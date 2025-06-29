@@ -18,11 +18,11 @@ Designed to support:
 vonova/
 ├── .github/                 # GitHub workflows, PR templates, issue templates
 ├── .vscode/                 # VSCode settings, recommended extensions
-├── apps/
+├── apps/                    # Frontend clients (web, desktop, mobile)
 │   ├── web-client/          # Next.js 15 React app (student/instructor/admin dashboards)
 │   ├── desktop-recorder/    # Electron.js instructor screen recording app
 │   └── mobile-client/       # React Native / Expo app (future scope)
-├── services/
+├── services/                # Microservices Backend (Node.js, Go Fiber, Rust Axum, Fast API)
 │   ├── ai-assistant/        # Python (GPT roadmap generation)
 │   ├── ai-problem-solving/  # Python (code hints/feedback)
 │   ├── ai-topic-video-gen/  # Go/Python (video generation backend)

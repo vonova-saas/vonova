@@ -1,18 +1,10 @@
-<h1 align="center">
-  🚀 Vonova Monorepo
-</h1>
-
 <p align="center">
-  <em>AI-powered, next-generation Learning Management System (LMS) for developers and CS students.</em>
-</p>
-
-<p align="center">
-  <strong>Empowering every student to master software engineering through intelligent, personalized, and interactive education.</strong>
+  <img src="https://raw.githubusercontent.com/vonova-saas/.github/refs/heads/main/img/github_organization.png" alt="Vonova Logo" width="100%" />
 </p>
 
 ---
 
-## 📚 Table of Contents
+## Table of Contents
 
 - [About](#about)
 - [Features](#features)
@@ -74,7 +66,7 @@ vonova/
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - React 19 / Next.js 15 / TypeScript
@@ -103,7 +95,7 @@ vonova/
 
 ---
 
-## 🛠️ Setup & Development
+## Setup & Development
 
 ### Prerequisites
 
@@ -121,7 +113,7 @@ git clone https://github.com/vonova-saas/vonova.git
 cd vonova
 ```
 
----
+<br>
 
 ### 2️⃣ Create Your Env File
 
@@ -130,7 +122,7 @@ cp .env.example .env
 # Fill in secrets and service configs
 ```
 
----
+<br>
 
 ### 3️⃣ Run with Docker Compose
 
@@ -138,7 +130,7 @@ cp .env.example .env
 docker-compose up --build
 ```
 
----
+<br>
 
 ### 4️⃣ Local Dev for Individual Services
 
@@ -158,7 +150,7 @@ npm install
 npm run dev
 ```
 
----
+<br>
 
 ### 5️⃣ Useful Makefile Commands
 
