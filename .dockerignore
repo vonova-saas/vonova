@@ -1,0 +1,75 @@
+# Dependencies:
+# Node.js
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+env/
+venv/
+*.pyc
+*.pyo
+
+# Rust
+target/
+
+# Go
+bin/
+*.exe
+*.out
+*.test
+
+# Version control
+.git
+.gitignore
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE specific files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build output
+dist
+build
+
+# Testing
+coverage
+tests/
+__tests__/
+*.spec.*
+*.test.*
+
+# Logs
+logs
+*.log
+
+# Operating System
+.DS_Store
+Thumbs.db
+.git
+.gitignore
+docker-compose.override.yml
+logs/
+.logs/
+*.log
+
+# undockerize folders
+.docs/
+*.md
+.tasks/
+.temp/
+.vscode/
+
+# Local dev
+.env
+.env.*
+Makefile
+scripts/
