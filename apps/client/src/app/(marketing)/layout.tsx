@@ -1,5 +1,5 @@
-import FooterSection from "@/components/footer-section";
-import HeroSection from "@/app/(landing)/components/hero-section";
+import FooterSection from "@/components/sections/footer-section";
+import HeroSection from "@/components/sections/hero-section";
 import React from "react";
 
 interface Props {

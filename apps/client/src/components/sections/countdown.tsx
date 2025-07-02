@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
 interface CountdownProps {
-  period: Date | string | number; // End date for countdown
+  period?: Date | string | number; // Optional - will use fixed launch date if not provided
   className?: string;
   label?: string; // Optional label text, defaults to "LEFT UNTIL FULL RELEASE"
 }
@@ -32,7 +32,17 @@ export default function Countdown({
 
   const prefersReducedMotion = useReducedMotion();
 
-  const targetDate = useMemo(() => new Date(period).getTime(), [period]);
+  // Fixed launch date - set this to your actual launch date
+  // Currently set to April 2, 2025 (3 months from now)
+  const LAUNCH_DATE = useMemo(() => {
+    // Set your fixed launch date here
+    return new Date("2025-12-28T00:00:00").getTime();
+  }, []);
+
+  const targetDate = useMemo(() => {
+    // Use provided period or fallback to fixed launch date
+    return period ? new Date(period).getTime() : LAUNCH_DATE;
+  }, [period, LAUNCH_DATE]);
 
   const calculateTimeLeft = useCallback(() => {
     const now = new Date().getTime();

@@ -1,13 +1,14 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Download } from "lucide-react";
+import { ArrowRight, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { TextEffect } from "@/components/motion-primitives/text-effect";
 import { AnimatedGroup } from "@/components/motion-primitives/animated-group";
-import { HeroHeader } from "@/components/header";
+import { Header } from "@/components/navigation/header";
 
 import type { Variants } from "framer-motion";
+import { BorderBeam } from "@/components/magicui/border-beam";
 
 const transitionVariants: { item: Variants } = {
   item: {
@@ -32,7 +33,7 @@ const transitionVariants: { item: Variants } = {
 export default function HeroSection() {
   return (
     <>
-      <HeroHeader />
+      <Header />
       <main className="overflow-hidden">
         <div
           aria-hidden
@@ -53,7 +54,7 @@ export default function HeroSection() {
                     className="hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950"
                   >
                     <span className="text-foreground text-sm">
-                      Introducing Support for CS Students
+                      🚀 Launching Soon in the Arab World
                     </span>
                     <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
 
@@ -76,7 +77,7 @@ export default function HeroSection() {
                   as="h1"
                   className="mt-8 text-balance text-6xl md:text-7xl lg:mt-16 xl:text-[5.25rem]"
                 >
-                  Modern Solutions for Learning
+                  Transform the Way CS Students Learn with AI
                 </TextEffect>
                 <TextEffect
                   per="line"
@@ -86,9 +87,10 @@ export default function HeroSection() {
                   as="p"
                   className="mx-auto mt-8 max-w-2xl text-balance text-lg"
                 >
-                  Experience Vonova&apos;s cutting-edge AI platform with our
-                  free demo. See how our customizable solutions can
-                  revolutionize your customer interactions.
+                  Vonova is an AI-powered Learning Management System designed
+                  for CS students and developers in the Arab world.
+                  Personalized, structured, and ready to revolutionize your
+                  learning journey.
                 </TextEffect>
 
                 <AnimatedGroup
@@ -114,9 +116,9 @@ export default function HeroSection() {
                       size="lg"
                       className="rounded-xl px-5 text-base"
                     >
-                      <Link href="https://github.com/Devovia/Vonova/releases/download/v0.1.0/Vonova_Setup_0.1.0.exe">
-                        <Download className="mr-2 size-4" />
-                        <span className="text-nowrap">Download Free Demo</span>
+                      <Link href="#">
+                        <Gem className="mr-2 size-4" />
+                        <span className="text-nowrap">Join the Waitlist</span>
                       </Link>
                     </Button>
                   </div>
@@ -158,12 +160,10 @@ export default function HeroSection() {
                     width="2700"
                     height="1440"
                   />
-                  <Image
-                    className="z-2 border-border/25 aspect-15/8 relative rounded-2xl border dark:hidden"
-                    src="/images/vonova.png"
-                    alt="app screen"
-                    width="2700"
-                    height="1440"
+                  <BorderBeam
+                    duration={6}
+                    size={200}
+                    className="from-transparent via-yellow-700 to-transparent dark:via-white/50"
                   />
                 </div>
               </div>

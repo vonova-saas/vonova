@@ -4,7 +4,7 @@ import { useState, type FormEvent, type ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 
 interface FormProps {
   onSuccessChange?: (success: boolean) => void;
@@ -42,54 +42,60 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
       return;
     }
 
+    if (!formData.name.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const promise = new Promise((resolve, reject) => {
-        const { name, email } = formData;
+      const promise = new Promise(async (resolve, reject) => {
+        try {
+          const { name, email } = formData;
 
-        fetch("/api/mail", {
-          cache: "no-store",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ firstname: name, email }),
-        })
-          .then((mailResponse) => {
-            if (!mailResponse.ok) {
-              if (mailResponse.status === 429) {
-                reject("Rate limited");
-              } else {
-                reject("Email sending failed");
-              }
-              return null;
-            }
-
-            return fetch("/api/notion", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ name, email }),
-            });
-          })
-          .then((notionResponse) => {
-            if (!notionResponse) return;
-
-            if (!notionResponse.ok) {
-              if (notionResponse.status === 429) {
-                reject("Rate limited");
-              } else {
-                reject("Notion insertion failed");
-              }
-            } else {
-              resolve({ name });
-            }
-          })
-          .catch((error) => {
-            reject(error);
+          // Send welcome email via Gmail
+          const mailResponse = await fetch("/api/mail", {
+            cache: "no-store",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              firstname: name,
+              email: email,
+              name: name,
+            }),
           });
+
+          if (!mailResponse.ok) {
+            const errorData = await mailResponse.json();
+            if (mailResponse.status === 429) {
+              reject("Rate limited");
+            } else {
+              reject(errorData.error || "Email sending failed");
+            }
+            return;
+          }
+
+          // Save to Notion (optional - only if you still want to store data)
+          const notionResponse = await fetch("/api/notion", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, email }),
+          });
+
+          if (!notionResponse.ok) {
+            // We'll continue even if Notion fails, since email was sent
+            console.warn("Notion save failed, but email was sent successfully");
+          }
+
+          resolve({ name });
+        } catch (error) {
+          reject(error);
+        }
       });
 
       toast.promise(promise, {
@@ -113,29 +119,31 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
               ],
             });
           }, 100);
-          return "Thank you for joining the waitlist 🎉";
+          return "Welcome email sent! Check your inbox 🎉";
         },
         error: (error) => {
+          console.error("Form submission error:", error);
           if (error === "Rate limited") {
             return "You're doing that too much. Please try again later";
           }
-          if (error === "Email sending failed") {
-            return "Failed to send email. Please try again 😢.";
+          if (
+            typeof error === "string" &&
+            error.includes("Gmail authentication")
+          ) {
+            return "Email service is temporarily unavailable. Please try again later.";
           }
-          if (error === "Notion insertion failed") {
-            return "Failed to save your details. Please try again 😢.";
+          if (typeof error === "string" && error.includes("quota")) {
+            return "Email service is temporarily at capacity. Please try again later.";
           }
-          return "An error occurred. Please try again 😢.";
+          return "Failed to send welcome email. Please try again 😢";
         },
       });
 
-      promise.finally(() => {
-        setLoading(false);
-      });
+      await promise;
     } catch (error) {
       console.error("Error submitting form:", error);
+    } finally {
       setLoading(false);
-      alert("Something went wrong. Please try again.");
     }
   };
 
@@ -156,7 +164,7 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
         >
           <Button
             onClick={resetForm}
-            className="text-black px-6 py-2 rounded-[12] font-semibold hover:bg-opacity-90 transition-all"
+            className="text-black px-6 py-2 rounded-[12px] font-semibold hover:bg-opacity-90 transition-all"
             type="button"
           >
             Join with another email
@@ -178,14 +186,14 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Email"
-                  className="flex-grow bg-background border border-border text-foreground px-4 py-3 rounded-[12]  focus:outline-1 transition-all duration-300 focus:outline-offset-4"
+                  placeholder="Enter your email address"
+                  className="flex-grow bg-background border border-border text-foreground px-4 py-3 rounded-[12px] focus:outline-1 transition-all duration-300 focus:outline-offset-4"
                   disabled={loading}
                   required
                 />
                 <Button
                   type="submit"
-                  className="absolute right-0 font-semibold top-0 bottom-0 flex justify-center items-center cursor-pointer text-black px-5 py-2 m-2 rounded-[12] hover:bg-opacity-90 transition-all disabled:opacity-50"
+                  className="absolute right-0 font-semibold top-0 bottom-0 flex justify-center items-center cursor-pointer text-black px-5 py-2 m-2 rounded-[12px] hover:bg-opacity-90 transition-all disabled:opacity-50"
                   disabled={loading}
                 >
                   Continue
@@ -205,14 +213,15 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="Name"
-                    className="flex-grow bg-background border border-border text-foreground px-4 py-3 rounded-[12]  focus:outline-1 transition-all duration-300 focus:outline-offset-4"
+                    placeholder="Enter your full name"
+                    className="flex-grow bg-background border border-border text-foreground px-4 py-3 rounded-[12px] focus:outline-1 transition-all duration-300 focus:outline-offset-4"
                     disabled={loading}
                     required
+                    minLength={2}
                   />
                   <Button
                     type="submit"
-                    className="absolute right-0 font-semibold top-0 bottom-0 flex justify-center items-center cursor-pointer text-black px-5 py-2 m-2 rounded-[12] hover:bg-opacity-90 transition-all disabled:opacity-50"
+                    className="absolute right-0 font-semibold top-0 bottom-0 flex justify-center items-center cursor-pointer text-black px-5 py-2 m-2 rounded-[12px] hover:bg-opacity-90 transition-all disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? (
@@ -239,13 +248,16 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           />
                         </svg>
-                        Joining...
+                        Sending...
                       </span>
                     ) : (
                       <span>Join waitlist</span>
                     )}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  We&apos;ll send you a welcome email with all the details
+                </p>
               </motion.div>
             )}
           </AnimatePresence>

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import Countdown from "./countdown";
 import People from "./people";
 import Form from "./form";
-import { Logo } from "./global/logo";
+import { Logo } from "@/components/global/logo";
 
 export default function Waitly() {
   const year = useMemo(() => new Date().getFullYear(), []);
@@ -17,8 +17,8 @@ export default function Waitly() {
         <Logo />
         <div className="flex items-center gap-4 rounded-full border border-border px-4 py-1 relative">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-400" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
           </span>
           <p className="uppercase text-sm font-medium">
             available in early {year}
@@ -41,7 +41,7 @@ export default function Waitly() {
       <div className="flex items-center justify-center gap-2">
         <People />
       </div>
-      <Countdown period={new Date("2025-12-31")} />
+      <Countdown />
     </div>
   );
 }

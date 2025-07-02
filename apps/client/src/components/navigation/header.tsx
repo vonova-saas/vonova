@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { LogoWithTitle } from './global/logo'
+import { LogoWithTitle } from '@/components/global/logo'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
@@ -13,7 +13,7 @@ const menuItems = [
     { name: 'About', href: '#link' },
 ]
 
-export const HeroHeader = () => {
+export const Header = () => {
     const [menuState, setMenuState] = React.useState(false)
     const [isScrolled, setIsScrolled] = React.useState(false)
 
