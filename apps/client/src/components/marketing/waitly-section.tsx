@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import Countdown from "./countdown";
-import People from "./people";
-import Form from "./form";
+import Countdown from "../forms/waitlist/countdown";
+import People from "../forms/waitlist/people";
+import Form from "../forms/waitlist/form";
 import { Logo } from "@/components/global/logo";
 
 export default function Waitly() {

@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  AppWindowMac,
   ChartBarIncreasingIcon,
   Database,
   Fingerprint,
@@ -16,7 +17,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { BorderBeam } from "@/components/magicui/border-beam";
 
-export default function FeaturesSection12() {
+export default function AIFeaturesSection() {
   type ImageKey = "item-1" | "item-2" | "item-3" | "item-4";
   const [activeItem, setActiveItem] = useState<ImageKey>("item-1");
 
@@ -31,11 +32,15 @@ export default function FeaturesSection12() {
     },
     "item-3": {
       image: "/images/mail2.png",
-      alt: "Student progress tracking dashboard",
+      alt: "AI Problem solving coach",
     },
     "item-4": {
       image: "/images/payments.png",
-      alt: "Analytics dashboard insights",
+      alt: "AI Assetant",
+    },
+    "item-5": {
+      image: "/images/charts.png",
+      alt: "AI Roadmap Generator",
     },
   };
 
@@ -80,8 +85,8 @@ export default function FeaturesSection12() {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                Automatically create teaching videos tailored to your
-                curriculum and student needs.
+                Automatically create teaching videos tailored to your curriculum
+                and student needs.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-3">
@@ -100,7 +105,19 @@ export default function FeaturesSection12() {
               <AccordionTrigger>
                 <div className="flex items-center gap-2 text-base">
                   <ChartBarIncreasingIcon className="size-4" />
-                  Analytics Dashboard
+                  AI Assetant
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                Understand student engagement with clear visualizations, trends,
+                and actionable recommendations.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-5">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2 text-base">
+                  <AppWindowMac className="size-4" />
+                  AI Roadmap Genrator
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -111,8 +128,7 @@ export default function FeaturesSection12() {
           </Accordion>
 
           <div className="bg-background relative flex overflow-hidden rounded-3xl border p-2">
-            <div className="w-15 absolute inset-0 right-0 ml-auto border-l bg-[repeating-linear-gradient(-45deg,var(--color-border),var(--color-border)_1px,transparent_1px,transparent_8px)]"></div>
-            <div className="aspect-76/59 bg-background relative w-[calc(3/4*100%+3rem)] rounded-2xl">
+            <div className="aspect-76/59 bg-background relative w-100% rounded-2xl">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${activeItem}-id`}

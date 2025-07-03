@@ -2,48 +2,8 @@ import { LogoWithTitle } from "@/components/global/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FOOTER_LINKS } from "@/utils/constants";
 import Link from "next/link";
-
-const links = [
-  {
-    group: "Product",
-    items: [
-      { title: "Features", href: "#" },
-      { title: "Courses", href: "#" },
-      { title: "Pricing", href: "#" },
-      { title: "Instructors", href: "#" },
-      { title: "Students", href: "#" },
-    ],
-  },
-  {
-    group: "Company",
-    items: [
-      { title: "About", href: "#" },
-      { title: "Careers", href: "#" },
-      { title: "Blog", href: "#" },
-      { title: "Contact", href: "#" },
-      { title: "Help Center", href: "#" },
-    ],
-  },
-  {
-    group: "Community",
-    items: [
-      { title: "Forums", href: "#" },
-      { title: "Events", href: "#" },
-      { title: "Ambassadors", href: "#" },
-      { title: "Partners", href: "#" },
-    ],
-  },
-  {
-    group: "Legal",
-    items: [
-      { title: "Privacy Policy", href: "#" },
-      { title: "Terms of Service", href: "#" },
-      { title: "Cookies", href: "#" },
-      { title: "Security", href: "#" },
-    ],
-  },
-];
 
 export default function FooterSection() {
   return (
@@ -140,7 +100,7 @@ export default function FooterSection() {
       <div className="mx-auto max-w-5xl px-6">
         <div className="grid gap-12 md:grid-cols-5 md:gap-0 lg:grid-cols-4">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 md:col-span-5 md:row-start-1 lg:col-span-3">
-            {links.map((link, index) => (
+            {FOOTER_LINKS.map((link, index) => (
               <div key={index} className="space-y-4 text-sm">
                 <span className="block font-medium">{link.group}</span>
                 {link.items.map((item, index) => (

@@ -1,21 +1,35 @@
-import HeroSection from "@/components/sections/hero-section";
-import GetStarted from "@/components/sections/get-started-section";
-import FooterSection from "@/components/sections/footer-section";
+import HeroSection from "@/components/marketing/hero-section";
+import Waitly from "@/components/marketing/waitly-section";
+import AIFeaturesSection from "@/components/marketing/ai-features-section";
+import LMSFeaturesSection from "@/components/marketing/lms-features-section";
 // import Reviews from "@/app/(landing)/components/reviews";
-import Waitly from "@/components/sections/waitly-section";
-import FeaturesSection12 from "@/components/sections/ai-features-section";
-import FeaturesSection9 from "@/components/sections/features-9";
+import FAQsSection from "@/components/marketing/faqs-section";
+import PricingSection from "@/components/marketing/pricing-section";
+import GetStarted from "@/components/marketing/get-started-section";
+import FooterSection from "@/components/navigation/footer-section";
+import Reviews from "@/components/marketing/reviews";
+import ContentSection from "@/components/marketing/content-section";
+// import Background from "@/components/global/background";
+// import Wrapper from "@/components/global/wrapper";
 
 export default function LandingPage() {
   return (
+    // <Background>
+    //   <Wrapper>
     <div>
       <HeroSection />
-      <FeaturesSection9 />
-      <FeaturesSection12 />
+      <ContentSection />
+      <LMSFeaturesSection />
+      <AIFeaturesSection />
       {/* <Reviews /> */}
+      <Reviews />
       <Waitly />
+      <FAQsSection />
+      <PricingSection />
       <GetStarted />
       <FooterSection />
     </div>
+    //  </Wrapper>
+    // </Background>
   );
 }

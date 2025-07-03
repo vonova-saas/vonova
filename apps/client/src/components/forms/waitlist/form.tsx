@@ -4,7 +4,7 @@ import { useState, type FormEvent, type ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 
 interface FormProps {
   onSuccessChange?: (success: boolean) => void;
