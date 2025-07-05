@@ -32,24 +32,37 @@ There are many ways to help:
 
 ## Branching Strategy
 
-We use **GitHub Flow** with a small team-friendly twist:
+We follow **GitHub Flow** with standardized branch naming:
 
-- `main` — always stable, production-ready
-- `dev` — shared integration branch (optional, for feature merging before `main`)
-- `feature/*` — new features
-- `bugfix/*` — bug fixes
-- `docs/*` — documentation updates
-- `hotfix/*` — critical production fixes
+### **Main Branches:**
+- `main` — production-ready, always stable
+- `develop` — integration branch for feature merging
 
-✅ Example branches:
+### **Working Branches:**
+- `feature/*` — new features (e.g., `feature/user-auth`)
+- `fix/*` — bug fixes (e.g., `fix/login-error`)
+- `hotfix/*` — critical production fixes (e.g., `hotfix/security-patch`)
+- `docs/*` — documentation updates (e.g., `docs/api-docs`)
+- `refactor/*` — code refactoring (e.g., `refactor/user-service`)
+- `release/*` — release preparation (e.g., `release/v1.2.0`)
 
+### **Examples:**
+```bash
+feature/ai-roadmap-generator
+fix/dashboard-loading-issue
+hotfix/payment-gateway-failure
+docs/installation-guide
+refactor/authentication-flow
 ```
 
-feature/ai-video-generation
-bugfix/login-refresh-token
-docs/update-prd
+## **Benefits of This Convention:**
+1. **Clear categorization** - Easy to identify branch purpose
+2. **Consistent formatting** - Lowercase with hyphens
+3. **Descriptive names** - Self-documenting
+4. **Tool integration** - Works well with CI/CD and automation
+5. **Team clarity** - Everyone understands the naming pattern
 
-```
+This follows industry best practices and is widely adopted by professional development teams.
 
 ---
 
