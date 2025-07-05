@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+build
+coverage
+.env
+.env.* 
+.DS_Store
+.github/
+temp/
+tasks/
+.gitignore
+*.lock
+*.json
+Dockerfile
+*.config.*
+*d.ts

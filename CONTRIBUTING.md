@@ -58,17 +58,14 @@ docs/update-prd
 ✅ Use clear, conventional commits.  
 Example:
 
-```
-
-feat(auth): add JWT refresh token
-fix(chat): handle disconnect error
-docs(prd): update AI service description
-
-```
-
-✅ Good practice:
-- Use present tense ("add", not "added")
-- Keep it concise but meaningful
+- **`feat`** - A new feature for the user
+- **`fix`** - A bug fix for the user
+- **`docs`** - Documentation only changes
+- **`style`** - Changes that don't affect the code (formatting, missing semicolons, etc.)
+- **`refactor`** - Code change that neither fixes a bug nor adds a feature
+- **`perf`** - Code change that improves performance
+- **`test`** - Adding missing tests or correcting existing tests
+- **`chore`** - Changes to the build process or auxiliary tools
 
 ---
 
