@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { useRef } from 'react';
 import { 
   AIInput, 
   AIInputTextarea, 
@@ -36,7 +37,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import AIAssistantVoice from './AIAssistantVoice';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -82,7 +83,8 @@ const AIAssistantChat = () => {
   const [status, setStatus] = useState<'submitted' | 'streaming' | 'ready' | 'error'>('ready');
   const [isTyping, setIsTyping] = useState(false);
   const [currentBranch, setCurrentBranch] = useState(0);
-  const [showVoice, setShowVoice] = useState(false);
+  const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const generateFakeResponse = () => {
     const responseIndex = Math.floor(Math.random() * fakeResponses.length);
@@ -102,6 +104,10 @@ const AIAssistantChat = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setText('');
+    // Reset textarea height after submit
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setStatus('submitted');
     setIsTyping(true);
 
@@ -158,7 +164,6 @@ const AIAssistantChat = () => {
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden relative">
-      {showVoice && <AIAssistantVoice onClose={() => setShowVoice(false)} />}
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 z-10">
         <div className="flex items-center gap-3">
@@ -262,50 +267,50 @@ const AIAssistantChat = () => {
         </AIConversation>
       </div>
       {/* Fixed Input Area at Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg">
-        <div className="p-4">
-          <AIInput onSubmit={handleSubmit} className="border shadow-sm">
-            <AIInputTextarea 
-              onChange={(e) => setText(e.target.value)} 
-              value={text}
-              placeholder="Message AI Assistant..."
-              disabled={isTyping}
-              className="min-h-[60px] max-h-[120px]"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  const form = e.currentTarget.form;
-                  if (form) form.requestSubmit();
-                }
-              }}
-            />
-            <AIInputToolbar>
-              <AIInputTools>
-                <AIInputButton disabled={isTyping} className="hover:bg-accent/50">
-                  <PlusIcon size={16} />
-                </AIInputButton>
-                <AIInputButton
-                  disabled={isTyping}
-                  className="hover:bg-accent/50"
-                  onClick={() => setShowVoice(true)}
-                >
-                  <MicIcon size={16} />
-                </AIInputButton>
-                <AIInputButton disabled={isTyping} className="hover:bg-accent/50">
-                  <GlobeIcon size={16} />
-                  <span>Search</span>
-                </AIInputButton>
-              </AIInputTools>
-              <AIInputSubmit 
-                disabled={!text.trim() || isTyping} 
-                status={status}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+      <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg flex flex-col-reverse items-stretch p-4 gap-0">
+        <AIInput onSubmit={handleSubmit} className="border shadow-sm w-full">
+          <AIInputTextarea 
+            onChange={(e) => setText(e.target.value)} 
+            value={text}
+            placeholder="Message AI Assistant..."
+            disabled={isTyping}
+            className="min-h-[60px] max-h-[120px] resize-none w-full"
+            style={{overflowY: 'auto'}}
+            ref={textareaRef}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const form = e.currentTarget.form;
+                if (form) form.requestSubmit();
+              }
+            }}
+          />
+          <AIInputToolbar>
+            <AIInputTools>
+              <AIInputButton disabled={isTyping} className="hover:bg-accent/50">
+                <PlusIcon size={16} />
+              </AIInputButton>
+              <AIInputButton
+                disabled={isTyping}
+                className="hover:bg-accent/50"
+                onClick={() => router.push('/dashboard/ai-assistant/voice')}
               >
-                <SendIcon size={16} />
-              </AIInputSubmit>
-            </AIInputToolbar>
-          </AIInput>
-        </div>
+                <MicIcon size={16} />
+              </AIInputButton>
+              <AIInputButton disabled={isTyping} className="hover:bg-accent/50">
+                <GlobeIcon size={16} />
+                <span>Search</span>
+              </AIInputButton>
+            </AIInputTools>
+            <AIInputSubmit 
+              disabled={!text.trim() || isTyping} 
+              status={status}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <SendIcon size={16} />
+            </AIInputSubmit>
+          </AIInputToolbar>
+        </AIInput>
       </div>
     </div>
   );

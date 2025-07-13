@@ -41,6 +41,7 @@ const segmentNameMap: Record<string, string> = {
   "ai-roadmap-generator": "AI Roadmap Generator",
   "problem-solving": "Problem Solving",
   "ai-assistant": "AI Assistant",
+  voice: "AI Voice",
   community: "Community",
   settings: "Settings",
 };
