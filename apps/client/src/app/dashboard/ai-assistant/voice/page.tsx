@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import AIAssistantVoice from '@/components/dashboard/student/ai-assistant/AIAssistantVoice';
+import AIAssistantVoice from '@/components/dashboard/student/ai-assistant/ai-assistant-voice';
 
 export default function AIAssistantVoicePage() {
   const router = useRouter();
