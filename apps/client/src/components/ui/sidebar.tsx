@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, PanelRightIcon } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -161,7 +161,7 @@ function Sidebar({
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right"
   variant?: "sidebar" | "floating" | "inset"
-  collapsible?: "offcanvas" | "icon" | "none"
+  collapsible?: "offcanvas" | "icon" | "none" | "rightIcon"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
@@ -253,7 +253,7 @@ function Sidebar({
   )
 }
 
-function SidebarTrigger({
+function LeftSidebarTrigger({
   className,
   onClick,
   ...props
@@ -274,6 +274,32 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
+      <span className="sr-only">Toggle Sidebar</span>
+    </Button>
+  )
+}
+
+function RightSidebarTrigger({
+  className,
+  onClick,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <Button
+      data-sidebar="trigger"
+      data-slot="sidebar-trigger"
+      variant="ghost"
+      size="icon"
+      className={cn("size-7", className)}
+      onClick={(event) => {
+        onClick?.(event)
+        toggleSidebar()
+      }}
+      {...props}
+    >
+      <PanelRightIcon />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
@@ -721,6 +747,7 @@ export {
   SidebarProvider,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
+  LeftSidebarTrigger,
+  RightSidebarTrigger,
   useSidebar,
 }
