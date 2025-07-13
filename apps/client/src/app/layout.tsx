@@ -3,6 +3,8 @@ import "../style/globals.css";
 import { cn } from "@/lib/utils";
 // import { inter, satoshi } from "@/utils/constants";
 import { ThemeProvider } from "@/providers/theme-provider";
+import Providers from "@/providers/providers";
+import NextTopLoader from "nextjs-toploader";
 
 export const metadata = generateMetadata();
 
@@ -25,7 +27,10 @@ export default function RootLayout({
             <NuqsAdapter>{children}</NuqsAdapter>
           </QueryProvider>
         </AuthProvider> */}
+        <Providers>
+        <NextTopLoader showSpinner={false} color="black" />
         <ThemeProvider>{children}</ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

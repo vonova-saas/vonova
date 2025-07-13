@@ -1,14 +1,14 @@
 "use client";
-import Roadmap from "@/components/dashboard/student/ai-roadmap/roadmap/roadmap";
+import Roadmap from "../roadmap/roadmap";
 import { Suspense } from "react";
 import { ReactFlowProvider } from "reactflow";
 
-export default function AIRoadmapGeneratorPage() {
+export const Flow = ({ roadmapId }: { roadmapId: string }) => {
   return (
     <Suspense fallback={<></>}>
       <ReactFlowProvider>
-        <Roadmap />
+        <Roadmap roadmapId={roadmapId} />
       </ReactFlowProvider>
     </Suspense>
   );
-}
+};
