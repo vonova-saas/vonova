@@ -185,10 +185,12 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
     linkTitle,
     link,
     iconUrl,
+    imageUrl,
   }: {
     link: string;
     linkTitle: string;
     iconUrl: string;
+    imageUrl?: string;
   }) => {
     return (
       <>
@@ -197,10 +199,11 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
             <TooltipTrigger>
               <a href={link} target="_blank" referrerPolicy="no-referrer">
                 <Image
-                  src={iconUrl}
+                  src={imageUrl || iconUrl}
                   alt="Wikipedia Logo"
-                  width={16}
-                  height={16}
+                  width={32}
+                  height={32}
+                  className="rounded"
                 />
               </a>
             </TooltipTrigger>
@@ -215,88 +218,89 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
 
   return (
     <Sheet open={drawerOpen} onOpenChange={toggleDrawer}>
-      <SheetContent className="overflow-auto min-w-full md:min-w-[700px]">
-        <div className="mb-4">
-          <p className="text-xs text-slate-400">
-            {drawerDetails?.parent ?? ""}
-          </p>
-          <p className="font-light">{drawerDetails?.child ?? ""}</p>
-        </div>
-        <div>
-          {isLoading ? (
-            <div className="flex justify-center items-center w-full h-[500px]">
-              <Loader2 className="w-6 h-6 animate-spin" />
+      <SheetContent className="overflow-auto min-w-full md:min-w-[700px] bg-background text-foreground p-0">
+        {isLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background/90">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+            <span className="text-muted-foreground text-lg">Loading resources...</span>
+          </div>
+        ) : (
+          <>
+            {/* Header Section */}
+            <div className="px-6 pt-6 pb-2 border-b border-border">
+              <div className="text-xs text-muted-foreground mb-1">{drawerDetails?.parent ?? ""}</div>
+              <div className="text-2xl font-bold mb-1">{drawerDetails?.child ?? ""}</div>
+              <div className="text-sm text-muted-foreground mb-2">{drawerDetails?.query ?? ""}</div>
             </div>
-          ) : (
-            <div>
-              {drawerData?.videoIds?.length > 0 && <YoutubeVideo />}
-              <div className="flex flex-wrap m-4">
-                {drawerData?.detailsData?.link && (
-                  <ResourceLink
-                    link={drawerData?.detailsData?.link ?? ""}
-                    linkTitle="Wikipedia"
-                    iconUrl="/images/wikipedia.png"
-                  />
-                )}
+            {/* Video Section */}
+            {drawerData?.videoIds?.length > 0 && (
+              <div className="py-6 px-6 border-b border-border">
+                <div className="text-lg font-semibold mb-4">Related Videos</div>
+                <YoutubeVideo />
               </div>
-              <p className="text-sm text-slate-600">
-                {drawerData?.detailsData?.description ?? ""}
-              </p>
-              {drawerData?.detailsData?.bulletPoints &&
-              drawerData?.detailsData?.bulletPoints?.length > 0 ? (
-                <div className="mt-4">
-                  <ul className="list-disc list-inside">
-                    {drawerData?.detailsData.bulletPoints?.map(
-                      (point: string, id: number) => (
-                        <li key={id} className="text-sm text-slate-600">
-                          {point ?? ""}
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              ) : null}
-              <div className="mt-4">
-                <p className="text-black mb-2">Recommended Books</p>
-                <div className="flex flex-col gap-3">
-                  {drawerData?.booksData?.length > 0 &&
-                    drawerData?.booksData?.map(
-                      (book: IOrilley["data"][number], id: number) => (
-                        <a
-                          className="flex items-start bg-white rounded-md overflow-hidden cursor-pointer"
-                          href={"https://learning.oreilly.com" + book?.web_url}
-                          target="_blank"
-                          key={book?.id}
-                        >
-                          <div className="w-[80px] h-[80px] flex-shrink-0">
-                            <img
-                              className="w-full h-full object-cover"
-                              src={book?.cover_url ?? ""}
-                              alt={book?.title ?? ""}
-                            />
-                          </div>
-                          <div className="px-4">
-                            <p className="text-base font-regular mb-1">
-                              {book?.title ?? ""}
-                            </p>
-                            <p className="text-gray-700 text-sm">
-                              By {book?.authors?.[0] ?? ""}
-                            </p>
-                            {book?.duration_seconds > 0 && (
-                              <p className="text-gray-600 text-xs">
-                                Complete in{" "}
-                                {formatDuration(book?.duration_seconds)}
-                              </p>
-                            )}
-                          </div>
-                        </a>
-                      ),
-                    )}
-                </div>
+            )}
+            {/* Resource Links */}
+            {drawerData?.detailsData?.link && (
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
+                <ResourceLink
+                  link={drawerData?.detailsData?.link ?? ""}
+                  linkTitle="Wikipedia"
+                  iconUrl="/images/wikipedia.png"
+                  imageUrl={drawerData?.detailsData?.thumbnail || drawerData?.detailsData?.image}
+                />
+                <span className="text-sm text-muted-foreground">Wikipedia</span>
               </div>
+            )}
+            {/* Description & Bullet Points */}
+            <div className="px-6 py-6 border-b border-border">
+              <div className="text-base mb-3 leading-relaxed">
+                {drawerData?.detailsData?.description ||
+                  drawerData?.detailsData?.extract ||
+                  drawerData?.detailsData?.summary ||
+                  drawerData?.detailsData?.text ||
+                  ""}
+              </div>
+              {drawerData?.detailsData?.bulletPoints && drawerData?.detailsData?.bulletPoints?.length > 0 && (
+                <ul className="list-disc list-inside space-y-2 pl-4 mt-2 text-sm text-muted-foreground">
+                  {drawerData?.detailsData.bulletPoints?.map((point: string, id: number) => (
+                    <li key={id}>{point ?? ""}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          )}
-        </div>
+            {/* Recommended Books */}
+            {drawerData?.booksData?.length > 0 && (
+              <div className="px-6 py-6">
+                <div className="text-lg font-semibold mb-4">Recommended Books</div>
+                <div className="flex flex-col gap-4">
+                  {drawerData?.booksData?.map((book: IOrilley["data"][number], id: number) => (
+                    <a
+                      className="flex items-center bg-card rounded-xl shadow hover:shadow-lg border border-border transition p-3 gap-4 hover:bg-primary/5"
+                      href={"https://learning.oreilly.com" + book?.web_url}
+                      target="_blank"
+                      key={book?.id}
+                    >
+                      <div className="w-16 h-20 flex-shrink-0 rounded overflow-hidden bg-muted">
+                        <img
+                          className="w-full h-full object-cover"
+                          src={book?.cover_url ?? ""}
+                          alt={book?.title ?? ""}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-base truncate mb-1">{book?.title ?? ""}</div>
+                        <div className="text-xs text-muted-foreground mb-1">By {book?.authors?.[0] ?? ""}</div>
+                        {book?.duration_seconds > 0 && (
+                          <div className="text-xs text-muted-foreground">Complete in {formatDuration(book?.duration_seconds)}</div>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );

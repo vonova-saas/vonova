@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -28,12 +27,10 @@ export function PresetShare() {
         </Button>
       </DialogTrigger>
       <DialogContent className="md:w-[520px] w-[380px]">
-        <DialogHeader>
-          <DialogTitle>Share roadmap</DialogTitle>
-          <DialogDescription>
-            Anyone who has this link can view your roadmap.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle>Share roadmap</DialogTitle>
+        <DialogDescription>
+          Anyone who has this link can view your roadmap.
+        </DialogDescription>
         <div className="flex items-center space-x-2 pt-4">
           <div className="grid flex-1 gap-2">
             <Label htmlFor="link" className="sr-only">

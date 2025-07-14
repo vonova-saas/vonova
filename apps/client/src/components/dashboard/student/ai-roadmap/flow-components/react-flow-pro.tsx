@@ -33,10 +33,11 @@ function ReactFlowPro({ animationDuration = 200, h }: ProProps) {
   const initialElements = getElements(h);
   const [nodes, setNodes] = useState(initialElements.nodes);
   const [edges, setEdges] = useState(initialElements.edges);
-  const { toggleDrawer, setDrawerDetails } = useUIStore(
+  const { toggleDrawer, setDrawerDetails, drawerOpen } = useUIStore(
     useShallow((state) => ({
       setDrawerDetails: state.setDrawerDetails,
       toggleDrawer: state.toggleDrawer,
+      drawerOpen: state.drawerOpen,
     })),
   );
 
@@ -53,12 +54,14 @@ function ReactFlowPro({ animationDuration = 200, h }: ProProps) {
     const isExpanded = !!currentNode.children;
     currentNode.children = isExpanded ? null : currentNode._children;
     if (!currentNode._children) {
-      toggleDrawer();
       setDrawerDetails({
         query: root.name,
         parent: currentNode.parent.data.name,
         child: currentNode.data.name,
       });
+      if (!drawerOpen) {
+        toggleDrawer();
+      }
     }
     const nextElements = getElements(h);
     setNodes(nextElements.nodes);
