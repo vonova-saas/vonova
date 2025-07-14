@@ -28,6 +28,7 @@ import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { LocalStorage } from "@/utils/functions/local-storage";
 import { getDisplayRoadmapId } from '@/lib/utils';
+import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions/local-storage';
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
@@ -36,41 +37,27 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   const [localRoadmap, setLocalRoadmap] = useState<{ content?: any; visibility?: string } | null>(null);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
   const router = useRouter();
-  // Recent roadmaps state (dynamic from localStorage)
-  const [recentRoadmaps, setRecentRoadmaps] = useState<Array<{ id: string; title: string; date: string; icon: string }>>([]);
+  const { recentRoadmaps, setRecentRoadmaps } = useUIStore();
 
   // Helper to load recent roadmaps from localStorage
   const loadRecentRoadmaps = () => {
-    if (typeof window === 'undefined') return [];
-    const keys = Object.keys(window.localStorage).filter((k) => k.startsWith('generated-'));
-    const roadmaps = keys.map((id) => {
-      try {
-        const data = LocalStorage.get<{ content?: any }>(id) || {};
-        return {
-          id,
-          title: data?.content?.[0]?.name || 'Untitled',
-          date: new Date(parseInt(id.replace('generated-', ''), 10)).toLocaleDateString(),
-          icon: '/images/placeholder.svg',
-        };
-      } catch {
-        return null;
-      }
-    }).filter(Boolean) as Array<{ id: string; title: string; date: string; icon: string }>;
-    // Sort by most recent
-    return roadmaps.sort((a, b) => parseInt(b.id.replace('generated-', '')) - parseInt(a.id.replace('generated-', '')));
+    const roadmaps = getRecentRoadmaps();
+    setRecentRoadmaps(roadmaps);
+    return roadmaps;
   };
 
   // Load recent roadmaps on mount
   useEffect(() => {
-    setRecentRoadmaps(loadRecentRoadmaps());
+    loadRecentRoadmaps();
   }, []);
 
   // Delete roadmap handler
   const handleDeleteRoadmap = (id: string) => {
-    setRecentRoadmaps((prev) => prev.filter((rm) => rm.id !== id));
+    removeRecentRoadmap(id);
     if (typeof window !== "undefined") {
       LocalStorage.remove(id);
     }
+    setRecentRoadmaps(getRecentRoadmaps());
   };
 
   // 1. Try to load from localStorage if roadmapId is present

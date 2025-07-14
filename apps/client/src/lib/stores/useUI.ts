@@ -8,6 +8,13 @@ type drawerDetails = {
 
 export type UModel = "cohere";
 
+type RoadmapMeta = {
+  id: string;
+  title: string;
+  date: string;
+  icon: string;
+};
+
 interface UIState {
   drawerOpen: boolean;
   toggleDrawer: () => void;
@@ -21,6 +28,10 @@ interface UIState {
   setMainQuery: (query: string) => void;
   modelApiKey: string | null;
   setModelApiKey: (query: string | null) => void;
+  recentRoadmaps: RoadmapMeta[];
+  setRecentRoadmaps: (roadmaps: RoadmapMeta[]) => void;
+  addRecentRoadmap: (roadmap: RoadmapMeta) => void;
+  removeRecentRoadmap: (id: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -36,4 +47,14 @@ export const useUIStore = create<UIState>((set) => ({
   setMainQuery: (mainQuery) => set(() => ({ mainQuery })),
   modelApiKey: "",
   setModelApiKey: (modelApiKey) => set(() => ({ modelApiKey })),
+  recentRoadmaps: [],
+  setRecentRoadmaps: (roadmaps) => set({ recentRoadmaps: roadmaps }),
+  addRecentRoadmap: (roadmap) =>
+    set((state) => ({
+      recentRoadmaps: [roadmap, ...state.recentRoadmaps.filter((r) => r.id !== roadmap.id)],
+    })),
+  removeRecentRoadmap: (id) =>
+    set((state) => ({
+      recentRoadmaps: state.recentRoadmaps.filter((r) => r.id !== id),
+    })),
 }));
