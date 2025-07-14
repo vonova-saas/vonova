@@ -18,6 +18,7 @@ enum Visibility {
   PUBLIC = "public",
   PRIVATE = "private"
 }
+
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -25,6 +26,7 @@ import { toPng } from "html-to-image";
 import { downloadImage } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { LocalStorage } from "@/utils/functions/local-storage";
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
@@ -39,10 +41,10 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Helper to load recent roadmaps from localStorage
   const loadRecentRoadmaps = () => {
     if (typeof window === 'undefined') return [];
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith('generated-'));
+    const keys = Object.keys(window.localStorage).filter((k) => k.startsWith('generated-'));
     const roadmaps = keys.map((id) => {
       try {
-        const data = JSON.parse(localStorage.getItem(id) || '{}');
+        const data = LocalStorage.get<{ content?: any }>(id) || {};
         return {
           id,
           title: data?.content?.[0]?.name || 'Untitled',
@@ -66,7 +68,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   const handleDeleteRoadmap = (id: string) => {
     setRecentRoadmaps((prev) => prev.filter((rm) => rm.id !== id));
     if (typeof window !== "undefined") {
-      localStorage.removeItem(id);
+      LocalStorage.remove(id);
     }
   };
 
@@ -74,9 +76,20 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   useEffect(() => {
     if (roadmapId) {
       setIsLocalLoading(true);
-      const roadmapData = typeof window !== "undefined" ? localStorage.getItem(roadmapId) : null;
+      const roadmapData = typeof window !== "undefined" ? LocalStorage.get(roadmapId) : null;
       if (roadmapData) {
-        setLocalRoadmap(JSON.parse(roadmapData));
+        // If roadmapData is a string, parse it; otherwise, use as object
+        let parsed: { content?: any; visibility?: string } | null = null;
+        if (typeof roadmapData === 'string') {
+          try {
+            parsed = JSON.parse(roadmapData);
+          } catch {
+            parsed = null;
+          }
+        } else {
+          parsed = roadmapData as { content?: any; visibility?: string };
+        }
+        setLocalRoadmap(parsed);
       } else {
         setLocalRoadmap(null);
       }
@@ -116,6 +129,51 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
     (data?.text && createTree(data.text)) ||
     (localRoadmap && localRoadmap.content ? localRoadmap.content : undefined) ||
     (roadmap && roadmap.content ? roadmap.content : undefined);
+
+  // Onboarding state
+  const ONBOARDING_KEY = "roadmap-onboarding-complete";
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const onboardingSteps = [
+    {
+      title: "Welcome to the AI Roadmap Generator!",
+      desc: "This tool helps you create a personalized learning roadmap for any topic. Let’s take a quick tour!",
+    },
+    {
+      title: "Generate Your Roadmap",
+      desc: "Use the generator card to enter your topic, skill level, and duration. Click Generate to get your roadmap!",
+    },
+    {
+      title: "Customize Your Experience",
+      desc: "Click the palette icon to personalize your roadmap’s colors and background pattern.",
+    },
+    {
+      title: "Export, Share, or Save",
+      desc: "Use the buttons at the top right to export as PDF/image, share, or save your roadmap.",
+    },
+    {
+      title: "Explore Your Roadmap",
+      desc: "Click nodes to expand and dive deeper into your learning path. Happy learning!",
+    },
+  ];
+  // Show onboarding if not completed
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !LocalStorage.get(ONBOARDING_KEY)) {
+      setShowOnboarding(true);
+    }
+  }, []);
+  const handleNextOnboarding = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      LocalStorage.set(ONBOARDING_KEY, "true");
+    }
+  };
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    LocalStorage.set(ONBOARDING_KEY, "true");
+  };
 
   // If viewing a specific roadmap (roadmapId is present), show the roadmap with Save/Back buttons
   if (roadmapId) {
@@ -246,6 +304,30 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
             )}
           </div>
         </div>
+        {/* Onboarding Popover/Modal */}
+        {showOnboarding && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-popover border border-border rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in">
+              <div className="text-xl font-bold mb-2 text-primary text-center">{onboardingSteps[onboardingStep].title}</div>
+              <div className="text-base text-muted-foreground mb-6 text-center">{onboardingSteps[onboardingStep].desc}</div>
+              <div className="flex gap-3 w-full justify-center">
+                <button
+                  className="px-4 py-2 rounded-lg bg-muted text-foreground font-medium border border-border hover:bg-muted/80 transition"
+                  onClick={handleSkipOnboarding}
+                >
+                  Skip
+                </button>
+                <button
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold border border-primary hover:bg-primary/90 transition"
+                  onClick={handleNextOnboarding}
+                >
+                  {onboardingStep === onboardingSteps.length - 1 ? "Got it!" : "Next"}
+                </button>
+              </div>
+              <div className="mt-4 text-xs text-muted-foreground">Step {onboardingStep + 1} of {onboardingSteps.length}</div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -379,6 +461,30 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           )}
         </div>
       </div>
+      {/* Onboarding Popover/Modal */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-popover border border-border rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in">
+            <div className="text-xl font-bold mb-2 text-primary text-center">{onboardingSteps[onboardingStep].title}</div>
+            <div className="text-base text-muted-foreground mb-6 text-center">{onboardingSteps[onboardingStep].desc}</div>
+            <div className="flex gap-3 w-full justify-center">
+              <button
+                className="px-4 py-2 rounded-lg bg-muted text-foreground font-medium border border-border hover:bg-muted/80 transition"
+                onClick={handleSkipOnboarding}
+              >
+                Skip
+              </button>
+              <button
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold border border-primary hover:bg-primary/90 transition"
+                onClick={handleNextOnboarding}
+              >
+                {onboardingStep === onboardingSteps.length - 1 ? "Got it!" : "Next"}
+              </button>
+            </div>
+            <div className="mt-4 text-xs text-muted-foreground">Step {onboardingStep + 1} of {onboardingSteps.length}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
