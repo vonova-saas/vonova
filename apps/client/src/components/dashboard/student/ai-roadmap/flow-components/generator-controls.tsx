@@ -9,7 +9,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/lib/stores";
-import { createTree } from "@/lib/utils";
+import { createTree, getDisplayRoadmapId } from "@/lib/utils";
+import { addRecentRoadmap, getRecentRoadmaps } from "@/utils/functions/local-storage";
 import { motion, AnimatePresence } from "framer-motion";
 
 enum Visibility {
@@ -26,6 +27,7 @@ interface Props {
   mutate: UseMutateFunction<any, AxiosError<unknown, any>, any, unknown>;
   step: 1 | 2 | 3 | 4;
   setStep: (step: 1 | 2 | 3 | 4) => void;
+  startTimer: () => void;
 }
 
 // Inline logic for isRoadmapGeneratedByUser
@@ -57,6 +59,7 @@ export const GeneratorControls = (props: Props) => {
     visibility: initialVisibility,
     step,
     setStep,
+    startTimer,
   } = props;
   const [visibility, setVisibility] = useState(initialVisibility);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,6 +70,7 @@ export const GeneratorControls = (props: Props) => {
   const [topic, setTopic] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [durationWeeks, setDurationWeeks] = useState("");
+  const { setRecentRoadmaps } = useUIStore();
 
   // Handlers for step transitions
   const handleTopicNext = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -126,6 +130,7 @@ export const GeneratorControls = (props: Props) => {
       | React.KeyboardEvent<HTMLInputElement>,
   ) => {
     e.preventDefault();
+    startTimer();
     try {
       setIsGenerating(true);
       if (!topic || !skillLevel || !durationWeeks) {
@@ -153,8 +158,8 @@ export const GeneratorControls = (props: Props) => {
               description: "Roadmap generated successfully.",
               duration: 4000,
             });
-            // Save to localStorage before redirect
-            const id = data?.roadmapId || data?.id;
+            let id = data?.roadmapId || data?.id;
+            id = getDisplayRoadmapId(id);
             let tree = null;
             if (data.query && data.chapters) {
               tree = [createTree(data)[0]];
@@ -168,7 +173,17 @@ export const GeneratorControls = (props: Props) => {
                 id,
                 JSON.stringify({ content: tree, visibility: "public" }),
               );
-              router.push(`/dashboard/ai-roadmap-generator/${id}`);
+              addRecentRoadmap({
+                id,
+                title: tree?.[0]?.name || "Untitled",
+                date: new Date().toLocaleDateString(),
+                icon: "/images/placeholder.svg",
+              });
+              setRecentRoadmaps(getRecentRoadmaps());
+              // Add a short delay before redirecting to ensure localStorage is updated
+              setTimeout(() => {
+                router.push(`/dashboard/ai-roadmap-generator/${id}`);
+              }, 100);
             }
           },
           onError: (error: any) => {

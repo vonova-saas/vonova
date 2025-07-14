@@ -12,7 +12,7 @@ import { useUIStore } from "@/lib/stores/useUI";
 import Instructions from "../flow-components/Instructions";
 import { Sparkles } from "lucide-react";
 import { Clock, PlusCircle, FolderOpen, Trash, FileDown, Image as ImageIcon, Share2 } from "lucide-react";
-import React from "react";
+import React, { useRef } from "react";
 
 enum Visibility {
   PUBLIC = "public",
@@ -38,6 +38,10 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
   const router = useRouter();
   const { recentRoadmaps, setRecentRoadmaps } = useUIStore();
+  const [timer, setTimer] = useState(0); // seconds
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isGeneratingTimer, setIsGeneratingTimer] = useState(false);
+  const TIMER_MAX = 50; // or 20 for 20 seconds
 
   // Helper to load recent roadmaps from localStorage
   const loadRecentRoadmaps = () => {
@@ -161,6 +165,42 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   const handleSkipOnboarding = () => {
     setShowOnboarding(false);
     LocalStorage.set(ONBOARDING_KEY, "true");
+  };
+
+  // Start/stop timer based on step
+  useEffect(() => {
+    if (step === 4 && !roadmapId) {
+      setTimer(0);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setTimer((prev) => {
+          if (prev < 50) return prev + 1;
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 50;
+        });
+      }, 1000);
+    } else {
+      setTimer(0);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [step, roadmapId]);
+
+  // Start timer when requested
+  const startTimer = () => {
+    setTimer(0);
+    setIsGeneratingTimer(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimer((prev) => {
+        if (prev < TIMER_MAX) return prev + 1;
+        if (timerRef.current) clearInterval(timerRef.current);
+        setIsGeneratingTimer(false);
+        return TIMER_MAX;
+      });
+    }, 1000);
   };
 
   // If viewing a specific roadmap (roadmapId is present), show the roadmap with Save/Back buttons
@@ -383,9 +423,19 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
             }
             step={step}
             setStep={setStep}
+            startTimer={startTimer}
           />
         </div>
       </div>
+      {/* Timer under Generator Card */}
+      {isGeneratingTimer && (
+        <div className="flex flex-col items-center justify-center mt-2 mb-4">
+          <span className="text-lg font-mono text-foreground">
+            {`00:${timer.toString().padStart(2, '0')}`}
+            <span className="text-base font-normal text-muted-foreground ml-2">Estimated time: 20 seconds</span>
+          </span>
+        </div>
+      )}
       {/* Recent Roadmaps Section */}
       <div className="w-full max-w-6xl mx-auto px-2 pb-10 mt-10">
         <div className="flex items-center gap-2 mb-2">
@@ -421,7 +471,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
               <div
                 key={rm.id}
                 className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition group overflow-hidden cursor-pointer border border-border"
-                onClick={() => router.push(`/dashboard/ai-roadmap-generator/${rm.id}`)}
+                onClick={() => router.push(`/dashboard/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`)}
               >
                 {/* Delete button, only visible on hover */}
                 <button
