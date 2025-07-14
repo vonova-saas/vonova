@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/carousel";
 import { useUIStore } from "@/lib/stores";
 import { useShallow } from "zustand/react/shallow";
-import { saveNodeDetails, findSavedNodeDetails } from "@/actions/roadmaps";
+import { saveNodeDetails, findSavedNodeDetails } from "@/lib/actions/roadmaps";
 
 interface DrawerProps {
   roadmapId?: string;

@@ -10,6 +10,9 @@ import { Loader2 } from "lucide-react";
 import { GeneratorControls } from "../flow-components/generator-controls";
 import { useUIStore } from "@/lib/stores/useUI";
 import Instructions from "../flow-components/Instructions";
+import { Sparkles } from "lucide-react";
+import { Clock, PlusCircle, FolderOpen } from "lucide-react";
+import React from "react";
 
 enum Visibility {
   PUBLIC = "public",
@@ -18,8 +21,11 @@ enum Visibility {
 import { useRouter } from "next/navigation";
 import { Trash } from "lucide-react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
+  // Stepper state for progress indicator (must be before any conditional return)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const { query } = useUIStore();
   const [localRoadmap, setLocalRoadmap] = useState<{ content?: any; visibility?: string } | null>(null);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -38,7 +44,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           id,
           title: data?.content?.[0]?.name || 'Untitled',
           date: new Date(parseInt(id.replace('generated-', ''), 10)).toLocaleDateString(),
-          icon: '/opengraph-image.png',
+          icon: '/images/placeholder.svg',
         };
       } catch {
         return null;
@@ -111,52 +117,97 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // If viewing a specific roadmap (roadmapId is present), show the roadmap with Save/Back buttons
   if (roadmapId) {
     return (
-      <div className="min-h-screen w-full h-full relative" style={{ background: "radial-gradient(circle, #f3f3f3 1px, transparent 1px), radial-gradient(circle, #f3f3f3 1px, transparent 1px)", backgroundSize: "32px 32px", backgroundPosition: "0 0, 16px 16px", backgroundColor: "#fff" }}>
-        {/* Save button top left, Back button top right */}
-        <button
-          className="fixed top-8 left-8 z-20 px-6 py-3 rounded-xl bg-black text-white font-semibold shadow hover:bg-gray-900 transition"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('save-roadmap', { detail: roadmapId }));
-          }}
-        >
-          Save
-        </button>
-        <button
-          className="fixed top-8 right-8 z-20 px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-semibold shadow hover:bg-gray-300 transition"
-          onClick={() => router.back()}
-        >
-          Back
-        </button>
-        {/* Roadmap Visualization Full Page */}
-        <div className="w-full h-screen flex items-center justify-center">
-          {isPending || isRoadmapPending || isLocalLoading ? (
-            <div className="flex justify-center items-center w-full h-full">
-              <Loader2 className="animate-spin w-8 h-8 text-gray-400" />
-            </div>
-          ) : roadmapContent && roadmapContent[0] ? (
-            <div className="w-full h-full">
-              <ExpandCollapse data={roadmapContent} isPending={isRoadmapPending || isPending || isLocalLoading} roadmapId={roadmapId} />
-            </div>
-          ) : (
-            <Instructions />
-          )}
+      <div className="min-h-screen w-full h-full relative flex flex-col items-center justify-center bg-background" style={{
+        background: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.15) 1.5px, transparent 1.5px)",
+        backgroundSize: "18px 18px"
+      }}>
+        {/* Beautiful Header */}
+        <div className="w-full max-w-2xl mx-auto flex flex-col items-center mt-16 mb-8 px-4">
+          <div className="flex flex-col items-center">
+            <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-primary mb-3 drop-shadow-lg" />
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground text-center mb-2 drop-shadow">Your Personalized Roadmap</h1>
+            <p className="text-base md:text-lg text-muted-foreground text-center mb-2 max-w-xl">Explore your generated learning path below. You can save it, share it, or go back to generate a new one!</p>
+            <div className="w-20 h-1 rounded-full bg-primary/30 mx-auto mb-2" />
+          </div>
+        </div>
+        {/* Save and Back Buttons - now in normal flow */}
+        <div className="w-full max-w-4xl flex flex-row items-center justify-between gap-4 mb-6 px-2">
+          <button
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition border border-primary/40 backdrop-blur-md bg-opacity-80"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('save-roadmap', { detail: roadmapId }));
+            }}
+          >
+            Save
+          </button>
+          <button
+            className="px-6 py-3 rounded-xl bg-muted text-foreground font-semibold shadow-lg hover:bg-muted/80 transition border border-border backdrop-blur-md bg-opacity-80"
+            onClick={() => router.back()}
+          >
+            Back
+          </button>
+        </div>
+        {/* Roadmap Visualization Glassy Card */}
+        <div className="flex flex-1 items-center justify-center w-full min-h-[60vh] px-2 pb-10">
+          <div className="w-full max-w-4xl bg-card/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-border p-6 md:p-10 flex flex-col items-center justify-center glassmorphism-card transition-all duration-300">
+            {isPending || isRoadmapPending || isLocalLoading ? (
+              <div className="flex justify-center items-center w-full h-64">
+                <Loader2 className="animate-spin w-10 h-10 text-primary/60" />
+              </div>
+            ) : roadmapContent && roadmapContent[0] ? (
+              <div className="w-full">
+                <ExpandCollapse data={roadmapContent} isPending={isRoadmapPending || isPending || isLocalLoading} roadmapId={roadmapId} />
+              </div>
+            ) : (
+              <Instructions />
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // Otherwise, show the main roadmap generation UI
   // Main layout
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden relative" style={{ background: "radial-gradient(circle, #e5e7eb 1.5px, transparent 1.5px), radial-gradient(circle, #e5e7eb 1.5px, transparent 1.5px)", backgroundSize: "28px 28px", backgroundPosition: "0 0, 14px 14px", backgroundColor: "#f9fafb" }}>
+    <div className="h-full w-full min-h-screen flex flex-col items-center justify-center overflow-hidden relative bg-background" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}>
       {/* Header */}
-      <div className="flex flex-col items-center justify-center pt-10 pb-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 mb-2">Good Evening, Vonova</h1>
-        <p className="text-lg md:text-xl text-muted-foreground font-medium">Ready to generate your learning path?</p>
+      <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto pt-8 pb-4">
+        <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-primary mb-3" />
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mb-1 text-center">AI Roadmap Generator</h1>
+        <p className="text-base md:text-lg text-muted-foreground font-normal text-center mb-2">What would you like to learn today? Enter your topic and preferences below to generate a personalized learning roadmap.</p>
+        <div className="w-16 h-1 rounded-full bg-primary/20 mx-auto mb-2" />
+      </div>
+      {/* Stepper/Progress Indicator OUTSIDE the card */}
+      <div className="flex flex-col items-center w-full mb-4">
+        <div className="flex items-center justify-center w-full max-w-md mx-auto">
+          {[1, 2, 3, 4].map((s, idx) => (
+            <React.Fragment key={s}>
+              <motion.div
+                layout
+                className={`flex flex-col items-center z-10`}
+              >
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300
+                    ${(Number(step) === s) ? 'bg-primary text-primary-foreground border-primary shadow-lg' : 'bg-muted text-muted-foreground border-muted-foreground'}
+                  `}
+                >
+                  <span className="font-semibold text-sm">{s}</span>
+                </div>
+                <span className={`mt-1 text-xs font-medium ${(Number(step) === s) ? 'text-primary' : 'text-muted-foreground'}`}>{
+                  s === 1 ? 'Topic' : s === 2 ? 'Level' : s === 3 ? 'Duration' : 'Generate'
+                }</span>
+              </motion.div>
+              {idx < 3 && (
+                <div className={`flex-1 h-0.5 mx-1 transition-all duration-300 ${(Number(step) > s) ? 'bg-primary' : 'bg-muted'}`}></div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        <div className="w-full max-w-md h-2 mt-2 mb-4 border-b border-muted" />
       </div>
       {/* Generator Card */}
-      <div className="flex justify-center w-full mb-8">
-        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center border border-gray-100">
+      <div className="flex flex-1 items-center justify-center w-full">
+        <div className="w-full max-w-lg bg-card text-card-foreground rounded-2xl shadow-2xl px-6 py-8 flex flex-col items-center border border-border">
           <GeneratorControls
             mutate={mutate}
             isPending={isPending}
@@ -177,69 +228,69 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
                   ? (localRoadmap.visibility as Visibility)
                   : Visibility.PUBLIC)
             }
+            step={step}
+            setStep={setStep}
           />
         </div>
       </div>
       {/* Recent Roadmaps Section */}
-      <div className="w-full max-w-6xl mx-auto px-2 pb-10">
-        <h2 className="text-2xl font-bold mb-6 ml-2 text-neutral-900">Recent Roadmaps</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      <div className="w-full max-w-6xl mx-auto px-2 pb-10 mt-10">
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-5 h-5 text-primary" />
+          <h2 className="text-xl md:text-2xl font-semibold text-foreground">Recent Roadmaps</h2>
+        </div>
+        <div className="w-16 h-1 rounded-full bg-primary/20 mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {/* Create New Project Card */}
           <div
-            className="relative flex-shrink-0 w-full h-56 bg-white rounded-2xl shadow-md flex flex-col items-center justify-center border border-dashed border-gray-200 cursor-pointer hover:shadow-lg transition group overflow-hidden"
+            className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg border-2 border-dashed border-primary/30 cursor-pointer hover:shadow-xl hover:scale-[1.03] transition group overflow-hidden"
             onClick={() => {
-              // Scroll to the generator controls
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           >
             <div className="flex flex-col items-center justify-center w-full h-full">
-              <div className="group relative mb-5 flex items-center justify-center overflow-hidden rounded-[12px] border border-[#2F3640] bg-[#2F3640] px-3 py-3 text-white transition-all duration-300">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 14 14"
-                  className="z-10 h-5 w-5 group-hover:text-[#2F3640]"
-                >
-                  <path
-                    fill="currentColor"
-                    fillRule="evenodd"
-                    d="M6.417 2.917a.583.583 0 0 1 1.166 0v3.5h3.5a.583.583 0 0 1 0 1.166h-3.5v3.5a.583.583 0 1 1-1.166 0v-3.5h-3.5a.583.583 0 1 1 0-1.166h3.5z"
-                    clipRule="evenodd"
-                  ></path>
-                </svg>
-                <div className="absolute rounded-full right-0 top-0 h-full w-full scale-0 bg-[#C4FF8C] transition-all duration-100 group-hover:scale-110"></div>
+              <div className="flex items-center justify-center mb-3">
+                <PlusCircle className="w-10 h-10 text-primary bg-primary/10 rounded-full p-2 shadow" />
               </div>
-              <div className="font-[Outfit] text-[16px] group-hover:hidden font-bold text-black">Create New Project</div>
-              <div className="font-[Outfit] text-[16px] hidden group-hover:block font-bold text-black">Time to start</div>
+              <div className="font-medium text-base text-foreground">Create New Project</div>
+              <div className="text-xs text-muted-foreground mt-1">Start a new learning journey</div>
             </div>
           </div>
           {/* Recent Roadmap Cards */}
           {recentRoadmaps.length === 0 ? (
-            <div className="col-span-full text-center text-gray-400">No recent roadmaps found.</div>
+            <div className="col-span-full flex flex-col items-center justify-center py-12">
+              <FolderOpen className="w-12 h-12 text-muted-foreground mb-3" />
+              <div className="text-lg font-medium text-muted-foreground mb-1">No recent roadmaps found</div>
+              <div className="text-sm text-muted-foreground">Your generated roadmaps will appear here.</div>
+            </div>
           ) : (
             recentRoadmaps.map((rm) => (
               <div
                 key={rm.id}
-                className="relative flex-shrink-0 w-full h-56 bg-white rounded-2xl shadow-md flex flex-col items-center justify-center hover:shadow-lg transition group overflow-hidden cursor-pointer"
+                className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition group overflow-hidden cursor-pointer border border-border"
                 onClick={() => router.push(`/dashboard/ai-roadmap-generator/${rm.id}`)}
               >
                 {/* Delete button, only visible on hover */}
                 <button
-                  className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-red-500 hover:text-white text-gray-700 rounded-full p-2 shadow transition"
+                  className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 bg-muted hover:bg-red-500 hover:text-white text-muted-foreground rounded-full p-2 shadow transition"
                   onClick={(e) => { e.stopPropagation(); handleDeleteRoadmap(rm.id); }}
                   aria-label="Delete"
                 >
-                  <Trash size={20} />
+                  <Trash size={18} />
                 </button>
-                <Image
-                  src={rm.icon}
-                  alt="Roadmap Preview"
-                  width="200"
-                  height="200"
-                  className="w-20 h-20 object-contain rounded-xl mb-3"
-                />
-                <div className="text-lg font-semibold mb-1">{rm.title}</div>
-                <div className="text-sm text-gray-400">Last refined on {rm.date}</div>
+                <div className="flex items-center justify-center mb-2 mt-2">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border border-border shadow overflow-hidden">
+                    <Image
+                      src={rm.icon}
+                      alt="Roadmap Preview"
+                      width={48}
+                      height={48}
+                      className="w-12 h-12 object-cover rounded-full bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="text-base font-semibold text-foreground mb-1 text-center px-2 truncate w-full" title={rm.title}>{rm.title}</div>
+                <div className="text-xs text-muted-foreground text-center">Last refined on {rm.date}</div>
               </div>
             ))
           )}

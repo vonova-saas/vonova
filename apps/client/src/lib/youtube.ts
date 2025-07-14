@@ -14,6 +14,7 @@ export async function searchYoutube(searchQuery: string) {
     console.log("No video found");
     return null;
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const videoIds = data.items.map((item: any) => item?.id?.videoId);
   return videoIds;
 }

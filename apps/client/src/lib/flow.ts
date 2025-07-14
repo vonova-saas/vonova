@@ -7,6 +7,7 @@ const layout = tree().nodeSize([70, 200]);
 export function getElements(h: HierarchyNode<unknown>) {
     const root = layout(h);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nodes = root.descendants().map((d: any, i) => ({
         id: d.id,
         data: { label: d.data.name, depth: d.depth },

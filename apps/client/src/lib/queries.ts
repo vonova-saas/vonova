@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { MutationOptions, QueryKey, useMutation } from "@tanstack/react-query";
 import axios, { AxiosError, AxiosResponse } from "axios";
 
@@ -25,7 +26,7 @@ export const useGenerateRoadmap = (
 ) => {
   return MutationFactory(
     ["Generate Roadmap"],
-    "http://localhost:8000/roadmap",
+    "http://localhost:8000/generate-roadmap",
     "POST",
     options,
   );
