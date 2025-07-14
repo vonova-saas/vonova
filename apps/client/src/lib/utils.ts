@@ -125,3 +125,14 @@ export function getGravatarHash(email: string) {
   const md5Hash = md5(normalizedEmail);
   return md5Hash;
 }
+
+// Utility to display roadmap ID as 'generated-<first-segment>'
+export function getDisplayRoadmapId(id: string): string {
+  if (id.startsWith('generated-')) return id;
+  // UUID format: 8d4ecaff-7321-48c0-a383-ab6a00b73644
+  const match = id.match(/^([a-f0-9]{8})-[a-f0-9\-]+$/i);
+  if (match) {
+    return `generated-${match[1]}`;
+  }
+  return id;
+}

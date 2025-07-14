@@ -33,6 +33,7 @@ import {
 import { SidebarRight } from "@/components/dashboard/main/right-sidebar";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
+import { getDisplayRoadmapId } from '@/lib/utils';
 
 interface Props {
   children: React.ReactNode;
@@ -125,7 +126,9 @@ export default function DashboardLayout({ children }: Props) {
                           ) : (
                             <BreadcrumbItem>
                               <BreadcrumbPage>
-                                {segmentNameMap[seg] || seg}
+                                {i === crumbSegments.length - 1 && /^[a-f0-9]{8}-[a-f0-9\-]+$/i.test(seg)
+                                  ? getDisplayRoadmapId(seg)
+                                  : segmentNameMap[seg] || seg}
                               </BreadcrumbPage>
                             </BreadcrumbItem>
                           )}

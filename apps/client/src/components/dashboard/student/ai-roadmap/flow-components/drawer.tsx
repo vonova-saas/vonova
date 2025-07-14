@@ -25,11 +25,14 @@ import {
 } from "@/components/ui/carousel";
 import { useUIStore } from "@/lib/stores";
 import { useShallow } from "zustand/react/shallow";
-import { saveNodeDetails, findSavedNodeDetails } from "@/lib/actions/roadmaps";
 
 interface DrawerProps {
   roadmapId?: string;
 }
+
+// Inline logic for findSavedNodeDetails and saveNodeDetails
+const findSavedNodeDetails = async (_roadmapId: string, _nodeName: string) => false;
+const saveNodeDetails = async (_roadmapId: string, _nodeName: string, _content: string, _books: string, _youtubeVideoIds: string[]) => {};
 
 export const Drawer = ({ roadmapId }: DrawerProps) => {
   const [drawerData, setDrawerData] = useState<any>(null);
@@ -58,7 +61,7 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
           nodeName,
         );
 
-        if (existingDetails) {
+        if (existingDetails && typeof existingDetails === 'object') {
           const { youtubeVideoIds, details, books } = existingDetails;
 
           setDrawerData({

@@ -27,6 +27,7 @@ import { downloadImage } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { LocalStorage } from "@/utils/functions/local-storage";
+import { getDisplayRoadmapId } from '@/lib/utils';
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
@@ -456,6 +457,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
                 </div>
                 <div className="text-base font-semibold text-foreground mb-1 text-center px-2 truncate w-full" title={rm.title}>{rm.title}</div>
                 <div className="text-xs text-muted-foreground text-center">Last refined on {rm.date}</div>
+                <div className="text-xs text-muted-foreground text-center">ID: {getDisplayRoadmapId(rm.id)}</div>
               </div>
             ))
           )}
