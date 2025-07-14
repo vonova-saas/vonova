@@ -56,7 +56,7 @@ const AIAssistantVoice = ({ onClose }: AIAssistantVoiceProps) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-white dark:bg-background transition-colors relative">
+    <div className="h-full w-full flex flex-col items-center justify-center overflow-hidden relative bg-background" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}>
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {/* Language Selector */}
         <div className="mb-6 flex gap-4 items-center">
