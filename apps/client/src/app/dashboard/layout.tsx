@@ -2,13 +2,6 @@
 
 import { AppSidebar } from "@/components/dashboard/main/app-sidebar";
 // import { AppSidebarWithCustomIcons } from "@/components/dashboard/main/temp/app-sidebar-with-customicon";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  LeftSidebarTrigger,
-  SidebarProvider,
-  RightSidebarTrigger,
-} from "@/components/ui/sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,23 +10,30 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
+import {
+  LeftSidebarTrigger,
+  RightSidebarTrigger,
+  SidebarInset,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
 import { Bell, MessageSquare, SearchIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import React from "react";
 // import { PanelRight } from "lucide-react";
 import ChatSidebar from "@/components/dashboard/main/chat-sidebar";
+import { SidebarRight } from "@/components/dashboard/main/right-sidebar";
 import {
   CommandDialog,
-  CommandInput,
-  CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
-import { SidebarRight } from "@/components/dashboard/main/right-sidebar";
+import { getDisplayRoadmapId } from "@/lib/utils";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Sun, Moon } from "lucide-react";
-import { getDisplayRoadmapId } from '@/lib/utils';
 
 interface Props {
   children: React.ReactNode;
@@ -65,6 +65,11 @@ export default function DashboardLayout({ children }: Props) {
   // const [rightSidebarOpen, setRightSidebarOpen] = React.useState(false);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Dashboard sections for search
   const dashboardSections = [
@@ -126,7 +131,8 @@ export default function DashboardLayout({ children }: Props) {
                           ) : (
                             <BreadcrumbItem>
                               <BreadcrumbPage>
-                                {i === crumbSegments.length - 1 && /^[a-f0-9]{8}-[a-f0-9\-]+$/i.test(seg)
+                                {i === crumbSegments.length - 1 &&
+                                /^[a-f0-9]{8}-[a-f0-9\-]+$/i.test(seg)
                                   ? getDisplayRoadmapId(seg)
                                   : segmentNameMap[seg] || seg}
                               </BreadcrumbPage>
@@ -190,7 +196,7 @@ export default function DashboardLayout({ children }: Props) {
                       setTheme(theme === "dark" ? "light" : "dark")
                     }
                   >
-                    {theme === "dark" ? (
+                    {!mounted ? null : theme === "dark" ? (
                       <Sun className="w-5 h-5" />
                     ) : (
                       <Moon className="w-5 h-5" />
