@@ -11,7 +11,7 @@ import { GeneratorControls } from "../flow-components/generator-controls";
 import { useUIStore } from "@/lib/stores/useUI";
 import Instructions from "../flow-components/Instructions";
 import { Sparkles } from "lucide-react";
-import { Clock, PlusCircle, FolderOpen } from "lucide-react";
+import { Clock, PlusCircle, FolderOpen, Trash, FileDown, Image as ImageIcon, Share2 } from "lucide-react";
 import React from "react";
 
 enum Visibility {
@@ -19,9 +19,12 @@ enum Visibility {
   PRIVATE = "private"
 }
 import { useRouter } from "next/navigation";
-import { Trash } from "lucide-react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { toPng } from "html-to-image";
+import { downloadImage } from "@/lib/utils";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
@@ -132,24 +135,104 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
         </div>
         {/* Save and Back Buttons - now in normal flow */}
         <div className="w-full max-w-4xl flex flex-row items-center justify-between gap-4 mb-6 px-2">
-          <button
-            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition border border-primary/40 backdrop-blur-md bg-opacity-80"
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition border border-primary/40 backdrop-blur-md bg-opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={() => {
               window.dispatchEvent(new CustomEvent('save-roadmap', { detail: roadmapId }));
             }}
+            aria-label="Save roadmap"
           >
             Save
-          </button>
-          <button
-            className="px-6 py-3 rounded-xl bg-muted text-foreground font-semibold shadow-lg hover:bg-muted/80 transition border border-border backdrop-blur-md bg-opacity-80"
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            className="px-6 py-3 rounded-xl bg-muted text-foreground font-semibold shadow-lg hover:bg-muted/80 transition border border-border backdrop-blur-md bg-opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={() => router.back()}
+            aria-label="Go back"
           >
             Back
-          </button>
+          </motion.button>
         </div>
         {/* Roadmap Visualization Glassy Card */}
         <div className="flex flex-1 items-center justify-center w-full min-h-[60vh] px-2 pb-10">
-          <div className="w-full max-w-4xl bg-card/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-border p-6 md:p-10 flex flex-col items-center justify-center glassmorphism-card transition-all duration-300">
+          <div className="w-full max-w-6xl bg-card/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-border p-2 sm:p-6 md:p-10 flex flex-col items-center justify-center glassmorphism-card transition-all duration-300 mx-auto relative">
+            {/* Export/Share Button Group */}
+            <div className="absolute top-4 right-4 flex gap-2 z-20">
+              {/* Export as pdf Button */}
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg bg-background/70 border border-border shadow hover:bg-primary/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Export as PDF"
+                aria-label="Export roadmap as PDF"
+                onClick={async () => {
+                  const el = document.querySelector('.react-flow__viewport') as HTMLElement;
+                  if (!el) {
+                    toast.error('Could not find roadmap viewport to export.');
+                    return;
+                  }
+                  try {
+                    const dataUrl = await toPng(el, { backgroundColor: 'transparent' });
+                    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [el.offsetWidth, el.offsetHeight] });
+                    pdf.addImage(dataUrl, 'PNG', 0, 0, el.offsetWidth, el.offsetHeight);
+                    pdf.save(`${roadmapId}.pdf`);
+                    toast.success('PDF exported successfully!');
+                  } catch {
+                    toast.error('Failed to export PDF.');
+                  }
+                }}
+              >
+                <FileDown className="w-5 h-5 text-primary" />
+              </motion.button>
+              {/* Export as Image Button */}
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg bg-background/70 border border-border shadow hover:bg-primary/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Export as Image"
+                aria-label="Export roadmap as image"
+                onClick={async () => {
+                  const el = document.querySelector('.react-flow__viewport') as HTMLElement;
+                  if (!el) {
+                    alert('Could not find roadmap viewport to export.');
+                    return;
+                  }
+                  try {
+                    const dataUrl = await toPng(el, { backgroundColor: 'transparent' });
+                    downloadImage(dataUrl);
+                  } catch {
+                    alert('Failed to export image.');
+                  }
+                }}
+              >
+                <ImageIcon className="w-5 h-5 text-primary" />
+              </motion.button>
+              {/* Share Button */}
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg bg-background/70 border border-border shadow hover:bg-primary/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Share Link"
+                aria-label="Copy roadmap ID to clipboard"
+                onClick={async () => {
+                  try {
+                    if (!roadmapId) {
+                      toast.error('No roadmap ID to copy.');
+                      return;
+                    }
+                    await navigator.clipboard.writeText(roadmapId);
+                    toast.success('Roadmap ID copied to clipboard!');
+                  } catch {
+                    toast.error('Failed to copy roadmap ID.');
+                  }
+                }}
+              >
+                <Share2 className="w-5 h-5 text-primary" />
+              </motion.button>
+            </div>
             {isPending || isRoadmapPending || isLocalLoading ? (
               <div className="flex justify-center items-center w-full h-64">
                 <Loader2 className="animate-spin w-10 h-10 text-primary/60" />
@@ -272,9 +355,9 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
               >
                 {/* Delete button, only visible on hover */}
                 <button
-                  className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 bg-muted hover:bg-red-500 hover:text-white text-muted-foreground rounded-full p-2 shadow transition"
+                  className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 bg-muted hover:bg-red-500 hover:text-white text-muted-foreground rounded-full p-2 shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={(e) => { e.stopPropagation(); handleDeleteRoadmap(rm.id); }}
-                  aria-label="Delete"
+                  aria-label="Delete roadmap"
                 >
                   <Trash size={18} />
                 </button>
