@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QuizType } from "./types";
 import React from "react";
+import Link from "next/link";
 
 type QuizListProps = {
-  onSelect: (quiz: QuizType) => void;
   quizzes: QuizType[];
 };
 
-export default function QuizList({ onSelect, quizzes }: QuizListProps) {
+export default function QuizList({ quizzes }: QuizListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
       {quizzes.length === 0 ? (
@@ -34,9 +34,11 @@ export default function QuizList({ onSelect, quizzes }: QuizListProps) {
               <p className="mb-4 text-muted-foreground min-h-[48px]">
                 {quiz.description}
               </p>
-              <Button onClick={() => onSelect(quiz)} className="w-full mt-4">
-                Attempt Now
-              </Button>
+              <Link href={`/dashboard/quizzes/${quiz.id}`} className="w-full mt-4">
+                <Button className="w-full cursor-pointer">
+                  Attempt Now
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         ))

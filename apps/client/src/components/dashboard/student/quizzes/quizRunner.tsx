@@ -6,21 +6,22 @@ import { QuizType, Question } from "./types";
 import React, { useState } from "react";
 import QuestionComponent from "./question";
 import QuizResult from "./quizResult";
+import { useRouter } from "next/navigation";
 
 type QuizRunnerProps = {
   quiz: QuizType;
-  onBack: () => void;
 };
 
 function getQuestions(quiz: QuizType): Question[] {
   return quiz.questions.length > 0 ? quiz.questions : [];
 }
 
-export default function QuizRunner({ quiz, onBack }: QuizRunnerProps) {
+export default function QuizRunner({ quiz }: QuizRunnerProps) {
   const questions = getQuestions(quiz);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
   const [showResult, setShowResult] = useState(false);
+  const router = useRouter();
 
   const handleAnswer = (questionId: string, optionId: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
@@ -44,7 +45,7 @@ export default function QuizRunner({ quiz, onBack }: QuizRunnerProps) {
         questions={questions}
         answers={answers}
         onRestart={handleRestart}
-        onBack={onBack}
+        onBack={() => router.back()}
       />
     );
   }
@@ -62,7 +63,7 @@ export default function QuizRunner({ quiz, onBack }: QuizRunnerProps) {
           selectedOptionId={answers[questions[current].id]}
         />
         <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={onBack}>Back</Button>
+          <Button variant="outline" onClick={() => router.back()}>Back</Button>
           <span className="text-muted-foreground">{current + 1} / {questions.length}</span>
         </div>
       </CardContent>

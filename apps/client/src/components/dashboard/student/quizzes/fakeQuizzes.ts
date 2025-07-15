@@ -2,7 +2,7 @@ import { QuizType } from "./types";
 
 export const mockQuizzes: (QuizType & { topic: string })[] = [
   {
-    id: "1",
+    id: "quiz-11565",
     title: "JavaScript Basics",
     description: "Test your knowledge of JavaScript fundamentals.",
     noOfQuestions: "6",
@@ -41,7 +41,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "2",
+    id: "quiz-65462",
     title: "React Essentials",
     description: "How well do you know React?",
     noOfQuestions: "3",
@@ -80,7 +80,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "3",
+    id: "quiz-45853",
     title: "Data Structures",
     description: "Quiz on common data structures.",
     noOfQuestions: "3",
@@ -119,7 +119,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "4",
+    id: "quiz-15234",
     title: "Algorithms",
     description: "Test your knowledge of algorithms.",
     noOfQuestions: "3",
@@ -158,7 +158,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "5",
+    id: "quiz-45605",
     title: "Operating Systems",
     description: "Quiz on operating system concepts.",
     noOfQuestions: "3",
@@ -197,7 +197,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "6",
+    id: "quiz-15256",
     title: "Databases",
     description: "Quiz on database concepts and SQL.",
     noOfQuestions: "3",
@@ -236,7 +236,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "7",
+    id: "quiz-47827",
     title: "Flutter",
     description: "Quiz on database concepts and SQL.",
     noOfQuestions: "3",
@@ -275,7 +275,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "8",
+    id: "quiz-42168",
     title: "Backend",
     description: "Quiz on database concepts and SQL.",
     noOfQuestions: "3",
@@ -314,7 +314,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     ],
   },
   {
-    id: "9",
+    id: "quiz-56249",
     title: "Frontend",
     description: "Quiz on database concepts and SQL.",
     noOfQuestions: "3",
