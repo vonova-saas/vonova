@@ -31,12 +31,3 @@ export const useGenerateRoadmap = (
     options,
   );
 };
-
-export const useSearch = (query: string, options?: MutationOptions) => {
-  return MutationFactory(
-    ["Search Roadmap", query],
-    `/api/v1/roadmaps`,
-    "POST",
-    options,
-  );
-};
