@@ -1,7 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Book, ImageIcon, Presentation, Library } from "lucide-react";
+import { Book, ImageIcon, Presentation, Library, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+
+const fakeUser = {
+  name: "Badawi",
+  exploredSections: 1, // For demo
+  totalSections: 3,
+};
 
 const sections = [
   {
@@ -11,10 +17,12 @@ const sections = [
     icon: Book,
     link: "/dashboard/material-library/online-books",
     button: "Explore Books",
+    completed: true, // For demo
   },
   {
     title: "Visual Guides",
-    description: "Quick visual guides and cheatsheets for fast learning.",
+    description:
+      "Quick visual guides and cheatsheets for fast learning.",
     icon: ImageIcon,
     link: "/dashboard/material-library/visual-guides",
     button: "View Guides",
@@ -22,7 +30,8 @@ const sections = [
   },
   {
     title: "Presentation Material",
-    description: "Presentations created by instructors for your courses.",
+    description:
+      "Presentations created by instructors for your courses.",
     icon: Presentation,
     link: "/dashboard/material-library/presentation-material",
     button: "See Presentations",
@@ -34,6 +43,8 @@ export default function MaterialLibrary() {
   const totalSections = sections.length;
   const totalMaterials = 24; // Example fake stat
   const totalTopics = 8; // Example fake stat
+  const exploredSections = fakeUser.exploredSections;
+  const progressPercent = Math.round((exploredSections / totalSections) * 100);
 
   return (
     <div
@@ -46,8 +57,8 @@ export default function MaterialLibrary() {
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <h1 className="text-4xl font-bold leading-tight">Material Library</h1>
-        <Library className="w-7 h-7 text-primary animate-pulse" />
+        <h1 className="text-4xl font-bold leading-tight" tabIndex={0} aria-label="Material Library">Material Library</h1>
+        <Library className="w-7 h-7 text-primary animate-pulse" aria-hidden="true" focusable="false"/>
       </div>
       {/* Summary Card */}
       <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm">
@@ -55,9 +66,13 @@ export default function MaterialLibrary() {
           {/* Icon and Main Stat */}
           <div className="flex items-center gap-4">
             <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-              <Library className="w-8 h-8" />
+              <Library className="w-8 h-8" aria-hidden="true" focusable="false"/>
             </div>
-            <div>
+            <div className="min-w-[220px] md:min-w-[300px] w-full">
+              {/* Personalized Greeting */}
+              <div className="text-lg font-semibold text-primary mb-1">
+                Welcome back, {fakeUser.name} 😃
+              </div>
               <div className="flex items-end gap-2">
                 <span className="text-4xl font-extrabold text-primary drop-shadow-sm">
                   {totalSections}
@@ -74,9 +89,25 @@ export default function MaterialLibrary() {
                   {totalMaterials}+ Materials
                 </span>
               </div>
+              {/* Progress Bar */}
+              <div className="mt-4 w-full max-w-xs" aria-label="Progress bar" tabIndex={0}>
+                <div className="flex justify-between mb-1 text-xs font-medium text-muted-foreground">
+                  <span>Progress</span>
+                  <span>
+                    {exploredSections}/{totalSections} sections
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100} aria-label={`Progress: ${progressPercent}%`}>
+                  <div
+                    className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+                <span className="sr-only">Progress: {progressPercent}%</span>
+              </div>
             </div>
           </div>
-          {/* Motivational Message */}
+          {/* Right: Motivational Message */}
           <div className="flex-1 text-center md:text-right flex flex-col justify-center">
             <span className="text-lg font-semibold text-primary">
               Empower your learning!
@@ -97,12 +128,18 @@ export default function MaterialLibrary() {
               <Card className="h-full flex flex-col justify-between shadow-md border hover:shadow-xl group relative">
                 {/* Badge */}
                 {section.badge && (
-                  <span className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md animate-pulse">
+                  <span className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md animate-pulse" aria-label={section.badge} tabIndex={0}>
                     {section.badge}
                   </span>
                 )}
+                {/* Completed Badge */}
+                {section.completed && (
+                  <span className="absolute top-4 left-4 z-10 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" focusable="false" /> Completed
+                  </span>
+                )}
                 <CardHeader className="flex flex-col items-center gap-2">
-                  <Icon className="w-10 h-10 text-primary" />
+                  <Icon className="w-10 h-10 text-primary" aria-hidden="true" focusable="false" />
                   <CardTitle className="text-xl text-center">
                     {section.title}
                   </CardTitle>
