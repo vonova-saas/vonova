@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Book, ImageIcon, Presentation, Library, CheckCircle2 } from "lucide-react";
+import { Book, ImageIcon, Presentation, Library, CheckCircle2, HelpCircle } from "lucide-react";
 import Link from "next/link";
+import * as React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 
 const fakeUser = {
   name: "Badawi",
@@ -60,8 +62,47 @@ export default function MaterialLibrary() {
         <h1 className="text-4xl font-bold leading-tight" tabIndex={0} aria-label="Material Library">Material Library</h1>
         <Library className="w-7 h-7 text-primary animate-pulse" aria-hidden="true" focusable="false"/>
       </div>
-      {/* Summary Card */}
-      <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm">
+      {/* Summary Card with Help Button */}
+      <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm relative">
+        {/* Help Dialog */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-4 right-4 z-20"
+              aria-label="Need help?"
+            >
+              <HelpCircle className="w-6 h-6 text-primary" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>How to use the Material Library</DialogTitle>
+              <DialogDescription asChild>
+                <div>
+                  <ul className="list-disc pl-5 space-y-2 mt-2 text-base">
+                    <li>
+                      <b>Browse Sections:</b> Choose from Online Books, Visual Guides, or Presentation Material.
+                    </li>
+                    <li>
+                      <b>Explore Resources:</b> Click on a section to view and use the materials inside.
+                    </li>
+                    <li>
+                      <b>Track Progress:</b> Your progress is shown at the top. Complete sections to boost your learning!
+                    </li>
+                    <li>
+                      <b>Need more help?</b> Contact support or check the FAQ in the dashboard menu.
+                    </li>
+                  </ul>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogClose asChild>
+              <Button variant="outline" className="mt-4 w-full">Close</Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
         <CardContent className="py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           {/* Icon and Main Stat */}
           <div className="flex items-center gap-4">
@@ -90,14 +131,14 @@ export default function MaterialLibrary() {
                 </span>
               </div>
               {/* Progress Bar */}
-              <div className="mt-4 w-full max-w-xs" aria-label="Progress bar" tabIndex={0}>
+              <div className="mt-4 w-full max-w-xs">
                 <div className="flex justify-between mb-1 text-xs font-medium text-muted-foreground">
                   <span>Progress</span>
                   <span>
                     {exploredSections}/{totalSections} sections
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100} aria-label={`Progress: ${progressPercent}%`}>
+                <div className="w-full bg-muted rounded-full h-2.5">
                   <div
                     className="bg-primary h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${progressPercent}%` }}
@@ -107,7 +148,7 @@ export default function MaterialLibrary() {
               </div>
             </div>
           </div>
-          {/* Right: Motivational Message */}
+          {/* Motivational Message */}
           <div className="flex-1 text-center md:text-right flex flex-col justify-center">
             <span className="text-lg font-semibold text-primary">
               Empower your learning!
@@ -128,7 +169,7 @@ export default function MaterialLibrary() {
               <Card className="h-full flex flex-col justify-between shadow-md border hover:shadow-xl group relative">
                 {/* Badge */}
                 {section.badge && (
-                  <span className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md animate-pulse" aria-label={section.badge} tabIndex={0}>
+                  <span className="absolute top-4 right-4 z-10 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md animate-pulse">
                     {section.badge}
                   </span>
                 )}
