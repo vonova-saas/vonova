@@ -3,15 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import React from "react";
 
-type QuizResultProps = {
+// Add timedOut prop
+interface QuizResultProps {
   quiz: QuizType;
   questions: Question[];
   answers: { [questionId: string]: string };
+  timedOut: { [questionId: string]: boolean };
   onRestart: () => void;
   onBack: () => void;
-};
+}
 
-export default function QuizResult({ questions, answers, onRestart, onBack }: QuizResultProps) {
+export default function QuizResult({ questions, answers, timedOut, onRestart, onBack }: QuizResultProps) {
   const correctCount = questions.filter(
     (q) => answers[q.id] === q.correctOptionId
   ).length;
@@ -37,6 +39,9 @@ export default function QuizResult({ questions, answers, onRestart, onBack }: Qu
                 Your answer: {q.options.find((o) => o.id === answers[q.id])?.text || "-"}
                 {answers[q.id] === q.correctOptionId ? " (Correct)" : " (Incorrect)"}
               </span>
+              {timedOut[q.id] && !answers[q.id] && (
+                <span className="text-yellow-600 font-medium">Time ran out for this question.</span>
+              )}
               {answers[q.id] !== q.correctOptionId && (
                 <span className="text-muted-foreground">
                   Correct answer: {q.options.find((o) => o.id === q.correctOptionId)?.text}

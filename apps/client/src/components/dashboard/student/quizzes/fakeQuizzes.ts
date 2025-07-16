@@ -5,12 +5,12 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     id: "quiz-11565",
     title: "JavaScript Basics",
     description: "Test your knowledge of JavaScript fundamentals.",
-    noOfQuestions: "6",
+    noOfQuestions: "10",
     topic: "JavaScript",
     questions: [
       {
         id: "q1",
-        text: "What is the output of 2 + 2?",
+        text: "What is the output of 2 + 2 in JavaScript?",
         options: [
           { id: "a", text: "3" },
           { id: "b", text: "4" },
@@ -20,21 +20,91 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
       },
       {
         id: "q2",
-        text: "Which of the following is NOT a JavaScript data type?",
+        text: "Which keyword declares a constant?",
         options: [
-          { id: "a", text: "Number" },
-          { id: "b", text: "Boolean" },
-          { id: "c", text: "Float" },
+          { id: "a", text: "var" },
+          { id: "b", text: "let" },
+          { id: "c", text: "const" },
         ],
         correctOptionId: "c",
       },
       {
         id: "q3",
-        text: "How do you declare a variable in JavaScript?",
+        text: "Which method converts JSON string to object?",
         options: [
-          { id: "a", text: "var myVar;" },
-          { id: "b", text: "int myVar;" },
-          { id: "c", text: "let myVar;" },
+          { id: "a", text: "JSON.stringify" },
+          { id: "b", text: "JSON.parse" },
+          { id: "c", text: "parseJSON" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q4",
+        text: "Which of these is NOT a data type in JavaScript?",
+        options: [
+          { id: "a", text: "Number" },
+          { id: "b", text: "Boolean" },
+          { id: "c", text: "Character" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q5",
+        text: "What is the value of typeof null?",
+        options: [
+          { id: "a", text: "object" },
+          { id: "b", text: "null" },
+          { id: "c", text: "undefined" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q6",
+        text: "What does '===' operator check?",
+        options: [
+          { id: "a", text: "Equality and type" },
+          { id: "b", text: "Only equality" },
+          { id: "c", text: "Only type" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q7",
+        text: "What is the scope of variables declared with let?",
+        options: [
+          { id: "a", text: "Global" },
+          { id: "b", text: "Function" },
+          { id: "c", text: "Block" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q8",
+        text: "What is NaN in JavaScript?",
+        options: [
+          { id: "a", text: "Not a Number" },
+          { id: "b", text: "New Array Number" },
+          { id: "c", text: "Null and Nothing" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q9",
+        text: "Which function runs after a delay?",
+        options: [
+          { id: "a", text: "setInterval" },
+          { id: "b", text: "setTimeout" },
+          { id: "c", text: "clearTimeout" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q10",
+        text: "Which array method adds an item to the end?",
+        options: [
+          { id: "a", text: "push" },
+          { id: "b", text: "pop" },
+          { id: "c", text: "shift" },
         ],
         correctOptionId: "a",
       },
@@ -44,7 +114,7 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
     id: "quiz-65462",
     title: "React Essentials",
     description: "How well do you know React?",
-    noOfQuestions: "3",
+    noOfQuestions: "10",
     topic: "React",
     questions: [
       {
@@ -59,21 +129,200 @@ export const mockQuizzes: (QuizType & { topic: string })[] = [
       },
       {
         id: "q2",
-        text: "What hook is used to manage state in a functional component?",
+        text: "Which hook manages local state?",
         options: [
           { id: "a", text: "useState" },
           { id: "b", text: "useEffect" },
-          { id: "c", text: "useContext" },
+          { id: "c", text: "useReducer" },
         ],
         correctOptionId: "a",
       },
       {
         id: "q3",
+        text: "What is JSX?",
+        options: [
+          { id: "a", text: "A CSS preprocessor" },
+          { id: "b", text: "A templating language" },
+          { id: "c", text: "JavaScript XML syntax" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q4",
+        text: "Which hook runs side effects?",
+        options: [
+          { id: "a", text: "useContext" },
+          { id: "b", text: "useEffect" },
+          { id: "c", text: "useState" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q5",
+        text: "What is lifting state up?",
+        options: [
+          { id: "a", text: "Moving state to a parent component" },
+          { id: "b", text: "Passing props down" },
+          { id: "c", text: "Using context API" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q6",
+        text: "What does useContext do?",
+        options: [
+          { id: "a", text: "Fetches data" },
+          { id: "b", text: "Manages state globally" },
+          { id: "c", text: "Subscribes to context" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q7",
+        text: "Which is NOT a valid React lifecycle method?",
+        options: [
+          { id: "a", text: "componentDidMount" },
+          { id: "b", text: "componentWillUpdate" },
+          { id: "c", text: "componentRenderNow" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q8",
         text: "What is the default port for Create React App?",
         options: [
           { id: "a", text: "3000" },
           { id: "b", text: "8080" },
           { id: "c", text: "5000" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q9",
+        text: "What is the Virtual DOM?",
+        options: [
+          { id: "a", text: "An actual DOM node" },
+          { id: "b", text: "A lightweight copy of the real DOM" },
+          { id: "c", text: "A browser API" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q10",
+        text: "What command starts a React app built with CRA?",
+        options: [
+          { id: "a", text: "npm start" },
+          { id: "b", text: "npm build" },
+          { id: "c", text: "npm test" },
+        ],
+        correctOptionId: "a",
+      },
+    ],
+  },
+  {
+    id: "quiz-99332",
+    title: "DevOps Basics",
+    description: "Quiz on CI/CD, containers, and automation.",
+    noOfQuestions: "10",
+    topic: "DevOps",
+    questions: [
+      {
+        id: "q1",
+        text: "What does CI/CD stand for?",
+        options: [
+          { id: "a", text: "Continuous Integration / Continuous Deployment" },
+          { id: "b", text: "Code Integration / Code Debugging" },
+          { id: "c", text: "Continuous Improvement / Code Delivery" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q2",
+        text: "What tool is commonly used for containerization?",
+        options: [
+          { id: "a", text: "Git" },
+          { id: "b", text: "Docker" },
+          { id: "c", text: "Jenkins" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q3",
+        text: "What is Infrastructure as Code?",
+        options: [
+          { id: "a", text: "Coding infrastructure components manually" },
+          { id: "b", text: "Managing infrastructure using code" },
+          { id: "c", text: "Deleting infrastructure" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q4",
+        text: "Which format is often used for pipeline configuration?",
+        options: [
+          { id: "a", text: "YAML" },
+          { id: "b", text: "HTML" },
+          { id: "c", text: "CSV" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q5",
+        text: "What does a load balancer do?",
+        options: [
+          { id: "a", text: "Balances database tables" },
+          { id: "b", text: "Distributes traffic across servers" },
+          { id: "c", text: "Encrypts data" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q6",
+        text: "Which is a popular CI server?",
+        options: [
+          { id: "a", text: "Docker" },
+          { id: "b", text: "Git" },
+          { id: "c", text: "Jenkins" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q7",
+        text: "What is blue-green deployment?",
+        options: [
+          { id: "a", text: "Color coding code" },
+          { id: "b", text: "Rolling updates with downtime" },
+          { id: "c", text: "Deploying to two environments for zero downtime" },
+        ],
+        correctOptionId: "c",
+      },
+      {
+        id: "q8",
+        text: "Which tool manages Kubernetes clusters?",
+        options: [
+          { id: "a", text: "kubectl" },
+          { id: "b", text: "docker-compose" },
+          { id: "c", text: "git" },
+        ],
+        correctOptionId: "a",
+      },
+      {
+        id: "q9",
+        text: "What does a reverse proxy do?",
+        options: [
+          { id: "a", text: "Sends requests directly to DB" },
+          { id: "b", text: "Serves as intermediary between client and server" },
+          { id: "c", text: "Encrypts data" },
+        ],
+        correctOptionId: "b",
+      },
+      {
+        id: "q10",
+        text: "Which tool is used for configuration management?",
+        options: [
+          { id: "a", text: "Ansible" },
+          { id: "b", text: "Docker" },
+          { id: "c", text: "Kubernetes" },
         ],
         correctOptionId: "a",
       },

@@ -17,7 +17,7 @@ export default function QuestionComponent({ question, selectedOptionId, onAnswer
           <Button
             key={option.id}
             variant={selectedOptionId === option.id ? "default" : "outline"}
-            className="justify-start"
+            className="justify-start cursor-pointer"
             onClick={() => onAnswer(question.id, option.id)}
             disabled={!!selectedOptionId}
           >

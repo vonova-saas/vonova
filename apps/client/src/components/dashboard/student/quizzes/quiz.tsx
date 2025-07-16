@@ -86,7 +86,7 @@ export default function Quiz() {
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
         </div>
-        <div className="relative w-[180px]">
+        <div className="relative w-[93px]">
           <Select value={topic} onValueChange={setTopic}>
             <SelectTrigger className="pl-10">
               <SelectValue placeholder="Filter by topic" />

@@ -34,10 +34,11 @@ export default function QuizList({ quizzes }: QuizListProps) {
               <p className="mb-4 text-muted-foreground min-h-[48px]">
                 {quiz.description}
               </p>
-              <Link href={`/dashboard/quizzes/${quiz.id}`} className="w-full mt-4">
-                <Button className="w-full cursor-pointer">
-                  Attempt Now
-                </Button>
+              <Link
+                href={`/dashboard/quizzes/${quiz.id}`}
+                className="w-full mt-4"
+              >
+                <Button className="w-full cursor-pointer">Attempt Now</Button>
               </Link>
             </CardContent>
           </Card>
