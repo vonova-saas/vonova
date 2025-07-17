@@ -12,6 +12,7 @@ import {
 import UserProfileModel from "../models/userProfile.model";
 import UserSettingsModel from "../models/userSettings.model";
 import DashboardDataModel from "../models/dashboardData.model";
+import { NotFoundException } from "../utils/appError";
 
 declare global {
   namespace Express {
@@ -73,7 +74,6 @@ export const getDashboardDataController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.userId;
     const dashboard = await getDashboardDataService(userId);
-
     return res.status(HTTPSTATUS.OK).json({
       message: "Dashboard data fetched successfully",
       data: dashboard,
@@ -101,6 +101,8 @@ export const initUserDataController = asyncHandler(
         message: "userId and email are required",
       });
     }
+
+
     // Create profile if not exists
     let profile = await UserProfileModel.findOne({ userId });
     if (!profile) {
