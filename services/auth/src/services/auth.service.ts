@@ -35,7 +35,7 @@ import axios from 'axios';
 // ============== Register Service ==============
 async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
   try {
-    await axios.post(`${Env.USER_SERVICE_URL}/api/user/init`, {
+    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
       userId,
       name,
       email,
