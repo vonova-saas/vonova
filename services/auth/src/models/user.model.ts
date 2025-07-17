@@ -1,12 +1,13 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { compareValue, hashValue } from "../utils/bcrypt";
-
+import { Roles, RoleType } from "../enums/role.enum";
 export interface UserDocument extends Document {
   name: string;
   email: string;
   password?: string;
   profilePicture: string | null;
   isVerified: boolean;
+  role: RoleType;
   isActive: boolean;
   lastLogin: Date | null;
   createdAt: Date;
@@ -19,7 +20,7 @@ const userSchema = new Schema<UserDocument>(
   {
     name: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
     },
     email: {
@@ -33,6 +34,12 @@ const userSchema = new Schema<UserDocument>(
     profilePicture: {
       type: String,
       default: null,
+    },
+    role: {
+      type: String,
+      enum: Object.keys(Roles),
+      default: "STUDENT",
+      required: true
     },
     isVerified: {
       type: Boolean,

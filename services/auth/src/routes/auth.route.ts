@@ -2,7 +2,7 @@ import { Router } from "express";
 import passport from "passport";
 import { Env } from "../config/env.config";
 import { validateRequest } from "../middlewares/validateRequest.middleware";
-
+import { authenticateToken, requireRole } from "../middlewares/auth/isAuthenticated.middleware";
 import {
   registerUserController,
   verifyEmailCodeController,
@@ -59,5 +59,10 @@ authRoutes.post("/reset-password", validateRequest(resetPasswordSchema), resetPa
 // Logout route
 authRoutes.post("/logout", logOutController);
 authRoutes.post("/logout-all", logOutAllDevicesController);
+
+// Admin role endpoint
+authRoutes.get("/admin-only", authenticateToken, requireRole(["ADMIN"]), (req, res) => {
+  res.json({ message: "You are an admin!" });
+});
 
 export default authRoutes;

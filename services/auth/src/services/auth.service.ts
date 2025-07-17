@@ -15,7 +15,6 @@ import {
 } from "../utils/jwt";
 import RefreshTokenModel from "../models/refreshToken.model";
 import PasswordResetModel from "../models/passwordReset.model";
-import { getRedisTokenKey, redisClient } from "../config/redis.config";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -23,12 +22,8 @@ import {
   sendWelcomeEmail,
 } from "../services/email.service";
 import EmailVerificationModel from "../models/emailVerification.model";
-
-import mongoose from "mongoose";
 import AccountModel from "../models/account.model";
-import RoleModel from "../models/roles-permission.model";
-import { Roles } from "../enums/role.enum";
-import { ProviderEnum, ProviderEnumType } from "../enums/account-provider.enum";
+import { ProviderEnum } from "../enums/account-provider.enum";
 import { Env } from "../config/env.config";
 import axios from 'axios';
 
@@ -49,8 +44,9 @@ export const registerUserService = async (body: {
   name: string;
   email: string;
   password: string;
+  role?: string;
 }) => {
-  const { email, name, password } = body;
+  const { email, name, password, role = "STUDENT" } = body;
 
   const existingUser = await UserModel.findOne({ email }).exec();
   if (existingUser) throw new BadRequestException("Email already exist");
@@ -59,6 +55,7 @@ export const registerUserService = async (body: {
     name,
     email,
     password,
+    role,
   });
   await user.save();
 
@@ -188,8 +185,8 @@ export const loginUserEmailService = async ({
   const deviceHash = generateDeviceHash(userAgent);
 
   const [accessToken, refreshToken] = await Promise.all([
-    signJwtToken({ userId: user._id }),
-    signJwtToken({ userId: user._id, jti }, refreshTokenSignOptions),
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
   ]);
 
   // Redis cache part
@@ -293,11 +290,13 @@ export const refreshTokenService = async (
   await RefreshTokenModel.deleteOne({ jti: payload.jti });
 
   // ---------- default ----------
+  const user = await UserModel.findById(payload.userId);
+  if (!user) throw new UnauthorizedException("User not found");
   const newJti = uuidv4();
   const [newAccessToken, newRefreshToken] = await Promise.all([
-    signJwtToken({ userId: payload.userId }),
+    signJwtToken({ userId: payload.userId, role: user.role }),
     signJwtToken(
-      { userId: payload.userId, jti: newJti },
+      { userId: payload.userId, jti: newJti, role: user.role },
       refreshTokenSignOptions
     ),
   ]);
@@ -386,7 +385,10 @@ export const verifyResetPasswordCodeService = async (
 
   // Generate a temporary token for password reset (valid for 10 minutes)
   const resetToken = signJwtToken(
-    { userId: user._id },
+    {
+      userId: user._id,
+      role: ""
+    },
     {
       expiresIn: "10m",
       secret: refreshTokenSignOptions.secret, // Use refresh secret for extra security

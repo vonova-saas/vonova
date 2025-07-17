@@ -78,19 +78,17 @@ export const requireVerifiedEmail = (
   next();
 };
 
-// export const requireRole = (roles: string[]) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     if (!req.user) {
-//       throw new UnauthorizedException("Authentication required");
-//     }
-
-//     if (!roles.includes(req.user.role)) {
-//       throw new ForbiddenException("Insufficient permissions");
-//     }
-
-//     next();
-//   };
-// };
+export function requireRole(roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      throw new UnauthorizedException("Authentication required");
+    }
+    if (!roles.includes((req.user as any).role)) {
+      throw new ForbiddenException("Insufficient permissions");
+    }
+    next();
+  };
+} 
 
 // Optional authentication - doesn't throw error if no token
 export const optionalAuth = async (
