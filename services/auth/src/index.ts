@@ -5,12 +5,18 @@ import { HTTPSTATUS } from "./config/http.config";
 import { errorHandler } from "./middlewares/errors/errorHandler.middleware";
 import { Env } from "./config/env.config";
 import connectDatabase from "./config/database.config";
+import "./config/passport.config";
+import passport from "passport";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
+import authRoutes from "./routes/auth.route";
 
 const app = express();
+const BASE_PATH = Env.BASE_PATH;
 
 app.use(express.urlencoded({ extended: true }));
+
+app.use(passport.initialize());
 
 app.get(
   `/`,
@@ -26,6 +32,8 @@ if (Env.NODE_ENV !== 'development') {
 } else {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
+
+app.use(`${BASE_PATH}/auth`, authRoutes);
 
 app.use(errorHandler);
 

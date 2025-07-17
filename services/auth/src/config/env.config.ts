@@ -15,6 +15,24 @@ const envConfig = () => ({
   MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
+  // Authentication Layer
+  JWT: {
+    JWT_ACCESS_SECRET: getEnv("JWT_ACCESS_SECRET", "jwt_secret"),
+    JWT_ACCESS_EXPIRES_IN: getEnv("JWT_ACCESS_EXPIRES_IN", "15m"),
+    JWT_REFRESH_SECRET: getEnv("JWT_REFRESH_SECRET", "jwt_refresh_key"),
+    JWT_REFRESH_EXPIRES_IN: getEnv("JWT_REFRESH_EXPIRES_IN", "7d"),
+  },
+
+  GOOGLE_CLIENT_ID: getEnv("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: getEnv("GOOGLE_CLIENT_SECRET"),
+  GOOGLE_CALLBACK_URL: getEnv("GOOGLE_CALLBACK_URL"),
+  FRONTEND_GOOGLE_CALLBACK_URL: getEnv("FRONTEND_GOOGLE_CALLBACK_URL"),
+
+  GITHUB_CLIENT_ID: getEnv("GITHUB_CLIENT_ID"),
+  GITHUB_CLIENT_SECRET: getEnv("GITHUB_CLIENT_SECRET"),
+  GITHUB_CALLBACK_URL: getEnv("GITHUB_CALLBACK_URL"),
+  FRONTEND_GITHUB_CALLBACK_URL: getEnv("FRONTEND_GITHUB_CALLBACK_URL"),
+
   //! Security Layer
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: getEnv("RATE_LIMIT_WINDOW_MS"),
@@ -26,6 +44,7 @@ const envConfig = () => ({
   TRUSTED_IPS: getEnv("TRUSTED_IPS"),
 
   // DDoS Protection
+
   DDOS_LIMIT: getEnv("DDOS_LIMIT"),
   DDOS_BURST: getEnv("DDOS_BURST"),
   DDOS_WINDOW_MS: getEnv("DDOS_WINDOW_MS"),
@@ -56,6 +75,7 @@ const envConfig = () => ({
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
+
 });
 
 export const Env = envConfig();
