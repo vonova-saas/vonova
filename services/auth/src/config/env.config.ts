@@ -28,11 +28,7 @@ const envConfig = () => ({
   GOOGLE_CALLBACK_URL: getEnv("GOOGLE_CALLBACK_URL"),
   FRONTEND_GOOGLE_CALLBACK_URL: getEnv("FRONTEND_GOOGLE_CALLBACK_URL"),
 
-  GITHUB_CLIENT_ID: getEnv("GITHUB_CLIENT_ID"),
-  GITHUB_CLIENT_SECRET: getEnv("GITHUB_CLIENT_SECRET"),
-  GITHUB_CALLBACK_URL: getEnv("GITHUB_CALLBACK_URL"),
-  FRONTEND_GITHUB_CALLBACK_URL: getEnv("FRONTEND_GITHUB_CALLBACK_URL"),
-
+  
   //! Security Layer
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: getEnv("RATE_LIMIT_WINDOW_MS"),
@@ -69,8 +65,8 @@ const envConfig = () => ({
   EMAIL_PORT: parseInt(process.env.EMAIL_PORT || "465"),
   EMAIL_SECURE: process.env.EMAIL_SECURE === "true",
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
-  EMAIL_USER: process.env.EMAIL_USER || "devoviacompany@gmail.com",
-  EMAIL_FROM: process.env.EMAIL_FROM || "devoviacompany@gmail.com",
+  EMAIL_USER: process.env.EMAIL_USER || "stafflycompany@gmail.com",
+  EMAIL_FROM: process.env.EMAIL_FROM || "stafflycompany@gmail.com",
 
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),

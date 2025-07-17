@@ -12,8 +12,8 @@ import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import authRoutes from "./routes/auth.route";
 
 const app = express();
-const BASE_PATH = Env.BASE_PATH;
 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(passport.initialize());
@@ -33,7 +33,7 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
-app.use(`${BASE_PATH}/auth`, authRoutes);
+app.use(`/auth`, authRoutes);
 
 app.use(errorHandler);
 
