@@ -1,0 +1,27 @@
+export const Roles = {
+  ADMIN: "ADMIN",
+  INSTRACTOR: "INSTRACTOR",
+  STUDENT: "STUDENT",
+} as const;
+
+export type RoleType = keyof typeof Roles;
+
+export const Permissions = {
+  ADD_INSTRACTOR: "ADD_INSTRACTOR",
+  DELETE_INSTRACTOR: "ADD_INSTRACTOR",
+
+  CREATE_COURSE: "CREATE_COURSE",
+  DELETE_COURSE: "DELETE_COURSE",
+  EDIT_COURSE: "EDIT_COURSE",
+  ADD_STUDENT: "ADD_STUDENT",
+  DELETE_STUDENT: "DELETE_STUDENT",
+  CREATE_QUIZ: "CREATE_QUIZ",
+  DELETE_QUIZ: "DELETE_QUIZ",
+  EDIT_QUIZ: "EDIT_QUIZ",
+  CREATE_MATERIAL: "CREATE_MATERIAL",
+  DELETE_MATERIAL: "DELETE_MATERIAL",
+  EDIT_MATERIAL: "EDIT_MATERIAL",
+
+} as const;
+
+export type PermissionType = keyof typeof Permissions;

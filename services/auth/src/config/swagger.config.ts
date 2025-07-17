@@ -2,13 +2,13 @@ export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Vonova API',
+      title: 'Vonova Auth Service API Endpoint',
       version: '1.0.0',
-      description: 'Vonova API documentation with Swagger',
+      description: 'Vonova Auth Service API Endpoint documentation with Swagger',
     },
     servers: [
       {
-        url: 'http://localhost:4004/api', // Change if needed
+        url: 'http://localhost:4001/api', // Change if needed
       },
     ],
     components: {
