@@ -29,8 +29,22 @@ import AccountModel from "../models/account.model";
 import RoleModel from "../models/roles-permission.model";
 import { Roles } from "../enums/role.enum";
 import { ProviderEnum, ProviderEnumType } from "../enums/account-provider.enum";
+import { Env } from "../config/env.config";
+import axios from 'axios';
 
 // ============== Register Service ==============
+async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
+  try {
+    await axios.post(`${Env.USER_SERVICE_URL}/api/user/init`, {
+      userId,
+      name,
+      email,
+    });
+  } catch (err: any) {
+    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
+  }
+}
+
 export const registerUserService = async (body: {
   name: string;
   email: string;
@@ -89,16 +103,17 @@ export const verifyEmailCodeService = async (email: string, otp_code: string) =>
   user.isVerified = true;
   await user.save();
 
+  // Call user service to initialize user data after verification
+  await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
+
   return { message: "Email verified successfully" };
 };
 
 export const welcomeuserService = async ({
   email,
-  workspaceName,
   provider = ProviderEnum.EMAIL,
 }: {
   email: string,
-  workspaceName: string,
   provider?: string
 }) => {
   const account = await AccountModel.findOne({ provider, providerId: email });

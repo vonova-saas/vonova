@@ -7,6 +7,9 @@ const envConfig = () => ({
   BASE_PATH: getEnv("BASE_PATH", "/api"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
+  // User Service URL for inter-service communication
+  USER_SERVICE_URL: getEnv("USER_SERVICE_URL", "http://localhost:4002"),
+
   //? Swagger Docs Configuration
   SWAGGER_USER: getEnv("SWAGGER_USER", "staffly"),
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
