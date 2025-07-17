@@ -2,7 +2,7 @@ import { getEnv } from "../utils/get-env";
 
 const envConfig = () => ({
   //? Backend Configuration
-  PORT: getEnv("PORT", "5000"),
+  PORT: getEnv("PORT", "4002"),
   NODE_ENV: getEnv("NODE_ENV", "development"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 

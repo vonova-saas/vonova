@@ -29,7 +29,7 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
-app.use(`/api/user`, userRoutes);
+app.use(`/user`, userRoutes);
 
 app.use(errorHandler);
 
