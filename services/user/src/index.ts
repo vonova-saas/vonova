@@ -7,9 +7,11 @@ import { Env } from "./config/env.config";
 import connectDatabase from "./config/database.config";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
+import userRoutes from "./routes/user.route";
 
 const app = express();
 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get(
@@ -26,6 +28,8 @@ if (Env.NODE_ENV !== 'development') {
 } else {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
+
+app.use(`/api/user`, userRoutes);
 
 app.use(errorHandler);
 

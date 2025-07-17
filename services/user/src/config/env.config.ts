@@ -4,12 +4,12 @@ const envConfig = () => ({
   //? Backend Configuration
   PORT: getEnv("PORT", "5000"),
   NODE_ENV: getEnv("NODE_ENV", "development"),
-  BASE_PATH: getEnv("BASE_PATH", "/api"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   //? Swagger Docs Configuration
   SWAGGER_USER: getEnv("SWAGGER_USER", "staffly"),
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
+
 
   //* Database configuration (MongoDB),
   MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
@@ -26,6 +26,7 @@ const envConfig = () => ({
   TRUSTED_IPS: getEnv("TRUSTED_IPS"),
 
   // DDoS Protection
+
   DDOS_LIMIT: getEnv("DDOS_LIMIT"),
   DDOS_BURST: getEnv("DDOS_BURST"),
   DDOS_WINDOW_MS: getEnv("DDOS_WINDOW_MS"),
@@ -56,6 +57,7 @@ const envConfig = () => ({
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
+
 });
 
 export const Env = envConfig();
