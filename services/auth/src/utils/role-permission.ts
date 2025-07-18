@@ -5,6 +5,9 @@ import {
 } from "../enums/role.enum";
 
 export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
+  PENDING: [
+    Permissions.CREATE_ACCOUNT
+  ],
   ADMIN: [
     // Instructor Management
     Permissions.ADD_INSTRUCTOR,

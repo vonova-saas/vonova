@@ -33,7 +33,7 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
-app.use(`/api/auth`, authRoutes);
+app.use(`/auth`, authRoutes);
 
 app.use(errorHandler);
 

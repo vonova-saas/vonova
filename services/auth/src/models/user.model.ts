@@ -38,7 +38,6 @@ const userSchema = new Schema<UserDocument>(
     role: {
       type: String,
       enum: Object.keys(Roles),
-      default: "STUDENT",
       required: true
     },
     isVerified: {

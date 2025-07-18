@@ -26,15 +26,35 @@ import AccountModel from "../models/account.model";
 import { ProviderEnum } from "../enums/account-provider.enum";
 import { Env } from "../config/env.config";
 import axios from 'axios';
+import { Roles } from "../enums/role.enum";
 
+//* -------------- User Srvice Iniatial --------------
+async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
+  try {
+    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
+      userId,
+      name,
+      email,
+    });
+    return {
+      message: "User Service Created Successfully"
+    };
+  } catch (err: any) {
+    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
+    return {
+      message: `UserService Failed to initialize user data: ${err?.response?.data || err.message}`
+    };
+  }
+};
+
+//? ************* Email Flow Services *************
 // ============== Register Service ==============
 export const registerUserService = async (body: {
   name: string;
   email: string;
   password: string;
-  role?: string;
 }) => {
-  const { email, name, password, role = "STUDENT" } = body;
+  const { email, name, password } = body;
 
   const existingUser = await UserModel.findOne({ email }).exec();
   if (existingUser) throw new BadRequestException("Email already exist");
@@ -43,7 +63,7 @@ export const registerUserService = async (body: {
     name,
     email,
     password,
-    role,
+    role: Roles.PENDING,
   });
   await user.save();
 
@@ -67,24 +87,6 @@ export const registerUserService = async (body: {
   return { user };
 };
 
-async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
-  try {
-    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
-      userId,
-      name,
-      email,
-    });
-    return {
-      message: "User Service Created Successfully"
-    };
-  } catch (err: any) {
-    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
-    return {
-      message: `UserService Failed to initialize user data: ${err?.response?.data || err.message}`
-    };
-  }
-}
-
 export const verifyEmailCodeService = async (email: string, otp_code: string) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new NotFoundException("User not found");
@@ -106,23 +108,20 @@ export const verifyEmailCodeService = async (email: string, otp_code: string) =>
   user.isVerified = true;
   await user.save();
 
-  // Call user service to initialize user data after verification
-  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
-
   return {
-    message: "Email verified successfully",
-    createUser
+    message: "Email verified successfully"
   };
 };
 
-export const welcomeuserService = async ({
-  email,
-  provider = ProviderEnum.EMAIL,
-}: {
-  email: string,
-  provider?: string
+export const welcomeUserEmailService = async (body: {
+  email: string;
+  userAgent: string;
+  role: string;
+  answerOne: string;
 }) => {
-  const account = await AccountModel.findOne({ provider, providerId: email });
+  const { email, userAgent, role, answerOne } = body;
+
+  const account = await AccountModel.findOne({ provider: ProviderEnum.EMAIL, providerId: email });
   if (!account) {
     throw new NotFoundException("Invalid email");
   }
@@ -137,36 +136,66 @@ export const welcomeuserService = async ({
     throw new BadRequestException("You should verify your email first!");
   }
 
-  // const ownerRole = await RoleModel.findOne({
-  //   name: Roles.OWNER,
-  // });
+  //? Add User Role & Update last login
+  if (user.role !== Roles.PENDING) {
+    throw new BadRequestException("Role already set");
+  }
 
-  // if (!ownerRole) {
-  //   throw new NotFoundException("Owner role not found");
-  // }
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  user.role = role as typeof Roles[keyof typeof Roles];
+  user.lastLogin = new Date();
+  await user.save();
+
+  //* Create access Token and refresh Token
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Call user service to initialize user data after verification
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
 
   await sendWelcomeEmail(user.email, user.name);
 
   return {
-    userId: user._id
+    userId: user._id,
+    userRole: user.role,
+    createUser,
+    accessToken,
+    refreshToken,
   };
 }
 
 // ============== Login Service ==============
-export const loginUserEmailService = async ({
-  email,
-  password,
-  userAgent,
-  provider = ProviderEnum.EMAIL,
-}: {
+export const loginUserEmailService = async (body: {
   email: string;
   password: string;
   userAgent: string;
-  provider?: string;
 }) => {
-  // const { email, password, userAgent } = body;
+  const { email, password, userAgent } = body;
 
-  const account = await AccountModel.findOne({ provider, providerId: email });
+  const account = await AccountModel.findOne({ provider: ProviderEnum.EMAIL, providerId: email });
   if (!account) {
     throw new NotFoundException("User not found for the given account");
   }
@@ -224,27 +253,39 @@ export const loginUserEmailService = async ({
   };
 };
 
-export const oauth2LoginService = async (
-  body: {
-    provider: string;
-    displayName: string;
-    providerId: string;
-    picture?: string;
-    email?: string;
-    userAgent: string;
+//! **************** oAuth Google Flow Services ****************
+// ============== Register or Login Service ==============
+export const oAuthGoogleLoginService = async ({
+  provider,
+  displayName,
+  providerId,
+  picture,
+  email,
+  userAgent,
+}: {
+  provider: string;
+  displayName: string;
+  providerId: string;
+  picture?: string;
+  email?: string;
+  userAgent: string;
+}) => {
+  const account = await AccountModel.findOne({ provider, providerId });
+  if (!account) {
+    throw new NotFoundException("User not found for the given account");
   }
-) => {
-  const { providerId, provider, displayName, email, picture, userAgent } = body;
 
-  let user = await UserModel.findOne({ email });
+  let user = await UserModel.findById(account.userId);
   let isNewUser = false;
 
   if (!user) {
-    // Create a new user if it doesn't exist
+    // New user: create with PENDING role, no tokens yet
     user = new UserModel({
       name: displayName,
       email,
       profilePicture: picture || null,
+      role: Roles.PENDING,
+      isVerified: true, // Google users are always verified
     });
     await user.save();
 
@@ -257,12 +298,22 @@ export const oauth2LoginService = async (
 
     await sendWelcomeEmail(user.email, user.name);
     isNewUser = true;
+
+    return {
+      user: user.omitPassword(),
+      isNewUser,
+      providerId, // Always return providerId for the welcome step
+    };
   }
 
-  // Update last login
-  user.lastLogin = new Date();
-  await user.save();
+  // Existing user: login and return tokens
+  user = await UserModel.findById(account.userId);
+  if (!user) throw new NotFoundException("User not found for the given account");
 
+  user.lastLogin = new Date();
+  user.save();
+
+  //* Create access Token and refresh Token
   const jti = uuidv4();
   const deviceHash = generateDeviceHash(userAgent);
 
@@ -271,7 +322,6 @@ export const oauth2LoginService = async (
     signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
   ]);
 
-  // Without using Redis
   await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
 
   const tokenHash = await hashValue(refreshToken);
@@ -287,9 +337,78 @@ export const oauth2LoginService = async (
     user: user.omitPassword(),
     accessToken,
     refreshToken,
-    isNewUser,
+    isNewUser: false,
   };
 };
+
+export const welcomeUseroAuthGoogleService = async (body: {
+  providerId: string;
+  userAgent: string;
+  role: string;
+  answerOne: string;
+}) => {
+  const { providerId, userAgent, role, answerOne } = body;
+
+  const account = await AccountModel.findOne({ provider: ProviderEnum.GOOGLE, providerId });
+  if (!account) {
+    throw new NotFoundException("Invalid email");
+  }
+
+  const user = await UserModel.findById(account.userId);
+  if (!user) {
+    throw new NotFoundException("User not found for the given account");
+  }
+
+  //? Add User Role & Update last login
+  if (user.role !== Roles.PENDING) {
+    throw new BadRequestException("Role already set");
+  }
+
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  user.role = role as typeof Roles[keyof typeof Roles];
+  user.lastLogin = new Date();
+  user.save();
+
+  //* Create access Token and refresh Token
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Call user service to initialize user data after verification
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
+
+  await sendWelcomeEmail(user.email, user.name);
+
+  return {
+    userId: user._id,
+    userRole: user.role,
+    createUser,
+    accessToken,
+    refreshToken,
+  };
+}
 
 // ============== Refresh Token Service ==============
 export const refreshTokenService = async (

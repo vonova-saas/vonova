@@ -2,11 +2,14 @@ export const Roles = {
   ADMIN: "ADMIN",
   INSTRUCTOR: "INSTRUCTOR", // fixed typo
   STUDENT: "STUDENT",
+  PENDING: "PENDING",
 } as const;
 
 export type RoleType = keyof typeof Roles;
 
 export const Permissions = {
+  CREATE_ACCOUNT: "CREATE_ACCOUNT",
+
   // Instructor Management (Admin)
   ADD_INSTRUCTOR: "ADD_INSTRUCTOR",
   DELETE_INSTRUCTOR: "DELETE_INSTRUCTOR",

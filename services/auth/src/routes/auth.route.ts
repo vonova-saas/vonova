@@ -2,20 +2,24 @@ import { Router } from "express";
 import passport from "passport";
 import { Env } from "../config/env.config";
 import { validateRequest } from "../middlewares/validateRequest.middleware";
-import { authenticateToken, requireRole } from "../middlewares/auth/isAuthenticated.middleware";
+import { authenticateToken } from "../middlewares/auth/isAuthenticated.middleware";
+import { isAuthorization } from "../middlewares/auth/isAuthorization.middleware";
+import { Permissions } from "../enums/role.enum";
 import {
   registerUserController,
   verifyEmailCodeController,
+  welcomeUserEmailController,
   loginUserEmailController,
+  oAuthGoogleLoginController,
+  welcomeUseroAuthGoogleController,
   refreshTokenController,
   requestResetPassController,
   verifyResetPassCodeController,
   resetPasswordController,
   logOutController,
   logOutAllDevicesController,
-  googleLoginCallback,
 } from "../controllers/auth.controller";
-import { 
+import {
   loginSchema,
   registerSchema,
   verifyEmailSchema,
@@ -28,14 +32,21 @@ const googleFailedUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`;
 
 const authRoutes = Router();
 
+//? ************* Email Flow Services *************
 // Register routes
 authRoutes.post("/register", validateRequest(registerSchema), registerUserController);
 authRoutes.post("/verify-email", validateRequest(verifyEmailSchema), verifyEmailCodeController)
 
 // Login routes
 authRoutes.post("/login", validateRequest(loginSchema), loginUserEmailController);
-authRoutes.get("/refresh", refreshTokenController);
 
+// Welcome (role selection) routes
+authRoutes.post(
+  "/welcome-email-user",
+  welcomeUserEmailController
+);
+
+//! **************** oAuth Google Flow Services ****************
 // OAuth Login routes
 authRoutes.get(
   "/google",
@@ -50,8 +61,17 @@ authRoutes.get(
     failureRedirect: googleFailedUrl,
     session: false,
   }),
-  googleLoginCallback
+  oAuthGoogleLoginController
 );
+
+// Welcome (role selection) routes
+authRoutes.post(
+  "/welcome-oauth-google",
+  welcomeUseroAuthGoogleController
+);
+
+// Access & Refresh Tokenes routes
+authRoutes.get("/refresh", refreshTokenController);
 
 // Forget password routes
 authRoutes.post("/request-resetPass", validateRequest(requestResetPasswordSchema), requestResetPassController);
@@ -63,8 +83,13 @@ authRoutes.post("/logout", logOutController);
 authRoutes.post("/logout-all", logOutAllDevicesController);
 
 // Admin role endpoint
-authRoutes.get("/admin-only", authenticateToken, requireRole(["ADMIN"]), (req, res) => {
-  res.json({ message: "You are an admin!" });
-});
+authRoutes.get(
+  "/admin-only",
+  authenticateToken,
+  isAuthorization([Permissions.MANAGE_ROLES]),
+  (req, res) => {
+    res.json({ message: "You are an admin!" });
+  }
+);;
 
 export default authRoutes;

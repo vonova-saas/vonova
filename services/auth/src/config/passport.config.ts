@@ -5,7 +5,7 @@ import { Env } from "./env.config";
 import { NotFoundException } from "../utils/appError";
 import { ProviderEnum } from "../enums/account-provider.enum";
 import {
-  oauth2LoginService,
+  oAuthGoogleLoginService,
 } from "../services/auth.service";
 
 // google oauth2.0 strategy
@@ -27,12 +27,13 @@ passport.use(
           throw new NotFoundException("Google ID (sub) is missing");
         }
 
-        const { user } = await oauth2LoginService({
+        const { user } = await oAuthGoogleLoginService({
           provider: ProviderEnum.GOOGLE,
           displayName: profile.displayName,
           providerId: googleId,
           picture: picture,
           email: email,
+          userAgent: req.headers["user-agent"] || "unknown",
         });
         done(null, user);
       } catch (error) {
