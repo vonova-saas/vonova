@@ -16,6 +16,7 @@ import {
 import { UnauthorizedException } from "../utils/appError";
 
 import { Env } from "../config/env.config";
+import { ProviderEnum } from "../enums/account-provider.enum";
 
 // ============== Register controllers ==============
 export const registerUserController = asyncHandler(
@@ -60,21 +61,31 @@ export const loginUserEmailController = asyncHandler(
 );
 
 // ============== OAuth controllers ==============
-// export const googleLoginCallback = asyncHandler(
-//   async (req: Request, res: Response) => {
-//     const currentWorkspace = req.user?.currentWorkspace;
+export const googleLoginCallback = asyncHandler(
+  async (req: Request, res: Response) => {
+    const googleUser = req.user as any;
+    if (!googleUser) {
+      return res.redirect(`${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`);
+    }
 
-//     if (!currentWorkspace) {
-//       return res.redirect(
-//         `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`
-//       );
-//     }
+    // Call oauth2LoginService to ensure user is created/found and get fresh user object
+    const { user, accessToken, refreshToken, isNewUser } = await oauth2LoginService({
+      provider: ProviderEnum.GOOGLE,
+      displayName: googleUser.name || googleUser.displayName,
+      providerId: googleUser.providerId || googleUser._id || googleUser.id,
+      picture: googleUser.profilePicture || googleUser.picture,
+      email: googleUser.email,
+      userAgent: req.headers["user-agent"] || "unknown",
+    });
 
-//     return res.redirect(
-//       `${Env.FRONTEND_ORIGIN}/workspace/${currentWorkspace}`
-//     );
-//   }
-// );
+    // Redirect to frontend with tokens and isNewUser flag
+    let redirectUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+    if (isNewUser) {
+      redirectUrl += "&welcome=true";
+    }
+    return res.redirect(redirectUrl);
+  }
+);
 
 // ============== Refresh Token controllers ==============
 export const refreshTokenController = asyncHandler(

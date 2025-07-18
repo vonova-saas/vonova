@@ -13,6 +13,7 @@ import {
   resetPasswordController,
   logOutController,
   logOutAllDevicesController,
+  googleLoginCallback,
 } from "../controllers/auth.controller";
 import { 
   loginSchema,
@@ -43,13 +44,14 @@ authRoutes.get(
   })
 );
 
-// authRoutes.get(
-//   "/google/callback",
-//   passport.authenticate("google", {
-//     failureRedirect: googleFailedUrl,
-//   }),
-//   googleLoginCallback
-// );
+authRoutes.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: googleFailedUrl,
+    session: false,
+  }),
+  googleLoginCallback
+);
 
 // Forget password routes
 authRoutes.post("/request-resetPass", validateRequest(requestResetPasswordSchema), requestResetPassController);

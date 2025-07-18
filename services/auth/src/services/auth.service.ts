@@ -28,18 +28,6 @@ import { Env } from "../config/env.config";
 import axios from 'axios';
 
 // ============== Register Service ==============
-async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
-  try {
-    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
-      userId,
-      name,
-      email,
-    });
-  } catch (err: any) {
-    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
-  }
-}
-
 export const registerUserService = async (body: {
   name: string;
   email: string;
@@ -79,6 +67,24 @@ export const registerUserService = async (body: {
   return { user };
 };
 
+async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
+  try {
+    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
+      userId,
+      name,
+      email,
+    });
+    return {
+      message: "User Service Created Successfully"
+    };
+  } catch (err: any) {
+    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
+    return {
+      message: `UserService Failed to initialize user data: ${err?.response?.data || err.message}`
+    };
+  }
+}
+
 export const verifyEmailCodeService = async (email: string, otp_code: string) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new NotFoundException("User not found");
@@ -101,9 +107,12 @@ export const verifyEmailCodeService = async (email: string, otp_code: string) =>
   await user.save();
 
   // Call user service to initialize user data after verification
-  await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
 
-  return { message: "Email verified successfully" };
+  return {
+    message: "Email verified successfully",
+    createUser
+  };
 };
 
 export const welcomeuserService = async ({
@@ -222,11 +231,13 @@ export const oauth2LoginService = async (
     providerId: string;
     picture?: string;
     email?: string;
+    userAgent: string;
   }
 ) => {
-  const { providerId, provider, displayName, email, picture } = body;
+  const { providerId, provider, displayName, email, picture, userAgent } = body;
 
   let user = await UserModel.findOne({ email });
+  let isNewUser = false;
 
   if (!user) {
     // Create a new user if it doesn't exist
@@ -245,10 +256,40 @@ export const oauth2LoginService = async (
     await account.save();
 
     await sendWelcomeEmail(user.email, user.name);
+    isNewUser = true;
   }
 
-  return { user };
-}
+  // Update last login
+  user.lastLogin = new Date();
+  await user.save();
+
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  // Without using Redis
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  return {
+    user: user.omitPassword(),
+    accessToken,
+    refreshToken,
+    isNewUser,
+  };
+};
 
 // ============== Refresh Token Service ==============
 export const refreshTokenService = async (
