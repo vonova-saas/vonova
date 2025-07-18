@@ -17,15 +17,15 @@ const userRoutes = Router();
 userRoutes.post("/init", initUserDataController);
 
 // Dashboard routes
-userRoutes.get("/dashboard", getDashboardDataController);
-userRoutes.put("/dashboard", validateRequest(updateDashboardDataSchema), updateDashboardDataController);
+userRoutes.get("/dashboard/:userId", getDashboardDataController);
+userRoutes.put("/dashboard/:userId", validateRequest(updateDashboardDataSchema), updateDashboardDataController);
 
 // Profile routes
-userRoutes.get("/profile", getUserProfileController);
-userRoutes.put("/profile", validateRequest(updateUserProfileSchema), updateUserProfileController);
+userRoutes.get("/profile/:userId", getUserProfileController);
+userRoutes.put("/profile/:userId", validateRequest(updateUserProfileSchema), updateUserProfileController);
 
 // Settings routes
-userRoutes.get("/settings", getUserSettingsController);
-userRoutes.put("/settings", validateRequest(updateUserSettingsSchema), updateUserSettingsController);
+userRoutes.get("/settings/:userId", getUserSettingsController);
+userRoutes.put("/settings/:userId", validateRequest(updateUserSettingsSchema), updateUserSettingsController);
 
 export default userRoutes;

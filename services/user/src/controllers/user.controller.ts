@@ -24,7 +24,7 @@ declare global {
 
 export const getUserProfileController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const profile = await getUserProfileService(userId);
 
     return res.status(HTTPSTATUS.OK).json({
@@ -36,7 +36,7 @@ export const getUserProfileController = asyncHandler(
 
 export const updateUserProfileController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const profile = await updateUserProfileService(userId, req.body);
 
     return res.status(HTTPSTATUS.OK).json({
@@ -48,7 +48,7 @@ export const updateUserProfileController = asyncHandler(
 
 export const getUserSettingsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const settings = await getUserSettingsService(userId);
 
     return res.status(HTTPSTATUS.OK).json({
@@ -60,7 +60,7 @@ export const getUserSettingsController = asyncHandler(
 
 export const updateUserSettingsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const settings = await updateUserSettingsService(userId, req.body);
 
     return res.status(HTTPSTATUS.OK).json({
@@ -72,7 +72,7 @@ export const updateUserSettingsController = asyncHandler(
 
 export const getDashboardDataController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const dashboard = await getDashboardDataService(userId);
     return res.status(HTTPSTATUS.OK).json({
       message: "Dashboard data fetched successfully",
@@ -83,9 +83,8 @@ export const getDashboardDataController = asyncHandler(
 
 export const updateDashboardDataController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const userId = req.params.userId;
     const dashboard = await updateDashboardDataService(userId, req.body);
-
     return res.status(HTTPSTATUS.OK).json({
       message: "Dashboard data updated successfully",
       data: dashboard,
