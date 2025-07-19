@@ -31,12 +31,13 @@ import { Roles } from "../enums/role.enum";
 import { RolePermissions } from "../utils/role-permission";
 
 //* -------------- User Srvice Iniatial --------------
-async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
+async function callUserServiceInit({ userId, name, email, role }: { userId: string, name: string, email: string, role: string }) {
   try {
     await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
       userId,
       name,
       email,
+      role,
     });
     return {
       message: "User Service Created Successfully"
@@ -176,7 +177,7 @@ export const welcomeUserEmailService = async (body: {
   });
 
   // Call user service to initialize user data after verification
-  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email, role: user.role });
 
   await sendWelcomeEmail(user.email, user.name);
 
@@ -386,7 +387,7 @@ export const welcomeUseroAuthGoogleService = async (body: {
   });
 
   // Call user service to initialize user data after verification
-  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email });
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email, role: user.role });
 
   await sendWelcomeEmail(user.email, user.name);
 
