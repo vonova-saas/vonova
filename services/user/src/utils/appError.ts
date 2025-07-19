@@ -45,7 +45,7 @@ export class NotFoundException extends AppError {
     super(
       message,
       HTTPSTATUS.NOT_FOUND,
-      errorCode || ErrorCodeEnum.RESOURCE_NOT_FOUND
+      errorCode || ErrorCodeEnum.USER_RESOURCE_NOT_FOUND
     );
   }
 }
@@ -55,7 +55,7 @@ export class BadRequestException extends AppError {
     super(
       message,
       HTTPSTATUS.BAD_REQUEST,
-      errorCode || ErrorCodeEnum.VALIDATION_ERROR
+      errorCode || ErrorCodeEnum.USER_DATA_VALIDATION_ERROR
     );
   }
 }
@@ -65,7 +65,7 @@ export class ForbiddenException extends AppError {
     super(
       message,
       HTTPSTATUS.FORBIDDEN,
-      errorCode || ErrorCodeEnum.FORBIDDEN_REQUEST
+      errorCode || ErrorCodeEnum.USER_ACCESS_FORBIDDEN
     );
   }
 }
@@ -74,7 +74,7 @@ export class UnauthorizedException extends AppError {
     super(
       message,
       HTTPSTATUS.UNAUTHORIZED,
-      errorCode || ErrorCodeEnum.ACCESS_UNAUTHORIZED
+      errorCode || ErrorCodeEnum.USER_ACCESS_UNAUTHORIZED
     );
   }
 }

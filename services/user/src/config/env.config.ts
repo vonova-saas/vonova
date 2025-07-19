@@ -2,13 +2,13 @@ import { getEnv } from "../utils/get-env";
 
 const envConfig = () => ({
   //? Backend Configuration
-  PORT: getEnv("PORT", "4002"),
-  NODE_ENV: getEnv("NODE_ENV", "development"),
+  PORT: getEnv("PORT"),
+  NODE_ENV: getEnv("NODE_ENV"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   //? Swagger Docs Configuration
-  SWAGGER_USER: getEnv("SWAGGER_USER", "staffly"),
-  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
+  SWAGGER_USER: getEnv("SWAGGER_USER"),
+  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD"),
 
 
   //* Database configuration (MongoDB),
@@ -47,12 +47,12 @@ const envConfig = () => ({
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
 
   //? Email configuration
-  EMAIL_HOST: process.env.EMAIL_HOST,
-  EMAIL_PORT: parseInt(process.env.EMAIL_PORT || "465"),
-  EMAIL_SECURE: process.env.EMAIL_SECURE === "true",
-  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
-  EMAIL_USER: process.env.EMAIL_USER || "devoviacompany@gmail.com",
-  EMAIL_FROM: process.env.EMAIL_FROM || "devoviacompany@gmail.com",
+  EMAIL_HOST: getEnv("EMAIL_HOST"),
+  EMAIL_PORT: parseInt(getEnv("EMAIL_PORT") || "465"),
+  EMAIL_SECURE: getEnv("EMAIL_SECURE", "true") === "true",
+  EMAIL_PASSWORD: getEnv("EMAIL_PASSWORD"),
+  EMAIL_USER: getEnv("EMAIL_USER"),
+  EMAIL_FROM: getEnv("EMAIL_FROM"),
 
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
