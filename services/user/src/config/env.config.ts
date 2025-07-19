@@ -4,7 +4,10 @@ const envConfig = () => ({
   //? Backend Configuration
   PORT: getEnv("PORT"),
   NODE_ENV: getEnv("NODE_ENV"),
-  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
+  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN"),
+
+  // Service URLs for inter-service communication
+  AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
 
   //? Swagger Docs Configuration
   SWAGGER_USER: getEnv("SWAGGER_USER"),

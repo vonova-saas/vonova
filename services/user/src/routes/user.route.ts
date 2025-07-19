@@ -4,11 +4,14 @@ import {
   updateUserProfileController,
   getUserSettingsController,
   updateUserSettingsController,
-  getDashboardDataController,
-  updateDashboardDataController,
   initUserDataController,
+  updateStudentInfoController,
+  updateInstructorInfoController,
+  updateAdminInfoController,
 } from "../controllers/user.controller";
 import { validateRequest } from "../middlewares/validateRequest.middleware";
+import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
+import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
 import { updateDashboardDataSchema, updateUserProfileSchema, updateUserSettingsSchema } from "../validation/user.validation";
 
 const userRoutes = Router();
@@ -16,16 +19,18 @@ const userRoutes = Router();
 // Internal endpoint for user data initialization (called by auth service)
 userRoutes.post("/init", initUserDataController);
 
-// Dashboard routes
-userRoutes.get("/dashboard/:userId", getDashboardDataController);
-userRoutes.put("/dashboard/:userId", validateRequest(updateDashboardDataSchema), updateDashboardDataController);
+// Protected routes - require authentication
+userRoutes.use(isAuthenticated);
 
-// Profile routes
-userRoutes.get("/profile/:userId", getUserProfileController);
-userRoutes.put("/profile/:userId", validateRequest(updateUserProfileSchema), updateUserProfileController);
+//* Profile routes - users can only access their own profile
+userRoutes.get("/profile/:userId", canAccessOwnData('userId'), getUserProfileController);
+userRoutes.put("/profile/:userId", canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
+userRoutes.patch("/profile/:userId/student-info", canAccessOwnData('userId'), updateStudentInfoController);
+userRoutes.patch("/profile/:userId/instructor-info", canAccessOwnData('userId'), updateInstructorInfoController);
+userRoutes.patch("/profile/:userId/admin-info", canAccessOwnData('userId'), updateAdminInfoController);
 
-// Settings routes
-userRoutes.get("/settings/:userId", getUserSettingsController);
-userRoutes.put("/settings/:userId", validateRequest(updateUserSettingsSchema), updateUserSettingsController);
+//! Settings routes - users can only access their own settings
+userRoutes.get("/getSettings/:userId", canAccessOwnData('userId'), getUserSettingsController);
+userRoutes.put("/updateSettings/:userId", canAccessOwnData('userId'), validateRequest(updateUserSettingsSchema), updateUserSettingsController);
 
 export default userRoutes;

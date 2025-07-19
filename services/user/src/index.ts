@@ -8,6 +8,7 @@ import connectDatabase from "./config/database.config";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import userRoutes from "./routes/user.route";
+import adminRoutes from "./routes/admin.route";
 
 const app = express();
 
@@ -19,6 +20,9 @@ app.get(
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     return res.status(HTTPSTATUS.OK).json({
       status: "Healthy!",
+      service: "User Service",
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
     });
   })
 );
@@ -29,11 +33,15 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
+// API routes
 app.use(`/user`, userRoutes);
+app.use(`/admin`, adminRoutes);
 
 app.use(errorHandler);
 
 app.listen(Env.PORT, async () => {
-  console.log(`Server listening on port ${Env.PORT} in ${Env.NODE_ENV}`);
+  console.log(`🚀 User Service listening on port ${Env.PORT} in ${Env.NODE_ENV} mode`);
+  console.log(`📚 Swagger docs available at http://localhost:${Env.PORT}/api-docs`);
+  console.log(`🔗 Auth Service URL: ${Env.AUTH_SERVICE_URL}`);
   await connectDatabase();
 });
