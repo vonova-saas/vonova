@@ -403,6 +403,102 @@
 
 /**
  * @swagger
+ * /auth/validate-role-change:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Validate role change request
+ *     description: Validates a role change request from the user service. This endpoint is used for inter-service communication to ensure role changes are valid and authorized.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - newRole
+ *               - adminUserId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID of the user whose role is being changed
+ *                 example: 685edd9be63269894bc97cde
+ *               newRole:
+ *                 type: string
+ *                 enum: [STUDENT, INSTRUCTOR]
+ *                 description: The new role to assign to the user
+ *                 example: INSTRUCTOR
+ *               adminUserId:
+ *                 type: string
+ *                 description: ID of the admin user making the role change request
+ *                 example: 685edd9be63269894bc97cdf
+ *     responses:
+ *       200:
+ *         description: Role change validation successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Role change validation successful
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     currentRole:
+ *                       type: string
+ *                       example: STUDENT
+ *                     newRole:
+ *                       type: string
+ *                       example: INSTRUCTOR
+ *                     targetUser:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: 685edd9be63269894bc97cde
+ *                         name:
+ *                           type: string
+ *                           example: John Doe
+ *                         email:
+ *                           type: string
+ *                           example: john@example.com
+ *                     adminUser:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: 685edd9be63269894bc97cdf
+ *                         name:
+ *                           type: string
+ *                           example: Admin User
+ *                         email:
+ *                           type: string
+ *                           example: admin@example.com
+ *       400:
+ *         description: Invalid role change request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - admin user not found or not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     User:

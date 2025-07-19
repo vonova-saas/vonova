@@ -18,6 +18,9 @@ import {
   resetPasswordController,
   logOutController,
   logOutAllDevicesController,
+  validateRoleChangeController,
+  getUserPermissionsController,
+  verifyTokenController,
 } from "../controllers/auth.controller";
 import {
   loginSchema,
@@ -25,7 +28,9 @@ import {
   verifyEmailSchema,
   requestResetPasswordSchema,
   verifyResetCodeSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  validateRoleChangeSchema,
+  verifyTokenSchema
 } from "../validation/auth.validation";
 
 const googleFailedUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`;
@@ -90,6 +95,25 @@ authRoutes.get(
   (req, res) => {
     res.json({ message: "You are an admin!" });
   }
-);;
+);
+
+// Role change validation endpoint (for inter-service communication)
+authRoutes.post(
+  "/validate-role-change",
+  validateRequest(validateRoleChangeSchema),
+  validateRoleChangeController
+);
+
+// Utility endpoints for inter-service communication
+authRoutes.get(
+  "/user/:userId/permissions",
+  getUserPermissionsController
+);
+
+authRoutes.post(
+  "/verify-token",
+  validateRequest(verifyTokenSchema),
+  verifyTokenController
+);
 
 export default authRoutes;

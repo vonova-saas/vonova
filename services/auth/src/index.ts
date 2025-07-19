@@ -23,6 +23,9 @@ app.get(
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     return res.status(HTTPSTATUS.OK).json({
       status: "Healthy!",
+      service: "Auth Service",
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
     });
   })
 );

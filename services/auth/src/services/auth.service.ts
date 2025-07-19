@@ -12,6 +12,7 @@ import {
   RefreshTPayload,
   signJwtToken,
   verifyJwtToken,
+  verifyAccessToken,
 } from "../utils/jwt";
 import RefreshTokenModel from "../models/refreshToken.model";
 import PasswordResetModel from "../models/passwordReset.model";
@@ -27,6 +28,7 @@ import { ProviderEnum } from "../enums/account-provider.enum";
 import { Env } from "../config/env.config";
 import axios from 'axios';
 import { Roles } from "../enums/role.enum";
+import { RolePermissions } from "../utils/role-permission";
 
 //* -------------- User Srvice Iniatial --------------
 async function callUserServiceInit({ userId, name, email }: { userId: string, name: string, email: string }) {
@@ -612,4 +614,131 @@ export const logoutAllDevicesService = async (
   await revokeAllUserTokens(payload.userId as string);
 
   return { message: "Logged out from all devices successfully" };
+};
+
+// ============== Role Change Validation Service ==============
+export const validateRoleChangeService = async (params: {
+  userId: string;
+  newRole: string;
+  adminUserId: string;
+}) => {
+  const { userId, newRole, adminUserId } = params;
+
+  // Validate admin user exists and has admin role
+  const adminUser = await UserModel.findById(adminUserId);
+  if (!adminUser) {
+    throw new NotFoundException("Admin user not found");
+  }
+
+  if (adminUser.role !== Roles.ADMIN) {
+    throw new UnauthorizedException("Only administrators can change user roles");
+  }
+
+  // Validate target user exists
+  const targetUser = await UserModel.findById(userId);
+  if (!targetUser) {
+    throw new NotFoundException("Target user not found");
+  }
+
+  // Validate new role is valid
+  if (!Object.values(Roles).includes(newRole as any)) {
+    throw new BadRequestException("Invalid role specified");
+  }
+
+  // Prevent admin from changing their own role
+  if (userId === adminUserId) {
+    throw new BadRequestException("Administrators cannot change their own role");
+  }
+
+  // Prevent changing to ADMIN role (only system can create admins)
+  if (newRole === Roles.ADMIN) {
+    throw new BadRequestException("Cannot assign ADMIN role through this endpoint");
+  }
+
+  // Check if role change is actually needed
+  if (targetUser.role === newRole) {
+    throw new BadRequestException("User already has the specified role");
+  }
+
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(newRole as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(newRole as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  targetUser.role = newRole as typeof Roles[keyof typeof Roles];
+  await targetUser.save();
+
+  return {
+    valid: true,
+    message: "Role change validation successful",
+    data: {
+      currentRole: targetUser.role,
+      newRole: newRole,
+      targetUser: {
+        id: targetUser._id,
+        name: targetUser.name,
+        email: targetUser.email
+      },
+      adminUser: {
+        id: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email
+      }
+    }
+  };
+};
+
+// ============== Utility Services for Inter-Service Communication ==============
+export const getUserPermissionsService = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new NotFoundException("User not found");
+  }
+
+  const permissions = (RolePermissions as Record<string, string[]>)[user.role] || [];
+
+  return {
+    userId: user._id,
+    role: user.role,
+    permissions: permissions,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
+      isVerified: user.isVerified
+    }
+  };
+};
+
+export const verifyTokenService = async (token: string) => {
+  const { payload, error } = verifyAccessToken(token);
+
+  if (error || !payload) {
+    throw new UnauthorizedException("Invalid or expired token");
+  }
+
+  const user = await UserModel.findById(payload.userId);
+  if (!user) {
+    throw new UnauthorizedException("User not found");
+  }
+
+  if (!user.isActive) {
+    throw new UnauthorizedException("User account is deactivated");
+  }
+
+  return {
+    valid: true,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      isVerified: user.isVerified
+    }
+  };
 };

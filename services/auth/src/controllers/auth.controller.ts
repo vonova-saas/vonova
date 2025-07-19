@@ -14,6 +14,9 @@ import {
   resetPasswordService,
   logoutService,
   logoutAllDevicesService,
+  validateRoleChangeService,
+  getUserPermissionsService,
+  verifyTokenService,
 } from "../services/auth.service";
 import { UnauthorizedException } from "../utils/appError";
 
@@ -299,6 +302,43 @@ export const logOutAllDevicesController = asyncHandler(
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
+    });
+  }
+);
+
+// ============== Role Change Validation Controller ==============
+export const validateRoleChangeController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await validateRoleChangeService(req.body);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: result.message,
+      data: result.data,
+    });
+  }
+);
+
+// ============== Utility Controllers for Inter-Service Communication ==============
+export const getUserPermissionsController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const result = await getUserPermissionsService(userId);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "User permissions retrieved successfully",
+      data: result,
+    });
+  }
+);
+
+export const verifyTokenController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const result = await verifyTokenService(token);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Token verification successful",
+      data: result,
     });
   }
 );
