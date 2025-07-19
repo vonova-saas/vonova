@@ -3,10 +3,6 @@ import { Request } from "express";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Env } from "./env.config";
 import { NotFoundException } from "../utils/appError";
-import { ProviderEnum } from "../enums/account-provider.enum";
-import {
-  oauth2LoginService,
-} from "../services/auth.service";
 
 // google oauth2.0 strategy
 passport.use(
@@ -27,14 +23,15 @@ passport.use(
           throw new NotFoundException("Google ID (sub) is missing");
         }
 
-        const { user } = await oauth2LoginService({
-          provider: ProviderEnum.GOOGLE,
-          displayName: profile.displayName,
+        // Just pass the Google profile data to the controller
+        const googleUser = {
+          name: profile.displayName,
+          email: email,
           providerId: googleId,
           picture: picture,
-          email: email,
-        });
-        done(null, user);
+        };
+
+        done(null, googleUser);
       } catch (error) {
         done(error, false);
       }

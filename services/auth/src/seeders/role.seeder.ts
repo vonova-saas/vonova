@@ -43,6 +43,7 @@ const seedRoles = async () => {
     console.log("Session ended.");
 
     console.log("Seeding completed successfully.");
+    process.exit(1);
   } catch (error) {
     console.error("Error during seeding:", error);
   }

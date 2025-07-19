@@ -6,11 +6,13 @@ type StringValue = `${number}${"s" | "m" | "h" | "d"}`; // e.g. "15m", "7d"
 
 export type AccessTPayload = {
   userId: UserDocument["_id"];
+  role: string;
 };
 
 export type RefreshTPayload = {
   userId: UserDocument["_id"];
   jti: string;
+  role: string;
 };
 
 type SignOptsAndSecret = SignOptions & {

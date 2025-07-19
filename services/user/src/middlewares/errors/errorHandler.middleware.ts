@@ -13,7 +13,7 @@ const formatZodError = (res: Response, error: z.ZodError) => {
   return res.status(HTTPSTATUS.BAD_REQUEST).json({
     message: "Validation failed",
     errors: errors,
-    errorCode: ErrorCodeEnum.VALIDATION_ERROR,
+    errorCode: ErrorCodeEnum.USER_DATA_VALIDATION_ERROR,
   });
 };
 

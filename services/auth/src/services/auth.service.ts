@@ -12,10 +12,10 @@ import {
   RefreshTPayload,
   signJwtToken,
   verifyJwtToken,
+  verifyAccessToken,
 } from "../utils/jwt";
 import RefreshTokenModel from "../models/refreshToken.model";
 import PasswordResetModel from "../models/passwordReset.model";
-import { getRedisTokenKey, redisClient } from "../config/redis.config";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -23,13 +23,34 @@ import {
   sendWelcomeEmail,
 } from "../services/email.service";
 import EmailVerificationModel from "../models/emailVerification.model";
-
-import mongoose from "mongoose";
 import AccountModel from "../models/account.model";
-import RoleModel from "../models/roles-permission.model";
+import { ProviderEnum } from "../enums/account-provider.enum";
+import { Env } from "../config/env.config";
+import axios from 'axios';
 import { Roles } from "../enums/role.enum";
-import { ProviderEnum, ProviderEnumType } from "../enums/account-provider.enum";
+import { RolePermissions } from "../utils/role-permission";
 
+//* -------------- User Srvice Iniatial --------------
+async function callUserServiceInit({ userId, name, email, role }: { userId: string, name: string, email: string, role: string }) {
+  try {
+    await axios.post(`${Env.USER_SERVICE_URL}/user/init`, {
+      userId,
+      name,
+      email,
+      role,
+    });
+    return {
+      message: "User Service Created Successfully"
+    };
+  } catch (err: any) {
+    console.error('[UserService] Failed to initialize user data:', err?.response?.data || err.message);
+    return {
+      message: `UserService Failed to initialize user data: ${err?.response?.data || err.message}`
+    };
+  }
+};
+
+//? ************* Email Flow Services *************
 // ============== Register Service ==============
 export const registerUserService = async (body: {
   name: string;
@@ -45,6 +66,7 @@ export const registerUserService = async (body: {
     name,
     email,
     password,
+    role: Roles.PENDING,
   });
   await user.save();
 
@@ -89,19 +111,20 @@ export const verifyEmailCodeService = async (email: string, otp_code: string) =>
   user.isVerified = true;
   await user.save();
 
-  return { message: "Email verified successfully" };
+  return {
+    message: "Email verified successfully"
+  };
 };
 
-export const welcomeuserService = async ({
-  email,
-  workspaceName,
-  provider = ProviderEnum.EMAIL,
-}: {
-  email: string,
-  workspaceName: string,
-  provider?: string
+export const welcomeUserEmailService = async (body: {
+  email: string;
+  userAgent: string;
+  role: string;
+  answerOne: string;
 }) => {
-  const account = await AccountModel.findOne({ provider, providerId: email });
+  const { email, userAgent, role, answerOne } = body;
+
+  const account = await AccountModel.findOne({ provider: ProviderEnum.EMAIL, providerId: email });
   if (!account) {
     throw new NotFoundException("Invalid email");
   }
@@ -116,36 +139,66 @@ export const welcomeuserService = async ({
     throw new BadRequestException("You should verify your email first!");
   }
 
-  // const ownerRole = await RoleModel.findOne({
-  //   name: Roles.OWNER,
-  // });
+  //? Add User Role & Update last login
+  if (user.role !== Roles.PENDING) {
+    throw new BadRequestException("Role already set");
+  }
 
-  // if (!ownerRole) {
-  //   throw new NotFoundException("Owner role not found");
-  // }
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  user.role = role as typeof Roles[keyof typeof Roles];
+  user.lastLogin = new Date();
+  await user.save();
+
+  //* Create access Token and refresh Token
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Call user service to initialize user data after verification
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email, role: user.role });
 
   await sendWelcomeEmail(user.email, user.name);
 
   return {
-    userId: user._id
+    userId: user._id,
+    userRole: user.role,
+    createUser,
+    accessToken,
+    refreshToken,
   };
 }
 
 // ============== Login Service ==============
-export const loginUserEmailService = async ({
-  email,
-  password,
-  userAgent,
-  provider = ProviderEnum.EMAIL,
-}: {
+export const loginUserEmailService = async (body: {
   email: string;
   password: string;
   userAgent: string;
-  provider?: string;
 }) => {
-  // const { email, password, userAgent } = body;
+  const { email, password, userAgent } = body;
 
-  const account = await AccountModel.findOne({ provider, providerId: email });
+  const account = await AccountModel.findOne({ provider: ProviderEnum.EMAIL, providerId: email });
   if (!account) {
     throw new NotFoundException("User not found for the given account");
   }
@@ -173,8 +226,8 @@ export const loginUserEmailService = async ({
   const deviceHash = generateDeviceHash(userAgent);
 
   const [accessToken, refreshToken] = await Promise.all([
-    signJwtToken({ userId: user._id }),
-    signJwtToken({ userId: user._id, jti }, refreshTokenSignOptions),
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
   ]);
 
   // Redis cache part
@@ -203,25 +256,30 @@ export const loginUserEmailService = async ({
   };
 };
 
-export const oauth2LoginService = async (
-  body: {
-    provider: string;
-    displayName: string;
-    providerId: string;
-    picture?: string;
-    email?: string;
-  }
-) => {
-  const { providerId, provider, displayName, email, picture } = body;
+//! **************** oAuth Google Flow Services ****************
+// ============== Register or Login Service ==============
+export const oAuthGoogleLoginService = async (data: {
+  provider: string;
+  displayName: string;
+  providerId: string;
+  picture?: string;
+  email?: string;
+  userAgent: string;
+}) => {
+  const { providerId, provider, displayName, email, picture, userAgent } = data;
 
+  // First, check if user exists by email
   let user = await UserModel.findOne({ email });
+  let isNewUser = false;
 
   if (!user) {
-    // Create a new user if it doesn't exist
+    // New user: create with PENDING role, no tokens yet
     user = new UserModel({
       name: displayName,
       email,
       profilePicture: picture || null,
+      role: Roles.PENDING,
+      isVerified: true, // Google users are always verified
     });
     await user.save();
 
@@ -233,9 +291,113 @@ export const oauth2LoginService = async (
     await account.save();
 
     await sendWelcomeEmail(user.email, user.name);
+    isNewUser = true;
+
+    return {
+      user: user.omitPassword(),
+      isNewUser,
+      providerId, // Always return providerId for the welcome step
+    };
   }
 
-  return { user };
+  user.lastLogin = new Date();
+  await user.save();
+
+  //* Create access Token and refresh Token
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  return {
+    user: user.omitPassword(),
+    accessToken,
+    refreshToken,
+    isNewUser: false,
+  };
+};
+
+export const welcomeUseroAuthGoogleService = async (body: {
+  providerId: string;
+  userAgent: string;
+  role: string;
+  answerOne: string;
+}) => {
+  const { providerId, userAgent, role, answerOne } = body;
+
+  const account = await AccountModel.findOne({ provider: ProviderEnum.GOOGLE, providerId });
+  if (!account) {
+    throw new NotFoundException("Invalid email");
+  }
+
+  const user = await UserModel.findById(account.userId);
+  if (!user) {
+    throw new NotFoundException("User not found for the given account");
+  }
+
+  //? Add User Role & Update last login
+  if (user.role !== Roles.PENDING) {
+    throw new BadRequestException("Role already set");
+  }
+
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(role as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  user.role = role as typeof Roles[keyof typeof Roles];
+  user.lastLogin = new Date();
+  await user.save();
+
+  //* Create access Token and refresh Token
+  const jti = uuidv4();
+  const deviceHash = generateDeviceHash(userAgent);
+
+  const [accessToken, refreshToken] = await Promise.all([
+    signJwtToken({ userId: user._id, role: user.role }),
+    signJwtToken({ userId: user._id, jti, role: user.role }, refreshTokenSignOptions),
+  ]);
+
+  await RefreshTokenModel.deleteMany({ userId: user._id, deviceHash });
+
+  const tokenHash = await hashValue(refreshToken);
+  await RefreshTokenModel.create({
+    userId: user._id,
+    tokenHash,
+    jti,
+    deviceHash,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Call user service to initialize user data after verification
+  const createUser = await callUserServiceInit({ userId: user._id!.toString(), name: user.name, email: user.email, role: user.role });
+
+  await sendWelcomeEmail(user.email, user.name);
+
+  return {
+    userId: user._id,
+    userRole: user.role,
+    createUser,
+    accessToken,
+    refreshToken,
+  };
 }
 
 // ============== Refresh Token Service ==============
@@ -278,11 +440,13 @@ export const refreshTokenService = async (
   await RefreshTokenModel.deleteOne({ jti: payload.jti });
 
   // ---------- default ----------
+  const user = await UserModel.findById(payload.userId);
+  if (!user) throw new UnauthorizedException("User not found");
   const newJti = uuidv4();
   const [newAccessToken, newRefreshToken] = await Promise.all([
-    signJwtToken({ userId: payload.userId }),
+    signJwtToken({ userId: payload.userId, role: user.role }),
     signJwtToken(
-      { userId: payload.userId, jti: newJti },
+      { userId: payload.userId, jti: newJti, role: user.role },
       refreshTokenSignOptions
     ),
   ]);
@@ -371,7 +535,10 @@ export const verifyResetPasswordCodeService = async (
 
   // Generate a temporary token for password reset (valid for 10 minutes)
   const resetToken = signJwtToken(
-    { userId: user._id },
+    {
+      userId: user._id,
+      role: ""
+    },
     {
       expiresIn: "10m",
       secret: refreshTokenSignOptions.secret, // Use refresh secret for extra security
@@ -448,4 +615,131 @@ export const logoutAllDevicesService = async (
   await revokeAllUserTokens(payload.userId as string);
 
   return { message: "Logged out from all devices successfully" };
+};
+
+// ============== Role Change Validation Service ==============
+export const validateRoleChangeService = async (params: {
+  userId: string;
+  newRole: string;
+  adminUserId: string;
+}) => {
+  const { userId, newRole, adminUserId } = params;
+
+  // Validate admin user exists and has admin role
+  const adminUser = await UserModel.findById(adminUserId);
+  if (!adminUser) {
+    throw new NotFoundException("Admin user not found");
+  }
+
+  if (adminUser.role !== Roles.ADMIN) {
+    throw new UnauthorizedException("Only administrators can change user roles");
+  }
+
+  // Validate target user exists
+  const targetUser = await UserModel.findById(userId);
+  if (!targetUser) {
+    throw new NotFoundException("Target user not found");
+  }
+
+  // Validate new role is valid
+  if (!Object.values(Roles).includes(newRole as any)) {
+    throw new BadRequestException("Invalid role specified");
+  }
+
+  // Prevent admin from changing their own role
+  if (userId === adminUserId) {
+    throw new BadRequestException("Administrators cannot change their own role");
+  }
+
+  // Prevent changing to ADMIN role (only system can create admins)
+  if (newRole === Roles.ADMIN) {
+    throw new BadRequestException("Cannot assign ADMIN role through this endpoint");
+  }
+
+  // Check if role change is actually needed
+  if (targetUser.role === newRole) {
+    throw new BadRequestException("User already has the specified role");
+  }
+
+  // Validate role
+  if (![Roles.STUDENT, Roles.INSTRUCTOR].includes(newRole as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+
+  if (!Object.values(Roles).includes(newRole as any)) {
+    throw new BadRequestException("Invalid role");
+  }
+  targetUser.role = newRole as typeof Roles[keyof typeof Roles];
+  await targetUser.save();
+
+  return {
+    valid: true,
+    message: "Role change validation successful",
+    data: {
+      currentRole: targetUser.role,
+      newRole: newRole,
+      targetUser: {
+        id: targetUser._id,
+        name: targetUser.name,
+        email: targetUser.email
+      },
+      adminUser: {
+        id: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email
+      }
+    }
+  };
+};
+
+// ============== Utility Services for Inter-Service Communication ==============
+export const getUserPermissionsService = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new NotFoundException("User not found");
+  }
+
+  const permissions = (RolePermissions as Record<string, string[]>)[user.role] || [];
+
+  return {
+    userId: user._id,
+    role: user.role,
+    permissions: permissions,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
+      isVerified: user.isVerified
+    }
+  };
+};
+
+export const verifyTokenService = async (token: string) => {
+  const { payload, error } = verifyAccessToken(token);
+
+  if (error || !payload) {
+    throw new UnauthorizedException("Invalid or expired token");
+  }
+
+  const user = await UserModel.findById(payload.userId);
+  if (!user) {
+    throw new UnauthorizedException("User not found");
+  }
+
+  if (!user.isActive) {
+    throw new UnauthorizedException("User account is deactivated");
+  }
+
+  return {
+    valid: true,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      isVerified: user.isVerified
+    }
+  };
 };

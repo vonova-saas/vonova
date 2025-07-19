@@ -93,3 +93,31 @@ export const refreshTokenSchema = z.object({
     })
     .min(1, "Refresh token is required"),
 });
+
+// Role change validation
+export const validateRoleChangeSchema = z.object({
+  userId: z
+    .string({
+      required_error: "User ID is required",
+    })
+    .min(1, "User ID is required"),
+  newRole: z
+    .string({
+      required_error: "New role is required",
+    })
+    .min(1, "New role is required"),
+  adminUserId: z
+    .string({
+      required_error: "Admin user ID is required",
+    })
+    .min(1, "Admin user ID is required"),
+});
+
+// Token verification validation
+export const verifyTokenSchema = z.object({
+  token: z
+    .string({
+      required_error: "Token is required",
+    })
+    .min(1, "Token is required"),
+});
