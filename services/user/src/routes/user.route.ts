@@ -19,7 +19,19 @@ import {
 import { validateRequest } from "../middlewares/validateRequest.middleware";
 import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
 import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
-import { updateDashboardDataSchema, updateUserProfileSchema, updateUserSettingsSchema } from "../validation/user.validation";
+import {
+  updateDashboardDataSchema,
+  updateUserProfileSchema,
+  updateUserSettingsSchema,
+  updateLearningProgressSchema,
+  addQuizPerformanceSchema,
+  updateAIRoadmapSchema,
+  addAIVideoSuggestionSchema,
+  addCourseCreatedSchema,
+  updateStudentInfoSchema,
+  updateInstructorInfoSchema,
+  updateAdminInfoSchema
+} from "../validation/user.validation";
 import { securityStack } from "../middlewares/security";
 
 const userRoutes = Router();
@@ -35,12 +47,12 @@ userRoutes.post("/init", initUserDataController);
 
 //? Dashboard routes - users can only access their own dashboard
 // Student Dashboard Routes
-userRoutes.patch("/dashboard/:userId/learning-progress", isAuthenticated, canAccessOwnData('userId'), updateLearningProgressController);
-userRoutes.patch("/dashboard/:userId/quiz-performance", isAuthenticated, canAccessOwnData('userId'), addQuizPerformanceController);
-userRoutes.patch("/dashboard/:userId/ai-roadmap", isAuthenticated, canAccessOwnData('userId'), updateAIRoadmapController);
-userRoutes.patch("/dashboard/:userId/ai-video-suggestion", isAuthenticated, canAccessOwnData('userId'), addAIVideoSuggestionController);
+userRoutes.patch("/dashboard/:userId/learning-progress", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateLearningProgressSchema), updateLearningProgressController);
+userRoutes.patch("/dashboard/:userId/quiz-performance", isAuthenticated, canAccessOwnData('userId'), validateRequest(addQuizPerformanceSchema), addQuizPerformanceController);
+userRoutes.patch("/dashboard/:userId/ai-roadmap", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateAIRoadmapSchema), updateAIRoadmapController);
+userRoutes.patch("/dashboard/:userId/ai-video-suggestion", isAuthenticated, canAccessOwnData('userId'), validateRequest(addAIVideoSuggestionSchema), addAIVideoSuggestionController);
 // Instructor Dashboard Routes
-userRoutes.patch("/dashboard/:userId/courses-created", isAuthenticated, canAccessOwnData('userId'), addCourseCreatedController);
+userRoutes.patch("/dashboard/:userId/courses-created", isAuthenticated, canAccessOwnData('userId'), validateRequest(addCourseCreatedSchema), addCourseCreatedController);
 // Shared/Other routes
 userRoutes.get("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), getDashboardDataController);
 userRoutes.put("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateDashboardDataSchema), updateDashboardDataController);
@@ -48,9 +60,9 @@ userRoutes.put("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId')
 //* Profile routes - users can only access their own profile
 userRoutes.get("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), getUserProfileController);
 userRoutes.put("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
-userRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), updateStudentInfoController);
-userRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), updateInstructorInfoController);
-userRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), updateAdminInfoController);
+userRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateStudentInfoSchema), updateStudentInfoController);
+userRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateInstructorInfoSchema), updateInstructorInfoController);
+userRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateAdminInfoSchema), updateAdminInfoController);
 
 //! Settings routes - users can only access their own settings
 userRoutes.get("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), getUserSettingsController);

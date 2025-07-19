@@ -66,7 +66,7 @@ export const updateDashboardDataSchema = z.object({
     })
     .partial()
     .optional(),
-}); 
+});
 
 export const updateUserProfileSchema = z.object({
   name: z.string().min(2).max(50).optional(),
@@ -107,4 +107,69 @@ export const updateUserSettingsSchema = z.object({
     })
     .partial()
     .optional(),
+});
+
+// Validation schemas for PATCH routes
+export const updateLearningProgressSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  progress: z.number().min(0).max(100, "Progress must be between 0 and 100"),
+});
+
+export const addQuizPerformanceSchema = z.object({
+  quizId: z.string().min(1, "Quiz ID is required"),
+  courseId: z.string().min(1, "Course ID is required"),
+  score: z.number().min(0, "Score must be non-negative"),
+});
+
+export const updateAIRoadmapSchema = z.object({
+  topics: z.array(z.string().min(1, "Topic cannot be empty")),
+  recommendedOrder: z.array(z.string().min(1, "Recommended order item cannot be empty")),
+});
+
+export const addAIVideoSuggestionSchema = z.object({
+  topic: z.string().min(1, "Topic is required"),
+  videoUrl: z.string().url("Video URL must be a valid URL"),
+});
+
+export const addCourseCreatedSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  title: z.string().min(1, "Course title is required"),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  level: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  price: z.number().min(0).optional(),
+  isPublished: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+});
+
+export const updateStudentInfoSchema = z.object({
+  studentId: z.string().optional(),
+  enrollmentDate: z.coerce.date().optional(),
+  currentLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  preferredLearningStyle: z.enum(["visual", "auditory", "kinesthetic", "reading"]).optional(),
+  goals: z.array(z.string()).optional(),
+  completedCourses: z.array(z.string()).optional(),
+  certificates: z.array(z.string()).optional(),
+  mentorId: z.string().optional(),
+});
+
+export const updateInstructorInfoSchema = z.object({
+  instructorId: z.string().optional(),
+  specialization: z.array(z.string()).optional(),
+  experience: z.number().min(0).optional(),
+  bio: z.string().max(1000).optional(),
+  certifications: z.array(z.string()).optional(),
+  coursesCreated: z.array(z.string()).optional(),
+  rating: z.number().min(0).max(5).optional(),
+  totalStudents: z.number().min(0).optional(),
+  joinDate: z.coerce.date().optional(),
+});
+
+export const updateAdminInfoSchema = z.object({
+  adminId: z.string().optional(),
+  department: z.string().optional(),
+  permissions: z.array(z.string()).optional(),
+  accessLevel: z.enum(["super", "admin", "moderator"]).optional(),
+  assignedRegions: z.array(z.string()).optional(),
+  lastLogin: z.coerce.date().optional(),
 });
