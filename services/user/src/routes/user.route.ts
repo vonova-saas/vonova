@@ -20,8 +20,12 @@ import { validateRequest } from "../middlewares/validateRequest.middleware";
 import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
 import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
 import { updateDashboardDataSchema, updateUserProfileSchema, updateUserSettingsSchema } from "../validation/user.validation";
+import { securityStack } from "../middlewares/security";
 
 const userRoutes = Router();
+
+// Apply security stack to all auth routes
+userRoutes.use(...securityStack);
 
 // Protected routes - require authentication
 userRoutes.use(isAuthenticated);

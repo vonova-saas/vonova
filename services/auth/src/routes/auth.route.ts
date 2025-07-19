@@ -32,10 +32,14 @@ import {
   validateRoleChangeSchema,
   verifyTokenSchema
 } from "../validation/auth.validation";
+import { securityStack } from "../middlewares/security";
 
 const googleFailedUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`;
 
 const authRoutes = Router();
+
+// Apply security stack to all auth routes
+authRoutes.use(...securityStack);
 
 //? ************* Email Flow Services *************
 // Register routes

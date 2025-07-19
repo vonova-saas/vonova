@@ -9,14 +9,20 @@ import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import userRoutes from "./routes/user.route";
 import adminRoutes from "./routes/admin.route";
+import { applySecurityStack, securityStack } from "./middlewares/security";
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+applySecurityStack(app, {
+  cors: {},
+  bot: {},
+});
+
 app.get(
-  `/`,
+  `/health`,
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     return res.status(HTTPSTATUS.OK).json({
       status: "Healthy!",
@@ -42,6 +48,6 @@ app.use(errorHandler);
 app.listen(Env.PORT, async () => {
   console.log(`🚀 User Service listening on port ${Env.PORT} in ${Env.NODE_ENV} mode`);
   console.log(`📚 Swagger docs available at http://localhost:${Env.PORT}/api-docs`);
-  console.log(`🔗 Auth Service URL: ${Env.AUTH_SERVICE_URL}`);
+  console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
   await connectDatabase();
 });

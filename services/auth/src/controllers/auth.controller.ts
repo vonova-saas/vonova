@@ -22,7 +22,6 @@ import { UnauthorizedException } from "../utils/appError";
 
 import { Env } from "../config/env.config";
 import { ProviderEnum } from "../enums/account-provider.enum";
-import { resourceLimits } from "worker_threads";
 
 //? ************* Email Flow Controllers *************
 // ============== Register Controller ==============
@@ -59,7 +58,7 @@ export const welcomeUserEmailController = asyncHandler(
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes in ms
+      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
 
@@ -95,7 +94,7 @@ export const loginUserEmailController = asyncHandler(
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes in ms
+      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
 
@@ -170,7 +169,7 @@ export const welcomeUseroAuthGoogleController = asyncHandler(
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes in ms
+      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
 
@@ -218,7 +217,7 @@ export const refreshTokenController = asyncHandler(
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes in ms
+      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
 
