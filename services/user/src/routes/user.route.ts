@@ -24,32 +24,32 @@ import { updateDashboardDataSchema, updateUserProfileSchema, updateUserSettingsS
 const userRoutes = Router();
 
 // Protected routes - require authentication
-userRoutes.use(isAuthenticated);
+
 
 // Internal endpoint for user data initialization (called by auth service)
 userRoutes.post("/init", initUserDataController);
 
 //? Dashboard routes - users can only access their own dashboard
 // Student Dashboard Routes
-userRoutes.patch("/dashboard/:userId/learning-progress", canAccessOwnData('userId'), updateLearningProgressController);
-userRoutes.patch("/dashboard/:userId/quiz-performance", canAccessOwnData('userId'), addQuizPerformanceController);
-userRoutes.patch("/dashboard/:userId/ai-roadmap", canAccessOwnData('userId'), updateAIRoadmapController);
-userRoutes.patch("/dashboard/:userId/ai-video-suggestion", canAccessOwnData('userId'), addAIVideoSuggestionController);
+userRoutes.patch("/dashboard/:userId/learning-progress", isAuthenticated, canAccessOwnData('userId'), updateLearningProgressController);
+userRoutes.patch("/dashboard/:userId/quiz-performance", isAuthenticated, canAccessOwnData('userId'), addQuizPerformanceController);
+userRoutes.patch("/dashboard/:userId/ai-roadmap", isAuthenticated, canAccessOwnData('userId'), updateAIRoadmapController);
+userRoutes.patch("/dashboard/:userId/ai-video-suggestion", isAuthenticated, canAccessOwnData('userId'), addAIVideoSuggestionController);
 // Instructor Dashboard Routes
-userRoutes.patch("/dashboard/:userId/courses-created", canAccessOwnData('userId'), addCourseCreatedController);
+userRoutes.patch("/dashboard/:userId/courses-created", isAuthenticated, canAccessOwnData('userId'), addCourseCreatedController);
 // Shared/Other routes
-userRoutes.get("/dashboard/:userId", canAccessOwnData('userId'), getDashboardDataController);
-userRoutes.put("/dashboard/:userId", canAccessOwnData('userId'), validateRequest(updateDashboardDataSchema), updateDashboardDataController);
+userRoutes.get("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), getDashboardDataController);
+userRoutes.put("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateDashboardDataSchema), updateDashboardDataController);
 
 //* Profile routes - users can only access their own profile
-userRoutes.get("/profile/:userId", canAccessOwnData('userId'), getUserProfileController);
-userRoutes.put("/profile/:userId", canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
-userRoutes.patch("/profile/:userId/student-info", canAccessOwnData('userId'), updateStudentInfoController);
-userRoutes.patch("/profile/:userId/instructor-info", canAccessOwnData('userId'), updateInstructorInfoController);
-userRoutes.patch("/profile/:userId/admin-info", canAccessOwnData('userId'), updateAdminInfoController);
+userRoutes.get("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), getUserProfileController);
+userRoutes.put("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
+userRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), updateStudentInfoController);
+userRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), updateInstructorInfoController);
+userRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), updateAdminInfoController);
 
 //! Settings routes - users can only access their own settings
-userRoutes.get("/settings/:userId", canAccessOwnData('userId'), getUserSettingsController);
-userRoutes.put("/settings/:userId", canAccessOwnData('userId'), validateRequest(updateUserSettingsSchema), updateUserSettingsController);
+userRoutes.get("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), getUserSettingsController);
+userRoutes.put("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserSettingsSchema), updateUserSettingsController);
 
 export default userRoutes;
