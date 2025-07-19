@@ -296,16 +296,27 @@ export const updateUserProfileService = async (
     }
   }
 
-  const profile = await UserProfileModel.findOneAndUpdate(
-    { userId },
-    { $set: update },
-    { new: true, runValidators: true }
-  );
-
+  // Fetch the profile first
+  const profile = await UserProfileModel.findOne({ userId });
   if (!profile) {
     throw new NotFoundException("User profile not found");
   }
 
+  // Merge top-level fields
+  Object.keys(update).forEach((key) => {
+    if (
+      typeof update[key] === "object" &&
+      update[key] !== null &&
+      !Array.isArray(update[key]) &&
+      (profile as any)[key]
+    ) {
+      (profile as any)[key] = { ...(profile as any)[key], ...update[key] };
+    } else {
+      (profile as any)[key] = update[key];
+    }
+  });
+
+  await profile.save();
   return profile;
 };
 
