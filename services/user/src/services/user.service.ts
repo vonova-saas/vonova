@@ -57,7 +57,20 @@ export const initUserDataService = async (
   // Create dashboard if not exists
   let dashboard = await DashboardDataModel.findOne({ userId });
   if (!dashboard) {
-    dashboard = await DashboardDataModel.create({ userId });
+    dashboard = await DashboardDataModel.create({
+      userId,
+      studentDashboard: {
+        enrolledCourses: [],
+        completedCourses: [],
+        quizzesTaken: [],
+        materialsAccessed: [],
+        aiRoadmap: null,
+        aiVideoSuggestions: [],
+        aiProblemSolvingStats: null
+      },
+      instructorDashboard: null,
+      adminDashboard: null
+    });
   }
 
   return {
