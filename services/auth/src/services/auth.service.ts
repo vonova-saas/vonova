@@ -255,14 +255,7 @@ export const loginUserEmailService = async (body: {
 
 //! **************** oAuth Google Flow Services ****************
 // ============== Register or Login Service ==============
-export const oAuthGoogleLoginService = async ({
-  provider,
-  displayName,
-  providerId,
-  picture,
-  email,
-  userAgent,
-}: {
+export const oAuthGoogleLoginService = async (data: {
   provider: string;
   displayName: string;
   providerId: string;
@@ -270,12 +263,10 @@ export const oAuthGoogleLoginService = async ({
   email?: string;
   userAgent: string;
 }) => {
-  const account = await AccountModel.findOne({ provider, providerId });
-  if (!account) {
-    throw new NotFoundException("User not found for the given account");
-  }
+  const { providerId, provider, displayName, email, picture, userAgent } = data;
 
-  let user = await UserModel.findById(account.userId);
+  // First, check if user exists by email
+  let user = await UserModel.findOne({ email });
   let isNewUser = false;
 
   if (!user) {
@@ -306,12 +297,8 @@ export const oAuthGoogleLoginService = async ({
     };
   }
 
-  // Existing user: login and return tokens
-  user = await UserModel.findById(account.userId);
-  if (!user) throw new NotFoundException("User not found for the given account");
-
   user.lastLogin = new Date();
-  user.save();
+  await user.save();
 
   //* Create access Token and refresh Token
   const jti = uuidv4();
@@ -374,7 +361,7 @@ export const welcomeUseroAuthGoogleService = async (body: {
   }
   user.role = role as typeof Roles[keyof typeof Roles];
   user.lastLogin = new Date();
-  user.save();
+  await user.save();
 
   //* Create access Token and refresh Token
   const jti = uuidv4();

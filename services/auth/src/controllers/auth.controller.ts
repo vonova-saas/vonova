@@ -151,7 +151,7 @@ export const oAuthGoogleLoginController = asyncHandler(
 export const welcomeUseroAuthGoogleController = asyncHandler(
   async (req: Request, res: Response) => {
     // You can get providerId from the cookie or from req.body (sent by frontend)
-    const providerId = req.cookies.providerId || req.body.providerId;
+    const providerId = req.body.providerId;
     const userAgent = req.headers["user-agent"] || "unknown";
     const { role, answerOne } = req.body;
 
