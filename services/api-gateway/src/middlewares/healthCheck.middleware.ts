@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { config } from '../config/gateway.config';
+import { HTTPSTATUS } from '../config/http.config';
+import { TooManyRequestsException } from '../utils/appError';
 
 // Rate limiting store (in production, use Redis)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -22,11 +24,7 @@ export const rateLimitMiddleware = (limit: number = 100, windowMs: number = 15 *
     }
 
     if (clientData.count >= limit) {
-      res.status(429).json({
-        error: 'Too Many Requests',
-        message: 'Rate limit exceeded'
-      });
-      return;
+      throw new TooManyRequestsException("Rate limit exceeded");
     }
 
     clientData.count++;
@@ -61,7 +59,7 @@ export const healthCheckMiddleware = async (req: Request, res: Response, next: N
       result.status === 'fulfilled' ? result.value : result.reason
     );
 
-    res.status(200).json({
+    res.status(HTTPSTATUS.OK).json({
       gateway: 'healthy',
       timestamp: new Date().toISOString(),
       services: results
@@ -77,34 +75,9 @@ export const corsMiddleware = (req: Request, res: Response, next: NextFunction):
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    res.status(HTTPSTATUS.OK).end();
     return;
   }
 
   next();
-};
-
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction): void => {
-  console.error('Gateway Error:', err);
-
-  if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
-    res.status(503).json({
-      error: 'Service Unavailable',
-      message: 'The requested service is currently unavailable'
-    });
-    return;
-  }
-
-  if (err.code === 'ECONNABORTED') {
-    res.status(504).json({
-      error: 'Gateway Timeout',
-      message: 'The service request timed out'
-    });
-    return;
-  }
-
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: 'An unexpected error occurred'
-  });
 };

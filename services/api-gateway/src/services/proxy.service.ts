@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import axios, { AxiosResponse } from 'axios';
 import { config, ServiceConfig } from '../config/gateway.config';
+import { HTTPSTATUS } from '../config/http.config';
+import { NotFoundException } from '../utils/appError';
 
 const services: Record<string, ServiceConfig> = {};
 Object.values(config.services).forEach(service => {
@@ -17,11 +19,7 @@ export async function forwardRequest(
   try {
     const service = services[serviceName];
     if (!service) {
-      res.status(404).json({
-        error: 'Service Not Found',
-        message: `Service '${serviceName}' is not registered`
-      });
-      return;
+      throw new NotFoundException(`Service '${serviceName}' is not registered`);
     }
 
     const targetUrl = buildTargetUrl(service.url, targetPath);

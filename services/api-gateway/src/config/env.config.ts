@@ -49,6 +49,10 @@ const envConfig = () => ({
   CORS_WHITELIST: getEnv("CORS_WHITELIST", "http://localhost:3000"),
   CORS_BLACKLIST: getEnv("CORS_BLACKLIST", ""),
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
+
+  // ============ Anothers Configuration ============
+  UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
+  UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
 });
 
 export const Env = envConfig();

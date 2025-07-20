@@ -78,3 +78,33 @@ export class UnauthorizedException extends AppError {
     );
   }
 }
+
+export class TooManyRequestsException extends AppError {
+  constructor(message = "Too Many Requests", errorCode?: ErrorCodeEnumType) {
+    super(
+      message,
+      HTTPSTATUS.TOO_MANY_REQUESTS,
+      errorCode || ErrorCodeEnum.TOO_MANY_REQUESTS
+    );
+  }
+}
+
+export class ServiceUnavailableException extends AppError {
+  constructor(message = "Service Unavailable", errorCode?: ErrorCodeEnumType) {
+    super(
+      message,
+      HTTPSTATUS.SERVICE_UNAVAILABLE,
+      errorCode || ErrorCodeEnum.SERVICE_UNAVAILABLE
+    );
+  }
+}
+
+export class GatewayTimeoutException extends AppError {
+  constructor(message = "Gateway Timeout", errorCode?: ErrorCodeEnumType) {
+    super(
+      message,
+      HTTPSTATUS.GATEWAY_TIMEOUT,
+      errorCode || ErrorCodeEnum.GATEWAY_TIMEOUT
+    );
+  }
+}

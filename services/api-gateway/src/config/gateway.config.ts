@@ -20,9 +20,6 @@ export interface RouteConfig {
 }
 
 export const config = {
-  port: Env.PORT,
-  environment: Env.NODE_ENV,
-
   // Services configuration
   services: {
     auth_service: {
