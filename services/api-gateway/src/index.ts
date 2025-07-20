@@ -102,11 +102,6 @@ app.listen(Env.PORT, async () => {
   });
   console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
   await connectDatabase();
-  console.log('\n🔗 Available endpoints:');
-  console.log(`   - Health Check: http://localhost:${Env.PORT}/health`);
-  console.log(`   - Services List: http://localhost:${Env.PORT}/services`);
-  console.log(`   - Service Status: http://localhost:${Env.PORT}/services/status`);
-  console.log(`   - API Routes: http://localhost:${Env.PORT}/api/v1/{service}/*`);
 });
 
 // Graceful shutdown

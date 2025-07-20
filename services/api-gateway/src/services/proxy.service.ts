@@ -21,7 +21,6 @@ export async function forwardRequest(
       throw new NotFoundException(`Service '${serviceName}' is not registered`);
     }
 
-    console.log(`the target: ${targetPath}`);
     const targetUrl = buildTargetUrl(service.url, targetPath);
     console.log(`Forwarding ${req.method} ${req.path} -> ${targetUrl}`);
 

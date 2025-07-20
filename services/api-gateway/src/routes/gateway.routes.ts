@@ -1,9 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import Router from 'express';
 import { forwardRequest, getServiceStatus } from '../services/proxy.service';
 import { config } from '../config/gateway.config';
 import { HTTPSTATUS } from '../config/http.config';
 import { asyncHandler } from '../middlewares/api/asyncHandler.middleware';
-import { NotFoundException } from '../utils/appError';
+import { InternalServerException, NotFoundException } from '../utils/appError';
 
 export function createGatewayRouter() {
   const router = Router();
@@ -11,7 +11,7 @@ export function createGatewayRouter() {
   // Service discovery endpoint
   router.get(
     '/services',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    asyncHandler(async (req, res, next) => {
       const services = Object.values(config.services).map(service => ({
         name: service.name,
         url: service.url,
@@ -27,7 +27,7 @@ export function createGatewayRouter() {
   // Service health status
   router.get(
     '/services/status',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    asyncHandler(async (req, res, next) => {
       try {
         const status = await getServiceStatus();
         res.status(HTTPSTATUS.OK).json({
@@ -35,51 +35,18 @@ export function createGatewayRouter() {
           status
         });
       } catch (error) {
-        res.status(HTTPSTATUS.INTERNAL_SERVER_ERROR).json({
-          error: 'Failed to get service status',
-          message: error instanceof Error ? error.message : 'Unknown error'
-        });
+        throw new InternalServerException("Failed to get service status");
       }
-    })
-  );
-
-  // Dynamic route handler for all service requests
-  router.all(
-    '/api/v1/:service',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-      const serviceName = req.params.service;
-
-      // Check if service exists
-      const service = config.services[serviceName as keyof typeof config.services];
-      if (!service) {
-        throw new NotFoundException(`Service '${serviceName}' is not available`);
-      }
-      forwardRequest(serviceName, '', req, res, next);
-    })
-  );
-
-  // Dynamic route handler for service requests with paths
-  router.all(
-    '/api/v1/:service/:path',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-      const serviceName = req.params.service;
-      const targetPath = req.params.path;
-
-      // Check if service exists
-      const service = config.services[serviceName as keyof typeof config.services];
-      if (!service) {
-        throw new NotFoundException(`Service '${serviceName}' is not available`);
-      }
-      forwardRequest(serviceName, targetPath, req, res, next);
     })
   );
 
   // Proxy Auth endpoints (no auth required)
   router.all(
-    '/api/v1/auth/:path*',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    '/api/v1/auth/*',
+    asyncHandler(async (req, res, next) => {
       const serviceName = 'auth';
-      const targetPath = req.params.path + (req.params[0] || '');
+      const subPath = req.params[0] || '';
+      const targetPath = 'auth/' + subPath;
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
         throw new NotFoundException(`Service '${serviceName}' is not available`);
@@ -90,10 +57,11 @@ export function createGatewayRouter() {
 
   // Proxy User endpoints (no auth required)
   router.all(
-    '/api/v1/user/:path*',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    '/api/v1/user/*',
+    asyncHandler(async (req, res, next) => {
       const serviceName = 'user';
-      const targetPath = req.params.path + (req.params[0] || '');
+      const subPath = req.params[0] || '';
+      const targetPath = 'auth/' + subPath;
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
         throw new NotFoundException(`Service '${serviceName}' is not available`);

@@ -4,7 +4,6 @@ const envConfig = () => ({
   //? =========== Backend Configuration ===========
   PORT: getEnv("PORT"),
   NODE_ENV: getEnv("NODE_ENV"),
-  BASE_PATH: getEnv("BASE_PATH"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN"),
 
   // Swagger Docs Configuration
@@ -18,11 +17,6 @@ const envConfig = () => ({
   //* =========== Service URLs ===========
   AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
   USER_SERVICE_URL: getEnv("USER_SERVICE_URL"),
-
-  //* =========== Gateway Settings ===========
-  GATEWAY_TIMEOUT: getEnv("GATEWAY_TIMEOUT"),
-  RATE_LIMIT_WINDOW: getEnv("RATE_LIMIT_WINDOW"),
-  RATE_LIMIT_MAX: getEnv("RATE_LIMIT_MAX"),
 
   //! =========== Security Layer===========
   // Rate limiting
