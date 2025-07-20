@@ -5,19 +5,17 @@ FROM oven/bun:1.1.13
 WORKDIR /app
 
 # Copy package files first for layer caching
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 # Install dependencies (including devDependencies for TypeScript)
 RUN bun install
 
 # Copy all source files
-COPY . .
+COPY src/ ./src/
+COPY tsconfig.json ./
 
 # Build the TypeScript project
 RUN bun run build && cp ./package.json ./dist/
-
-# Prune dev dependencies to reduce image size (optional)
-RUN bun prune --production
 
 # Expose the port your app runs on
 EXPOSE 4000
