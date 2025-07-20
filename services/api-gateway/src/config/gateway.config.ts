@@ -73,8 +73,8 @@ export const config = {
     rateLimitMax: 100 // requests per window
   },
 
-  // Auth settings
-  auth: {
-    jwtSecret: process.env.JWT_SECRET || 'your_default_jwt_secret',
-  }
+  // // Auth settings
+  // auth: {
+  //   jwtSecret: process.env.JWT_SECRET || 'your_default_jwt_secret',
+  // }
 };

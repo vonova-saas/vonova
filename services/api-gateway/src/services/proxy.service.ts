@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import axios, { AxiosResponse } from 'axios';
 import { config, ServiceConfig } from '../config/gateway.config';
-import { HTTPSTATUS } from '../config/http.config';
 import { NotFoundException } from '../utils/appError';
 
 const services: Record<string, ServiceConfig> = {};

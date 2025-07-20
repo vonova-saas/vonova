@@ -11,6 +11,10 @@ const envConfig = () => ({
   SWAGGER_USER: getEnv("SWAGGER_USER"),
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD"),
 
+  //* Database configuration (MongoDB),
+  MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
+  // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
+
   //* =========== Service URLs ===========
   AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
   USER_SERVICE_URL: getEnv("USER_SERVICE_URL"),
