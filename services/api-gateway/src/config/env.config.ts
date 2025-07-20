@@ -1,21 +1,24 @@
 import { getEnv } from "../utils/get-env";
 
 const envConfig = () => ({
-  //? Backend Configuration
-  PORT: getEnv("PORT", "5000"),
-  NODE_ENV: getEnv("NODE_ENV", "development"),
-  BASE_PATH: getEnv("BASE_PATH", "/api"),
-  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
+  //? =========== Backend Configuration ===========
+  PORT: getEnv("PORT"),
+  NODE_ENV: getEnv("NODE_ENV"),
+  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN"),
 
-  //? Swagger Docs Configuration
-  SWAGGER_USER: getEnv("SWAGGER_USER", "staffly"),
-  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
+  // Swagger Docs Configuration
+  SWAGGER_USER: getEnv("SWAGGER_USER"),
+  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD"),
 
   //* Database configuration (MongoDB),
   MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
-  //! Security Layer
+  //* =========== Service URLs ===========
+  AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
+  USER_SERVICE_URL: getEnv("USER_SERVICE_URL"),
+
+  //! =========== Security Layer===========
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: getEnv("RATE_LIMIT_WINDOW_MS"),
   RATE_LIMIT_MAX_REQUESTS: getEnv("RATE_LIMIT_MAX_REQUESTS"),
@@ -44,14 +47,6 @@ const envConfig = () => ({
   CORS_WHITELIST: getEnv("CORS_WHITELIST", "http://localhost:3000"),
   CORS_BLACKLIST: getEnv("CORS_BLACKLIST", ""),
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
-
-  //? Email configuration
-  EMAIL_HOST: process.env.EMAIL_HOST,
-  EMAIL_PORT: parseInt(process.env.EMAIL_PORT || "465"),
-  EMAIL_SECURE: process.env.EMAIL_SECURE === "true",
-  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
-  EMAIL_USER: process.env.EMAIL_USER || "devoviacompany@gmail.com",
-  EMAIL_FROM: process.env.EMAIL_FROM || "devoviacompany@gmail.com",
 
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),

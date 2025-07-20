@@ -66,45 +66,37 @@ export const updateDashboardDataSchema = z.object({
     })
     .partial()
     .optional(),
-}); 
-
-export const updateUserProfileSchema = z.object({
-  name: z.string().min(2).max(50).optional(),
-  email: z.string().email().optional(),
-  avatarUrl: z.string().url().nullable().optional(),
-  bio: z.string().max(500).optional(),
-  phone: z.string().max(20).optional(),
-  gender: z.enum(["male", "female", "other"]).optional(),
-  dateOfBirth: z.coerce.date().optional(),
-  address: z.string().max(200).optional(),
-  social: z
-    .object({
-      facebook: z.string().url().optional(),
-      twitter: z.string().url().optional(),
-      linkedin: z.string().url().optional(),
-      github: z.string().url().optional(),
-    })
-    .partial()
-    .optional(),
 });
 
-export const updateUserSettingsSchema = z.object({
-  language: z.string().min(2).max(10).optional(),
-  theme: z.enum(["light", "dark", "system"]).optional(),
-  notifications: z
-    .object({
-      email: z.boolean().optional(),
-      sms: z.boolean().optional(),
-      push: z.boolean().optional(),
-    })
-    .partial()
-    .optional(),
-  privacy: z
-    .object({
-      profileVisible: z.boolean().optional(),
-      showEmail: z.boolean().optional(),
-      showPhone: z.boolean().optional(),
-    })
-    .partial()
-    .optional(),
+// Validation schemas for PATCH routes
+export const updateLearningProgressSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  progress: z.number().min(0).max(100, "Progress must be between 0 and 100"),
+});
+
+export const addQuizPerformanceSchema = z.object({
+  quizId: z.string().min(1, "Quiz ID is required"),
+  courseId: z.string().min(1, "Course ID is required"),
+  score: z.number().min(0, "Score must be non-negative"),
+});
+
+export const updateAIRoadmapSchema = z.object({
+  topics: z.array(z.string().min(1, "Topic cannot be empty")),
+  recommendedOrder: z.array(z.string().min(1, "Recommended order item cannot be empty")),
+});
+
+export const addAIVideoSuggestionSchema = z.object({
+  topic: z.string().min(1, "Topic is required"),
+  videoUrl: z.string().url("Video URL must be a valid URL"),
+});
+
+export const addCourseCreatedSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  title: z.string().min(1, "Course title is required"),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  level: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  price: z.number().min(0).optional(),
+  isPublished: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
 });

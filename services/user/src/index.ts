@@ -7,9 +7,11 @@ import { Env } from "./config/env.config";
 import connectDatabase from "./config/database.config";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
-import userRoutes from "./routes/user.route";
+import profileRoutes from "./routes/profile.route";
 import adminRoutes from "./routes/admin.route";
 import { applySecurityStack, securityStack } from "./middlewares/security";
+import userSettingsRoutes from "./routes/settings.route";
+import userDashboardRoutes from "./routes/dashboard.route";
 
 const app = express();
 
@@ -40,7 +42,9 @@ if (Env.NODE_ENV !== 'development') {
 }
 
 // API routes
-app.use(`/user`, userRoutes);
+app.use(`/userDashbaord`, userDashboardRoutes);
+app.use(`/userProfile`, profileRoutes);
+app.use(`/userSettings`, userSettingsRoutes);
 app.use(`/admin`, adminRoutes);
 
 app.use(errorHandler);
