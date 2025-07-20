@@ -1,0 +1,59 @@
+import { Router } from "express";
+import {
+  getUserProfileController,
+  updateUserProfileController,
+  getUserSettingsController,
+  updateUserSettingsController,
+  getDashboardDataController,
+  updateDashboardDataController,
+  initUserDataController,
+  updateStudentInfoController,
+  updateInstructorInfoController,
+  updateAdminInfoController,
+  updateLearningProgressController,
+  addQuizPerformanceController,
+  updateAIRoadmapController,
+  addAIVideoSuggestionController,
+  addCourseCreatedController,
+} from "../controllers/user.controller";
+import { validateRequest } from "../middlewares/validateRequest.middleware";
+import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
+import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
+import { updateDashboardDataSchema, updateUserProfileSchema, updateUserSettingsSchema } from "../validation/user.validation";
+import { securityStack } from "../middlewares/security";
+
+const userRoutes = Router();
+
+// Apply security stack to all auth routes
+userRoutes.use(...securityStack);
+
+// Protected routes - require authentication
+
+
+// Internal endpoint for user data initialization (called by auth service)
+userRoutes.post("/init", initUserDataController);
+
+//? Dashboard routes - users can only access their own dashboard
+// Student Dashboard Routes
+userRoutes.patch("/dashboard/:userId/learning-progress", isAuthenticated, canAccessOwnData('userId'), updateLearningProgressController);
+userRoutes.patch("/dashboard/:userId/quiz-performance", isAuthenticated, canAccessOwnData('userId'), addQuizPerformanceController);
+userRoutes.patch("/dashboard/:userId/ai-roadmap", isAuthenticated, canAccessOwnData('userId'), updateAIRoadmapController);
+userRoutes.patch("/dashboard/:userId/ai-video-suggestion", isAuthenticated, canAccessOwnData('userId'), addAIVideoSuggestionController);
+// Instructor Dashboard Routes
+userRoutes.patch("/dashboard/:userId/courses-created", isAuthenticated, canAccessOwnData('userId'), addCourseCreatedController);
+// Shared/Other routes
+userRoutes.get("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), getDashboardDataController);
+userRoutes.put("/dashboard/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateDashboardDataSchema), updateDashboardDataController);
+
+//* Profile routes - users can only access their own profile
+userRoutes.get("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), getUserProfileController);
+userRoutes.put("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
+userRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), updateStudentInfoController);
+userRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), updateInstructorInfoController);
+userRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), updateAdminInfoController);
+
+//! Settings routes - users can only access their own settings
+userRoutes.get("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), getUserSettingsController);
+userRoutes.put("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserSettingsSchema), updateUserSettingsController);
+
+export default userRoutes;
