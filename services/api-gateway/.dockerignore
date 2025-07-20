@@ -1,0 +1,38 @@
+# Node/Bun/TypeScript typical ignores
+
+node_modules
+bun.lockb
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Build output
+dist
+build
+
+# Local env files
+.env
+.env.*
+
+# OS/Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+
+# Git
+.git
+.gitignore
+
+# IDEs
+.vscode
+.idea
+
+# Test output
+coverage
+*.log
+
+# Docker
+Dockerfile*
+docker-compose*
