@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -96,11 +97,11 @@ app.listen(Env.PORT, async () => {
   console.log(`📍 Server running on port ${Env.PORT}`);
   console.log(`🌍 Environment: ${Env.NODE_ENV}`);
   console.log('📊 Registered services:');
-  console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
-  await connectDatabase();
   Object.values(config.services).forEach(service => {
     console.log(`   - ${service.name}: ${service.url}`);
   });
+  console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
+  await connectDatabase();
   console.log('\n🔗 Available endpoints:');
   console.log(`   - Health Check: http://localhost:${Env.PORT}/health`);
   console.log(`   - Services List: http://localhost:${Env.PORT}/services`);

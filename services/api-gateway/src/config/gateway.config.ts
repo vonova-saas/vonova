@@ -1,7 +1,4 @@
-import dotenv from 'dotenv';
 import { Env } from './env.config';
-
-dotenv.config();
 
 export interface ServiceConfig {
   name: string;
@@ -22,15 +19,15 @@ export interface RouteConfig {
 export const config = {
   // Services configuration
   services: {
-    auth_service: {
-      name: 'auth_service',
+    auth: {
+      name: 'auth',
       url: Env.AUTH_SERVICE_URL,
       healthCheck: '/health',
       timeout: 5000
     } as ServiceConfig,
 
-    user_service: {
-      name: 'user_service',
+    user: {
+      name: 'user',
       url: Env.USER_SERVICE_URL,
       healthCheck: '/health',
       timeout: 5000
@@ -52,15 +49,33 @@ export const config = {
       target: '/*'
     },
     {
-      path: '/api/v1/service2/*',
+      path: '/api/v1/user/*',
       method: 'GET',
-      service: 'service2',
+      service: 'user',
       target: '/*'
     },
     {
-      path: '/api/v1/service2/*',
+      path: '/api/v1/user/*',
       method: 'POST',
-      service: 'service2',
+      service: 'user',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/user/*',
+      method: 'PUT',
+      service: 'user',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/user/*',
+      method: 'PATCH',
+      service: 'user',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/user/*',
+      method: 'DELETE',
+      service: 'user',
       target: '/*'
     }
   ] as RouteConfig[],

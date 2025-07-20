@@ -3,6 +3,7 @@ import { forwardRequest, getServiceStatus } from '../services/proxy.service';
 import { config } from '../config/gateway.config';
 import { HTTPSTATUS } from '../config/http.config';
 import { asyncHandler } from '../middlewares/api/asyncHandler.middleware';
+import { NotFoundException } from '../utils/appError';
 
 export function createGatewayRouter() {
   const router = Router();
@@ -51,11 +52,7 @@ export function createGatewayRouter() {
       // Check if service exists
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
-        res.status(HTTPSTATUS.NOT_FOUND).json({
-          error: 'Service Not Found',
-          message: `Service '${serviceName}' is not available`
-        });
-        return;
+        throw new NotFoundException(`Service '${serviceName}' is not available`);
       }
       forwardRequest(serviceName, '', req, res, next);
     })
@@ -71,11 +68,7 @@ export function createGatewayRouter() {
       // Check if service exists
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
-        res.status(HTTPSTATUS.NOT_FOUND).json({
-          error: 'Service Not Found',
-          message: `Service '${serviceName}' is not available`
-        });
-        return;
+        throw new NotFoundException(`Service '${serviceName}' is not available`);
       }
       forwardRequest(serviceName, targetPath, req, res, next);
     })
@@ -89,11 +82,7 @@ export function createGatewayRouter() {
       const targetPath = req.params.path + (req.params[0] || '');
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
-        res.status(HTTPSTATUS.NOT_FOUND).json({
-          error: 'Service Not Found',
-          message: `Service '${serviceName}' is not available`
-        });
-        return;
+        throw new NotFoundException(`Service '${serviceName}' is not available`);
       }
       forwardRequest(serviceName, targetPath, req, res, next);
     })
@@ -107,33 +96,10 @@ export function createGatewayRouter() {
       const targetPath = req.params.path + (req.params[0] || '');
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
-        res.status(HTTPSTATUS.NOT_FOUND).json({
-          error: 'Service Not Found',
-          message: `Service '${serviceName}' is not available`
-        });
-        return;
+        throw new NotFoundException(`Service '${serviceName}' is not available`);
       }
       forwardRequest(serviceName, targetPath, req, res, next);
     })
   );
-
-  // Proxy Admin endpoints (no auth required)
-  router.all(
-    '/api/v1/admin/:path*',
-    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-      const serviceName = 'user';
-      const targetPath = 'admin/' + req.params.path + (req.params[0] || '');
-      const service = config.services[serviceName as keyof typeof config.services];
-      if (!service) {
-        res.status(HTTPSTATUS.NOT_FOUND).json({
-          error: 'Service Not Found',
-          message: `Service '${serviceName}' is not available`
-        });
-        return;
-      }
-      forwardRequest(serviceName, targetPath, req, res, next);
-    })
-  );
-
   return router;
 }
