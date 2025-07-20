@@ -19,13 +19,13 @@ export interface CORSConfig {
 }
 
 const DEFAULT_CONFIG: Required<CORSConfig> = {
-  origin: Env.CORS_ORIGIN || 'http://localhost:3000',
-  methods: (Env.CORS_METHODS || 'GET,POST,PUT,DELETE,OPTIONS').split(','),
-  allowedHeaders: (Env.CORS_ALLOWED_HEADERS || 'Content-Type,Authorization,X-Requested-With').split(','),
-  exposedHeaders: (Env.CORS_EXPOSED_HEADERS || '').split(',').filter(Boolean),
+  origin: Env.CORS_ORIGIN,
+  methods: (Env.CORS_METHODS).split(','),
+  allowedHeaders: (Env.CORS_ALLOWED_HEADERS).split(','),
+  exposedHeaders: (Env.CORS_EXPOSED_HEADERS).split(',').filter(Boolean),
   credentials: Env.CORS_CREDENTIALS === 'true',
-  maxAge: parseInt(Env.CORS_MAX_AGE || '86400', 10),
-  whitelist: (Env.CORS_WHITELIST || 'http://localhost:3000').split(',').filter(Boolean),
+  maxAge: parseInt(Env.CORS_MAX_AGE, 10),
+  whitelist: (Env.CORS_WHITELIST || '').split(',').map(origin => origin.trim()).filter(Boolean),
   blacklist: (Env.CORS_BLACKLIST || '').split(',').filter(Boolean),
   enableSecurityHeaders: Env.CORS_SECURITY_HEADERS !== 'false',
   logger: (msg, meta) => console.warn(`[CORS] ${msg}`, meta),
@@ -39,7 +39,7 @@ const preflightStore = new Map<string, { count: number; lastRequest: number }>()
  */
 function validateOrigin(origin: string, config: Required<CORSConfig>): boolean {
   // Special case: allow Swagger docs access from same origin
-  if (origin === 'http://localhost:4004' || origin === 'https://localhost:4004') {
+  if (origin === 'http://localhost:4000' || origin === 'https://localhost:4001') {
     return true;
   }
 
@@ -79,10 +79,10 @@ function addSecurityHeaders(res: Response, config: Required<CORSConfig>): void {
   res.header('X-XSS-Protection', '1; mode=block');
   res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
+
   // Content Security Policy
   res.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
-  
+
   // Strict Transport Security (only for HTTPS)
   if (process.env.NODE_ENV === 'production') {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -163,20 +163,20 @@ export function createCORSProtectionMiddleware(userConfig: CORSConfig = {}): Req
       }
       res.header('Access-Control-Allow-Methods', config.methods.join(','));
       res.header('Access-Control-Allow-Headers', config.allowedHeaders.join(','));
-      
+
       if (config.exposedHeaders.length > 0) {
         res.header('Access-Control-Expose-Headers', config.exposedHeaders.join(','));
       }
-      
+
       if (config.credentials) {
         res.header('Access-Control-Allow-Credentials', 'true');
       }
-      
+
       res.header('Access-Control-Max-Age', config.maxAge.toString());
-      
+
       // Add security headers
       addSecurityHeaders(res, config);
-      
+
       res.sendStatus(204);
       return;
     }
