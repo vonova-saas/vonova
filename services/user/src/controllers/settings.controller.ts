@@ -1,11 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/api/asyncHandler.middleware";
 import { HTTPSTATUS } from "../config/http.config";
-import {
-  getUserSettingsService,
-  updateUserSettingsService,
-} from "../services/settings.service";
-import { NotFoundException } from "../utils/appError";
+import * as settingsService from "../services/settings.service";
 
 declare global {
   namespace Express {
@@ -25,15 +21,9 @@ declare global {
 //! ============ User settings Controllers ============
 export const getUserSettingsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.params.userId;
-    const requesterId = req.user?.id;
+    const userId = req.user!.id;
 
-    // Users can only access their own settings (unless admin)
-    if (requesterId && requesterId !== userId && req.user?.role !== 'ADMIN') {
-      throw new NotFoundException("You can only access your own settings");
-    }
-
-    const settings = await getUserSettingsService(userId);
+    const settings = await settingsService.getUserSettingsService(userId);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User settings fetched successfully",
@@ -44,15 +34,9 @@ export const getUserSettingsController = asyncHandler(
 
 export const updateUserSettingsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.params.userId;
-    const requesterId = req.user?.id;
+    const userId = req.user!.id;
 
-    // Users can only update their own settings (unless admin)
-    if (requesterId && requesterId !== userId && req.user?.role !== 'ADMIN') {
-      throw new NotFoundException("You can only update your own settings");
-    }
-
-    const settings = await updateUserSettingsService(userId, req.body);
+    const settings = await settingsService.updateUserSettingsService(userId, req.body);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User settings updated successfully",

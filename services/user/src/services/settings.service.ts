@@ -1,5 +1,6 @@
 import UserSettingsModel from "../models/userSettings.model";
 import { NotFoundException } from "../utils/appError";
+import { flattenObject } from "../utils/flattenObjectHelper";
 
 //! ============ User settings Service ============
 export const getUserSettingsService = async (userId: string) => {
@@ -11,13 +12,17 @@ export const getUserSettingsService = async (userId: string) => {
 };
 
 export const updateUserSettingsService = async (userId: string, update: any) => {
+  const flatUpdate = flattenObject(update);
+
   const settings = await UserSettingsModel.findOneAndUpdate(
     { userId },
-    { $set: update },
-    { new: true, runValidators: true }
+    { $set: flatUpdate },
+    { new: true }
   );
+
   if (!settings) {
     throw new NotFoundException("User settings not found");
   }
   return settings;
 };
+

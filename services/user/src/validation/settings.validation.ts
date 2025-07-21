@@ -19,4 +19,9 @@ export const updateUserSettingsSchema = z.object({
     })
     .partial()
     .optional(),
-});
+})
+  .refine((data) => {
+    return Object.keys(data).length > 0;
+  }, {
+    message: "At least one setting must be provided.",
+  });

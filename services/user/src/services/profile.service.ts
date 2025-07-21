@@ -98,18 +98,20 @@ export const getUserProfileService = async (userId: string, requesterId?: string
   return profile;
 };
 
+export const getMyProfileService = async (userId: string) => {
+  const profile = await UserProfileModel.findOne({ userId });
+  if (!profile) {
+    throw new NotFoundException("User profile not found");
+  }
+  return profile;
+};
+
+
+
 export const updateUserProfileService = async (
   userId: string,
   update: any,
-  requesterId?: string
 ) => {
-  // Ensure user can only update their own profile (unless admin)
-  if (requesterId && requesterId !== userId) {
-    const requester = await UserProfileModel.findOne({ userId: requesterId });
-    if (!requester || requester.role !== UserRoleEnum.ADMIN) {
-      throw new ForbiddenException("You can only update your own profile");
-    }
-  }
 
   // Fetch the profile first
   const profile = await UserProfileModel.findOne({ userId });
@@ -117,22 +119,12 @@ export const updateUserProfileService = async (
     throw new NotFoundException("User profile not found");
   }
 
-  // Merge top-level fields
-  Object.keys(update).forEach((key) => {
-    if (
-      typeof update[key] === "object" &&
-      update[key] !== null &&
-      !Array.isArray(update[key]) &&
-      (profile as any)[key]
-    ) {
-      (profile as any)[key] = { ...(profile as any)[key], ...update[key] };
-    } else {
-      (profile as any)[key] = update[key];
-    }
-  });
-
-  await profile.save();
-  return profile;
+  const updatedProfile = await UserProfileModel.findOneAndUpdate(
+    { userId },
+    { $set: update },
+    { new: true, runValidators: true }
+  );
+  return updatedProfile;
 };
 
 // Role-specific profile updates
