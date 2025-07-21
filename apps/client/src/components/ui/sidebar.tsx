@@ -287,6 +287,7 @@ function LeftSidebarTrigger({
     </Button>
   );
 }
+
 function RightSidebarTrigger({
   className,
   onClick,

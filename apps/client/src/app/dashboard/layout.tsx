@@ -34,31 +34,55 @@ import {
 import { getDisplayRoadmapId } from "@/lib/utils";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface Props {
   children: React.ReactNode;
 }
 
-const segmentNameMap: Record<string, string> = {
-  dashboard: "Dashboard",
-  courses: "Courses",
-  "material-library": "Material Library",
-  quizzes: "Quizzes",
-  "ai-video-generator": "AI Video Generator",
-  "ai-roadmap-generator": "AI Roadmap Generator",
-  "problem-solving": "Problem Solving",
-  "ai-assistant": "AI Assistant",
-  voice: "AI Voice",
-  community: "Community",
-  settings: "Settings",
+const segmentNameMap = {
+  student: {
+    dashboard: "Dashboard",
+    courses: "Courses",
+    "material-library": "Material Library",
+    quizzes: "Quizzes",
+    "ai-video-generator": "AI Video Generator",
+    "ai-roadmap-generator": "AI Roadmap Generator",
+    "problem-solving": "Problem Solving",
+    "ai-assistant": "AI Assistant",
+    voice: "AI Voice",
+    community: "Community",
+    profile: "Profile",
+    settings: "Settings",
+  },
+  admin: {
+    dashboard: "Admin Dashboard",
+    "user-management": "User Management",
+    reports: "Reports",
+    profile: "Profile",
+    settings: "Settings",
+  },
+  instructor: {
+    dashboard: "Instructor Dashboard",
+    "courses-management": "Courses Management",
+    "material-library-management": "Material Library Management",
+    "presentation-builder": "Presentation Builder",
+    "problem-solving-management": "Problem Solving Management",
+    profile: "Profile",
+    settings: "Settings",
+  },
 };
 
 export default function DashboardLayout({ children }: Props) {
   const pathname = usePathname();
+  const role = useUserRole();
   const segments = pathname.split("/").filter(Boolean);
   const dashboardIndex = segments.indexOf("dashboard");
   const crumbSegments =
     dashboardIndex >= 0 ? segments.slice(dashboardIndex) : segments;
+
+  const currentSegmentMap =
+    segmentNameMap[role as never] || segmentNameMap["student"];
 
   const [open, setOpen] = React.useState(false);
   const [chatOpen, setChatOpen] = React.useState(false);
@@ -125,7 +149,7 @@ export default function DashboardLayout({ children }: Props) {
                                   "/" + crumbSegments.slice(0, i + 1).join("/")
                                 }
                               >
-                                {segmentNameMap[seg] || seg}
+                                {currentSegmentMap[seg] || seg}
                               </BreadcrumbLink>
                             </BreadcrumbItem>
                           ) : (
@@ -134,7 +158,7 @@ export default function DashboardLayout({ children }: Props) {
                                 {i === crumbSegments.length - 1 &&
                                 /^[a-f0-9]{8}-[a-f0-9\-]+$/i.test(seg)
                                   ? getDisplayRoadmapId(seg)
-                                  : segmentNameMap[seg] || seg}
+                                  : currentSegmentMap[seg] || seg}
                               </BreadcrumbPage>
                             </BreadcrumbItem>
                           )}
