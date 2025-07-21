@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { gitBook } from "./git-book-data";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Book, Menu, Home } from "lucide-react";
+import { Book, Menu, Home, ArrowLeft, ArrowRight } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 export default function BookViewer() {
   const router = useRouter();
@@ -27,6 +28,11 @@ export default function BookViewer() {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isTocOpen, setIsTocOpen] = useState(false);
+  const [fontSize, setFontSize] = useState<'text-base' | 'text-lg' | 'text-xl' | 'text-2xl'>('text-lg');
+  const [lineHeight, setLineHeight] = useState<'normal' | 'relaxed'>('normal');
+  const [search, setSearch] = useState("");
+  const [matchCount, setMatchCount] = useState(0);
+  const matchCountRef = useRef(0);
 
   const currentChapterSlug =
     searchParams.get("chapter") || gitBook.chapters[0].slug;
@@ -41,6 +47,28 @@ export default function BookViewer() {
     currentChapterIndex < gitBook.chapters.length - 1
       ? gitBook.chapters[currentChapterIndex + 1]
       : null;
+
+  // Keyboard navigation for chapters
+  const handleChapterChange = useCallback((slug: string) => {
+    router.push(`${pathname}?chapter=${slug}`);
+    setIsTocOpen(false); // Close mobile TOC on selection
+  }, [router, pathname]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft' && prevChapter) {
+      handleChapterChange(prevChapter.slug);
+    } else if (e.key === 'ArrowRight' && nextChapter) {
+      handleChapterChange(nextChapter.slug);
+    }
+  }, [prevChapter, nextChapter, handleChapterChange]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Progress calculation
+  const chapterProgress = ((currentChapterIndex + 1) / gitBook.chapters.length) * 100;
 
   useEffect(() => {
     if (currentChapter) {
@@ -59,10 +87,55 @@ export default function BookViewer() {
     }
   }, [currentChapter]);
 
-  const handleChapterChange = (slug: string) => {
-    router.push(`${pathname}?chapter=${slug}`);
-    setIsTocOpen(false); // Close mobile TOC on selection
+  const increaseFont = () => {
+    setFontSize((prev) =>
+      prev === 'text-base' ? 'text-lg' : prev === 'text-lg' ? 'text-xl' : prev === 'text-xl' ? 'text-2xl' : 'text-2xl'
+    );
   };
+  const decreaseFont = () => {
+    setFontSize((prev) =>
+      prev === 'text-2xl' ? 'text-xl' : prev === 'text-xl' ? 'text-lg' : prev === 'text-lg' ? 'text-base' : 'text-base'
+    );
+  };
+  const resetFont = () => setFontSize('text-lg');
+
+  // Helper to highlight search matches in text
+  function highlightMatches(text: string, search: string) {
+    if (!search) return text;
+    // Use global, case-insensitive regex
+    const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    let lastIndex = 0;
+    let match;
+    const nodes: React.ReactNode[] = [];
+    let count = 0;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(text.slice(lastIndex, match.index));
+      }
+      nodes.push(
+        <mark key={match.index} className="bg-yellow-300 text-black rounded px-1 py-0.5">
+          {match[0]}
+        </mark>
+      );
+      count++;
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      nodes.push(text.slice(lastIndex));
+    }
+    matchCountRef.current += count;
+    return nodes.length > 0 ? nodes : text;
+  }
+
+  // Reset match count before each render
+  useLayoutEffect(() => {
+    matchCountRef.current = 0;
+  }, [content, search]);
+
+  // After render, update matchCount state
+  useLayoutEffect(() => {
+    setMatchCount(matchCountRef.current);
+  }, []);
 
   const TableOfContents = () => (
     <div className="w-full">
@@ -89,7 +162,7 @@ export default function BookViewer() {
   );
 
   return (
-    <div className="flex h-[100vh] bg-muted/20">
+    <div className="flex h-[89vh] bg-muted/20">
       {/* Desktop Sidebar (Table of Contents) */}
       <aside className="hidden md:flex flex-col w-72 bg-background border-r h-full">
         <div className="p-4 border-b">
@@ -146,9 +219,69 @@ export default function BookViewer() {
           </Button>
         </header>
 
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground px-4 pt-4 pb-2" aria-label="Breadcrumb">
+          <Link href="/dashboard/material-library/online-books" className="hover:underline">{gitBook.title}</Link>
+          <span className="mx-1">/</span>
+          <span className="font-semibold text-primary">{currentChapter?.title}</span>
+        </nav>
+
+        {/* Progress Bar & Search */}
+        <div className="w-full px-4 mb-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span>Chapter {currentChapterIndex + 1} of {gitBook.chapters.length}</span>
+              <span>{Math.round(chapterProgress)}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2.5">
+              <div className="bg-primary h-2.5 rounded-full transition-all duration-300" style={{ width: `${chapterProgress}%` }}></div>
+            </div>
+          </div>
+          {/* Search in Chapter */}
+          <div className="flex-1 min-w-0 flex items-center gap-2 md:ml-4 mt-2 md:mt-0">
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search in chapter..."
+              className="w-full"
+              aria-label="Search in chapter"
+            />
+            {search && (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{matchCount} match{matchCount !== 1 ? "es" : ""}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-4 px-4 pt-4 pb-2">
+          {/* Font Size Controls */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Font size:</span>
+            <Button size="icon" variant="outline" aria-label="Decrease font size" onClick={decreaseFont} disabled={fontSize === 'text-base'}>
+              A-
+            </Button>
+            <Button size="icon" variant="outline" aria-label="Reset font size" onClick={resetFont}>
+              A
+            </Button>
+            <Button size="icon" variant="outline" aria-label="Increase font size" onClick={increaseFont} disabled={fontSize === 'text-2xl'}>
+              A+
+            </Button>
+          </div>
+          {/* Line Height Control */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Line height:</span>
+            <Button size="sm" variant={lineHeight === 'normal' ? 'default' : 'outline'} aria-label="Normal line height" onClick={() => setLineHeight('normal')}>
+              Normal
+            </Button>
+            <Button size="sm" variant={lineHeight === 'relaxed' ? 'default' : 'outline'} aria-label="Relaxed line height" onClick={() => setLineHeight('relaxed')}>
+              Relaxed
+            </Button>
+          </div>
+        </div>
+
         {/* Reading Area */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8">
-          <article className="prose prose-lg prose-zinc dark:prose-invert max-w-none bg-background p-6 rounded-lg shadow-sm">
+          <article className={`prose prose-lg prose-zinc dark:prose-invert max-w-none bg-background p-6 rounded-lg shadow-sm ${fontSize} ${lineHeight === 'relaxed' ? 'leading-relaxed' : 'leading-normal'}`}>
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-8 w-3/4" />
@@ -180,7 +313,13 @@ export default function BookViewer() {
                         {children}
                       </code>
                     );
-                  })
+                  }),
+                  text: ({ children }) => {
+                    if (!search || !Array.isArray(children)) return children;
+                    const first = children[0];
+                    if (typeof first !== 'string') return children;
+                    return highlightMatches(first, search);
+                  },
                 }}
               >
                 {content}
@@ -194,23 +333,25 @@ export default function BookViewer() {
               <Button
                 variant="outline"
                 onClick={() => handleChapterChange(prevChapter.slug)}
+                aria-label="Previous chapter"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                {prevChapter.title}
+                <span className="hidden sm:inline">{prevChapter.title}</span>
+                <ArrowLeft className="w-4 h-4 sm:ml-2" />
               </Button>
             ) : (
-              <div /> // Placeholder for alignment
+              <div />
             )}
             {nextChapter ? (
               <Button
                 variant="outline"
                 onClick={() => handleChapterChange(nextChapter.slug)}
+                aria-label="Next chapter"
               >
-                {nextChapter.title}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <span className="hidden sm:inline">{nextChapter.title}</span>
+                <ArrowRight className="w-4 h-4 sm:ml-2" />
               </Button>
             ) : (
-              <div /> // Placeholder for alignment
+              <div />
             )}
           </div>
         </div>
