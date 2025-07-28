@@ -87,7 +87,7 @@ export const registerUserService = async (body: {
 
   await sendVerificationEmail(user.email, verificationCode);
 
-  return { user };
+  return { message: "User registered successfully, you will receive a verification email." };
 };
 
 export const verifyEmailCodeService = async (email: string, otp_code: string) => {

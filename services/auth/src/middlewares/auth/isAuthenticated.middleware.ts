@@ -18,19 +18,13 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    const accessToken = req.cookies?.accessToken;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!accessToken) {
       throw new UnauthorizedException("Access token required");
     }
 
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      throw new UnauthorizedException("Access token required");
-    }
-
-    const { payload, error } = verifyAccessToken(token);
+    const { payload, error } = verifyAccessToken(accessToken);
 
     if (error || !payload) {
       throw new UnauthorizedException("Invalid or expired access token");

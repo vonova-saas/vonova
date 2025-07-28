@@ -27,11 +27,10 @@ import { ProviderEnum } from "../enums/account-provider.enum";
 // ============== Register Controller ==============
 export const registerUserController = asyncHandler(
   async (req: Request, res: Response) => {
-    const { user } = await registerUserService(req.body);
+    const result = await registerUserService(req.body);
 
     return res.status(HTTPSTATUS.CREATED).json({
-      message: "User registered successfully, you will receive a verification email.",
-      data: user.omitPassword(),
+      message: result.message,
     });
   }
 );
@@ -57,7 +56,7 @@ export const welcomeUserEmailController = asyncHandler(
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
@@ -65,7 +64,7 @@ export const welcomeUserEmailController = asyncHandler(
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
@@ -93,7 +92,7 @@ export const loginUserEmailController = asyncHandler(
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
@@ -101,7 +100,7 @@ export const loginUserEmailController = asyncHandler(
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
@@ -136,15 +135,36 @@ export const oAuthGoogleLoginController = asyncHandler(
 
     // Redirect to frontend with tokens and isNewUser flag
     if (isNewUser || user.role === "PENDING") {
-      res.cookie('providerId', providerId, { httpOnly: true, secure: true, sameSite: 'lax' });
+      res.cookie('providerId', providerId,
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
+        });
       return res.redirect(`${Env.FRONTEND_GOOGLE_CALLBACK_URL}?welcome=true`);
     } else if (user.role === "INSTRUCTOR") {
-      res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'lax' });
-      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'lax' });
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: Env.NODE_ENV === 'production',
+        sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: Env.NODE_ENV === 'production',
+        sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
       return res.redirect(`${Env.FRONTEND_ORIGIN}/instructor/dashboard`);
     } else {
-      res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'lax' });
-      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'lax' });
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: Env.NODE_ENV === 'production',
+        sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: Env.NODE_ENV === 'production',
+        sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
       return res.redirect(`${Env.FRONTEND_ORIGIN}/student/dashboard`);
     }
   }
@@ -153,7 +173,7 @@ export const oAuthGoogleLoginController = asyncHandler(
 export const welcomeUseroAuthGoogleController = asyncHandler(
   async (req: Request, res: Response) => {
     // You can get providerId from the cookie or from req.body (sent by frontend)
-    const providerId = req.body.providerId;
+    const providerId = req.cookies?.providerId;
     const userAgent = req.headers["user-agent"] || "unknown";
     const { role, answerOne } = req.body;
 
@@ -168,7 +188,7 @@ export const welcomeUseroAuthGoogleController = asyncHandler(
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
@@ -176,7 +196,7 @@ export const welcomeUseroAuthGoogleController = asyncHandler(
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
@@ -201,12 +221,10 @@ export const refreshTokenController = asyncHandler(
     const userAgent = req.headers["user-agent"] || "unknown";
 
     // Extract the refresh token from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new UnauthorizedException("Missing or invalid access token");
+    const refresh_token = req.cookies?.refreshToken;
+    if (!refresh_token) {
+      throw new UnauthorizedException("Missing or invalid refresh token");
     }
-
-    const refresh_token = authHeader.split(" ")[1];
 
     const { accessToken, refreshToken } = await refreshTokenService(
       refresh_token,
@@ -216,7 +234,7 @@ export const refreshTokenController = asyncHandler(
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
       path: '/',
     });
@@ -224,7 +242,7 @@ export const refreshTokenController = asyncHandler(
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: Env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
@@ -250,18 +268,28 @@ export const verifyResetPassCodeController = asyncHandler(
   async (req: Request, res: Response) => {
     const result = await verifyResetPasswordCodeService(req.body.email, req.body.code);
 
+    res.cookie('resetToken', result.resetToken, {
+      httpOnly: true,
+      secure: Env.NODE_ENV === 'production',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 1000 * 60 * 10, // 10m in ms
+      path: '/',
+    });
+
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
-      data: {
-        resetToken: result.resetToken,
-      }
     });
   }
 );
 
 export const resetPasswordController = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await resetPasswordService(req.body.resetToken, req.body.newPassword);
+    const resetToken = req.cookies?.resetToken;
+    if (!resetToken) {
+      throw new UnauthorizedException("Missing or invalid reset token");
+    }
+    const { newPassword } = req.body;
+    const result = await resetPasswordService(resetToken, newPassword);
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
@@ -275,13 +303,16 @@ export const logOutController = asyncHandler(
     const userAgent = req.headers["user-agent"] || "unknown";
 
     // Extract the refresh token from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
       throw new UnauthorizedException("Missing or invalid refresh token");
     }
-    const refreshToken = authHeader.split(" ")[1];
 
     const result = await logoutService(refreshToken, userAgent);
+
+    // Clear the cookies after logout
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/' });
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
@@ -291,13 +322,16 @@ export const logOutController = asyncHandler(
 
 export const logOutAllDevicesController = asyncHandler(
   async (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;[]
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
       throw new UnauthorizedException("Missing or invalid refresh token");
     }
-    const refreshToken = authHeader.split(" ")[1];
 
     const result = await logoutAllDevicesService(refreshToken);
+
+    // Clear the cookies after logout
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/' });
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,

@@ -31,7 +31,7 @@ passport.use(
           picture: picture,
         };
 
-        done(null, googleUser);
+        done(null, googleUser as any);
       } catch (error) {
         done(error, false);
       }
