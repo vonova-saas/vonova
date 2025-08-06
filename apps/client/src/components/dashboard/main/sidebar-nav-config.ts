@@ -3,6 +3,7 @@ import {
   Bot,
   BrainCog,
   Component,
+  FileText,
   Frame,
   LayoutDashboard,
   Presentation,
@@ -41,6 +42,11 @@ export const sidebarNavData = {
       title: "Material Library",
       url: "/dashboard/material-library",
       icon: BookOpen,
+    },
+    {
+      title: "PDF Summary",
+      url: "/dashboard/pdf-summary",
+      icon: FileText,
     },
     {
       title: "Quizzes",

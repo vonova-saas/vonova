@@ -44,6 +44,7 @@ const segmentNameMap = {
   student: {
     dashboard: "Dashboard",
     courses: "Courses",
+    "pdf-summary": "PDF Summary",
     "material-library": "Material Library",
     quizzes: "Quizzes",
     "ai-video-generator": "AI Video Generator",
