@@ -155,6 +155,7 @@ const AIAssistantChat = () => {
         </div>
         {isUser && (
           <div className="flex items-end ml-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/avatars/avatar1.avif" alt="User" className="w-10 h-10 rounded-full border" />
           </div>
         )}

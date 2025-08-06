@@ -3,28 +3,31 @@ import { cn } from "@/lib/utils";
 export const Logo = ({ className }: { className?: string }) => {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 279 265"
+      width="372"
+      height="353"
+      viewBox="0 0 372 353"
       fill="none"
+      xmlns="http://www.w3.org/2000/svg"
       className={cn("h-10 w-10", className)}
     >
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M76.3802 0H230.202L255.662 43.8105L230.202 86.5524L279 174.173L230.202 265H76.3802L0 134.637L76.3802 0ZM152.76 130.363L127.3 86.5524H77.2053L76.9107 87.0867L127.3 177.379H179.281L205.802 134.637L228.08 181.653L205.802 219.052H100.779L53.0418 130.363L76.9107 87.0867L77.2053 86.5524L100.779 43.8105H202.62L152.76 130.363Z"
-        fill="url(#paint0_linear)"
+        d="M101.84 0H306.935L340.882 58.3589L306.935 115.294L372 232.012L306.935 353H101.84L0 179.347L101.84 0ZM203.681 173.653L169.734 115.294H102.94L102.548 116.006L169.734 236.282H239.042L274.403 179.347L304.106 241.976L274.403 291.794H134.373L70.7224 173.653L102.548 116.006L102.94 115.294L134.373 58.3589H270.16L203.681 173.653Z"
+        fill="url(#paint0_linear_2060_173)"
       />
       <defs>
         <linearGradient
-          id="paint0_linear"
-          x1="139.5"
-          y1="0"
-          x2="139.5"
-          y2="265"
+          id="paint0_linear_2060_173"
+          x1="114.5"
+          y1="36"
+          x2="291.5"
+          y2="309.5"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#92FE9D" />
-          <stop offset="1" stopColor="#00C9FF" />
+          <stop stopColor="#CA5934" />
+          <stop offset="0.5" stopColor="#E6A582" />
+          <stop offset="1" stopColor="#CA5934" />
         </linearGradient>
       </defs>
     </svg>

@@ -94,7 +94,7 @@ export const Header = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="/login">
+                  <Link href="/auth/login">
                     <span>Login</span>
                   </Link>
                 </Button>
@@ -103,7 +103,7 @@ export const Header = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="/register">
+                  <Link href="/auth/register">
                     <span>Get Started</span>
                   </Link>
                 </Button>

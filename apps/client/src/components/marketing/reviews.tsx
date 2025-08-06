@@ -67,6 +67,7 @@ const ReviewCard = ({
           alt="developer image"
           src={img}
         /> */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="rounded-full"
           width="32"

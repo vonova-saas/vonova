@@ -1,21 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { IOrilley } from "@/lib/types";
-import { formatDuration } from "@/lib/utils";
-import { searchYoutube } from "@/lib/youtube";
-import { YouTubeEmbed } from "@next/third-parties/google";
-import axios from "axios";
-import { Loader2 } from "lucide-react";
-import Image from "next/image";
-import { useEffect, useState } from "react";
 import {
   Carousel,
   CarouselContent,
@@ -23,7 +8,22 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useUIStore } from "@/lib/stores";
+import { IOrilley } from "@/lib/types";
+import { formatDuration } from "@/lib/utils";
+import { searchYoutube } from "@/lib/youtube";
+import { YouTubeEmbed } from "@next/third-parties/google";
+import axios from "axios";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 interface DrawerProps {
@@ -31,8 +31,15 @@ interface DrawerProps {
 }
 
 // Inline logic for findSavedNodeDetails and saveNodeDetails
-const findSavedNodeDetails = async (_roadmapId: string, _nodeName: string) => false;
-const saveNodeDetails = async (_roadmapId: string, _nodeName: string, _content: string, _books: string, _youtubeVideoIds: string[]) => {};
+const findSavedNodeDetails = async (_roadmapId: string, _nodeName: string) =>
+  false;
+const saveNodeDetails = async (
+  _roadmapId: string,
+  _nodeName: string,
+  _content: string,
+  _books: string,
+  _youtubeVideoIds: string[],
+) => {};
 
 export const Drawer = ({ roadmapId }: DrawerProps) => {
   const [drawerData, setDrawerData] = useState<any>(null);
@@ -51,6 +58,58 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
 
   const nodeName = `${drawerDetails?.query}_${drawerDetails?.parent}_${drawerDetails?.child}`;
 
+  const fetchDetailsData = useCallback(async () => {
+    try {
+      const response = await axios.post(
+        `/api/v1/${model}/details?apiKey=${modelApiKey}&roadmapId=${roadmapId}`,
+        {
+          query: drawerDetails?.query,
+          child: drawerDetails?.child,
+          parent: drawerDetails?.parent,
+        },
+      );
+      return response.data.text;
+    } catch (error) {
+      console.error("Error fetching details data:", error);
+      return null;
+    }
+  }, [
+    model,
+    modelApiKey,
+    roadmapId,
+    drawerDetails?.query,
+    drawerDetails?.child,
+    drawerDetails?.parent,
+  ]);
+
+  const fetchBooksData = useCallback(async () => {
+    try {
+      const response = await axios.post(`/api/v1/orilley`, {
+        data: { query: drawerDetails?.child },
+      });
+      return response.data.data.results;
+    } catch (error) {
+      console.error("Error fetching books data:", error);
+      return null;
+    }
+  }, [drawerDetails?.child]);
+
+  const fetchDataFromAPIs = useCallback(async () => {
+    const detailsData = await fetchDetailsData();
+    const videoIds = await searchYoutube(
+      `${drawerDetails?.query} ${drawerDetails?.parent} ${drawerDetails?.child}`,
+    );
+    const booksData = await fetchBooksData();
+
+    return { detailsData, videoIds, booksData };
+  }, [
+    fetchDetailsData,
+    fetchBooksData,
+    drawerDetails?.query,
+    drawerDetails?.parent,
+    drawerDetails?.child,
+  ]);
+
   useEffect(() => {
     const fetchAndSaveData = async () => {
       setIsLoading(true);
@@ -61,7 +120,7 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
           nodeName,
         );
 
-        if (existingDetails && typeof existingDetails === 'object') {
+        if (existingDetails && typeof existingDetails === "object") {
           const { youtubeVideoIds, details, books } = existingDetails;
 
           setDrawerData({
@@ -119,46 +178,9 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
     drawerDetails?.query,
     drawerDetails?.parent,
     drawerDetails?.child,
+    nodeName,
+    fetchDataFromAPIs,
   ]);
-
-  const fetchDataFromAPIs = async () => {
-    const detailsData = await fetchDetailsData();
-    const videoIds = await searchYoutube(
-      `${drawerDetails?.query} ${drawerDetails?.parent} ${drawerDetails?.child}`,
-    );
-    const booksData = await fetchBooksData();
-
-    return { detailsData, videoIds, booksData };
-  };
-
-  const fetchDetailsData = async () => {
-    try {
-      const response = await axios.post(
-        `/api/v1/${model}/details?apiKey=${modelApiKey}&roadmapId=${roadmapId}`,
-        {
-          query: drawerDetails?.query,
-          child: drawerDetails?.child,
-          parent: drawerDetails?.parent,
-        },
-      );
-      return response.data.text;
-    } catch (error) {
-      console.error("Error fetching details data:", error);
-      return null;
-    }
-  };
-
-  const fetchBooksData = async () => {
-    try {
-      const response = await axios.post(`/api/v1/orilley`, {
-        data: { query: drawerDetails?.child },
-      });
-      return response.data.data.results;
-    } catch (error) {
-      console.error("Error fetching books data:", error);
-      return null;
-    }
-  };
 
   const YoutubeVideo = () => {
     return (
@@ -222,15 +244,23 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
         {isLoading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background/90">
             <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-            <span className="text-muted-foreground text-lg">Loading resources...</span>
+            <span className="text-muted-foreground text-lg">
+              Loading resources...
+            </span>
           </div>
         ) : (
           <>
             {/* Header Section */}
             <div className="px-6 pt-6 pb-2 border-b border-border">
-              <div className="text-xs text-muted-foreground mb-1">{drawerDetails?.parent ?? ""}</div>
-              <div className="text-2xl font-bold mb-1">{drawerDetails?.child ?? ""}</div>
-              <div className="text-sm text-muted-foreground mb-2">{drawerDetails?.query ?? ""}</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                {drawerDetails?.parent ?? ""}
+              </div>
+              <div className="text-2xl font-bold mb-1">
+                {drawerDetails?.child ?? ""}
+              </div>
+              <div className="text-sm text-muted-foreground mb-2">
+                {drawerDetails?.query ?? ""}
+              </div>
             </div>
             {/* Video Section */}
             {drawerData?.videoIds?.length > 0 && (
@@ -246,7 +276,10 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
                   link={drawerData?.detailsData?.link ?? ""}
                   linkTitle="Wikipedia"
                   iconUrl="/images/wikipedia.png"
-                  imageUrl={drawerData?.detailsData?.thumbnail || drawerData?.detailsData?.image}
+                  imageUrl={
+                    drawerData?.detailsData?.thumbnail ||
+                    drawerData?.detailsData?.image
+                  }
                 />
                 <span className="text-sm text-muted-foreground">Wikipedia</span>
               </div>
@@ -260,42 +293,57 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
                   drawerData?.detailsData?.text ||
                   ""}
               </div>
-              {drawerData?.detailsData?.bulletPoints && drawerData?.detailsData?.bulletPoints?.length > 0 && (
-                <ul className="list-disc list-inside space-y-2 pl-4 mt-2 text-sm text-muted-foreground">
-                  {drawerData?.detailsData.bulletPoints?.map((point: string, id: number) => (
-                    <li key={id}>{point ?? ""}</li>
-                  ))}
-                </ul>
-              )}
+              {drawerData?.detailsData?.bulletPoints &&
+                drawerData?.detailsData?.bulletPoints?.length > 0 && (
+                  <ul className="list-disc list-inside space-y-2 pl-4 mt-2 text-sm text-muted-foreground">
+                    {drawerData?.detailsData.bulletPoints?.map(
+                      (point: string, id: number) => (
+                        <li key={id}>{point ?? ""}</li>
+                      ),
+                    )}
+                  </ul>
+                )}
             </div>
             {/* Recommended Books */}
             {drawerData?.booksData?.length > 0 && (
               <div className="px-6 py-6">
-                <div className="text-lg font-semibold mb-4">Recommended Books</div>
+                <div className="text-lg font-semibold mb-4">
+                  Recommended Books
+                </div>
                 <div className="flex flex-col gap-4">
-                  {drawerData?.booksData?.map((book: IOrilley["data"][number], id: number) => (
-                    <a
-                      className="flex items-center bg-card rounded-xl shadow hover:shadow-lg border border-border transition p-3 gap-4 hover:bg-primary/5"
-                      href={"https://learning.oreilly.com" + book?.web_url}
-                      target="_blank"
-                      key={book?.id}
-                    >
-                      <div className="w-16 h-20 flex-shrink-0 rounded overflow-hidden bg-muted">
-                        <img
-                          className="w-full h-full object-cover"
-                          src={book?.cover_url ?? ""}
-                          alt={book?.title ?? ""}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-base truncate mb-1">{book?.title ?? ""}</div>
-                        <div className="text-xs text-muted-foreground mb-1">By {book?.authors?.[0] ?? ""}</div>
-                        {book?.duration_seconds > 0 && (
-                          <div className="text-xs text-muted-foreground">Complete in {formatDuration(book?.duration_seconds)}</div>
-                        )}
-                      </div>
-                    </a>
-                  ))}
+                  {drawerData?.booksData?.map(
+                    (book: IOrilley["data"][number], id: number) => (
+                      <a
+                        className="flex items-center bg-card rounded-xl shadow hover:shadow-lg border border-border transition p-3 gap-4 hover:bg-primary/5"
+                        href={"https://learning.oreilly.com" + book?.web_url}
+                        target="_blank"
+                        key={book?.id}
+                      >
+                        <div className="w-16 h-20 flex-shrink-0 rounded overflow-hidden bg-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className="w-full h-full object-cover"
+                            src={book?.cover_url ?? ""}
+                            alt={book?.title ?? ""}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-base truncate mb-1">
+                            {book?.title ?? ""}
+                          </div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            By {book?.authors?.[0] ?? ""}
+                          </div>
+                          {book?.duration_seconds > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Complete in{" "}
+                              {formatDuration(book?.duration_seconds)}
+                            </div>
+                          )}
+                        </div>
+                      </a>
+                    ),
+                  )}
                 </div>
               </div>
             )}

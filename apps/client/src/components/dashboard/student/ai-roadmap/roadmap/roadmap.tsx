@@ -53,6 +53,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Load recent roadmaps on mount
   useEffect(() => {
     loadRecentRoadmaps();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Delete roadmap handler
