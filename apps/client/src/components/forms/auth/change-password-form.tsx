@@ -19,7 +19,7 @@ export function ChangePasswordForm({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Add authentication logic here
-    router.push("/login");
+    router.push("/auth/login");
   };
 
   return (
@@ -93,7 +93,7 @@ export function ChangePasswordForm({
           </Button>
         </div>
         <div className="text-center text-sm">
-          <a href="/login" className="underline underline-offset-4">
+          <a href="/auth/login" className="underline underline-offset-4">
             Back to sign in
           </a>
         </div>

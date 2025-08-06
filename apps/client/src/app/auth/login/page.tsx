@@ -1,6 +1,6 @@
+import { LoginForm } from "@/components/forms/auth/login-form";
 import { Logo } from "@/components/global/logo";
 import Image from "next/image";
-import { LoginForm } from "@/components/forms/auth/login-form";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -9,7 +9,7 @@ export default function LoginPage() {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <Link href="/" className="flex items-center gap-2 font-medium">
-              <Logo className="size-8" />
+            <Logo className="size-8" />
             Vonova
           </Link>
         </div>

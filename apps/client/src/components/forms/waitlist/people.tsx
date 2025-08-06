@@ -135,6 +135,7 @@ export default function People({
             transition={{ delay: index * 0.1, duration: 0.3 }}
             style={{ zIndex: displayAvatars.length - index }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={avatar.src}
               alt={`Waitlist member ${index + 1}`}

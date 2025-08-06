@@ -34,7 +34,7 @@ export function RegisterForm({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Add authentication logic here
-    router.push("/verify-email");
+    router.push("/auth/verify-email");
   };
 
   return (
@@ -121,7 +121,7 @@ export function RegisterForm({
         </div>
         <div className="text-center text-sm">
           Already have an account?{" "}
-          <a href="/login" className="underline underline-offset-4">
+          <a href="/auth/login" className="underline underline-offset-4">
             Sign in
           </a>
         </div>

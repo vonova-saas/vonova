@@ -15,7 +15,7 @@ export function ForgetPasswordForm({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Add forget password logic here
-    router.push("/otp");
+    router.push("/auth/otp");
   };
 
   return (
@@ -46,7 +46,7 @@ export function ForgetPasswordForm({
           </Button>
         </div>
         <div className="text-center text-sm">
-          <a href="/login" className="underline underline-offset-4">
+          <a href="/auth/login" className="underline underline-offset-4">
             Back to sign in
           </a>
         </div>

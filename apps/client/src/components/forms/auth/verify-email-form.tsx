@@ -20,7 +20,7 @@ export function VerifyEmailForm({
     // TODO: Add verify email logic here
     e.preventDefault();
     setIsLoading(true);
-    router.push("/welcome");
+    router.push("/auth/welcome");
   }
 
   return (

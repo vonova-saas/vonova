@@ -20,7 +20,7 @@ export function OtpCodeForm({
     // TODO: Add otp code logic here
     setIsLoading(true);
     e.preventDefault();
-    router.push("/change-password");
+    router.push("/auth/change-password");
   }
 
   return (
