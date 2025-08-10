@@ -18,6 +18,10 @@ export const updateUserProfileSchema = z.object({
     })
     .partial()
     .optional(),
+}).refine((data) => {
+  return Object.keys(data).length > 0;
+}, {
+  message: "At least one profile field must be provided.",
 });
 
 export const updateStudentInfoSchema = z.object({
@@ -29,6 +33,10 @@ export const updateStudentInfoSchema = z.object({
   completedCourses: z.array(z.string()).optional(),
   certificates: z.array(z.string()).optional(),
   mentorId: z.string().optional(),
+}).refine((data) => {
+  return Object.keys(data).length > 0;
+}, {
+  message: "At least one student info field must be provided.",
 });
 
 export const updateInstructorInfoSchema = z.object({
@@ -41,6 +49,10 @@ export const updateInstructorInfoSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   totalStudents: z.number().min(0).optional(),
   joinDate: z.coerce.date().optional(),
+}).refine((data) => {
+  return Object.keys(data).length > 0;
+}, {
+  message: "At least one instructor info field must be provided.",
 });
 
 export const updateAdminInfoSchema = z.object({
@@ -50,4 +62,8 @@ export const updateAdminInfoSchema = z.object({
   accessLevel: z.enum(["super", "admin", "moderator"]).optional(),
   assignedRegions: z.array(z.string()).optional(),
   lastLogin: z.coerce.date().optional(),
+}).refine((data) => {
+  return Object.keys(data).length > 0;
+}, {
+  message: "At least one admin info field must be provided.",
 });

@@ -1,21 +1,9 @@
 import { Router } from "express";
-import {
-  getUserProfileController,
-  updateUserProfileController,
-  initUserDataController,
-  updateStudentInfoController,
-  updateInstructorInfoController,
-  updateAdminInfoController,
-} from "../controllers/profile.controller";
+import * as profileController from "../controllers/profile.controller";
 import { validateRequest } from "../middlewares/validateRequest.middleware";
 import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
 import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
-import {
-  updateUserProfileSchema,
-  updateStudentInfoSchema,
-  updateInstructorInfoSchema,
-  updateAdminInfoSchema
-} from "../validation/profile.validation";
+import * as profileValidation from "../validation/profile.validation";
 import { securityStack } from "../middlewares/security";
 
 const profileRoutes = Router();
@@ -24,13 +12,27 @@ const profileRoutes = Router();
 profileRoutes.use(...securityStack);
 
 // Internal endpoint for user data initialization (called by auth service)
-profileRoutes.post("/init", initUserDataController);
+profileRoutes.post("/init", profileController.initUserDataController);
 
 //* Profile routes - users can only access their own profile
-profileRoutes.get("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), getUserProfileController);
-profileRoutes.put("/profile/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserProfileSchema), updateUserProfileController);
-profileRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateStudentInfoSchema), updateStudentInfoController);
-profileRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateInstructorInfoSchema), updateInstructorInfoController);
-profileRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateAdminInfoSchema), updateAdminInfoController);
+
+//* Get my profile
+profileRoutes.get("/profile/me", isAuthenticated, profileController.getMyProfileController);
+
+//* Get user profile
+profileRoutes.get("/profile/:userId", isAuthenticated, profileController.getUserProfileController);
+
+
+//* Update my profile
+profileRoutes.patch("/profile/me", isAuthenticated, validateRequest(profileValidation.updateUserProfileSchema), profileController.updateUserProfileController);
+
+
+profileRoutes.patch("/profile/:userId/student-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(profileValidation.updateStudentInfoSchema), profileController.updateStudentInfoController);
+
+
+profileRoutes.patch("/profile/:userId/instructor-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(profileValidation.updateInstructorInfoSchema), profileController.updateInstructorInfoController);
+
+
+profileRoutes.patch("/profile/:userId/admin-info", isAuthenticated, canAccessOwnData('userId'), validateRequest(profileValidation.updateAdminInfoSchema), profileController.updateAdminInfoController);
 
 export default profileRoutes;

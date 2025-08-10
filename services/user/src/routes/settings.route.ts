@@ -1,14 +1,8 @@
 import { Router } from "express";
-import {
-  getUserSettingsController,
-  updateUserSettingsController,
-} from "../controllers/settings.controller";
+import * as settingsController from "../controllers/settings.controller";
 import { validateRequest } from "../middlewares/validateRequest.middleware";
 import { isAuthenticated } from "../middlewares/auth/isAuthenticated.middleware";
-import { canAccessOwnData } from "../middlewares/auth/isAuthorized.middleware";
-import {
-  updateUserSettingsSchema,
-} from "../validation/settings.validation";
+import * as settingsValidation from "../validation/settings.validation";
 import { securityStack } from "../middlewares/security";
 
 const userSettingsRoutes = Router();
@@ -17,7 +11,10 @@ const userSettingsRoutes = Router();
 userSettingsRoutes.use(...securityStack);
 
 //! Settings routes - users can only access their own settings
-userSettingsRoutes.get("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), getUserSettingsController);
-userSettingsRoutes.put("/settings/:userId", isAuthenticated, canAccessOwnData('userId'), validateRequest(updateUserSettingsSchema), updateUserSettingsController);
+//* Get my settings
+userSettingsRoutes.get("/settings/me", isAuthenticated, settingsController.getUserSettingsController);
+
+//* Update my settings
+userSettingsRoutes.patch("/settings/me", isAuthenticated, validateRequest(settingsValidation.updateUserSettingsSchema), settingsController.updateUserSettingsController);
 
 export default userSettingsRoutes;

@@ -1,14 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/api/asyncHandler.middleware";
 import { HTTPSTATUS } from "../config/http.config";
-import {
-  getUserProfileService,
-  updateUserProfileService,
-  initUserDataService,
-  updateStudentInfoService,
-  updateInstructorInfoService,
-  updateAdminInfoService,
-} from "../services/profile.service";
+import * as profileService from "../services/profile.service";
 import { BadRequestException } from "../utils/appError";
 
 declare global {
@@ -34,7 +27,7 @@ export const initUserDataController = asyncHandler(
       throw new BadRequestException("userId and email are required");
     }
 
-    const result = await initUserDataService(userId, name, email, role);
+    const result = await profileService.initUserDataService(userId, name, email, role);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User data initialized",
@@ -51,7 +44,7 @@ export const getUserProfileController = asyncHandler(
     const userId = req.params.userId;
     const requesterId = req.user?.id;
 
-    const profile = await getUserProfileService(userId, requesterId);
+    const profile = await profileService.getUserProfileService(userId, requesterId);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User profile fetched successfully",
@@ -60,12 +53,25 @@ export const getUserProfileController = asyncHandler(
   }
 );
 
+export const getMyProfileController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    const profile = await profileService.getMyProfileService(userId!);
+    return res.status(HTTPSTATUS.OK).json({
+      message: "My profile fetched successfully",
+      data: profile,
+    });
+  }
+);
+
+
+
+
 export const updateUserProfileController = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.params.userId;
-    const requesterId = req.user?.id;
+    const userId = req.user!.id;
 
-    const profile = await updateUserProfileService(userId, req.body, requesterId);
+    const profile = await profileService.updateUserProfileService(userId!, req.body);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User profile updated successfully",
@@ -78,7 +84,7 @@ export const updateStudentInfoController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.params.userId;
     const studentInfo = req.body;
-    const updatedProfile = await updateStudentInfoService(userId, studentInfo);
+    const updatedProfile = await profileService.updateStudentInfoService(userId, studentInfo);
 
     res.status(HTTPSTATUS.OK).json({
       message: "Student info updated",
@@ -91,7 +97,7 @@ export const updateInstructorInfoController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.params.userId;
     const instructorInfo = req.body;
-    const updatedProfile = await updateInstructorInfoService(userId, instructorInfo);
+    const updatedProfile = await profileService.updateInstructorInfoService(userId, instructorInfo);
 
     res.status(HTTPSTATUS.OK).json({
       message: "Student info updated",
@@ -104,7 +110,7 @@ export const updateAdminInfoController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.params.userId;
     const adminInfo = req.body;
-    const updatedProfile = await updateAdminInfoService(userId, adminInfo);
+    const updatedProfile = await profileService.updateAdminInfoService(userId, adminInfo);
 
     res.status(HTTPSTATUS.OK).json({
       message: "Student info updated",
