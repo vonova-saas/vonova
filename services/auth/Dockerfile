@@ -18,7 +18,7 @@ COPY tsconfig.json ./
 RUN bun run build && cp ./package.json ./dist/
 
 # Expose the port your app runs on
-EXPOSE 4000
+EXPOSE 4001
 
 # Start the compiled application
 CMD ["bun", "run", "start"]
