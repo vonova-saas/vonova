@@ -1,5 +1,6 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from asyncio.log import logger
+from models.roadmap import RoadmapData
+from utils.logging_utils import setup_ai_logger
 import cohere
 import json
 import re
@@ -10,7 +11,11 @@ class RoadmapGenerator:
         self.co = cohere.Client(api_key)
 
     def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12, focus_areas=None):
+        logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
+        
         focus_text = f" with focus on {', '.join(focus_areas)}" if focus_areas else ""
+        logger.info(f"Focus areas: {focus_areas}")
+        
         prompt = f"""
         Create a detailed {duration_weeks}-week learning roadmap for {topic} at {skill_level} level{focus_text}.
         Structure the response as a JSON with this exact format:
@@ -42,6 +47,8 @@ class RoadmapGenerator:
         Make sure each week has 3-5 specific topics, realistic time estimates, and practical projects.
         Ensure milestones reference weeks that exist within the {duration_weeks}-week timeline.
         """
+        
+        logger.info("Sending request to Cohere API")
         try:
             response = self.co.generate(
                 model='command-r-plus',
@@ -52,17 +59,26 @@ class RoadmapGenerator:
                 presence_penalty=0.2,          
             )
             response_text = response.generations[0].text
+            logger.info("Received response from Cohere API")
+            
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
+                logger.info("Successfully parsed JSON from response")
                 roadmap_data = json.loads(json_match.group())
                 roadmap_data['milestones'] = [
                     m for m in roadmap_data['milestones']
                     if m['week'] in [w['week'] for w in roadmap_data['weeks']]
                 ]
+                logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
             else:
+                logger.warning("Failed to parse JSON from response, using fallback parsing")
                 roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
+            
             return roadmap_data
+            
         except Exception as e:
+            logger.error(f"Error generating roadmap: {str(e)}", exc_info=True)
+            logger.info("Using fallback roadmap")
             return self._create_fallback_roadmap(topic, skill_level, duration_weeks)
 
     def _parse_text_response(self, text, topic, duration_weeks):
