@@ -7,10 +7,9 @@ import { TextEffect } from "@/components/motion-primitives/text-effect";
 import { AnimatedGroup } from "@/components/motion-primitives/animated-group";
 import { Header } from "@/components/navigation/header";
 
-import type { Variants } from "framer-motion";
 import { BorderBeam } from "@/components/magicui/border-beam";
 
-const transitionVariants: { item: Variants } = {
+const transitionVariants = {
   item: {
     hidden: {
       opacity: 0,
@@ -28,7 +27,7 @@ const transitionVariants: { item: Variants } = {
       },
     },
   },
-};
+} as const;
 
 export default function HeroSection() {
   return (
@@ -103,7 +102,7 @@ export default function HeroSection() {
                         },
                       },
                     },
-                    ...transitionVariants,
+                    item: transitionVariants.item,
                   }}
                   className="mt-12 flex flex-col items-center justify-center gap-2 md:flex-row"
                 >
@@ -147,7 +146,7 @@ export default function HeroSection() {
                     },
                   },
                 },
-                ...transitionVariants,
+                item: transitionVariants.item,
               }}
             >
               <div className="relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20">

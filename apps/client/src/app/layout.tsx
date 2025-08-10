@@ -1,7 +1,7 @@
 import { generateMetadata } from "@/utils/functions/metadata";
 import "../style/globals.css";
 import { cn } from "@/lib/utils";
-// import { inter, satoshi } from "@/utils/constants";
+import { lato, cairo } from "@/utils/constants";
 import { ThemeProvider } from "@/providers/theme-provider";
 import Providers from "@/providers/providers";
 import NextTopLoader from "nextjs-toploader";
@@ -18,8 +18,8 @@ export default function RootLayout({
       <body
         className={cn(
           "overflow-x-hidden antialiased",
-          // inter.variable,
-          // satoshi.variable
+          lato.variable,
+          cairo.variable,
         )}
       >
         {/* <AuthProvider>
@@ -28,8 +28,8 @@ export default function RootLayout({
           </QueryProvider>
         </AuthProvider> */}
         <Providers>
-        <NextTopLoader showSpinner={false} color="black" />
-        <ThemeProvider>{children}</ThemeProvider>
+          <NextTopLoader showSpinner={false} color="black" />
+          <ThemeProvider>{children}</ThemeProvider>
         </Providers>
       </body>
     </html>
