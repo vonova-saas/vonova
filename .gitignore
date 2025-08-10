@@ -82,9 +82,6 @@ turbo/
 nx/
 cache/
 
-# OS
-Icon?
-
 # Temporary folders
 tasks/
 temp/

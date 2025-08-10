@@ -8,7 +8,7 @@ export const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:4004/api', // Change if needed
+        url: 'http://localhost:4000/api', // Change if needed
       },
     ],
     components: {

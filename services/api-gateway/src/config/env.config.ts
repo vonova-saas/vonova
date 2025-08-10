@@ -17,6 +17,7 @@ const envConfig = () => ({
   //* =========== Service URLs ===========
   AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
   USER_SERVICE_URL: getEnv("USER_SERVICE_URL"),
+  QUIZ_SERVICE_URL: getEnv("QUIZ_SERVICE_URL"),
 
   //! =========== Security Layer===========
   // Rate limiting

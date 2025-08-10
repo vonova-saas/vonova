@@ -32,6 +32,13 @@ export const config = {
       healthCheck: '/health',
       timeout: 5000
     } as ServiceConfig,
+
+    quiz: {
+      name: 'quiz',
+      url: Env.QUIZ_SERVICE_URL,
+      healthCheck: '/health',
+      timeout: 5000
+    } as ServiceConfig,
   },
 
   // Route configuration
@@ -77,7 +84,13 @@ export const config = {
       method: 'DELETE',
       service: 'user',
       target: '/*'
-    }
+    },
+    {
+      path: '/api/v1/quiz/*',
+      method: 'GET',
+      service: 'quiz',
+      target: '/*'
+    },
   ] as RouteConfig[],
 
   // Gateway settings
