@@ -2,7 +2,7 @@
 
 import { PDFMessage } from "./types";
 import { AIResponse } from "@/components/ui/ai/ai-components/response";
-import { FileText } from "lucide-react";
+import { FileText, Bot } from "lucide-react";
 
 interface PDFChatMessageProps {
   message: PDFMessage;
@@ -37,26 +37,7 @@ export default function PDFChatMessage({
       return (
         <div className="flex items-end mr-2">
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border">
-            {/* OpenAI swirl SVG icon */}
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 40 40"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <g>
-                <path
-                  d="M20.5 6.5c-3.5-2-8 0-9.5 3.5l-7 12c-2 3.5 0 8 3.5 9.5l12 7c3.5 2 8 0 9.5-3.5l7-12c2-3.5 0-8-3.5-9.5l-12-7z"
-                  fill="#fff"
-                />
-                <path
-                  d="M20.5 6.5c-3.5-2-8 0-9.5 3.5l-7 12c-2 3.5 0 8 3.5 9.5l12 7c3.5 2 8 0 9.5-3.5l7-12c2-3.5 0-8-3.5-9.5l-12-7z"
-                  stroke="#000"
-                  strokeWidth="2"
-                />
-              </g>
-            </svg>
+            <Bot className="w-6 h-6 text-gray-700" />
           </div>
         </div>
       );

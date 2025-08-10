@@ -123,6 +123,22 @@ export const mockMessages: PDFMessage[] = [
     pdfId: 'pdf-2',
     type: 'summary',
   },
+  {
+    id: 'msg-5',
+    content: 'What are the best practices for database design?',
+    from: 'user',
+    timestamp: new Date('2024-01-25T16:40:00Z'),
+    pdfId: 'pdf-3',
+    type: 'question',
+  },
+  {
+    id: 'msg-6',
+    content: 'According to the Database Design Principles, here are the key performance optimization practices:\n\n1. **Use React.memo()** for component memoization\n2. **Implement useCallback()** for function memoization\n3. **Use useMemo()** for expensive calculations\n4. **Code splitting** with React.lazy() and Suspense\n5. **Virtual scrolling** for large lists\n6. **Optimize bundle size** with tree shaking\n7. **Use production builds** for deployment\n\nThese techniques help reduce unnecessary re-renders and improve application performance.',
+    from: 'assistant',
+    timestamp: new Date('2024-01-25T16:42:00Z'),
+    pdfId: 'pdf-3',
+    type: 'summary',
+  },
 ];
 
 export const topics = [

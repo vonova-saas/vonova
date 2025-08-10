@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
 import {
   AIInput,
   AIInputTextarea,
@@ -8,11 +9,6 @@ import {
   AIInputTools,
   AIInputButton,
   AIInputSubmit,
-  AIInputModelSelect,
-  AIInputModelSelectContent,
-  AIInputModelSelectItem,
-  AIInputModelSelectTrigger,
-  AIInputModelSelectValue,
 } from "@/components/ui/ai/ai-components/input";
 import {
   AIConversation,
@@ -36,10 +32,22 @@ import {
   MessageSquare,
   Download,
   MoreVertical,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,25 +55,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PDFFile, PDFMessage, UploadProgress } from "./types";
-import { mockPDFFiles, mockMessages, topics } from "./fake-data";
-import PDFUpload from "./pdf-upload";
-import PDFSummaryList from "./pdf-summary-list";
+import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
+import LastPDFChats from "./last-pdf-chats";
 
-const models = [
-  { id: "gpt-4", name: "GPT-4", description: "Most capable model" },
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    description: "Fast and efficient",
-  },
-  { id: "claude-2", name: "Claude 2", description: "Advanced reasoning" },
-  {
-    id: "claude-instant",
-    name: "Claude Instant",
-    description: "Quick responses",
-  },
-];
+interface PDFSummaryChatProps {
+  initialPDF?: PDFFile | null;
+  initialMessages?: PDFMessage[];
+  isIndividualChat?: boolean;
+}
 
 const fakeResponses = [
   {
@@ -82,19 +80,23 @@ const fakeResponses = [
   },
 ];
 
-const AIAssistantChat = () => {
-  const [messages, setMessages] = useState<PDFMessage[]>(mockMessages);
+const PDFSummaryChat = ({
+  initialPDF = null,
+  initialMessages = mockMessages,
+  isIndividualChat = false,
+}: PDFSummaryChatProps = {}) => {
+  const [messages, setMessages] = useState<PDFMessage[]>(initialMessages);
   const [text, setText] = useState<string>("");
-  const [model, setModel] = useState<string>(models[0].id);
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
   const [isTyping, setIsTyping] = useState(false);
   const [currentBranch, setCurrentBranch] = useState(0);
   const [pdfs, setPdfs] = useState<PDFFile[]>(mockPDFFiles);
+  const [currentPDF, setCurrentPDF] = useState<PDFFile | null>(initialPDF);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
-  const [currentPDF, setCurrentPDF] = useState<PDFFile | null>(null);
-  const [activeTab, setActiveTab] = useState("chat");
+  const [isDragActive, setIsDragActive] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const generateFakeResponse = () => {
@@ -140,82 +142,22 @@ const AIAssistantChat = () => {
     }, 2000);
   };
 
-  const clearConversation = () => {
-    setMessages([]);
-    setCurrentBranch(0);
-  };
-
-  const handleFileUpload = (files: File[]) => {
-    files.forEach((file, index) => {
-      const progress: UploadProgress = {
-        fileId: `upload-${Date.now()}-${index}`,
-        progress: 0,
-        status: "uploading",
-      };
-
-      setUploadProgress((prev) => [...prev, progress]);
-
-      // Simulate upload progress
-      const interval = setInterval(() => {
-        setUploadProgress((prev) =>
-          prev.map((p) =>
-            p.fileId === file.name
-              ? { ...p, progress: Math.min(p.progress + 10, 100) }
-              : p,
-          ),
-        );
-      }, 200);
-
-      // Simulate upload completion
-      setTimeout(() => {
-        clearInterval(interval);
-        setUploadProgress((prev) =>
-          prev.map((p) =>
-            p.fileId === file.name
-              ? { ...p, status: "processing", progress: 100 }
-              : p,
-          ),
-        );
-
-        // Simulate processing completion
-        setTimeout(() => {
-          const newPDF: PDFFile = {
-            id: `pdf-${Date.now()}-${index}`,
-            name: file.name,
-            size: file.size,
-            uploadedAt: new Date(),
-            status: "ready",
-            pages: Math.floor(Math.random() * 50) + 10,
-            topics: topics.slice(
-              Math.floor(Math.random() * 5) + 1,
-              Math.floor(Math.random() * 8) + 1,
-            ),
-          };
-
-          setPdfs((prev) => [...prev, newPDF]);
-          setUploadProgress((prev) =>
-            prev.filter((p) => p.fileId !== file.name),
-          );
-        }, 3000);
-      }, 2000);
-    });
-  };
-
-  const handleCancelUpload = (fileId: string) => {
-    setUploadProgress((prev) => prev.filter((p) => p.fileId !== fileId));
-  };
-
   const handleChat = (pdfId: string) => {
-    const pdf = pdfs.find((p) => p.id === pdfId);
-    if (pdf) {
-      setCurrentPDF(pdf);
-      setActiveTab("chat");
-      // Update last accessed
-      setPdfs((prev) =>
-        prev.map((p) =>
-          p.id === pdfId ? { ...p, lastAccessed: new Date() } : p,
-        ),
-      );
+    if (isIndividualChat) {
+      // If already in individual chat mode, just set the current PDF
+      const pdf = pdfs.find((p) => p.id === pdfId);
+      if (pdf) {
+        setCurrentPDF(pdf);
+        // Update last accessed
+        setPdfs((prev) =>
+          prev.map((p) =>
+            p.id === pdfId ? { ...p, lastAccessed: new Date() } : p,
+          ),
+        );
+      }
+    } else {
+      // Navigate to individual chat page
+      window.location.href = `/dashboard/pdf-summary/${pdfId}`;
     }
   };
 
@@ -223,7 +165,6 @@ const AIAssistantChat = () => {
     setPdfs((prev) => prev.filter((p) => p.id !== pdfId));
     if (currentPDF?.id === pdfId) {
       setCurrentPDF(null);
-      setActiveTab("files");
     }
   };
 
@@ -232,321 +173,523 @@ const AIAssistantChat = () => {
     console.log("Downloading PDF:", pdfId);
   };
 
-  const handleRename = (pdfId: string, newName: string) => {
-    setPdfs((prev) =>
-      prev.map((p) => (p.id === pdfId ? { ...p, name: newName } : p)),
-    );
-  };
-
-  const handleUpload = () => {
-    setActiveTab("upload");
-  };
-
   const handleBackToFiles = () => {
-    setCurrentPDF(null);
-    setActiveTab("files");
+    if (isIndividualChat) {
+      window.location.href = "/dashboard/pdf-summary";
+    }
   };
 
-  return (
-    <div className="h-full w-full flex flex-col overflow-hidden relative" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}>
-      {/* Header */}
-      {/* <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <FileText className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-semibold">PDF Summary & Chat</h1>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">
-                Powered by {models.find((m) => m.id === model)?.name}
-              </p>
-              <Badge variant="secondary" className="text-xs">
-                {pdfs.length} PDFs
-              </Badge>
-              {currentPDF && (
-                <Badge variant="outline" className="text-xs">
-                  {currentPDF.name}
-                </Badge>
-              )}
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  };
+
+  // Upload functionality
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const pdfFiles = acceptedFiles.filter(
+      (file) => file.type === "application/pdf",
+    );
+    if (pdfFiles.length > 0) {
+      handleFileUpload(pdfFiles);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragReject } = useDropzone({
+    onDrop,
+    accept: {
+      "application/pdf": [".pdf"],
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+    multiple: true,
+    onDragEnter: () => setIsDragActive(true),
+    onDragLeave: () => setIsDragActive(false),
+  });
+
+  const handleFileUpload = (files: File[]) => {
+    files.forEach((file) => {
+      const fileId = `${file.name}-${Date.now()}`;
+
+      // Add to upload progress
+      setUploadProgress((prev) => [
+        ...prev,
+        {
+          fileId,
+          fileName: file.name,
+          progress: 0,
+          status: "uploading",
+          error: null,
+        },
+      ]);
+
+      // Simulate upload progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+
+          // Update status to processing
+          setUploadProgress((prev) =>
+            prev.map((p) =>
+              p.fileId === fileId
+                ? { ...p, progress: 100, status: "processing" }
+                : p,
+            ),
+          );
+
+          // Simulate processing completion
+          setTimeout(() => {
+            setUploadProgress((prev) =>
+              prev.map((p) =>
+                p.fileId === fileId ? { ...p, status: "complete" } : p,
+              ),
+            );
+
+            // Add new PDF to the list
+            const newPDF: PDFFile = {
+              id: fileId,
+              name: file.name,
+              size: file.size,
+              pages: Math.floor(Math.random() * 50) + 10, // Random page count
+              status: "ready",
+              uploadedAt: new Date(),
+              lastAccessed: new Date(),
+              topics: ["Document Analysis", "AI Summary"],
+            };
+
+            setPdfs((prev) => [...prev, newPDF]);
+
+            // Close modal and navigate to chat page after successful upload
+            setTimeout(() => {
+              setShowUploadModal(false);
+              setUploadProgress([]);
+              // Navigate to the new PDF chat page
+              window.location.href = `/dashboard/pdf-summary/${fileId}`;
+            }, 2000);
+          }, 2000);
+        } else {
+          setUploadProgress((prev) =>
+            prev.map((p) => (p.fileId === fileId ? { ...p, progress } : p)),
+          );
+        }
+      }, 200);
+    });
+  };
+
+  const handleCancelUpload = (fileId: string) => {
+    setUploadProgress((prev) => prev.filter((p) => p.fileId !== fileId));
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "uploading":
+        return <Loader2 className="w-4 h-4 animate-spin" />;
+      case "processing":
+        return <Loader2 className="w-4 h-4 animate-spin" />;
+      case "complete":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "uploading":
+        return "bg-blue-500";
+      case "processing":
+        return "bg-yellow-500";
+      case "complete":
+        return "bg-green-500";
+      case "error":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  // If viewing a specific PDF chat (individual chat mode), show the chat interface
+  if (isIndividualChat && currentPDF) {
+    return (
+      <div
+        className="h-full w-full flex flex-col overflow-hidden relative"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
+          backgroundSize: "18px 18px",
+        }}
+      >
+        {/* Chat Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 z-10">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackToFiles}
+              className="flex items-center gap-2 hover:bg-muted/50"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Files
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-foreground">{currentPDF.name}</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">
+                    {currentPDF.pages} pages
+                  </Badge>
+                  <span>•</span>
+                  <span>{formatFileSize(currentPDF.size)}</span>
+                  <span>•</span>
+                  <span>{formatDate(currentPDF.uploadedAt)}</span>
+                </div>
+              </div>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleDownload(currentPDF.id)}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDelete(currentPDF.id)}
+                  className="text-red-600"
+                >
+                  <TrashIcon className="w-4 h-4 mr-2" />
+                  Delete PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AIInputModelSelect onValueChange={setModel} value={model}>
-            <AIInputModelSelectTrigger className="w-40">
-              <AIInputModelSelectValue />
-            </AIInputModelSelectTrigger>
-            <AIInputModelSelectContent>
-              {models.map((model) => (
-                <AIInputModelSelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {model.description}
-                    </span>
+
+        {/* Chat Messages */}
+        <div className="h-[calc(100vh-280px)] overflow-hidden">
+          <AIConversation className="h-full">
+            <AIConversationContent>
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center mb-6">
+                    <FileText className="w-10 h-10 text-primary" />
                   </div>
-                </AIInputModelSelectItem>
-              ))}
-            </AIInputModelSelectContent>
-          </AIInputModelSelect>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={clearConversation}
-            disabled={messages.length === 0}
-          >
-            <TrashIcon className="w-4 h-4" />
-          </Button>
-        </div>
-      </div> */}
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Chat
-            </TabsTrigger>
-            <TabsTrigger value="files" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              PDF Files
-            </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="chat" className="h-full mt-0">
-            <div className="h-full flex flex-col">
-              {/* Chat Header */}
-              {currentPDF && (
-                <div className="flex items-center justify-between p-4 border-b bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleBackToFiles}
-                      className="flex items-center gap-2"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      Back to Files
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary" />
-                      <span className="font-medium">{currentPDF.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {currentPDF.pages} pages
-                      </Badge>
+                  <h2 className="text-2xl font-semibold mb-3 text-foreground">
+                    Chat with {currentPDF.name}
+                  </h2>
+                  <p className="text-muted-foreground max-w-md mb-8 leading-relaxed">
+                    Ask questions about &ldquo;{currentPDF.name}&rdquo; and get
+                    instant AI-powered answers, summaries, and insights from your document.
+                  </p>
+                  <div className="flex flex-col gap-3 max-w-sm w-full">
+                    <div className="text-sm text-muted-foreground text-left">
+                      <p className="font-medium mb-2">Try asking:</p>
+                      <ul className="space-y-1 text-left">
+                        <li className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                          &ldquo;Summarize the main points&rdquo;
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                          &ldquo;What are the key findings?&rdquo;
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                          &ldquo;Explain the methodology&rdquo;
+                        </li>
+                      </ul>
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleDownload(currentPDF.id)}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(currentPDF.id)}
-                        className="text-red-600"
-                      >
-                        <TrashIcon className="w-4 h-4 mr-2" />
-                        Delete PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
-              )}
-
-              {/* Chat Messages */}
-              <div className="h-[calc(100vh-280px)] overflow-hidden">
-                <AIConversation className="h-full">
-                  <AIConversationContent>
-                    {messages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-xl font-semibold mb-2">
-                          {currentPDF
-                            ? `Chat with ${currentPDF.name}`
-                            : "Start a PDF conversation"}
-                        </h2>
-                        <p className="text-muted-foreground max-w-md mb-6">
-                          {currentPDF
-                            ? `Ask questions about "${currentPDF.name}" and get instant AI-powered answers and summaries.`
-                            : "Upload a PDF file and start chatting with AI to get instant summaries and answers!"}
-                        </p>
-                        {!currentPDF && (
-                          <Button onClick={() => setActiveTab("files")}>
-                            Browse PDFs
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <AIBranch
-                        defaultBranch={currentBranch}
-                        onBranchChange={setCurrentBranch}
-                      >
-                        <AIBranchMessages>
-                          <div className="space-y-4">
-                            {messages.map((message) => (
-                              <PDFChatMessage
-                                key={message.id}
-                                message={message}
-                                currentPDFName={currentPDF?.name}
-                              />
-                            ))}
-                            {/* Typing indicator */}
-                            {isTyping && (
-                              <div className="flex w-full justify-start mb-4">
-                                <div className="flex items-end mr-2">
-                                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border">
-                                    <svg
-                                      width="28"
-                                      height="28"
-                                      viewBox="0 0 40 40"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <g>
-                                        <path
-                                          d="M20.5 6.5c-3.5-2-8 0-9.5 3.5l-7 12c-2 3.5 0 8 3.5 9.5l12 7c3.5 2 8 0 9.5-3.5l7-12c2-3.5 0-8-3.5-9.5l-12-7z"
-                                          fill="#fff"
-                                        />
-                                        <path
-                                          d="M20.5 6.5c-3.5-2-8 0-9.5 3.5l-7 12c-2 3.5 0 8 3.5 9.5l12 7c3.5 2 8 0 9.5-3.5l7-12c2-3.5 0-8-3.5-9.5l-12-7z"
-                                          stroke="#000"
-                                          strokeWidth="2"
-                                        />
-                                      </g>
-                                    </svg>
-                                  </div>
-                                </div>
-                                <div className="max-w-[70%] mr-8">
-                                  <div className="rounded-2xl px-4 py-3 text-base bg-neutral-900 text-white shadow-sm flex items-center gap-2">
-                                    <div className="flex space-x-1">
-                                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                      <div
-                                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                        style={{ animationDelay: "0.1s" }}
-                                      ></div>
-                                      <div
-                                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                        style={{ animationDelay: "0.2s" }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-sm text-gray-200">
-                                      AI is analyzing PDF...
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </AIBranchMessages>
-                        <AIBranchSelector from="assistant">
-                          <AIBranchPrevious />
-                          <AIBranchNext />
-                        </AIBranchSelector>
-                      </AIBranch>
-                    )}
-                  </AIConversationContent>
-                  <AIConversationScrollButton />
-                </AIConversation>
-              </div>
-
-              {/* Chat Input */}
-              <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg flex flex-col-reverse items-stretch p-4 gap-0">
-                <AIInput
-                  onSubmit={handleSubmit}
-                  className="border shadow-sm w-full"
+              ) : (
+                <AIBranch
+                  defaultBranch={currentBranch}
+                  onBranchChange={setCurrentBranch}
                 >
-                  <AIInputTextarea
-                    onChange={(e) => setText(e.target.value)}
-                    value={text}
-                    placeholder={
-                      currentPDF
-                        ? `Ask about ${currentPDF.name}...`
-                        : "Upload a PDF to start chatting..."
-                    }
-                    disabled={isTyping || !currentPDF}
-                    className="min-h-[60px] max-h-[120px] resize-none w-full"
-                    style={{ overflowY: "auto" }}
-                    ref={textareaRef}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        const form = e.currentTarget.form;
-                        if (form) form.requestSubmit();
-                      }
-                    }}
-                  />
-                  <AIInputToolbar>
-                    <AIInputTools>
-                      <AIInputButton
-                        disabled={isTyping}
-                        className="hover:bg-accent/50"
-                      >
-                        <PlusIcon size={16} />
-                      </AIInputButton>
-                      <AIInputButton
-                        disabled={isTyping}
-                        className="hover:bg-accent/50"
-                        onClick={() => setActiveTab("files")}
-                      >
-                        <FileText size={16} />
-                        <span>Browse PDFs</span>
-                      </AIInputButton>
-                    </AIInputTools>
-                    <AIInputSubmit
-                      disabled={!text.trim() || isTyping || !currentPDF}
-                      status={status}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      <SendIcon size={16} />
-                    </AIInputSubmit>
-                  </AIInputToolbar>
-                </AIInput>
-              </div>
-            </div>
-          </TabsContent>
+                  <AIBranchMessages>
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <PDFChatMessage
+                          key={message.id}
+                          message={message}
+                          currentPDFName={currentPDF?.name}
+                        />
+                      ))}
+                      {/* Typing indicator */}
+                      {isTyping && (
+                        <div className="flex w-full justify-start mb-4">
+                          <div className="flex items-end mr-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-blue-200">
+                              <Bot className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                          <div className="max-w-[75%] mr-12">
+                            <div className="rounded-2xl px-4 py-3 text-base bg-card text-card-foreground border shadow-sm flex items-center gap-3">
+                              <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                                <div
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                  style={{ animationDelay: "0.1s" }}
+                                ></div>
+                                <div
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                  style={{ animationDelay: "0.2s" }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                AI is analyzing PDF...
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </AIBranchMessages>
+                  <AIBranchSelector from="assistant">
+                    <AIBranchPrevious />
+                    <AIBranchNext />
+                  </AIBranchSelector>
+                </AIBranch>
+              )}
+            </AIConversationContent>
+            <AIConversationScrollButton />
+          </AIConversation>
+        </div>
 
-          <TabsContent value="files" className="h-full mt-0 overflow-auto">
-            <div className="p-6">
-              <PDFSummaryList
-                pdfs={pdfs}
-                onChat={handleChat}
-                onDelete={handleDelete}
-                onDownload={handleDownload}
-                onRename={handleRename}
-                onUpload={handleUpload}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="upload" className="h-full mt-0 overflow-auto">
-            <div className="p-6">
-              <PDFUpload
-                onFileUpload={handleFileUpload}
-                uploadProgress={uploadProgress}
-                onCancelUpload={handleCancelUpload}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* Chat Input */}
+        <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg flex flex-col-reverse items-stretch p-4 gap-0">
+          <AIInput onSubmit={handleSubmit} className="border shadow-sm w-full">
+            <AIInputTextarea
+              onChange={(e) => setText(e.target.value)}
+              value={text}
+              placeholder={`Ask about ${currentPDF.name}...`}
+              disabled={isTyping}
+              className="min-h-[60px] max-h-[120px] resize-none w-full"
+              style={{ overflowY: "auto" }}
+              ref={textareaRef}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  const form = e.currentTarget.form;
+                  if (form) form.requestSubmit();
+                }
+              }}
+            />
+            <AIInputToolbar>
+              <AIInputTools>
+                <AIInputButton
+                  disabled={isTyping}
+                  className="hover:bg-accent/50"
+                >
+                  <PlusIcon size={16} />
+                </AIInputButton>
+              </AIInputTools>
+              <AIInputSubmit
+                disabled={!text.trim() || isTyping}
+                status={status}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <SendIcon size={16} />
+              </AIInputSubmit>
+            </AIInputToolbar>
+          </AIInput>
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  // Main layout - following the roadmap pattern
+  return (
+    <>
+      <div
+        className="h-full w-full min-h-screen flex flex-col items-center justify-center overflow-hidden relative bg-background"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
+          backgroundSize: "18px 18px",
+        }}
+      >
+        {/* Header */}
+        <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto pt-8 pb-4">
+          <FileText className="w-10 h-10 md:w-12 md:h-12 text-primary mb-3" />
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mb-1 text-center">
+            PDF Summary & Chat
+          </h1>
+          <p className="text-base md:text-lg text-muted-foreground font-normal text-center mb-2">
+            Upload your PDF files and chat with AI to get instant summaries,
+            answers, and insights from your documents.
+          </p>
+          <div className="w-16 h-1 rounded-full bg-primary/20 mx-auto mb-2" />
+        </div>
+
+        {/* Main Content - PDF Upload Card in Center */}
+        <div className="flex flex-1 items-center justify-center w-full">
+          <div className="w-full max-w-lg bg-card text-card-foreground rounded-2xl shadow-2xl px-6 py-8 flex flex-col items-center border border-border">
+            <div className="flex flex-col items-center justify-center w-full">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <Upload className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-center">
+                Upload PDF
+              </h3>
+              <p className="text-muted-foreground text-center mb-6">
+                Start a new conversation with your PDF documents
+              </p>
+              <Button
+                onClick={() => setShowUploadModal(true)}
+                className="w-full"
+                size="lg"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Last PDF Chats Section */}
+        <div className="w-full max-w-6xl mx-auto px-2 pb-10 mt-10">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+              Recent PDF Chats
+            </h2>
+          </div>
+          <div className="w-16 h-1 rounded-full bg-primary/20 mb-6" />
+          <LastPDFChats onChat={handleChat} />
+        </div>
+      </div>
+
+      {/* Upload Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload PDF Files
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Upload Area */}
+            <Card
+              className={`border-2 border-dashed transition-colors ${
+                isDragActive
+                  ? "border-primary bg-primary/5"
+                  : isDragReject
+                    ? "border-red-500 bg-red-50"
+                    : "border-muted-foreground/25 hover:border-primary/50"
+              }`}
+            >
+              <CardContent className="p-6">
+                <div
+                  {...getRootProps()}
+                  className="flex flex-col items-center justify-center space-y-4 cursor-pointer"
+                >
+                  <input {...getInputProps()} />
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">
+                      {isDragActive
+                        ? "Drop PDF files here"
+                        : "Upload PDF files"}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Drag and drop PDF files here, or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Maximum file size: 10MB per file
+                    </p>
+                  </div>
+                  <Button variant="outline" className="mt-2">
+                    Choose Files
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upload Progress */}
+            {uploadProgress.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="font-semibold mb-3">Upload Progress</h4>
+                  <div className="space-y-3">
+                    {uploadProgress.map((progress) => (
+                      <div
+                        key={progress.fileId}
+                        className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div className="flex-shrink-0">
+                          {getStatusIcon(progress.status)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium truncate">
+                              {progress.fileName}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs ${getStatusColor(progress.status)}`}
+                              >
+                                {progress.status}
+                              </Badge>
+                              {progress.status === "uploading" && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    handleCancelUpload(progress.fileId)
+                                  }
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <Progress value={progress.progress} className="h-2" />
+                          {progress.error && (
+                            <p className="text-xs text-red-500 mt-1">
+                              {progress.error}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
-export default AIAssistantChat;
+export default PDFSummaryChat;

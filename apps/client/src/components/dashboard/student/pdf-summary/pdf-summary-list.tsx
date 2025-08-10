@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,31 +12,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, FileText, Upload, Grid3X3, List } from "lucide-react";
+import {
+  Search,
+  Filter,
+  FileText,
+  Upload,
+  Grid3X3,
+  List,
+  BarChart3,
+  ArrowLeft,
+} from "lucide-react";
 import { PDFFile } from "./types";
+import { mockPDFFiles } from "./fake-data";
 import PDFSummaryCard from "./pdf-summary-card";
 
 interface PDFSummaryListProps {
-  pdfs: PDFFile[];
-  onChat: (pdfId: string) => void;
-  onDelete: (pdfId: string) => void;
-  onDownload: (pdfId: string) => void;
-  onRename: (pdfId: string, newName: string) => void;
-  onUpload: () => void;
+  pdfs?: PDFFile[];
+  onChat?: (pdfId: string) => void;
+  onDelete?: (pdfId: string) => void;
+  onDownload?: (pdfId: string) => void;
+  onRename?: (pdfId: string, newName: string) => void;
+  onUpload?: () => void;
 }
 
 export default function PDFSummaryList({
-  pdfs,
-  onChat,
-  onDelete,
-  onDownload,
-  onRename,
-  onUpload,
+  pdfs = mockPDFFiles,
+  onChat = (pdfId: string) => {
+    window.location.href = `/dashboard/pdf-summary/${pdfId}`;
+  },
+  onDelete = (pdfId: string) => {
+    console.log("Delete PDF:", pdfId);
+  },
+  onDownload = (pdfId: string) => {
+    console.log("Download PDF:", pdfId);
+  },
+  onRename = (pdfId: string, newName: string) => {
+    console.log("Rename PDF:", pdfId, "to", newName);
+  },
+  onUpload = () => {
+    window.location.href = "/dashboard/pdf-summary";
+  },
 }: PDFSummaryListProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [topicFilter, setTopicFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  const router = useRouter();
 
   // Get unique topics from all PDFs
   const allTopics = useMemo(() => {
@@ -80,59 +103,84 @@ export default function PDFSummaryList({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const handleBackToMain = () => {
+    router.push("/dashboard/pdf-summary");
+  };
+
   return (
     <div className="w-full space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToMain}
+            className="flex items-center gap-2 hover:bg-muted/50 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to PDF Summary
+          </Button>
+        </div>
       {/* Stats Card */}
-      <Card className="shadow-lg border-2 backdrop-blur-sm">
-        <CardContent className="py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-                <FileText className="w-8 h-8" />
+      <Card className="shadow-xl border-2 border-border/50 backdrop-blur-sm from-background to-muted/20">
+        <CardContent className="p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/10 text-primary rounded-2xl p-6 flex items-center justify-center shadow-lg border border-primary/10">
+                <BarChart3 className="w-10 h-10" />
               </div>
-              <div>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-primary drop-shadow-sm">
+              <div className="space-y-3">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-5xl font-bold text-primary drop-shadow-sm">
                     {stats.total}
                   </span>
-                  <span className="text-base font-medium text-muted-foreground mb-1">
+                  <span className="text-lg font-medium text-muted-foreground">
                     PDF Files
                   </span>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
+                <div className="flex flex-wrap gap-3">
+                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold border border-green-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     {stats.ready} Ready
-                  </span>
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-200">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                     {stats.processing} Processing
-                  </span>
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
-                    {formatTotalSize(stats.totalSize)}
-                  </span>
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
-                    {stats.totalPages} Pages
-                  </span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold border border-blue-200">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    {formatTotalSize(stats.totalSize)} Total Size
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold border border-purple-200">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    {stats.totalPages} Total Pages
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex-1 text-center md:text-right flex flex-col justify-center">
-              <span className="text-lg font-semibold text-primary">
-                Ready to analyze your PDFs?
-              </span>
-              <span className="text-muted-foreground text-sm mt-1">
-                Upload PDFs and start chatting with AI to get instant summaries
-                and answers!
-              </span>
+            <div className="flex-1 max-w-md">
+              <div className="text-center lg:text-right space-y-2">
+                <h3 className="text-xl font-semibold text-foreground">
+                  Ready to analyze your PDFs?
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Upload PDFs and start chatting with AI to get instant
+                  summaries and answers from your documents.
+                </p>
+                <Button onClick={onUpload} className="mt-4" size="lg">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload New PDF
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Search and Filter Controls */}
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="w-full flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Input
-            placeholder="Search PDFs..."
+            placeholder="Search PDFs by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -140,62 +188,55 @@ export default function PDFSummaryList({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
         </div>
 
-        <div className="flex gap-2">
-          <div className="relative w-[120px]">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="pl-10">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Status</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="uploading">Uploading</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-              </SelectContent>
-            </Select>
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
-          </div>
+        <div className="relative w-[140px]">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="pl-10">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Status</SelectItem>
+              <SelectItem value="ready">Ready</SelectItem>
+              <SelectItem value="processing">Processing</SelectItem>
+              <SelectItem value="uploading">Uploading</SelectItem>
+              <SelectItem value="error">Error</SelectItem>
+            </SelectContent>
+          </Select>
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
+        </div>
 
-          <div className="relative w-[120px]">
-            <Select value={topicFilter} onValueChange={setTopicFilter}>
-              <SelectTrigger className="pl-10">
-                <SelectValue placeholder="Topic" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Topics</SelectItem>
-                {allTopics.map((topic) => (
-                  <SelectItem key={topic} value={topic}>
-                    {topic}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
-          </div>
+        <div className="relative w-[140px]">
+          <Select value={topicFilter} onValueChange={setTopicFilter}>
+            <SelectTrigger className="pl-10">
+              <SelectValue placeholder="Filter by topic" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Topics</SelectItem>
+              {allTopics.map((topic) => (
+                <SelectItem key={topic} value={topic}>
+                  {topic}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
+        </div>
 
-          <div className="flex border rounded-md">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className="rounded-r-none"
-            >
-              <Grid3X3 className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <Button onClick={onUpload} className="flex items-center gap-2">
-            <Upload className="w-4 h-4" />
-            Upload PDF
+        <div className="flex border rounded-lg overflow-hidden">
+          <Button
+            variant={viewMode === "grid" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+            className="rounded-r-none h-10 px-3"
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="rounded-l-none h-10 px-3"
+          >
+            <List className="w-4 h-4" />
           </Button>
         </div>
       </div>

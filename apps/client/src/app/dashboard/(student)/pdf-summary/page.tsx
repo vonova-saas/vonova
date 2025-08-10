@@ -1,5 +1,7 @@
-import PDFSummaryChat from '@/components/dashboard/student/pdf-summary/pdf-summary-chat';
+"use client";
+
+import PDFSummaryChat from "@/components/dashboard/student/pdf-summary/pdf-summary-chat";
 
 export default function PDFSummaryPage() {
-  return <PDFSummaryChat />;
+  return <PDFSummaryChat isIndividualChat={false} />;
 }

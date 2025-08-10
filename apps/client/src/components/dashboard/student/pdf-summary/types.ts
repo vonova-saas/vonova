@@ -39,7 +39,8 @@ export type PDFQuestion = {
 
 export type UploadProgress = {
   fileId: string;
+  fileName: string;
   progress: number;
   status: 'uploading' | 'processing' | 'complete' | 'error';
-  error?: string;
+  error?: string | null;
 }; 
