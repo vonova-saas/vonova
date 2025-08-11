@@ -26,7 +26,7 @@ export const useGenerateRoadmap = (
 ) => {
   return MutationFactory(
     ["Generate Roadmap"],
-    "http://localhost:8000/generate-roadmap",
+    `${process.env.NEXT_PUBLIC_API_URL}/generate-roadmap`,
     "POST",
     options,
   );
