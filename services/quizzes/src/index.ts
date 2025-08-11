@@ -8,6 +8,7 @@ import connectDatabase from "./config/database.config";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import { applySecurityStack, securityStack } from "./middlewares/security";
+import quizRouter from "./routes/quiz.routes";
 
 const app = express();
 
@@ -37,7 +38,9 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
+app.use("/quizzes", quizRouter);
 app.use(errorHandler);
+
 
 app.listen(Env.PORT, async () => {
   console.log(`🚀 Quiz Service listening on port ${Env.PORT} in ${Env.NODE_ENV} mode`);

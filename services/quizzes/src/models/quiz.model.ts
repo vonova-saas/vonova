@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface Option {
   id: string; // e.g., "a"
@@ -18,6 +18,7 @@ export interface QuizDocument extends Document {
   topic: string;
   noOfQuestions: number;
   questions: Question[];
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +82,7 @@ const quizSchema = new Schema<QuizDocument>(
     questions: {
       type: [questionSchema],
     },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   {
     timestamps: true,
