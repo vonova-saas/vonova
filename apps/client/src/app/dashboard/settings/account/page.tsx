@@ -1,7 +1,14 @@
-export default function AccountPage() {
+import ContentSection from '@/components/dashboard/settings/shared/content-section';
+import AccountForm from '@/components/dashboard/settings/account/account-form';
+
+export default function SettingsAccount() {
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <h1 className="text-3xl font-bold">Account</h1>
-    </div>
+    <ContentSection
+      title='Account'
+      desc='Update your account settings. Set your preferred language and
+            timezone.'
+    >
+      <AccountForm />
+    </ContentSection>
   );
-} 
+}

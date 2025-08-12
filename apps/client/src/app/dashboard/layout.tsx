@@ -20,7 +20,6 @@ import {
 import { Bell, MessageSquare, SearchIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
-// import { PanelRight } from "lucide-react";
 import ChatSidebar from "@/components/dashboard/main/chat-sidebar";
 import { SidebarRight } from "@/components/dashboard/main/right-sidebar";
 import {
@@ -97,16 +96,47 @@ export default function DashboardLayout({ children }: Props) {
   }, []);
 
   // Dashboard sections for search
-  const dashboardSections = [
+  const studentDashboardSections = [
     { name: "Dashboard", url: "/dashboard" },
-    { name: "Playground", url: "/dashboard/playground" },
-    { name: "Models", url: "/dashboard/models" },
-    { name: "Documentation", url: "/dashboard/documentation" },
+    { name: "Courses", url: "/dashboard/courses" },
+    { name: "PDF Summary", url: "/dashboard/pdf-summary" },
+    { name: "Material Library", url: "/dashboard/material-library" },
+    { name: "Quizzes", url: "/dashboard/quizzes" },
+    { name: "AI Video Generator", url: "/dashboard/ai-video-generator" },
+    { name: "AI Roadmap Generator", url: "/dashboard/ai-roadmap-generator" },
+    { name: "Problem Solving", url: "/dashboard/problem-solving" },
+    { name: "AI Assistant", url: "/dashboard/ai-assistant" },
+    { name: "AI Voice", url: "/dashboard/ai-voice" },
+    { name: "Community", url: "/dashboard/community" },
+    { name: "Settings", url: "/dashboard/settings" },
+  ];
+
+  const adminDashboardSections = [
+    { name: "Dashboard", url: "/dashboard" },
+    { name: "User Management", url: "/dashboard/user-management" },
+    { name: "Reports", url: "/dashboard/reports" },
+    { name: "Settings", url: "/dashboard/settings" },
+  ];
+
+  const instructorDashboardSections = [
+    { name: "Dashboard", url: "/dashboard" },
+    { name: "Courses Management", url: "/dashboard/courses-management" },
+    { name: "Material Library Management", url: "/dashboard/material-library-management" },
+    { name: "Presentation Builder", url: "/dashboard/presentation-builder" },
+    { name: "Problem Solving Management", url: "/dashboard/problem-solving-management" },
     { name: "Settings", url: "/dashboard/settings" },
   ];
 
   const [search, setSearch] = React.useState("");
-  const filteredSections = dashboardSections.filter((section) =>
+  const studentFilteredSections = studentDashboardSections.filter((section) =>
+    section.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const adminFilteredSections = adminDashboardSections.filter((section) =>
+    section.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const instructorFilteredSections = instructorDashboardSections.filter((section) =>
     section.name.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -192,11 +222,11 @@ export default function DashboardLayout({ children }: Props) {
                       onValueChange={setSearch}
                     />
                     <CommandList>
-                      {filteredSections.length === 0 ? (
+                      {studentFilteredSections.length === 0 ? (
                         <CommandEmpty>No results found.</CommandEmpty>
                       ) : (
                         <CommandGroup heading="Sections">
-                          {filteredSections.map((section) => (
+                          {studentFilteredSections.map((section) => (
                             <CommandItem
                               key={section.url}
                               onSelect={() => {

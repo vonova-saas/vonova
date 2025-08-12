@@ -1,7 +1,14 @@
-export default function NotificationsPage() {
+
+import ContentSection from '@/components/dashboard/settings/shared/content-section';
+import NotificationsForm from '@/components/dashboard/settings/notifications/notifications-form';
+
+export default function SettingsNotifications() {
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <h1 className="text-3xl font-bold">Notifications</h1>
-    </div>
+    <ContentSection
+      title='Notifications'
+      desc='Configure how you receive notifications.'
+    >
+      <NotificationsForm />
+    </ContentSection>
   );
-} 
+}

@@ -79,22 +79,21 @@ export const sidebarNavData = {
       icon: Frame,
     },
     {
-      title: "Profile",
-      url: "/dashboard/profile",
-      icon: UserCog,
-    },
-    {
       title: "Settings",
       url: "/dashboard/settings",
       icon: Settings2,
       items: [
         {
-          title: "General",
-          url: "/dashboard/settings/general",
+          title: "Account",
+          url: "/dashboard/settings/account",
         },
         {
           title: "Billing",
           url: "/dashboard/settings/billing",
+        },
+        {
+          title: "Notifications",
+          url: "/dashboard/settings/notifications",
         },
       ],
     },
@@ -117,22 +116,21 @@ export const sidebarNavData = {
       icon: BookOpen
     },
     {
-      title: "Profile",
-      url: "/dashboard/profile",
-      icon: UserCog,
-    },
-    {
       title: "Settings",
       url: "/dashboard/settings",
       icon: Settings2,
       items: [
         {
-          title: "General",
-          url: "/dashboard/settings/general",
+          title: "Account",
+          url: "/dashboard/settings/account",
         },
         {
           title: "Billing",
           url: "/dashboard/settings/billing",
+        },
+        {
+          title: "Notifications",
+          url: "/dashboard/settings/notifications",
         },
       ],
     },
@@ -161,22 +159,21 @@ export const sidebarNavData = {
       icon: BrainCog,
     },
     {
-      title: "Profile",
-      url: "/dashboard/profile",
-      icon: UserCog,
-    },
-    {
       title: "Settings",
       url: "/dashboard/settings",
       icon: Settings2,
       items: [
         {
-          title: "General",
-          url: "/dashboard/settings/general",
+          title: "Account",
+          url: "/dashboard/settings/account",
         },
         {
           title: "Billing",
           url: "/dashboard/settings/billing",
+        },
+        {
+          title: "Notifications",
+          url: "/dashboard/settings/notifications",
         },
       ],
     },

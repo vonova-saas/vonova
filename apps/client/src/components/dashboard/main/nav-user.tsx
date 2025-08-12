@@ -6,7 +6,7 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
-  User,
+  UserCog,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,7 +87,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push('/dashboard/settings/account')}>
-                <User />
+                <UserCog />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push('/dashboard/settings/billing')}>

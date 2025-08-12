@@ -1,7 +1,13 @@
+import ContentSection from "@/components/dashboard/settings/shared/content-section";
+import { BillingForm } from "@/components/dashboard/settings/billing/billing-form";
+
 export default function BillingPage() {
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <h1 className="text-3xl font-bold">Billing</h1>
-    </div>
+    <ContentSection
+      title="Billing"
+      desc="Update your billing information and manage your subscription."
+    >
+      <BillingForm />
+    </ContentSection>
   );
-} 
+}
