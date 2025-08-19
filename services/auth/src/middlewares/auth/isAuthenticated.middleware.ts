@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { UnauthorizedException } from "../../utils/appError";
 import { verifyAccessToken } from "../../utils/jwt";
-import UserModel, { UserDocument } from "../../models/user.model";
-
+import UserModel, { UserDocument } from "../../models/auth/user.model";
 declare global {
   namespace Express {
     interface Request {
