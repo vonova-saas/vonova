@@ -5,10 +5,12 @@ import { HTTPSTATUS } from "./config/http.config";
 import { errorHandler } from "./middlewares/errors/errorHandler.middleware";
 import { Env } from "./config/env.config";
 import connectDatabase from "./config/database.config";
-import { swaggerUi, swaggerSpec } from "./services/swagger.service";
+//import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import { applySecurityStack, securityStack } from "./middlewares/security";
-import quizRouter from "./routes/quiz.routes";
+import { swaggerSpec, swaggerUi } from "./services/docs/swagger.service";
+import quizRouter from "./routes/quizzes/quiz.routes";
+//import quizRouter from "./routes/quiz.routes";
 
 const app = express();
 

@@ -15,6 +15,8 @@ quizRouter.post("/addQuiz", isAuthenticated, isInstructorOrAdmin, validateReques
 
 quizRouter.patch('/updateQuiz/:id', isAuthenticated, isInstructorOrAdmin, validateRequest(validationSchema.updateQuizSchema), QuizController.updateQuiz)
 
+quizRouter.get('/getQuiz/:id', isAuthenticated, QuizController.getQuiz)
 
+quizRouter.delete('/deleteQuiz/:id', isAuthenticated, isInstructorOrAdmin, QuizController.deleteQuiz);
 
 export default quizRouter;

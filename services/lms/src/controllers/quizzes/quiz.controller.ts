@@ -41,3 +41,18 @@ export const updateQuiz = asyncHandler(async (req: Request, res: Response) => {
     data: quiz,
   });
 });
+export const getQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const quiz = await QuizService.getQuiz(req.params.id);
+  res.status(HTTPSTATUS.OK).json({
+    message: "Quiz retrieved successfully",
+    data: quiz,
+  });
+});
+
+export const deleteQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const quiz = await QuizService.deleteQuiz(req.params.id);
+  res.status(HTTPSTATUS.OK).json({
+    message: "Quiz deleted successfully",
+    data: quiz,
+  });
+});

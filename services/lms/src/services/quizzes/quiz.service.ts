@@ -58,3 +58,18 @@ export const updateQuiz = async (
   await quiz.save();
   return quiz;
 };
+export const getQuiz = async (quizId: string) => {
+  const quiz = await QuizModel.findById(quizId);
+  if (!quiz) {
+    throw new Error("Quiz not found");
+  }
+  return quiz;
+};
+
+export const deleteQuiz = async (quizId: string) => {
+  const quiz = await QuizModel.findByIdAndDelete(quizId);
+  if (!quiz) {
+    throw new Error("Quiz not found");
+  }
+  return quiz;
+}
