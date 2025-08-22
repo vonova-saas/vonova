@@ -18,7 +18,7 @@ export const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:4004/api',
+        url: 'http://localhost:4005/api',
         description: 'Development server'
       },
       {
@@ -109,10 +109,6 @@ export const swaggerOptions = {
       {
         name: 'Health',
         description: 'Service health and monitoring endpoints'
-      },
-      {
-        name: 'Admin',
-        description: 'Administrative endpoints for system management'
       }
     ]
   },

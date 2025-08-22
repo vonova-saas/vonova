@@ -2,20 +2,24 @@ import { getEnv } from "../utils/get-env";
 
 const envConfig = () => ({
   //? Backend Configuration
-  PORT: getEnv("PORT", "4004"),
+  PORT: getEnv("PORT", "4005"),
   NODE_ENV: getEnv("NODE_ENV", "development"),
   BASE_PATH: getEnv("BASE_PATH", "/api"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   //? AI Service Configuration
   ROADMAP_AI_SERVICE_URL: getEnv("ROADMAP_AI_SERVICE_URL", "http://127.0.0.1:5000"),
+  PD_SUMMARY_AI_SERVICE_URL: getEnv("PD_SUMMARY_AI_SERVICE_URL", "http://127.0.0.1:5001"),
+  PROBLEM_SOLVER_AI_SERVICE_URL: getEnv("PROBLEM_SOLVER_AI_SERVICE_URL", "http://127.0.0.1:5002"),
+  ASSISTANT_AI_SERVICE_URL: getEnv("ASSISTANT_AI_SERVICE_URL", "http://127.0.0.1:5003"),
+  VIDEO_GEN_AI_SERVICE_URL: getEnv("VIDEO_GEN_AI_SERVICE_URL", "http://127.0.0.1:5004"),
 
   //? Swagger Docs Configuration
   SWAGGER_USER: getEnv("SWAGGER_USER", "vonova"),
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
 
   //* Database configuration (MongoDB),
-  MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE", "mongodb://localhost:27017/vonova_lms_ai"),
+  MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE", "mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/vonova_lms_ai"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
   //! Security Layer
@@ -44,7 +48,7 @@ const envConfig = () => ({
   CORS_EXPOSED_HEADERS: getEnv("CORS_EXPOSED_HEADERS", "none"),
   CORS_CREDENTIALS: getEnv("CORS_CREDENTIALS", "true"),
   CORS_MAX_AGE: getEnv("CORS_MAX_AGE", "86400"),
-  CORS_WHITELIST: getEnv("CORS_WHITELIST", "http://localhost:3000"),
+  CORS_WHITELIST: getEnv("CORS_WHITELIST", "http://localhost:3000,https://vonova.tech"),
   CORS_BLACKLIST: getEnv("CORS_BLACKLIST", "none"),
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
 
@@ -52,7 +56,7 @@ const envConfig = () => ({
   EMAIL_HOST: getEnv("EMAIL_HOST", "smtp.gmail.com"),
   EMAIL_PORT: parseInt(getEnv("EMAIL_PORT", "465")),
   EMAIL_SECURE: getEnv("EMAIL_SECURE", "true") === "true",
-  EMAIL_PASSWORD: getEnv("EMAIL_PASSWORD", "none"),
+  EMAIL_PASSWORD: getEnv("EMAIL_PASSWORD", "jaxy whio zpia tjsz"),
   EMAIL_USER: getEnv("EMAIL_USER", "vonovacompany@gmail.com"),
   EMAIL_FROM: getEnv("EMAIL_FROM", "vonovacompany@gmail.com"),
 

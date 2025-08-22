@@ -551,7 +551,7 @@
  *                           example: "healthy"
  *                         port:
  *                           type: string
- *                           example: "4004"
+ *                           example: "4005"
  *                     ai_service:
  *                       type: object
  *                       properties:
@@ -634,7 +634,7 @@
  *                           example: "lms-ai-backend"
  *                         port:
  *                           type: string
- *                           example: "4004"
+ *                           example: "4005"
  *                     ai_service:
  *                       type: object
  *                       properties:
@@ -646,115 +646,11 @@
  *                       properties:
  *                         backend:
  *                           type: integer
- *                           example: 4004
+ *                           example: 4005
  *                         ai_service:
  *                           type: integer
  *                           example: 5000
  */
 
-/**
- * @swagger
- * /api/roadmap/stats:
- *   get:
- *     summary: Get global statistics (Admin)
- *     description: Retrieves global statistics for the roadmap service
- *     tags: [Admin]
- *     parameters:
- *       - in: query
- *         name: days
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 365
- *           default: 30
- *         description: Number of days to look back
- *     responses:
- *       200:
- *         description: Global statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Global statistics retrieved successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     period_days:
- *                       type: integer
- *                       example: 30
- *                     popular_topics:
- *                       type: array
- *                       items:
- *                         type: object
- *                     generated_at:
- *                       type: string
- *                       format: date-time
- *       400:
- *         $ref: '#/components/responses/ValidationError'
- *       500:
- *         $ref: '#/components/responses/InternalError'
- */
 
-/**
- * @swagger
- * /api/roadmap/search:
- *   get:
- *     summary: Search roadmaps (Future Feature)
- *     description: Search for roadmaps by various criteria (not yet implemented)
- *     tags: [Admin]
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema:
- *           type: string
- *         description: Search query
- *       - in: query
- *         name: skill_level
- *         schema:
- *           type: string
- *           enum: [beginner, intermediate, advanced]
- *         description: Filter by skill level
- *       - in: query
- *         name: duration_min
- *         schema:
- *           type: integer
- *         description: Minimum duration in weeks
- *       - in: query
- *         name: duration_max
- *         schema:
- *           type: integer
- *         description: Maximum duration in weeks
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Items per page
- *     responses:
- *       501:
- *         description: Not implemented
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Search functionality is not yet implemented"
- */
+

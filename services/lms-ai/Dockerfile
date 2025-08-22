@@ -42,7 +42,7 @@ RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Expose the port the app runs on
-EXPOSE 4004
+EXPOSE 4005
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
@@ -50,7 +50,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=4004
+ENV PORT=4005
 
 # Start the application
 CMD ["bun", "start"]

@@ -11,6 +11,23 @@ import axios from 'axios';
 export class HealthController {
 
   /**
+   * Simple health check
+   * GET /api/roadmap/health
+   */
+  healthCheck = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    res.status(200).json({
+      success: true,
+      message: 'Roadmap service is healthy',
+      data: {
+        service: 'roadmap-generator',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+      }
+    });
+  });
+
+  /**
    * Test AI service connectivity
    * GET /api/roadmap/test-ai-connection
    */
