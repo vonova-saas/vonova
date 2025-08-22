@@ -9,7 +9,11 @@ const connectDatabase = async () => {
     console.log("Connected to Mongo database");
   } catch (error) {
     console.log("Error connecting to Mongo database");
-    process.exit(1);
+    // Don't exit in development - allow service to run for testing
+    if (Env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 

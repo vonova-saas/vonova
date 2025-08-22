@@ -11,13 +11,17 @@ export interface ISecurityLog extends Document {
 }
 
 const SecurityLogSchema = new Schema<ISecurityLog>({
-  timestamp: { type: Date, default: Date.now },
-  ip: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now, index: true },
+  ip: { type: String, required: true, index: true },
   userAgent: { type: String },
   method: { type: String, required: true },
-  route: { type: String, required: true },
-  attackType: { type: String, required: true },
+  route: { type: String, required: true, index: true },
+  attackType: { type: String, required: true, index: true },
   details: { type: Schema.Types.Mixed }
 });
 
-export default mongoose.model<ISecurityLog>('SecurityLog', SecurityLogSchema); 
+// Indexes for better query performance
+SecurityLogSchema.index({ timestamp: -1, attackType: 1 });
+SecurityLogSchema.index({ ip: 1, timestamp: -1 });
+
+export default mongoose.model<ISecurityLog>('SecurityLog', SecurityLogSchema);
