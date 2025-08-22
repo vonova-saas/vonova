@@ -1,11 +1,12 @@
 from services.roadmap_generator import RoadmapGenerator
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
-import os
 from utils.logging_utils import setup_ai_logger
+import os
 
 logger = setup_ai_logger(__name__, "roadmap_ai.log", "INFO")
 load_dotenv()
@@ -32,32 +33,29 @@ else:
 generator = RoadmapGenerator(API_KEY)
 logger.info("RoadmapGenerator initialized")
 
+class RoadmapRequest(BaseModel):
+    topic: str
+    skill_level: str
+    duration_weeks: int
+
 @app.post("/generate-roadmap")
-async def generate_roadmap_api(request: Request):
+async def generate_roadmap_api(request: RoadmapRequest):
     try:
         logger.info("Received generate-roadmap request")
         
-        data = await request.json()
-        topic = data.get("topic")
-        skill_level = data.get("skill_level", "beginner")
-        duration_weeks = int(data.get("duration_weeks", 12))
-        focus_areas = data.get("focus_areas")
-        
-        logger.info(f"Request parameters - topic: {topic}, skill_level: {skill_level}, duration_weeks: {duration_weeks}")
-        
-        if focus_areas is not None and isinstance(focus_areas, str):
-            focus_areas = [area.strip() for area in focus_areas.split(",") if area.strip()]
-            logger.info(f"Parsed focus areas: {focus_areas}")
-        
         roadmap = generator.generate_roadmap(
-            topic=topic,
-            skill_level=skill_level,
-            duration_weeks=duration_weeks,
-            focus_areas=focus_areas
+            topic=request.topic,
+            skill_level=request.skill_level,
+            duration_weeks=request.duration_weeks,
         )
         
         logger.info("Roadmap generated successfully")
-        json_response = generator.generate_json_response(roadmap, topic, skill_level, duration_weeks)
+        json_response = generator.generate_json_response(
+            roadmap,
+            request.topic,
+            request.skill_level,
+            request.duration_weeks
+        )
         
         logger.info(f"Response prepared with roadmap ID: {json_response.get('roadmapId')}")
         return JSONResponse(content=json_response)

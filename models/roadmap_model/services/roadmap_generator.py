@@ -9,6 +9,30 @@ import uuid
 class RoadmapGenerator:
     def __init__(self, api_key):
         self.co = cohere.Client(api_key)
+    
+    def _sanitize_json(self, json_string):
+        """Convert single quotes to double quotes and handle common JSON formatting issues"""
+        try:
+            # First try to parse as-is
+            json.loads(json_string)
+            return json_string
+        except json.JSONDecodeError:
+            # If parsing fails, try to sanitize
+            sanitized = json_string
+            
+            # Replace single quotes with double quotes for property names
+            sanitized = re.sub(r"(\w+)\s*:\s*'", r'"\1": "', sanitized)
+            sanitized = re.sub(r",\s*'", ', "', sanitized)
+            sanitized = re.sub(r"{\s*'", '{ "', sanitized)
+            sanitized = re.sub(r"'\s*}", '" }', sanitized)
+            sanitized = re.sub(r"'\s*,", '",', sanitized)
+            sanitized = re.sub(r"'\s*:", '":', sanitized)
+            
+            logger.info("Sanitized JSON attempt")
+            return sanitized
+        except Exception as e:
+            logger.error(f"Error sanitizing JSON: {str(e)}")
+            return json_string
 
     def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12, focus_areas=None):
         logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
@@ -63,15 +87,39 @@ class RoadmapGenerator:
             
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
-                logger.info("Successfully parsed JSON from response")
-                roadmap_data = json.loads(json_match.group())
-                roadmap_data['milestones'] = [
-                    m for m in roadmap_data['milestones']
-                    if m['week'] in [w['week'] for w in roadmap_data['weeks']]
-                ]
-                logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
+                logger.info("Found JSON pattern in response")
+                json_str = json_match.group()
+                logger.info(f"Raw JSON string: {json_str[:200]}...")  # Log first 200 chars for debugging
+                
+                try:
+                    # First try to parse the JSON as-is
+                    roadmap_data = json.loads(json_str)
+                    logger.info("Successfully parsed JSON from response")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON parsing failed: {str(e)}, attempting sanitization")
+                    
+                    # Try to sanitize the JSON
+                    sanitized_json = self._sanitize_json(json_str)
+                    try:
+                        roadmap_data = json.loads(sanitized_json)
+                        logger.info("Successfully parsed sanitized JSON")
+                    except json.JSONDecodeError as e2:
+                        logger.error(f"Sanitized JSON also failed: {str(e2)}, using fallback parsing")
+                        logger.info(f"Sanitized JSON attempt: {sanitized_json[:200]}...")
+                        roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
+                
+                # Validate and filter milestones
+                if 'milestones' in roadmap_data and 'weeks' in roadmap_data:
+                    roadmap_data['milestones'] = [
+                        m for m in roadmap_data['milestones']
+                        if m['week'] in [w['week'] for w in roadmap_data['weeks']]
+                    ]
+                    logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
+                else:
+                    logger.warning("Missing required fields in roadmap data, using fallback")
+                    roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
             else:
-                logger.warning("Failed to parse JSON from response, using fallback parsing")
+                logger.warning("Failed to find JSON pattern in response, using fallback parsing")
                 roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
             
             return roadmap_data
