@@ -47,11 +47,8 @@ export class RoadmapController {
       req.get('User-Agent')
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Roadmap generated successfully',
-      data: roadmap
-    });
+    // Return the roadmap response directly without wrapping it
+    res.status(201).json(roadmap);
   });
 
   getRoadmapById = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {

@@ -82,7 +82,7 @@ console.log(roadmap.data.roadmapId);
 ROADMAP_AI_SERVICE_URL=http://localhost:5000
 
 # MongoDB
-MONGO_URI_RMOTE=mongodb://...
+MONGO_URI_ROADMAP_AI=mongodb://...
 
 # Security
 CORS_ORIGIN=http://localhost:3000

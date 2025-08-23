@@ -17,7 +17,7 @@ BASE_PATH=/api
 ROADMAP_AI_SERVICE_URL=http://localhost:5000
 
 # Database (Replace with your MongoDB connection)
-MONGO_URI_RMOTE=mongodb://localhost:27017/vonova_lms_ai
+MONGO_URI_ROADMAP_AI=mongodb://localhost:27017/ROADMAP_AI
 
 # Security
 CORS_ORIGIN=http://localhost:3000

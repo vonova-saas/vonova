@@ -20,7 +20,7 @@ import { Env } from '../../config/env.config';
  */
 export class RoadmapGeneratorService {
   private readonly PYTHON_SERVICE_URL: string;
-  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+  private readonly DEFAULT_TIMEOUT = 120000; // 120 seconds (2 minutes)
 
   constructor() {
     this.PYTHON_SERVICE_URL = Env.ROADMAP_AI_SERVICE_URL;
@@ -29,32 +29,44 @@ export class RoadmapGeneratorService {
   /**
    * Generate a new learning roadmap
    */
-  async generateRoadmap(request: IRoadmapRequest, userIp?: string, userAgent?: string): Promise<IRoadmapResponse> {
+  async generateRoadmap(request: IRoadmapRequest, userIp?: string, userAgent?: string): Promise<any> {
     const startTime = Date.now();
     
     try {
       // Validate request
       this.validateRoadmapRequest(request);
 
-      // Check for existing similar roadmaps (optional caching)
-      const existingRoadmap = await this.findSimilarRoadmap(request);
-      if (existingRoadmap && this.shouldUseCachedRoadmap(existingRoadmap, request)) {
-        // Log history for cached roadmap usage
-        await this.logRoadmapHistory(existingRoadmap.roadmapId, request.user_id, 'viewed', userIp, userAgent);
-        
-        return this.formatRoadmapResponse(existingRoadmap);
+      // Call Python AI service directly
+      const response = await fetch(`${this.PYTHON_SERVICE_URL}/generate-roadmap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: request.topic,
+          skill_level: request.skill_level,
+          duration_weeks: request.duration_weeks,
+          focus_areas: request.focus_areas?.join(', ') || null
+        }),
+        signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Python service responded with status: ${response.status}, body: ${errorText}`);
       }
 
-      // Call Python AI service
-      const aiResponse = await this.callPythonService(request);
+      const aiResponse = await response.json();
       
-      // Process and save roadmap
-      const roadmapData = await this.processAndSaveRoadmap(aiResponse, request, startTime);
+      if (!aiResponse.status) {
+        throw new Error(aiResponse.error || 'Python service returned error');
+      }
+
+      // Optionally save to database in background (don't wait for it)
+      this.processAndSaveRoadmapInBackground(aiResponse, request, startTime, userIp, userAgent);
       
-      // Log generation history
-      await this.logRoadmapHistory(roadmapData.roadmapId, request.user_id, 'generated', userIp, userAgent);
-      
-      return this.formatRoadmapResponse(roadmapData);
+      // Return the Python AI service response directly
+      return aiResponse;
       
     } catch (error) {
       console.error('Error generating roadmap:', error);
@@ -331,45 +343,6 @@ export class RoadmapGeneratorService {
            existingRoadmap.skill_level === request.skill_level;
   }
 
-  private async callPythonService(request: IRoadmapRequest): Promise<any> {
-    try {
-      const response = await fetch(`${this.PYTHON_SERVICE_URL}/generate-roadmap`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: request.topic,
-          skill_level: request.skill_level,
-          duration_weeks: request.duration_weeks,
-          focus_areas: request.focus_areas?.join(', ') || null
-        }),
-        signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Python service responded with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.status) {
-        throw new Error(data.error || 'Python service returned error');
-      }
-
-      return data;
-      
-    } catch (error) {
-      console.error('Error calling Python service:', error);
-      
-      if (error instanceof Error && error.name === 'TimeoutError') {
-        throw new InternalServerException('Roadmap generation timed out. Please try again.');
-      }
-      
-      // Return fallback roadmap if Python service fails
-      return this.generateFallbackRoadmap(request);
-    }
-  }
 
   private generateFallbackRoadmap(request: IRoadmapRequest): any {
     const roadmapId = uuidv4();
@@ -420,9 +393,18 @@ export class RoadmapGeneratorService {
     };
   }
 
+  private async processAndSaveRoadmapInBackground(aiResponse: any, request: IRoadmapRequest, startTime: number, userIp?: string, userAgent?: string): Promise<void> {
+    try {
+      const roadmapData = await this.processAndSaveRoadmap(aiResponse, request, startTime);
+      await this.logRoadmapHistory(roadmapData.roadmapId, request.user_id, 'generated', userIp, userAgent);
+    } catch (error) {
+      console.warn('Background roadmap saving failed:', error);
+    }
+  }
+
   private async processAndSaveRoadmap(aiResponse: any, request: IRoadmapRequest, startTime: number): Promise<IRoadmapData> {
     const generationTime = Date.now() - startTime;
-    const roadmapId = uuidv4();
+    const roadmapId = aiResponse.roadmapId || uuidv4();
 
     // Extract roadmap data from AI response
     const roadmapData = this.extractRoadmapDataFromResponse(aiResponse);
@@ -498,6 +480,7 @@ export class RoadmapGeneratorService {
       }))
     }];
 
+    // Return the exact same structure as Python AI service
     return {
       status: true,
       text: {
@@ -509,8 +492,7 @@ export class RoadmapGeneratorService {
       metadata: {
         generated: roadmap.title,
         summary: `${roadmap.duration_weeks} weeks, ${roadmap.total_estimated_hours || 0} total hours`
-      },
-      roadmap_data: roadmap
+      }
     };
   }
 

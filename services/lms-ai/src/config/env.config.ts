@@ -19,7 +19,7 @@ const envConfig = () => ({
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", "defaultPass"),
 
   //* Database configuration (MongoDB),
-  MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE", "mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/vonova_lms_ai"),
+  MONGO_URI_ROADMAP_AI: getEnv("MONGO_URI_ROADMAP_AI", "mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/ROADMAP_AI"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
   //! Security Layer

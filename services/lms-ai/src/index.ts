@@ -120,7 +120,7 @@ app.listen(Env.PORT, async () => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown database error';
     console.warn('Database connection failed (service will run with limited functionality):', errorMessage);
-    console.log('To enable full functionality, configure MONGO_URI_RMOTE in your .env file');
+    console.log('To enable full functionality, configure MONGO_URI_ROADMAP_AI in your .env file');
   }
   
             console.log('');

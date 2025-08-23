@@ -5,7 +5,7 @@ const connectDatabase = async () => {
   try {
     // await mongoose.connect(Env.MONGO_URI_LOCAL);
     // console.log("Connected to Local Mongo database");
-    await mongoose.connect(Env.MONGO_URI_RMOTE);
+    await mongoose.connect(Env.MONGO_URI_ROADMAP_AI);
     console.log("Connected to Mongo database");
   } catch (error) {
     console.log("Error connecting to Mongo database");
