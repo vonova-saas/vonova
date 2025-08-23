@@ -1,0 +1,539 @@
+import { 
+  IRoadmapRequest, 
+  IRoadmapResponse, 
+  IRoadmapData, 
+  IWeek, 
+  IMilestone, 
+  IChapter, 
+  ITreeNode 
+} from '../models/roadmap.model';
+import RoadmapModel from '../models/roadmap.model';
+import RoadmapHistoryModel from '../models/roadmapHistory.model';
+import { v4 as uuidv4 } from 'uuid';
+import { AppError, BadRequestException, InternalServerException } from '../../utils/appError';
+import { HTTPSTATUS } from '../../config/http.config';
+import { Env } from '../../config/env.config';
+
+/**
+ * Roadmap Generator Service
+ * Handles AI-powered roadmap generation using external Python service
+ */
+export class RoadmapGeneratorService {
+  private readonly PYTHON_SERVICE_URL: string;
+  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+
+  constructor() {
+    this.PYTHON_SERVICE_URL = Env.ROADMAP_AI_SERVICE_URL;
+  }
+
+  /**
+   * Generate a new learning roadmap
+   */
+  async generateRoadmap(request: IRoadmapRequest, userIp?: string, userAgent?: string): Promise<IRoadmapResponse> {
+    const startTime = Date.now();
+    
+    try {
+      // Validate request
+      this.validateRoadmapRequest(request);
+
+      // Check for existing similar roadmaps (optional caching)
+      const existingRoadmap = await this.findSimilarRoadmap(request);
+      if (existingRoadmap && this.shouldUseCachedRoadmap(existingRoadmap, request)) {
+        // Log history for cached roadmap usage
+        await this.logRoadmapHistory(existingRoadmap.roadmapId, request.user_id, 'viewed', userIp, userAgent);
+        
+        return this.formatRoadmapResponse(existingRoadmap);
+      }
+
+      // Call Python AI service
+      const aiResponse = await this.callPythonService(request);
+      
+      // Process and save roadmap
+      const roadmapData = await this.processAndSaveRoadmap(aiResponse, request, startTime);
+      
+      // Log generation history
+      await this.logRoadmapHistory(roadmapData.roadmapId, request.user_id, 'generated', userIp, userAgent);
+      
+      return this.formatRoadmapResponse(roadmapData);
+      
+    } catch (error) {
+      console.error('Error generating roadmap:', error);
+      
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new InternalServerException('Failed to generate roadmap. Please try again.');
+    }
+  }
+
+  /**
+   * Get roadmap by ID
+   */
+  async getRoadmapById(roadmapId: string, userId?: string, userIp?: string, userAgent?: string): Promise<IRoadmapResponse> {
+    try {
+      const roadmap = await RoadmapModel.findOne({ roadmapId });
+      
+      if (!roadmap) {
+        throw new BadRequestException('Roadmap not found');
+      }
+
+      // Log view history
+      if (userId) {
+        await this.logRoadmapHistory(roadmapId, userId, 'viewed', userIp, userAgent);
+      }
+      
+      return this.formatRoadmapResponse(roadmap);
+      
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new InternalServerException('Failed to retrieve roadmap');
+    }
+  }
+
+  /**
+   * Get user's roadmaps
+   */
+  async getUserRoadmaps(userId: string, page = 1, limit = 10): Promise<{
+    roadmaps: IRoadmapResponse[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const [roadmaps, total] = await Promise.all([
+        RoadmapModel.find({ user_id: userId })
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit),
+        RoadmapModel.countDocuments({ user_id: userId })
+      ]);
+
+      return {
+        roadmaps: roadmaps.map((roadmap: IRoadmapData) => this.formatRoadmapResponse(roadmap)),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      };
+      
+    } catch (error) {
+      throw new InternalServerException('Failed to retrieve user roadmaps');
+    }
+  }
+
+  /**
+   * Update roadmap progress
+   */
+  async updateProgress(
+    roadmapId: string, 
+    userId: string, 
+    weekNumber?: number, 
+    milestoneWeek?: number,
+    progressPercentage?: number,
+    timeSpentMinutes?: number,
+    notes?: string,
+    userIp?: string,
+    userAgent?: string
+  ): Promise<void> {
+    try {
+      const roadmap = await RoadmapModel.findOne({ roadmapId, user_id: userId });
+      
+      if (!roadmap) {
+        throw new BadRequestException('Roadmap not found or access denied');
+      }
+
+      // Determine action type
+      let action: 'started' | 'week_completed' | 'milestone_reached' | 'completed' = 'started';
+      
+      if (progressPercentage === 100) {
+        action = 'completed';
+        roadmap.status = 'completed';
+      } else if (milestoneWeek) {
+        action = 'milestone_reached';
+      } else if (weekNumber) {
+        action = 'week_completed';
+      }
+
+      // Update roadmap status if needed
+      if (roadmap.status === 'generated' && (weekNumber || progressPercentage)) {
+        roadmap.status = 'in_progress';
+      }
+
+      await roadmap.save();
+
+      // Log progress history
+      await this.logRoadmapHistory(
+        roadmapId, 
+        userId, 
+        action, 
+        userIp, 
+        userAgent,
+        {
+          week_number: weekNumber,
+          milestone_week: milestoneWeek,
+          progress_percentage: progressPercentage,
+          time_spent_minutes: timeSpentMinutes,
+          notes
+        }
+      );
+      
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new InternalServerException('Failed to update progress');
+    }
+  }
+
+  /**
+   * Get roadmap analytics
+   */
+  async getRoadmapAnalytics(roadmapId: string): Promise<any> {
+    try {
+      const [roadmap, completionStats, userProgress] = await Promise.all([
+        RoadmapModel.findOne({ roadmapId }),
+        RoadmapHistoryModel.aggregate([
+          { $match: { roadmapId: roadmapId } },
+          { 
+            $group: {
+              _id: '$action',
+              count: { $sum: 1 },
+              unique_users: { $addToSet: '$user_id' }
+            }
+          },
+          {
+            $project: {
+              action: '$_id',
+              count: 1,
+              unique_user_count: { $size: '$unique_users' }
+            }
+          }
+        ]),
+        RoadmapHistoryModel.find({ roadmapId }).sort({ timestamp: -1 }).limit(100)
+      ]);
+
+      if (!roadmap) {
+        throw new BadRequestException('Roadmap not found');
+      }
+
+      return {
+        roadmap: {
+          id: roadmap.roadmapId,
+          topic: roadmap.topic,
+          skill_level: roadmap.skill_level,
+          duration_weeks: roadmap.duration_weeks,
+          total_hours: roadmap.total_estimated_hours,
+          created_at: roadmap.created_at
+        },
+        stats: completionStats,
+        recent_activity: userProgress
+      };
+      
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new InternalServerException('Failed to retrieve analytics');
+    }
+  }
+
+  /**
+   * Get popular topics
+   */
+  async getPopularTopics(days = 30): Promise<any[]> {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      
+      return await RoadmapHistoryModel.aggregate([
+        { 
+          $match: { 
+            action: 'generated',
+            timestamp: { $gte: startDate }
+          }
+        },
+        {
+          $lookup: {
+            from: 'roadmaps',
+            localField: 'roadmapId',
+            foreignField: 'roadmapId',
+            as: 'roadmap'
+          }
+        },
+        { $unwind: '$roadmap' },
+        {
+          $group: {
+            _id: '$roadmap.topic',
+            count: { $sum: 1 },
+            skill_levels: { $addToSet: '$roadmap.skill_level' },
+            avg_duration: { $avg: '$roadmap.duration_weeks' }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]);
+    } catch (error) {
+      throw new InternalServerException('Failed to retrieve popular topics');
+    }
+  }
+
+  // Private methods
+
+  private validateRoadmapRequest(request: IRoadmapRequest): void {
+    if (!request.topic || request.topic.trim().length === 0) {
+      throw new BadRequestException('Topic is required');
+    }
+
+    if (request.topic.length > 200) {
+      throw new BadRequestException('Topic must be less than 200 characters');
+    }
+
+    if (!['beginner', 'intermediate', 'advanced'].includes(request.skill_level)) {
+      throw new BadRequestException('Invalid skill level. Must be beginner, intermediate, or advanced');
+    }
+
+    if (request.duration_weeks < 1 || request.duration_weeks > 52) {
+      throw new BadRequestException('Duration must be between 1 and 52 weeks');
+    }
+
+    if (request.focus_areas && request.focus_areas.length > 10) {
+      throw new BadRequestException('Maximum 10 focus areas allowed');
+    }
+  }
+
+  private async findSimilarRoadmap(request: IRoadmapRequest): Promise<IRoadmapData | null> {
+    try {
+      const similarRoadmaps = await RoadmapModel.find({
+        topic: { $regex: request.topic, $options: 'i' },
+        skill_level: request.skill_level,
+        duration_weeks: { $gte: request.duration_weeks - 2, $lte: request.duration_weeks + 2 }
+      }).sort({ created_at: -1 }).limit(1);
+
+      return similarRoadmaps.length > 0 ? similarRoadmaps[0] as IRoadmapData : null;
+    } catch (error) {
+      console.warn('Error finding similar roadmap:', error);
+      return null;
+    }
+  }
+
+  private shouldUseCachedRoadmap(existingRoadmap: IRoadmapData, request: IRoadmapRequest): boolean {
+    // Use cached roadmap if it's less than 7 days old and matches closely
+    const daysSinceCreation = (Date.now() - existingRoadmap.created_at.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceCreation < 7 && 
+           existingRoadmap.topic.toLowerCase().includes(request.topic.toLowerCase()) &&
+           existingRoadmap.skill_level === request.skill_level;
+  }
+
+  private async callPythonService(request: IRoadmapRequest): Promise<any> {
+    try {
+      const response = await fetch(`${this.PYTHON_SERVICE_URL}/generate-roadmap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: request.topic,
+          skill_level: request.skill_level,
+          duration_weeks: request.duration_weeks,
+          focus_areas: request.focus_areas?.join(', ') || null
+        }),
+        signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Python service responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.status) {
+        throw new Error(data.error || 'Python service returned error');
+      }
+
+      return data;
+      
+    } catch (error) {
+      console.error('Error calling Python service:', error);
+      
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new InternalServerException('Roadmap generation timed out. Please try again.');
+      }
+      
+      // Return fallback roadmap if Python service fails
+      return this.generateFallbackRoadmap(request);
+    }
+  }
+
+  private generateFallbackRoadmap(request: IRoadmapRequest): any {
+    const roadmapId = uuidv4();
+    const weeks = Array.from({ length: request.duration_weeks }, (_, i) => ({
+      week: i + 1,
+      title: `Week ${i + 1}: ${i < 2 ? 'Foundation' : 'Advanced Topics'}`,
+      objectives: [`Master week ${i + 1} concepts`],
+      topics: [`${request.topic} Basics`, 'Practical Applications', 'Hands-on Practice'],
+      resources: ['Official documentation', 'Online courses', 'Practice exercises'],
+      projects: [`Week ${i + 1} hands-on project`],
+      estimated_hours: 8
+    }));
+
+    const milestones = [];
+    if (request.duration_weeks >= 4) {
+      milestones.push({
+        week: Math.max(1, Math.floor(request.duration_weeks / 3)),
+        milestone: 'Foundation Established',
+        deliverable: 'Basic competency'
+      });
+    }
+
+    const chapters = {
+      'First Steps': weeks.slice(0, Math.ceil(weeks.length / 4)).flatMap(w => w.topics),
+      'Core Concepts': weeks.slice(Math.ceil(weeks.length / 4), Math.ceil(weeks.length / 2)).flatMap(w => w.topics),
+      'Interactivity': weeks.slice(Math.ceil(weeks.length / 2), Math.ceil(3 * weeks.length / 4)).flatMap(w => w.topics),
+      'Advanced': weeks.slice(Math.ceil(3 * weeks.length / 4)).flatMap(w => w.topics)
+    };
+
+    return {
+      status: true,
+      text: {
+        query: request.topic,
+        chapters
+      },
+      tree: [{
+        name: request.topic,
+        children: Object.entries(chapters).map(([name, topics]) => ({
+          name,
+          children: topics.map(topic => ({ name: topic }))
+        }))
+      }],
+      roadmapId,
+      metadata: {
+        generated: `Fallback ${request.topic} Roadmap`,
+        summary: `${request.duration_weeks} weeks, ${request.duration_weeks * 8} total hours`
+      }
+    };
+  }
+
+  private async processAndSaveRoadmap(aiResponse: any, request: IRoadmapRequest, startTime: number): Promise<IRoadmapData> {
+    const generationTime = Date.now() - startTime;
+    const roadmapId = uuidv4();
+
+    // Extract roadmap data from AI response
+    const roadmapData = this.extractRoadmapDataFromResponse(aiResponse);
+
+    // Create and save roadmap document
+    const roadmap = new RoadmapModel({
+      roadmapId,
+      title: roadmapData.title,
+      overview: roadmapData.overview,
+      prerequisites: roadmapData.prerequisites || [],
+      weeks: roadmapData.weeks || [],
+      milestones: roadmapData.milestones || [],
+      final_project: roadmapData.final_project || 'Complete the learning journey',
+      next_steps: roadmapData.next_steps || [],
+      
+      // Request metadata
+      topic: request.topic,
+      skill_level: request.skill_level,
+      duration_weeks: request.duration_weeks,
+      focus_areas: request.focus_areas,
+      user_id: request.user_id,
+      
+      // Generation metadata
+      ai_model_used: 'cohere-command-r-plus',
+      generation_time_ms: generationTime,
+      status: 'generated'
+    });
+
+    await roadmap.save();
+    return roadmap;
+  }
+
+  private extractRoadmapDataFromResponse(aiResponse: any): any {
+    // If roadmap_data is not provided, try to construct it from the response
+    return {
+      title: aiResponse.metadata?.generated || `Learning Roadmap`,
+      overview: `Generated learning roadmap`,
+      prerequisites: ['Basic computer skills'],
+      weeks: [],
+      milestones: [],
+      final_project: 'Complete the learning journey',
+      next_steps: ['Continue learning', 'Apply knowledge']
+    };
+  }
+
+  private formatRoadmapResponse(roadmap: IRoadmapData): IRoadmapResponse {
+    // Create chapters for frontend visualization
+    const totalWeeks = roadmap.weeks.length;
+    const phaseSize = Math.max(1, Math.floor(totalWeeks / 4));
+    
+    const chapters: Record<string, string[]> = {
+      'First Steps': [],
+      'Core Concepts': [],
+      'Interactivity': [],
+      'Advanced': []
+    };
+
+    roadmap.weeks.forEach((week, index) => {
+      const phase = index < phaseSize ? 'First Steps' :
+                   index < 2 * phaseSize ? 'Core Concepts' :
+                   index < 3 * phaseSize ? 'Interactivity' : 'Advanced';
+      if (chapters[phase]) {
+        chapters[phase].push(...week.topics);
+      }
+    });
+
+    // Create tree structure
+    const tree: ITreeNode[] = [{
+      name: roadmap.topic,
+      children: Object.entries(chapters).map(([name, topics]) => ({
+        name,
+        children: topics.map(topic => ({ name: topic }))
+      }))
+    }];
+
+    return {
+      status: true,
+      text: {
+        query: roadmap.topic,
+        chapters
+      },
+      tree,
+      roadmapId: roadmap.roadmapId,
+      metadata: {
+        generated: roadmap.title,
+        summary: `${roadmap.duration_weeks} weeks, ${roadmap.total_estimated_hours || 0} total hours`
+      },
+      roadmap_data: roadmap
+    };
+  }
+
+  private async logRoadmapHistory(
+    roadmapId: string, 
+    userId?: string, 
+    action: 'generated' | 'viewed' | 'started' | 'week_completed' | 'milestone_reached' | 'completed' | 'archived' = 'viewed',
+    userIp?: string,
+    userAgent?: string,
+    additionalData?: any
+  ): Promise<void> {
+    try {
+      await RoadmapHistoryModel.create({
+        roadmapId,
+        user_id: userId,
+        action,
+        ip_address: userIp,
+        user_agent: userAgent,
+        ...additionalData
+      });
+    } catch (error) {
+      console.warn('Failed to log roadmap history:', error);
+      // Don't throw error for logging failures
+    }
+  }
+}

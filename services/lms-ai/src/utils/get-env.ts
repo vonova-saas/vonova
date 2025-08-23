@@ -1,6 +1,6 @@
 export const getEnv = (key: string, defaultValue: string = ""): string => {
   const value = process.env[key];
-  if (value === undefined) {
+  if (value === undefined || value === "") {
     if (defaultValue) {
       return defaultValue;
     }
