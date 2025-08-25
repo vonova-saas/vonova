@@ -30,7 +30,7 @@ import { logAIServiceCallWrapper, logDatabaseOperationWrapper } from '../middlew
  */
 export class RoadmapGeneratorService {
   private readonly PYTHON_SERVICE_URL: string;
-  private readonly DEFAULT_TIMEOUT = 120000; // 120 seconds (2 minutes)
+  private readonly DEFAULT_TIMEOUT = 0; // No timeout - let AI take its time
 
   constructor() {
     this.PYTHON_SERVICE_URL = Env.ROADMAP_AI_SERVICE_URL;
@@ -77,7 +77,7 @@ export class RoadmapGeneratorService {
               duration_weeks: request.duration_weeks,
               focus_areas: request.focus_areas?.join(', ') || null
             }),
-            signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
+            // No timeout signal - let AI take its time
           });
 
           if (!response.ok) {
