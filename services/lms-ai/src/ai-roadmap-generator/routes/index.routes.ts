@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import analyticsRoutes from './analytics.routes';
-import healthRoutes from './health.routes';
 import { roadmapController } from '../controllers/roadmap.controller';
+import healthRoutes from './health.routes';
+import analyticsRoutes from './analytics.routes';
+import { requestLoggingMiddleware, errorLoggingMiddleware } from '../middlewares/logging.middleware';
 import { healthController } from '../controllers/health.controller';
 
 import { validateRequest } from '../../middlewares/validateRequest.middleware';
@@ -11,6 +12,9 @@ import {
 } from '../validation/roadmap.validation';
 
 const router = Router();
+
+// Apply logging middleware to all routes
+router.use(requestLoggingMiddleware);
 
 // ============ MODULE ROUTES ============
 
@@ -51,5 +55,8 @@ router.put('/:roadmapId/progress',
   validateRequest(UpdateProgressRequestSchema),
   roadmapController.updateProgress
 );
+
+// Apply error logging middleware
+router.use(errorLoggingMiddleware);
 
 export default router;

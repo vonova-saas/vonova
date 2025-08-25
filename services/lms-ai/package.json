@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --poll --files src/index.ts",
-    "build": "tsc && cp package.json ./dist",
+    "build": "tsc && copy package.json .\\dist\\",
     "start": "node -r tsconfig-paths/register dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test-logging": "ts-node -r tsconfig-paths/register src/ai-roadmap-generator/test-logging.ts",
