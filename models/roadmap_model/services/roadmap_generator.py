@@ -1,4 +1,3 @@
-from asyncio.log import logger
 from models.roadmap import RoadmapData
 from utils.logging_utils import setup_ai_logger
 import cohere
@@ -8,7 +7,8 @@ import uuid
 
 class RoadmapGenerator:
     def __init__(self, api_key):
-        self.co = cohere.Client(api_key)
+        self.co = cohere.Client(api_key)  # No timeout - let AI take its time
+        self.logger = setup_ai_logger(__name__, "roadmap_generator.log", "INFO")
     
     def _sanitize_json(self, json_string):
         """Convert single quotes to double quotes and handle common JSON formatting issues"""
@@ -28,32 +28,32 @@ class RoadmapGenerator:
             sanitized = re.sub(r"'\s*,", '",', sanitized)
             sanitized = re.sub(r"'\s*:", '":', sanitized)
             
-            logger.info("Sanitized JSON attempt")
+            self.logger.info("Sanitized JSON attempt")
             return sanitized
         except Exception as e:
-            logger.error(f"Error sanitizing JSON: {str(e)}")
+            self.logger.error(f"Error sanitizing JSON: {str(e)}")
             return json_string
 
     def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12, focus_areas=None):
-        logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
+        self.logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
         
         focus_text = f" with focus on {', '.join(focus_areas)}" if focus_areas else ""
-        logger.info(f"Focus areas: {focus_areas}")
+        self.logger.info(f"Focus areas: {focus_areas}")
         
         prompt = f"""
-        Create a detailed {duration_weeks}-week learning roadmap for {topic} at {skill_level} level{focus_text}.
-        Structure the response as a JSON with this exact format:
+        Create a {duration_weeks}-week {topic} roadmap for {skill_level} level{focus_text}.
+        Return ONLY valid JSON in this format:
         {{
-            "title": "Learning Roadmap Title",
-            "overview": "Brief description of what will be learned",
+            "title": "{topic} Learning Roadmap",
+            "overview": "Brief overview",
             "prerequisites": ["prerequisite1", "prerequisite2"],
             "weeks": [
                 {{
                     "week": 1,
-                    "title": "Week Title",
+                    "title": "Week 1 Title",
                     "objectives": ["objective1", "objective2"],
-                    "topics": ["topic1", "topic2", "topic3"],
-                    "resources": ["resource1", "resource2"],
+                    "topics": ["topic1", "topic2"],
+                    "resources": ["resource1"],
                     "projects": ["project1"],
                     "estimated_hours": 8
                 }}
@@ -61,51 +61,49 @@ class RoadmapGenerator:
             "milestones": [
                 {{
                     "week": 4,
-                    "milestone": "First major milestone",
-                    "deliverable": "What should be completed"
+                    "milestone": "Milestone name",
+                    "deliverable": "What to deliver"
                 }}
             ],
-            "final_project": "Description of capstone project",
-            "next_steps": ["What to learn next", "Advanced topics"]
+            "final_project": "Capstone project description",
+            "next_steps": ["Next step 1", "Next step 2"]
         }}
-        Make sure each week has 3-5 specific topics, realistic time estimates, and practical projects.
-        Ensure milestones reference weeks that exist within the {duration_weeks}-week timeline.
         """
         
-        logger.info("Sending request to Cohere API")
+        self.logger.info("Sending request to Cohere API")
         try:
             response = self.co.generate(
                 model='command-r-plus',
                 prompt=prompt,
-                max_tokens=2000,
+                max_tokens=2500,
                 temperature=0.3,
                 frequency_penalty=0.3, 
                 presence_penalty=0.2,          
             )
             response_text = response.generations[0].text
-            logger.info("Received response from Cohere API")
+            self.logger.info("Received response from Cohere API")
             
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
-                logger.info("Found JSON pattern in response")
+                self.logger.info("Found JSON pattern in response")
                 json_str = json_match.group()
-                logger.info(f"Raw JSON string: {json_str[:200]}...")  # Log first 200 chars for debugging
+                self.logger.info(f"Raw JSON string: {json_str[:200]}...")  # Log first 200 chars for debugging
                 
                 try:
                     # First try to parse the JSON as-is
                     roadmap_data = json.loads(json_str)
-                    logger.info("Successfully parsed JSON from response")
+                    self.logger.info("Successfully parsed JSON from response")
                 except json.JSONDecodeError as e:
-                    logger.warning(f"JSON parsing failed: {str(e)}, attempting sanitization")
+                    self.logger.warning(f"JSON parsing failed: {str(e)}, attempting sanitization")
                     
                     # Try to sanitize the JSON
                     sanitized_json = self._sanitize_json(json_str)
                     try:
                         roadmap_data = json.loads(sanitized_json)
-                        logger.info("Successfully parsed sanitized JSON")
+                        self.logger.info("Successfully parsed sanitized JSON")
                     except json.JSONDecodeError as e2:
-                        logger.error(f"Sanitized JSON also failed: {str(e2)}, using fallback parsing")
-                        logger.info(f"Sanitized JSON attempt: {sanitized_json[:200]}...")
+                        self.logger.error(f"Sanitized JSON also failed: {str(e2)}, using fallback parsing")
+                        self.logger.info(f"Sanitized JSON attempt: {sanitized_json[:200]}...")
                         roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
                 
                 # Validate and filter milestones
@@ -114,19 +112,19 @@ class RoadmapGenerator:
                         m for m in roadmap_data['milestones']
                         if m['week'] in [w['week'] for w in roadmap_data['weeks']]
                     ]
-                    logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
+                    self.logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
                 else:
-                    logger.warning("Missing required fields in roadmap data, using fallback")
+                    self.logger.warning("Missing required fields in roadmap data, using fallback")
                     roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
             else:
-                logger.warning("Failed to find JSON pattern in response, using fallback parsing")
+                self.logger.warning("Failed to find JSON pattern in response, using fallback parsing")
                 roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
             
             return roadmap_data
             
         except Exception as e:
-            logger.error(f"Error generating roadmap: {str(e)}", exc_info=True)
-            logger.info("Using fallback roadmap")
+            self.logger.error(f"Error generating roadmap: {str(e)}", exc_info=True)
+            self.logger.info("Using fallback roadmap")
             return self._create_fallback_roadmap(topic, skill_level, duration_weeks)
 
     def _parse_text_response(self, text, topic, duration_weeks):

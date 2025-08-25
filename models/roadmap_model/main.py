@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 from dotenv import load_dotenv
 
 from utils.logging_utils import setup_ai_logger
@@ -47,6 +48,7 @@ class RoadmapRequest(BaseModel):
     topic: str
     skill_level: str
     duration_weeks: int
+    focus_areas: Optional[str] = None
 
 @app.post("/generate-roadmap")
 async def generate_roadmap_api(request: RoadmapRequest):
@@ -57,6 +59,7 @@ async def generate_roadmap_api(request: RoadmapRequest):
             topic=request.topic,
             skill_level=request.skill_level,
             duration_weeks=request.duration_weeks,
+            focus_areas=request.focus_areas.split(', ') if request.focus_areas else None
         )
         
         logger.info(f"Roadmap generated successfully: {request.topic}, {request.skill_level}, {request.duration_weeks} weeks")
@@ -72,7 +75,7 @@ async def generate_roadmap_api(request: RoadmapRequest):
         
     except Exception as e:
         logger.error(f"Error in generate_roadmap_api: {str(e)}", exc_info=True)
-        return JSONResponse(content={"status": False, "error": str(e)}, status_code=400)
+        return JSONResponse(content={"status": False, "error": str(e)}, status_code=500)
 
 @app.get("/health")
 async def health_check():
