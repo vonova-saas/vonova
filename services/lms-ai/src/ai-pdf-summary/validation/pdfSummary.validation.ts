@@ -43,25 +43,7 @@ export const AutoSummarizeSchema = z.boolean()
   .default(false);
 
 // Request validation schemas
-export const GenerateSummaryRequestSchema = z.object({
-  file_url: FileUrlSchema,
-  file_content: z.instanceof(Buffer).optional(),
-  summary_type: SummaryTypeSchema,
-  focus_areas: FocusAreasSchema,
-  max_length: MaxLengthSchema,
-  user_id: UserIdSchema
-}).strict().refine(
-  (data) => data.file_url || data.file_content,
-  {
-    message: 'Either file_url or file_content must be provided'
-  }
-);
-
-export const GetSummaryRequestSchema = z.object({
-  summaryId: z.string()
-    .min(1, 'Summary ID is required')
-    .max(100, 'Summary ID must be less than 100 characters')
-}).strict();
+// Removed: GenerateSummaryRequestSchema and GetSummaryRequestSchema (endpoints deleted)
 
 export const ChatWithPDFRequestSchema = z.object({
   session_id: SessionIdSchema,
@@ -76,19 +58,7 @@ export const UploadPDFRequestSchema = z.object({
   summary_type: SummaryTypeSchema.optional()
 }).strict();
 
-export const GetUserSummariesRequestSchema = z.object({
-  user_id: z.string().uuid('Invalid user ID format'),
-  page: z.number()
-    .int('Page must be a whole number')
-    .min(1, 'Page must be at least 1')
-    .max(1000, 'Page cannot exceed 1000')
-    .default(1),
-  limit: z.number()
-    .int('Limit must be a whole number')
-    .min(1, 'Limit must be at least 1')
-    .max(100, 'Limit cannot exceed 100')
-    .default(10)
-}).strict();
+// Removed: GetUserSummariesRequestSchema (endpoint deleted)
 
 export const GetSessionChatHistoryRequestSchema = z.object({
   session_id: SessionIdSchema,
@@ -111,7 +81,8 @@ export const RateChatResponseSchema = z.object({
   rating: z.number()
     .int('Rating must be a whole number')
     .min(1, 'Rating must be at least 1')
-    .max(5, 'Rating cannot exceed 5')
+    .max(5, 'Rating cannot exceed 5'),
+  user_id: UserIdSchema
 }).strict();
 
 // Query parameter validation schemas
@@ -137,20 +108,17 @@ export const DaysQuerySchema = z.object({
 }).strict();
 
 // Type exports
-export type GenerateSummaryRequest = z.infer<typeof GenerateSummaryRequestSchema>;
-export type GetSummaryRequest = z.infer<typeof GetSummaryRequestSchema>;
+// Removed types: GenerateSummaryRequest, GetSummaryRequest
 export type ChatWithPDFRequest = z.infer<typeof ChatWithPDFRequestSchema>;
 export type UploadPDFRequest = z.infer<typeof UploadPDFRequestSchema>;
-export type GetUserSummariesRequest = z.infer<typeof GetUserSummariesRequestSchema>;
+// Removed type: GetUserSummariesRequest
 export type GetSessionChatHistoryRequest = z.infer<typeof GetSessionChatHistoryRequestSchema>;
 export type RateChatResponse = z.infer<typeof RateChatResponseSchema>;
 export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
 export type DaysQuery = z.infer<typeof DaysQuerySchema>;
 
 // Validation functions
-export const validateGenerateSummaryRequest = (data: unknown) => {
-  return GenerateSummaryRequestSchema.parse(data);
-};
+// Removed: validateGenerateSummaryRequest
 
 export const validateChatWithPDFRequest = (data: unknown) => {
   return ChatWithPDFRequestSchema.parse(data);

@@ -4,12 +4,7 @@ import { asyncHandler } from '../../middlewares/api/asyncHandler.middleware';
 import { 
   GenerateRoadmapRequestSchema, 
   GetRoadmapRequestSchema,
-  UpdateProgressRequestSchema,
-  GetUserRoadmapsRequestSchema,
-  GetAnalyticsRequestSchema,
-  GetPopularTopicsRequestSchema,
-  PaginationQuerySchema,
-  DaysQuerySchema
+  UpdateProgressRequestSchema
 } from '../validation/roadmap.validation';
 import { IRoadmapRequest } from '../models/roadmap.model';
 
@@ -81,43 +76,7 @@ export class RoadmapController {
     });
   });
 
-  getUserRoadmaps = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GetUserRoadmapsRequestSchema.safeParse({
-      user_id: req.params.userId,
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 10
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const { roadmaps, total, page, totalPages } = await this.roadmapService.getUserRoadmaps(
-      validatedData.user_id,
-      validatedData.page,
-      validatedData.limit
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'User roadmaps retrieved successfully',
-      data: {
-        roadmaps,
-        pagination: {
-          total,
-          page,
-          totalPages,
-          limit: validatedData.limit
-        }
-      }
-    });
-  });
+  // Removed: getUserRoadmaps
 
   updateProgress = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const validationResult = UpdateProgressRequestSchema.safeParse({
@@ -155,54 +114,6 @@ export class RoadmapController {
     });
   });
 
-  getRoadmapAnalytics = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GetAnalyticsRequestSchema.safeParse({
-      roadmapId: req.params.roadmapId
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const analytics = await this.roadmapService.getRoadmapAnalytics(validatedData.roadmapId);
-
-    res.status(200).json({
-      success: true,
-      message: 'Roadmap analytics retrieved successfully',
-      data: analytics
-    });
-  });
-
-  getPopularTopics = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GetPopularTopicsRequestSchema.safeParse({
-      days: parseInt(req.query.days as string) || 30
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const topics = await this.roadmapService.getPopularTopics(validatedData.days);
-
-    res.status(200).json({
-      success: true,
-      message: 'Popular topics retrieved successfully',
-      data: topics
-    });
-  });
-
   healthCheck = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Simple health check since the service doesn't have a healthCheck method
     res.status(200).json({
@@ -217,53 +128,7 @@ export class RoadmapController {
     });
   });
 
-  getGlobalStats = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // Get popular topics as a basic stat since the service doesn't have getGlobalStats
-    const days = parseInt(req.query.days as string) || 30;
-    const topics = await this.roadmapService.getPopularTopics(days);
-
-    res.status(200).json({
-      success: true,
-      message: 'Global statistics retrieved successfully',
-      data: {
-        period_days: days,
-        popular_topics: topics,
-        generated_at: new Date().toISOString()
-      }
-    });
-  });
-
-  searchRoadmaps = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = PaginationQuerySchema.safeParse({
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 10
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const { query } = req.query;
-    
-    // Placeholder for search functionality since the service doesn't have searchRoadmaps
-    res.status(501).json({
-      success: false,
-      message: 'Search functionality is not yet implemented',
-      data: {
-        query,
-        pagination: {
-          page: validatedData.page,
-          limit: validatedData.limit
-        }
-      }
-    });
-  });
+  // Removed: getRoadmapAnalytics, getPopularTopics, getGlobalStats, searchRoadmaps
 }
 
 // Export singleton instance

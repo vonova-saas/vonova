@@ -1,18 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { PDFSummaryService } from '../services/pdfSummary.service';
 import { asyncHandler } from '../../middlewares/api/asyncHandler.middleware';
-import { 
-  GenerateSummaryRequestSchema, 
-  GetSummaryRequestSchema,
+import {
   ChatWithPDFRequestSchema,
   UploadPDFRequestSchema,
-  GetUserSummariesRequestSchema,
   GetSessionChatHistoryRequestSchema,
-  RateChatResponseSchema,
-  PaginationQuerySchema,
-  DaysQuerySchema
+  RateChatResponseSchema
 } from '../validation/pdfSummary.validation';
-import { IPDFSummaryRequest, IPDFChatRequest } from '../models/pdfSummary.model';
+import { IPDFChatRequest } from '../models/pdfSummary.model';
 import multer from 'multer';
 import { MulterRequest } from '../../types/multer';
 
@@ -69,77 +64,13 @@ export class PDFSummaryController {
     return next();
   };
 
-  /**
-   * Generate PDF summary from file content or URL
-   */
-  generateSummary = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GenerateSummaryRequestSchema.safeParse(req.body);
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const request: IPDFSummaryRequest = {
-      summary_type: validatedData.summary_type,
-      focus_areas: validatedData.focus_areas || [],
-      ...(validatedData.file_url && { file_url: validatedData.file_url }),
-      ...(validatedData.file_content && { file_content: validatedData.file_content }),
-      ...(validatedData.max_length && { max_length: validatedData.max_length }),
-      ...(validatedData.user_id && { user_id: validatedData.user_id })
-    };
-
-    const summary = await this.pdfSummaryService.generateSummary(
-      request,
-      req.ip,
-      req.get('User-Agent')
-    );
-
-    res.status(201).json(summary);
-  });
-
-  /**
-   * Get summary by ID
-   */
-  getSummaryById = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GetSummaryRequestSchema.safeParse({
-      summaryId: req.params.summaryId
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const userId = (req.query.user_id as string) || (req.body.user_id as string);
-    const summary = await this.pdfSummaryService.getSummaryById(
-      validatedData.summaryId,
-      userId
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Summary retrieved successfully',
-      data: summary
-    });
-  });
 
   /**
    * Chat with PDF using session ID
    */
   chatWithPDF = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const validationResult = ChatWithPDFRequestSchema.safeParse(req.body);
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -174,7 +105,7 @@ export class PDFSummaryController {
     this.handleMulterError,
     asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       const multerReq = req as MulterRequest;
-      
+
       if (!multerReq.file) {
         res.status(400).json({
           success: false,
@@ -198,7 +129,7 @@ export class PDFSummaryController {
         auto_summarize: req.body.auto_summarize === 'true',
         summary_type: req.body.summary_type
       });
-      
+
       if (!validationResult.success) {
         res.status(400).json({
           success: false,
@@ -226,38 +157,6 @@ export class PDFSummaryController {
     })
   ];
 
-  /**
-   * Get user summaries with pagination
-   */
-  getUserSummaries = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const validationResult = GetUserSummariesRequestSchema.safeParse({
-      user_id: req.params.userId,
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 10
-    });
-    
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validationResult.error.errors
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-    const result = await this.pdfSummaryService.getUserSummaries(
-      validatedData.user_id,
-      validatedData.page,
-      validatedData.limit
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'User summaries retrieved successfully',
-      data: result
-    });
-  });
 
   /**
    * Get session chat history
@@ -268,7 +167,7 @@ export class PDFSummaryController {
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 20
     });
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -297,7 +196,7 @@ export class PDFSummaryController {
    */
   rateChatResponse = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const validationResult = RateChatResponseSchema.safeParse(req.body);
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -308,14 +207,14 @@ export class PDFSummaryController {
     }
 
     const validatedData = validationResult.data;
-    
+
     // TODO: Implement rating functionality in service
     // const result = await this.pdfSummaryService.rateChatResponse(validatedData);
 
     res.status(200).json({
       success: true,
       message: 'Chat response rated successfully',
-      data: { chatId: validatedData.chatId, rating: validatedData.rating }
+      data: { chatId: validatedData.chatId, rating: validatedData.rating, user_id: validatedData.user_id }
     });
   });
 
@@ -347,5 +246,30 @@ export class PDFSummaryController {
         average_processing_time: 0
       }
     });
+  });
+
+  /**
+   * Get full summary for a session
+   */
+  getFullSummary = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Be tolerant to accidental spaces or different casing in query key
+    const keys = Object.keys(req.query || {});
+    const sessionKey = keys.find(k => k.trim().toLowerCase() === 'session_id');
+    const sessionId = sessionKey ? String(req.query[sessionKey]).trim() : undefined;
+    if (!sessionId) {
+      res.status(400).json({ success: false, message: 'session_id is required' });
+      return;
+    }
+    const userKey = keys.find(k => k.trim().toLowerCase() === 'user_id');
+    const userId = userKey ? String(req.query[userKey]).trim() : undefined;
+
+    const result = await this.pdfSummaryService.getFullSummary(
+      sessionId,
+      userId,
+      req.ip,
+      req.get('User-Agent')
+    );
+
+    res.status(200).json(result);
   });
 }

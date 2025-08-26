@@ -2,11 +2,8 @@ import { Router } from 'express';
 import { PDFSummaryController } from '../controllers/pdfSummary.controller';
 import { validateRequest } from '../../middlewares/validateRequest.middleware';
 import { 
-  GenerateSummaryRequestSchema, 
-  GetSummaryRequestSchema,
   ChatWithPDFRequestSchema,
   UploadPDFRequestSchema,
-  GetUserSummariesRequestSchema,
   GetSessionChatHistoryRequestSchema,
   RateChatResponseSchema
 } from '../validation/pdfSummary.validation';
@@ -19,18 +16,13 @@ router.get('/health', pdfSummaryController.healthCheck);
 router.get('/stats', pdfSummaryController.getServiceStats);
 
 // PDF Summary generation and management
-router.post('/generate', 
-  validateRequest(GenerateSummaryRequestSchema), 
-  pdfSummaryController.generateSummary
-);
-
-router.get('/summary/:summaryId', 
-  pdfSummaryController.getSummaryById
-);
 
 router.post('/upload', 
   pdfSummaryController.uploadPDF
 );
+
+// Get full summary of entire file
+router.get('/summarize', pdfSummaryController.getFullSummary);
 
 // PDF Chat functionality
 router.post('/chat', 
@@ -44,9 +36,6 @@ router.post('/chat/rate',
 );
 
 // User data and history
-router.get('/user/:userId/summaries', 
-  pdfSummaryController.getUserSummaries
-);
 
 router.get('/session/:sessionId/chat-history', 
   pdfSummaryController.getSessionChatHistory

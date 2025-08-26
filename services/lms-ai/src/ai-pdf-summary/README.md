@@ -137,15 +137,13 @@ curl -X POST http://localhost:3001/api/pdf-summary/chat \
 
 ### PDF Management
 - `POST /api/pdf-summary/upload` - Upload PDF file
-- `POST /api/pdf-summary/generate` - Generate AI summary
-- `GET /api/pdf-summary/summary/:id` - Get summary by ID
+- `GET  /api/pdf-summary/summarize` - Get full PDF summary
 
 ### Chat Functionality
 - `POST /api/pdf-summary/chat` - Chat with PDF content
 - `POST /api/pdf-summary/chat/rate` - Rate chat response quality
 
 ### User Data
-- `GET /api/pdf-summary/user/:userId/summaries` - Get user summaries
 - `GET /api/pdf-summary/session/:sessionId/chat-history` - Get chat history
 
 ## 🔐 Security Features

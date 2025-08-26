@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { roadmapController } from '../controllers/roadmap.controller';
 import healthRoutes from './health.routes';
-import analyticsRoutes from './analytics.routes';
 import { requestLoggingMiddleware, errorLoggingMiddleware } from '../middlewares/logging.middleware';
 import { healthController } from '../controllers/health.controller';
 
@@ -20,9 +19,6 @@ router.use(requestLoggingMiddleware);
 
 
 
-// Analytics routes
-router.use('/analytics', analyticsRoutes);
-
 // Health routes
 router.use('/health', healthRoutes);
 
@@ -34,8 +30,7 @@ router.post('/generate',
   roadmapController.generateRoadmap
 );
 
-// Get user's roadmaps with pagination
-router.get('/user/:userId', roadmapController.getUserRoadmaps);
+// Removed: Get user's roadmaps with pagination
 
 
 

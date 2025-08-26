@@ -207,37 +207,7 @@ export class RoadmapGeneratorService {
     }
   }
 
-  /**
-   * Get user's roadmaps
-   */
-  async getUserRoadmaps(userId: string, page = 1, limit = 10): Promise<{
-    roadmaps: IRoadmapResponse[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
-    try {
-      const skip = (page - 1) * limit;
-      
-      const [roadmaps, total] = await Promise.all([
-        RoadmapModel.find({ user_id: userId })
-          .sort({ created_at: -1 })
-          .skip(skip)
-          .limit(limit),
-        RoadmapModel.countDocuments({ user_id: userId })
-      ]);
-
-      return {
-        roadmaps: roadmaps.map((roadmap: IRoadmapData) => this.formatRoadmapResponse(roadmap)),
-        total,
-        page,
-        totalPages: Math.ceil(total / limit)
-      };
-      
-    } catch (error) {
-      throw new InternalServerException('Failed to retrieve user roadmaps');
-    }
-  }
+  // Removed: getUserRoadmaps
 
   /**
    * Update roadmap progress
@@ -307,95 +277,12 @@ export class RoadmapGeneratorService {
   /**
    * Get roadmap analytics
    */
-  async getRoadmapAnalytics(roadmapId: string): Promise<any> {
-    try {
-      const [roadmap, completionStats, userProgress] = await Promise.all([
-        RoadmapModel.findOne({ roadmapId }),
-        RoadmapHistoryModel.aggregate([
-          { $match: { roadmapId: roadmapId } },
-          { 
-            $group: {
-              _id: '$action',
-              count: { $sum: 1 },
-              unique_users: { $addToSet: '$user_id' }
-            }
-          },
-          {
-            $project: {
-              action: '$_id',
-              count: 1,
-              unique_user_count: { $size: '$unique_users' }
-            }
-          }
-        ]),
-        RoadmapHistoryModel.find({ roadmapId }).sort({ timestamp: -1 }).limit(100)
-      ]);
-
-      if (!roadmap) {
-        throw new BadRequestException('Roadmap not found');
-      }
-
-      return {
-        roadmap: {
-          id: roadmap.roadmapId,
-          topic: roadmap.topic,
-          skill_level: roadmap.skill_level,
-          duration_weeks: roadmap.duration_weeks,
-          total_hours: roadmap.total_estimated_hours,
-          created_at: roadmap.created_at
-        },
-        stats: completionStats,
-        recent_activity: userProgress
-      };
-      
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      
-      throw new InternalServerException('Failed to retrieve analytics');
-    }
-  }
+  // Removed: getRoadmapAnalytics
 
   /**
    * Get popular topics
    */
-  async getPopularTopics(days = 30): Promise<any[]> {
-    try {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      return await RoadmapHistoryModel.aggregate([
-        { 
-          $match: { 
-            action: 'generated',
-            timestamp: { $gte: startDate }
-          }
-        },
-        {
-          $lookup: {
-            from: 'roadmaps',
-            localField: 'roadmapId',
-            foreignField: 'roadmapId',
-            as: 'roadmap'
-          }
-        },
-        { $unwind: '$roadmap' },
-        {
-          $group: {
-            _id: '$roadmap.topic',
-            count: { $sum: 1 },
-            skill_levels: { $addToSet: '$roadmap.skill_level' },
-            avg_duration: { $avg: '$roadmap.duration_weeks' }
-          }
-        },
-        { $sort: { count: -1 } },
-        { $limit: 10 }
-      ]);
-    } catch (error) {
-      throw new InternalServerException('Failed to retrieve popular topics');
-    }
-  }
+  // Removed: getPopularTopics
 
   // Private methods
 

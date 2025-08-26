@@ -124,13 +124,7 @@ Backend
 ### Roadmap Management
 - `POST /api/roadmap/generate` - Generate new roadmap
 - `GET /api/roadmap/:roadmapId` - Get roadmap by ID
-- `GET /api/roadmap/user/:userId` - Get user's roadmaps
 - `PUT /api/roadmap/:roadmapId/progress` - Update progress
-
-### Analytics & Monitoring
-- `GET /api/roadmap/popular-topics` - Popular topics
-- `GET /api/roadmap/:roadmapId/analytics` - Roadmap analytics
-- `GET /api/roadmap/stats` - Global statistics
 
 ### Health & Testing
 - `GET /api/roadmap/health` - Backend health

@@ -76,6 +76,7 @@ export interface IPDFChatResponse {
   answer: string;
   session_id: string;
   filename: string;
+  user_id?: string;
   ai_wizard_status: string;
   magic_level: string;
   message: string;
@@ -104,6 +105,7 @@ export interface IPDFUploadResponse {
   status: boolean;
   session_id: string;
   brief_summary: string;
+  user_id?: string;
   magic_level: string;
   enchantment_status: string;
   message: string;

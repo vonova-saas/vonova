@@ -70,31 +70,9 @@ export const UpdateProgressRequestSchema = z.object({
   }
 );
 
-export const GetUserRoadmapsRequestSchema = z.object({
-  user_id: z.string().uuid('Invalid user ID format'),
-  page: z.number()
-    .int('Page must be a whole number')
-    .min(1, 'Page must be at least 1')
-    .max(1000, 'Page cannot exceed 1000')
-    .default(1),
-  limit: z.number()
-    .int('Limit must be a whole number')
-    .min(1, 'Limit must be at least 1')
-    .max(100, 'Limit cannot exceed 100')
-    .default(10)
-}).strict();
+// Removed: GetUserRoadmapsRequestSchema
 
-export const GetAnalyticsRequestSchema = z.object({
-  roadmapId: RoadmapIdSchema
-}).strict();
-
-export const GetPopularTopicsRequestSchema = z.object({
-  days: z.number()
-    .int('Days must be a whole number')
-    .min(1, 'Days must be at least 1')
-    .max(365, 'Days cannot exceed 365')
-    .default(30)
-}).strict();
+// Removed: GetAnalyticsRequestSchema, GetPopularTopicsRequestSchema
 
 // Query parameter validation schemas
 export const PaginationQuerySchema = z.object({
@@ -112,14 +90,7 @@ export const PaginationQuerySchema = z.object({
     .default('10')
 });
 
-export const DaysQuerySchema = z.object({
-  days: z.string()
-    .regex(/^\d+$/, 'Days must be a positive number')
-    .transform(val => parseInt(val, 10))
-    .refine(val => val >= 1 && val <= 365, 'Days must be between 1 and 365')
-    .optional()
-    .default('30')
-});
+// Removed: DaysQuerySchema
 
 // Response validation schemas (for testing and documentation)
 export const WeekResponseSchema = z.object({
@@ -185,11 +156,9 @@ export const RoadmapResponseSchema = z.object({
 export type GenerateRoadmapRequest = z.infer<typeof GenerateRoadmapRequestSchema>;
 export type GetRoadmapRequest = z.infer<typeof GetRoadmapRequestSchema>;
 export type UpdateProgressRequest = z.infer<typeof UpdateProgressRequestSchema>;
-export type GetUserRoadmapsRequest = z.infer<typeof GetUserRoadmapsRequestSchema>;
-export type GetAnalyticsRequest = z.infer<typeof GetAnalyticsRequestSchema>;
-export type GetPopularTopicsRequest = z.infer<typeof GetPopularTopicsRequestSchema>;
+// Removed type: GetUserRoadmapsRequest
 export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
-export type DaysQuery = z.infer<typeof DaysQuerySchema>;
+// Removed types: GetAnalyticsRequest, GetPopularTopicsRequest, DaysQuery
 
 // Validation helper functions
 export const validateGenerateRoadmapRequest = (data: unknown) => {
@@ -204,9 +173,7 @@ export const validatePaginationQuery = (query: unknown) => {
   return PaginationQuerySchema.parse(query);
 };
 
-export const validateDaysQuery = (query: unknown) => {
-  return DaysQuerySchema.parse(query);
-};
+// Removed: validateDaysQuery
 
 // Custom validation errors
 export class ValidationError extends Error {

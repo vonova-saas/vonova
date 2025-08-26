@@ -15,16 +15,12 @@ This module provides AI-powered learning roadmap generation capabilities for the
 ### Roadmap Management
 - `POST /api/roadmap/generate` - Generate a new learning roadmap
 - `GET /api/roadmap/:roadmapId` - Get roadmap by ID
-- `GET /api/roadmap/user/:userId` - Get user's roadmaps
 - `PUT /api/roadmap/:roadmapId/progress` - Update roadmap progress
-
-### Analytics
-- `GET /api/roadmap/:roadmapId/analytics` - Get roadmap analytics
-- `GET /api/roadmap/popular-topics` - Get popular topics
-- `GET /api/roadmap/stats` - Get global statistics (Admin)
 
 ### Health & Monitoring
 - `GET /api/roadmap/health` - Health check
+- `GET /api/roadmap/test-ai-connection` - Test AI service connectivity
+- `GET /api/roadmap/system-status` - Comprehensive system status
 
 ## Usage Example
 

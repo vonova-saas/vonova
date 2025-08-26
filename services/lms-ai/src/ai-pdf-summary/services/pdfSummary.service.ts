@@ -1,6 +1,6 @@
-import { 
-  IPDFSummaryRequest, 
-  IPDFSummaryResponse, 
+import {
+  IPDFSummaryRequest,
+  IPDFSummaryResponse,
   IPDFSummaryData,
   IPDFChatRequest,
   IPDFChatResponse,
@@ -13,11 +13,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppError, BadRequestException, InternalServerException } from '../../utils/appError';
 import { HTTPSTATUS } from '../../config/http.config';
 import { Env } from '../../config/env.config';
-import { 
-  logAIServiceCall, 
-  logDatabaseOperation, 
-  logPerformance, 
-  logUserActivity 
+import {
+  logAIServiceCall,
+  logDatabaseOperation,
+  logPerformance,
+  logUserActivity
 } from '../utils/logger';
 import crypto from 'crypto';
 
@@ -33,114 +33,18 @@ export class PDFSummaryService {
     this.PYTHON_SERVICE_URL = Env.PDF_SUMMARY_AI_SERVICE_URL || 'http://localhost:5001';
   }
 
-  /**
-   * Generate PDF summary using AI
-   */
-  async generateSummary(request: IPDFSummaryRequest, userIp?: string, userAgent?: string): Promise<IPDFSummaryResponse> {
-    const startTime = Date.now();
-    const summaryId = uuidv4();
-    const sessionId = uuidv4();
-    let filename = 'unknown';
-    
-    try {
-      // Log request start
-      console.log('Starting PDF summary generation', {
-        summary_type: request.summary_type,
-        user_id: request.user_id,
-        summaryId,
-        sessionId
-      });
 
-      // Validate request
-      this.validateSummaryRequest(request);
-
-      // Process file content or URL
-      let fileContent: Buffer;
-      let fileSize: number;
-      let totalPages: number;
-
-      if (request.file_content) {
-        fileContent = request.file_content;
-        filename = `uploaded_${Date.now()}.pdf`;
-        fileSize = fileContent.length;
-        totalPages = await this.extractPageCount(fileContent);
-      } else if (request.file_url) {
-        const fileData = await this.downloadFileFromUrl(request.file_url);
-        fileContent = fileData.content;
-        filename = fileData.filename;
-        fileSize = fileData.content.length;
-        totalPages = await this.extractPageCount(fileData.content);
-      } else {
-        throw new BadRequestException('Either file_content or file_url must be provided');
-      }
-
-      // Generate file hash
-      const fileHash = this.generateFileHash(fileContent);
-
-      // Check for existing summary with same hash
-      const existingSummary = await this.findExistingSummary(fileHash, request.summary_type);
-      if (existingSummary) {
-        return this.formatSummaryResponse(existingSummary, sessionId);
-      }
-
-      // Call Python AI service
-      const aiResponse = await this.callPythonService(
-        `${this.PYTHON_SERVICE_URL}/summarize`,
-        {
-          summary_type: request.summary_type,
-          focus_areas: request.focus_areas?.join(', ') || null,
-          max_length: request.max_length || 1000
-        },
-        fileContent,
-        filename
-      );
-
-      // Process and save summary
-      const summaryData = await this.processAndSaveSummary(
-        aiResponse,
-        request,
-        summaryId,
-        sessionId,
-        filename,
-        fileSize,
-        totalPages,
-        fileHash,
-        startTime,
-        userIp,
-        userAgent
-      );
-
-      // Return formatted response
-      return this.formatSummaryResponse(summaryData, sessionId);
-
-    } catch (error) {
-      console.error('Error generating PDF summary:', error);
-      
-      // Save failed summary attempt
-      await this.saveFailedSummary(
-        request,
-        summaryId,
-        sessionId,
-        filename,
-        error instanceof Error ? error.message : 'Unknown error',
-        userIp,
-        userAgent
-      );
-
-      throw error;
-    }
-  }
 
   /**
    * Chat with PDF using AI
    */
   async chatWithPDF(request: IPDFChatRequest, userIp?: string, userAgent?: string): Promise<IPDFChatResponse> {
     const startTime = Date.now();
-    
+
     try {
       // Validate session exists
       const session = await this.validateSession(request.session_id);
-      
+
       // Call Python AI service for chat
       console.log(`Calling Python service for chat with session_id: ${request.session_id}`);
       const aiResponse = await this.callPythonService(
@@ -171,6 +75,7 @@ export class PDFSummaryService {
         answer: aiResponse.answer,
         session_id: request.session_id,
         filename: session.filename,
+        ...(request.user_id && { user_id: request.user_id }),
         ai_wizard_status: aiResponse.ai_wizard_status || 'active',
         magic_level: aiResponse.magic_level || 'normal',
         message: aiResponse.message || 'Chat response generated successfully',
@@ -194,7 +99,7 @@ export class PDFSummaryService {
   async uploadPDF(request: IPDFUploadRequest, userIp?: string, userAgent?: string): Promise<IPDFUploadResponse> {
     const startTime = Date.now();
     const sessionId = uuidv4();
-    
+
     try {
       // Validate file
       if (!request.file || request.file.mimetype !== 'application/pdf') {
@@ -236,7 +141,7 @@ export class PDFSummaryService {
 
       // Use the session_id from Python service response
       const pythonSessionId = uploadResponse.session_id;
-      
+
       // Save basic summary data
       const summaryData = await this.saveBasicSummary(
         pythonSessionId, // Use Python service session ID instead of generated one
@@ -254,6 +159,7 @@ export class PDFSummaryService {
         status: true,
         session_id: pythonSessionId, // Use Python service session ID
         brief_summary: uploadResponse.brief_summary || 'PDF uploaded successfully',
+        ...(request.user_id && { user_id: request.user_id }),
         magic_level: uploadResponse.magic_level || 'normal',
         enchantment_status: uploadResponse.enchantment_status || 'uploaded',
         message: uploadResponse.message || 'PDF uploaded and processed successfully',
@@ -271,51 +177,6 @@ export class PDFSummaryService {
     }
   }
 
-  /**
-   * Get summary by ID
-   */
-  async getSummaryById(summaryId: string, userId?: string): Promise<IPDFSummaryResponse> {
-    const summary = await PDFSummaryModel.findOne({ summaryId });
-
-    if (!summary) {
-      throw new AppError('Summary not found', HTTPSTATUS.NOT_FOUND);
-    }
-
-    if (userId && summary.user_id && summary.user_id !== userId) {
-      throw new AppError('Access denied', HTTPSTATUS.FORBIDDEN);
-    }
-
-    return this.formatSummaryResponse(summary, summary.session_id);
-  }
-
-  /**
-   * Get user summaries with pagination
-   */
-  async getUserSummaries(userId: string, page = 1, limit = 10): Promise<{
-    summaries: IPDFSummaryResponse[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
-    const skip = (page - 1) * limit;
-
-    const [summaries, total] = await Promise.all([
-      PDFSummaryModel.find({ user_id: userId })
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limit),
-      PDFSummaryModel.countDocuments({ user_id: userId })
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      summaries: summaries.map((summary: any) => this.formatSummaryResponse(summary, summary.session_id)),
-      total,
-      page,
-      totalPages
-    };
-  }
 
   /**
    * Get session chat history
@@ -367,10 +228,10 @@ export class PDFSummaryService {
       if (!response.ok) {
         throw new Error(`Failed to download file: ${response.statusText}`);
       }
-      
+
       const content = Buffer.from(await response.arrayBuffer());
       const filename = url.split('/').pop() || `downloaded_${Date.now()}.pdf`;
-      
+
       return { content, filename };
     } catch (error) {
       throw new BadRequestException(`Failed to download file from URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -390,8 +251,8 @@ export class PDFSummaryService {
   }
 
   private async findExistingSummary(fileHash: string, summaryType: string): Promise<IPDFSummaryData | null> {
-    return await PDFSummaryModel.findOne({ 
-      file_hash: fileHash, 
+    return await PDFSummaryModel.findOne({
+      file_hash: fileHash,
       summary_type: summaryType,
       status: 'completed'
     });
@@ -400,17 +261,17 @@ export class PDFSummaryService {
   private async callPythonService(endpoint: string, data: any, fileContent?: Buffer, filename?: string): Promise<any> {
     try {
       let response: Response;
-      
+
       if (fileContent && filename) {
         // Try different approach: send Buffer directly with proper headers
         const formData = new FormData();
-        
+
         // Method 1: Try sending as Buffer directly
         formData.append('file', new Blob([fileContent], { type: 'application/pdf' }), filename);
-        
+
         // Method 2: Also try sending as raw Buffer
         formData.append('file_buffer', fileContent.toString('base64'));
-        
+
         // Add other data as form fields
         Object.entries(data).forEach(([key, value]) => {
           if (value !== null && value !== undefined) {
@@ -464,12 +325,12 @@ export class PDFSummaryService {
 
       const responseData = await response.json();
       console.log(`AI Service success response received:`, responseData);
-      
+
       // Check if response has status field, if not, treat as success
       if (responseData.status === false) {
         throw new Error(responseData.error || responseData.detail || 'Python service returned error');
       }
-      
+
       // If no status field, assume success and create a default response
       if (responseData.status === undefined) {
         console.log(`AI Service response has no status field, treating as success`);
@@ -484,6 +345,47 @@ export class PDFSummaryService {
       console.error(`Error calling AI Service: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw new Error(`Failed to call Python service: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get full summary of the entire PDF from AI service
+   */
+  async getFullSummary(sessionId: string, userId?: string, userIp?: string, userAgent?: string): Promise<IPDFSummaryResponse> {
+    const startTime = Date.now();
+    // Ensure session exists and get filename
+    const session = await this.validateSession(sessionId);
+
+    // Call AI service GET /summarize with session_id
+    const endpoint = `${this.PYTHON_SERVICE_URL}/summarize?session_id=${encodeURIComponent(sessionId)}`;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new InternalServerException(`AI summarize failed: ${response.status} ${errorText}`);
+    }
+
+    const aiResponse = await response.json();
+
+    return {
+      status: true,
+      summary: aiResponse.summary || 'Summary generated successfully',
+      summary_type: aiResponse.summary_type || 'detailed',
+      filename: session.filename,
+      session_id: sessionId,
+      metadata: {
+        generated: new Date().toISOString(),
+        ai_model_used: aiResponse.ai_model_used || 'gemini',
+        processing_time_ms: Date.now() - startTime,
+        file_size_bytes: aiResponse.file_size_bytes || 0,
+        total_pages: aiResponse.total_pages || 0
+      }
+    };
   }
 
   private async processAndSaveSummary(
@@ -601,7 +503,7 @@ export class PDFSummaryService {
     if (summary) {
       return { filename: summary.filename };
     }
-    
+
     // If not in database, check with Python service
     try {
       const response = await fetch(`${this.PYTHON_SERVICE_URL}/sessions`);
@@ -616,7 +518,7 @@ export class PDFSummaryService {
     } catch (error) {
       console.log('Could not check Python service sessions:', error);
     }
-    
+
     throw new BadRequestException('Invalid session ID');
   }
 

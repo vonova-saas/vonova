@@ -130,6 +130,10 @@
  *         brief_summary:
  *           type: string
  *           example: "Document uploaded successfully"
+ *         user_id:
+ *           type: string
+ *           format: uuid
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         magic_level:
  *           type: string
  *           example: "expert"
@@ -170,6 +174,10 @@
  *         filename:
  *           type: string
  *           example: "document.pdf"
+ *         user_id:
+ *           type: string
+ *           format: uuid
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         ai_wizard_status:
  *           type: string
  *           example: "active"
@@ -319,73 +327,9 @@
  *                       example: 2.5
  */
 
-/**
- * @swagger
- * /api/pdf-summary/generate:
- *   post:
- *     summary: Generate PDF summary
- *     description: Generate AI-powered summary from PDF file content or URL
- *     tags: [AI PDF Summary]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/PDFSummaryRequest'
- *     responses:
- *       201:
- *         description: Summary generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PDFSummaryResponse'
- *       400:
- *         $ref: '#/components/responses/PDFValidationError'
- *       500:
- *         $ref: '#/components/responses/PDFInternalError'
- */
+/** Deleted: POST /api/pdf-summary/generate */
 
-/**
- * @swagger
- * /api/pdf-summary/summary/{summaryId}:
- *   get:
- *     summary: Get summary by ID
- *     description: Retrieve a specific PDF summary by its ID
- *     tags: [AI PDF Summary]
- *     parameters:
- *       - in: path
- *         name: summaryId
- *         required: true
- *         schema:
- *           type: string
- *         description: Unique identifier for the summary
- *       - in: query
- *         name: user_id
- *         schema:
- *           type: string
- *           format: uuid
- *         description: User ID for access control (optional)
- *     responses:
- *       200:
- *         description: Summary retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Summary retrieved successfully"
- *                 data:
- *                   $ref: '#/components/schemas/PDFSummaryResponse'
- *       404:
- *         $ref: '#/components/responses/PDFNotFound'
- *       500:
- *         $ref: '#/components/responses/PDFInternalError'
- */
+/** Deleted: GET /api/pdf-summary/summary/{summaryId} */
 
 /**
  * @swagger
@@ -412,6 +356,44 @@
  *       500:
  *         $ref: '#/components/responses/PDFInternalError'
  */
+
+/**
+ * @swagger
+ * /api/pdf-summary/summarize:
+ *   get:
+ *     summary: Get full PDF summary
+ *     description: Returns a complete AI-generated summary for the entire uploaded PDF session.
+ *     tags: [AI PDF Summary]
+ *     parameters:
+ *       - in: query
+ *         name: session_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID returned from upload
+ *       - in: query
+ *         name: user_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Optional user identifier
+ *     responses:
+ *       200:
+ *         description: Summary generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PDFSummaryResponse'
+ *       400:
+ *         $ref: '#/components/responses/PDFValidationError'
+ *       404:
+ *         $ref: '#/components/responses/PDFNotFound'
+ *       500:
+ *         $ref: '#/components/responses/PDFInternalError'
+ */
+
+
 
 /**
  * @swagger
@@ -455,6 +437,7 @@
  *             required:
  *               - chatId
  *               - rating
+ *               - user_id
  *             properties:
  *               chatId:
  *                 type: string
@@ -464,6 +447,10 @@
  *                 minimum: 1
  *                 maximum: 5
  *                 description: Rating from 1 (poor) to 5 (excellent)
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: User who submitted the rating
  *     responses:
  *       200:
  *         description: Rating submitted successfully
@@ -487,71 +474,7 @@
  *                       type: number
  */
 
-/**
- * @swagger
- * /api/pdf-summary/user/{userId}/summaries:
- *   get:
- *     summary: Get user summaries
- *     description: Retrieve all summaries for a specific user with pagination
- *     tags: [AI PDF Summary]
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: User ID
- *       - in: query
- *         name: page
- *         schema:
- *           type: number
- *           minimum: 1
- *           default: 1
- *         description: Page number for pagination
- *       - in: query
- *         name: limit
- *         schema:
- *           type: number
- *           minimum: 1
- *           maximum: 100
- *           default: 10
- *         description: Number of items per page
- *     responses:
- *       200:
- *         description: User summaries retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "User summaries retrieved successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     summaries:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PDFSummaryResponse'
- *                     total:
- *                       type: number
- *                       example: 25
- *                     page:
- *                       type: number
- *                       example: 1
- *                     totalPages:
- *                       type: number
- *                       example: 3
- *       400:
- *         $ref: '#/components/responses/PDFValidationError'
- *       500:
- *         $ref: '#/components/responses/PDFInternalError'
- */
+/** Deleted: GET /api/pdf-summary/user/{userId}/summaries */
 
 /**
  * @swagger
