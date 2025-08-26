@@ -1,5 +1,9 @@
 /**
  * @swagger
+ * tags:
+ *   - name: AI Roadmap Generator
+ *     description: AI-powered learning roadmap generation and management - All roadmap endpoints
+ * 
  * components:
  *   schemas:
  *     GenerateRoadmapRequest:
@@ -183,7 +187,7 @@
  *   post:
  *     summary: Generate a new learning roadmap
  *     description: Creates a personalized learning roadmap using AI based on the provided topic, skill level, and duration
- *     tags: [Roadmap]
+ *     tags: [AI Roadmap Generator]
  *     requestBody:
  *       required: true
  *       content:
@@ -209,7 +213,7 @@
  *   get:
  *     summary: Get roadmap by ID
  *     description: Retrieves a specific roadmap by its ID
- *     tags: [Roadmap]
+ *     tags: [AI Roadmap Generator]
  *     parameters:
  *       - in: path
  *         name: roadmapId
@@ -243,7 +247,7 @@
  *   get:
  *     summary: Get user's roadmaps
  *     description: Retrieves all roadmaps for a specific user with pagination
- *     tags: [Roadmap]
+ *     tags: [AI Roadmap Generator]
  *     parameters:
  *       - in: path
  *         name: userId
@@ -309,7 +313,7 @@
  *   put:
  *     summary: Update roadmap progress
  *     description: Updates the progress for a specific roadmap
- *     tags: [Roadmap]
+ *     tags: [AI Roadmap Generator]
  *     parameters:
  *       - in: path
  *         name: roadmapId
@@ -362,7 +366,7 @@
  *   get:
  *     summary: Get roadmap analytics
  *     description: Retrieves analytics data for a specific roadmap
- *     tags: [Analytics]
+ *     tags: [AI Roadmap Generator]
  *     parameters:
  *       - in: path
  *         name: roadmapId
@@ -424,7 +428,7 @@
  *   get:
  *     summary: Get popular topics
  *     description: Retrieves the most popular learning topics based on roadmap generation frequency
- *     tags: [Analytics]
+ *     tags: [AI Roadmap Generator]
  *     parameters:
  *       - in: query
  *         name: days
@@ -485,7 +489,7 @@
  *   get:
  *     summary: Health check
  *     description: Returns the health status of the roadmap service
- *     tags: [Health]
+ *     tags: [AI Roadmap Generator]
  *     responses:
  *       200:
  *         description: Service is healthy
@@ -525,7 +529,7 @@
  *   get:
  *     summary: Test AI service connection
  *     description: Tests the connectivity between backend and AI service
- *     tags: [Health]
+ *     tags: [AI Roadmap Generator]
  *     responses:
  *       200:
  *         description: AI service connection successful
@@ -605,7 +609,7 @@
  *   get:
  *     summary: Get comprehensive system status
  *     description: Returns detailed status of all system components
- *     tags: [Health]
+ *     tags: [AI Roadmap Generator]
  *     responses:
  *       200:
  *         description: System status retrieved successfully

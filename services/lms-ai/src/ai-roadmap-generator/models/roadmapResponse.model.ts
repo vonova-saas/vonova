@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { getServiceConnection } from '../../config/database.config';
 
 // Interface for storing complete AI response data
 export interface IRoadmapResponseData extends Document {
@@ -86,4 +87,4 @@ RoadmapResponseSchema.index({ 'original_request.topic': 1 });
 RoadmapResponseSchema.index({ 'original_request.skill_level': 1 });
 RoadmapResponseSchema.index({ 'original_request.user_id': 1, created_at: -1 });
 
-export default mongoose.model<IRoadmapResponseData>('RoadmapResponse', RoadmapResponseSchema);
+export default getServiceConnection('roadmap').model<IRoadmapResponseData>('RoadmapResponse', RoadmapResponseSchema);

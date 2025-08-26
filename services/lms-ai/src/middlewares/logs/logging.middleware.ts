@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { roadmapLoggerInstance } from '../../utils/roadmap-logger';
 import { LoggingConfig } from '../../config/logging.config';
 
 export interface LoggedRequest extends Request {
@@ -11,6 +10,44 @@ export interface LoggedRequest extends Request {
 export interface LoggedResponse extends Response {
   responseBody?: any;
 }
+
+/**
+ * Simple console logger for the main application
+ */
+const consoleLogger = {
+  logRequest: (req: LoggedRequest, message: string) => {
+    if (LoggingConfig.enableUserTracking) {
+      console.log(`[REQUEST] ${message} - User: ${req.userId || 'anonymous'} - IP: ${req.ip}`);
+    }
+  },
+  
+  logResponse: (message: string, statusCode: number, duration: number, userId?: string) => {
+    if (LoggingConfig.enableUserTracking) {
+      console.log(`[RESPONSE] ${message} - Status: ${statusCode} - Duration: ${duration}ms - User: ${userId || 'anonymous'}`);
+    }
+  },
+  
+  logPerformance: (message: string, duration: number, metadata: any) => {
+    if (LoggingConfig.enablePerformanceLogging) {
+      console.log(`[PERFORMANCE] ${message} - Duration: ${duration}ms`, metadata);
+    }
+  },
+  
+  logUserAction: (action: string, userId: string, roadmapId: string, metadata: any) => {
+    if (LoggingConfig.logUserActions) {
+      console.log(`[USER_ACTION] ${action} - User: ${userId} - Roadmap: ${roadmapId}`, metadata);
+    }
+  },
+  
+  logError: (error: Error, context: string, metadata?: any) => {
+    if (LoggingConfig.enableErrorLogging) {
+      console.error(`[ERROR] ${context} - ${error.message}`, metadata);
+      if (LoggingConfig.logErrorStack) {
+        console.error(error.stack);
+      }
+    }
+  }
+};
 
 /**
  * Middleware to log incoming requests
@@ -31,7 +68,7 @@ export const requestLoggingMiddleware = (req: LoggedRequest, res: LoggedResponse
   req.roadmapId = roadmapIdMatch ? roadmapIdMatch[1] : undefined;
 
   // Log the incoming request
-  roadmapLoggerInstance.logRequest(req, `${req.method} ${req.url}`);
+  consoleLogger.logRequest(req, `${req.method} ${req.url}`);
 
   // Override res.json to capture response body for logging
   const originalJson = res.json;
@@ -62,7 +99,7 @@ export const responseLoggingMiddleware = (req: LoggedRequest, res: LoggedRespons
   const duration = req.startTime ? Date.now() - req.startTime : 0;
   
   // Log the response
-  roadmapLoggerInstance.logResponse(
+  consoleLogger.logResponse(
     `${req.method} ${req.url}`,
     res.statusCode,
     duration,
@@ -71,7 +108,7 @@ export const responseLoggingMiddleware = (req: LoggedRequest, res: LoggedRespons
 
   // Log performance if it exceeds threshold
   if (LoggingConfig.enablePerformanceLogging && duration > LoggingConfig.performanceThreshold) {
-    roadmapLoggerInstance.logPerformance(
+    consoleLogger.logPerformance(
       `${req.method} ${req.url}`,
       duration,
       {
@@ -88,7 +125,7 @@ export const responseLoggingMiddleware = (req: LoggedRequest, res: LoggedRespons
   if (LoggingConfig.logUserActions && req.roadmapId) {
     const action = getActionFromRequest(req);
     if (action) {
-      roadmapLoggerInstance.logUserAction(
+      consoleLogger.logUserAction(
         action,
         req.userId || 'anonymous',
         req.roadmapId,
@@ -109,37 +146,17 @@ export const responseLoggingMiddleware = (req: LoggedRequest, res: LoggedRespons
 /**
  * Middleware to log errors
  */
-export const errorLoggingMiddleware = (error: any, req: LoggedRequest, res: LoggedResponse, next: NextFunction) => {
-  if (!LoggingConfig.enableErrorLogging) {
-    return next(error);
+export const errorLoggingMiddleware = (error: Error, req: LoggedRequest, res: LoggedResponse, next: NextFunction) => {
+  if (LoggingConfig.enableErrorLogging) {
+    consoleLogger.logError(error, `${req.method} ${req.url}`, {
+      userId: req.userId,
+      roadmapId: req.roadmapId,
+      userAgent: req.get('User-Agent'),
+      ip: req.ip,
+      body: LoggingConfig.logSensitiveData ? req.body : '[REDACTED]',
+      query: req.query
+    });
   }
-
-  const duration = req.startTime ? Date.now() - req.startTime : 0;
-  
-  // Log the error with context
-  roadmapLoggerInstance.logError(
-    error,
-    'HTTP Request',
-    `${req.method} ${req.url}`,
-    req.userId,
-    req.roadmapId
-  );
-
-  // Log security events for certain error types
-  if (error.statusCode === 401 || error.statusCode === 403) {
-    roadmapLoggerInstance.logSecurityEvent(
-      `Unauthorized access attempt: ${error.message}`,
-      req.ip || 'unknown',
-      req.userId,
-      {
-        method: req.method,
-        url: req.url,
-        userAgent: req.get('User-Agent'),
-        errorCode: error.statusCode
-      }
-    );
-  }
-
   next(error);
 };
 
@@ -149,153 +166,24 @@ export const errorLoggingMiddleware = (error: any, req: LoggedRequest, res: Logg
 function getActionFromRequest(req: LoggedRequest): string | null {
   const { method, url } = req;
   
-  if (method === 'POST' && url.includes('/generate')) {
-    return 'roadmap_generated';
-  } else if (method === 'GET' && url.includes('/roadmap/')) {
-    return 'roadmap_viewed';
-  } else if (method === 'PUT' && url.includes('/progress')) {
-    return 'progress_updated';
-  } else if (method === 'GET' && url.includes('/analytics')) {
-    return 'analytics_viewed';
-  } else if (method === 'GET' && url.includes('/popular-topics')) {
-    return 'popular_topics_viewed';
-  } else if (method === 'GET' && url.includes('/stats')) {
-    return 'stats_viewed';
-  } else if (method === 'GET' && url.includes('/search')) {
-    return 'roadmap_searched';
+  if (url.includes('/roadmap')) {
+    if (method === 'POST' && url.includes('/generate')) return 'roadmap_generated';
+    if (method === 'GET' && url.includes('/roadmap/')) return 'roadmap_viewed';
+    if (method === 'PUT' && url.includes('/progress')) return 'roadmap_progress_updated';
+    if (method === 'DELETE' && url.includes('/roadmap/')) return 'roadmap_deleted';
+  }
+  
+  if (url.includes('/pdf-summary')) {
+    if (method === 'POST' && url.includes('/generate')) return 'pdf_summary_generated';
+    if (method === 'POST' && url.includes('/upload')) return 'pdf_uploaded';
+    if (method === 'POST' && url.includes('/chat')) return 'pdf_chat_interaction';
+    if (method === 'GET' && url.includes('/summary/')) return 'pdf_summary_viewed';
   }
   
   return null;
 }
 
 /**
- * Middleware to log database operations
+ * Export the console logger for use in other parts of the application
  */
-export const databaseLoggingMiddleware = (operation: string, collection: string, startTime: number, success: boolean, error?: any) => {
-  if (!LoggingConfig.enableDatabaseLogging) {
-    return;
-  }
-
-  const duration = Date.now() - startTime;
-  
-  roadmapLoggerInstance.logDatabaseOperation(
-    operation,
-    collection,
-    duration,
-    success,
-    error
-  );
-
-  // Log slow queries
-  if (LoggingConfig.logQueryTime && duration > LoggingConfig.performanceThreshold) {
-    roadmapLoggerInstance.logWarning(
-      `Slow database operation: ${operation} on ${collection}`,
-      'database',
-      operation,
-      {
-        duration,
-        threshold: LoggingConfig.performanceThreshold,
-        collection
-      }
-    );
-  }
-};
-
-/**
- * Middleware to log AI service operations
- */
-export const aiServiceLoggingMiddleware = (operation: string, startTime: number, success: boolean, error?: any, requestData?: any, responseData?: any) => {
-  if (!LoggingConfig.enableAIServiceLogging) {
-    return;
-  }
-
-  const duration = Date.now() - startTime;
-  
-  // Log the AI service call
-  roadmapLoggerInstance.logAIServiceCall(
-    operation,
-    duration,
-    success,
-    error
-  );
-
-  // Log request data if enabled
-  if (LoggingConfig.logAIRequests && requestData) {
-    roadmapLoggerInstance.logDebug(
-      `AI service request: ${operation}`,
-      'ai-service',
-      operation,
-      {
-        requestData: sanitizeRequestData(requestData),
-        duration
-      }
-    );
-  }
-
-  // Log response data if enabled
-  if (LoggingConfig.logAIResponses && responseData && success) {
-    roadmapLoggerInstance.logDebug(
-      `AI service response: ${operation}`,
-      'ai-service',
-      operation,
-      {
-        responseData: sanitizeResponseData(responseData),
-        duration
-      }
-    );
-  }
-
-  // Log performance if it exceeds threshold
-  if (LoggingConfig.enablePerformanceLogging && duration > LoggingConfig.performanceThreshold) {
-    roadmapLoggerInstance.logPerformance(
-      `AI service ${operation}`,
-      duration,
-      {
-        operation,
-        success,
-        hasError: !!error
-      }
-    );
-  }
-};
-
-/**
- * Sanitize request data to remove sensitive information
- */
-function sanitizeRequestData(data: any): any {
-  if (!LoggingConfig.logSensitiveData) {
-    const sanitized = { ...data };
-    // Remove potentially sensitive fields
-    delete sanitized.apiKey;
-    delete sanitized.password;
-    delete sanitized.token;
-    delete sanitized.secret;
-    return sanitized;
-  }
-  return data;
-}
-
-/**
- * Sanitize response data to remove sensitive information
- */
-function sanitizeResponseData(data: any): any {
-  if (!LoggingConfig.logSensitiveData) {
-    const sanitized = { ...data };
-    // Remove potentially sensitive fields
-    delete sanitized.apiKey;
-    delete sanitized.password;
-    delete sanitized.token;
-    delete sanitized.secret;
-    return sanitized;
-  }
-  return data;
-}
-
-// Export all middleware functions
-export const loggingMiddleware = {
-  request: requestLoggingMiddleware,
-  response: responseLoggingMiddleware,
-  error: errorLoggingMiddleware,
-  database: databaseLoggingMiddleware,
-  aiService: aiServiceLoggingMiddleware
-};
+export { consoleLogger as roadmapLoggerInstance };

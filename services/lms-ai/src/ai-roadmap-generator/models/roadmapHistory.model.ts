@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { getServiceConnection } from '../../config/database.config';
 
 // Interface for Roadmap History (for analytics and tracking)
 export interface IRoadmapHistory extends Document {
@@ -125,4 +126,4 @@ RoadmapHistorySchema.statics.getPopularTopics = function(days: number = 30) {
   ]);
 };
 
-export default mongoose.model<IRoadmapHistory>('RoadmapHistory', RoadmapHistorySchema);
+export default getServiceConnection('roadmap').model<IRoadmapHistory>('RoadmapHistory', RoadmapHistorySchema);

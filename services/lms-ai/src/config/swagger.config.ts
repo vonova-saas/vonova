@@ -2,9 +2,9 @@ export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Vonova LMS AI Roadmap Generation',
+      title: 'Vonova LMS AI Platform',
       version: '1.0.0',
-      description: 'AI-powered learning roadmap generation and management system',
+      description: 'Complete AI-powered learning platform with roadmap generation, PDF summarization, and more',
       contact: {
         name: 'Vonova Development Team',
         email: 'dev@vonova.tech',
@@ -57,6 +57,26 @@ export const swaggerOptions = {
           description: 'The unique roadmap identifier',
           example: '123e4567-e89b-12d3-a456-426614174000'
         },
+        SummaryIdParam: {
+          name: 'summaryId',
+          in: 'path',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'The unique PDF summary identifier',
+          example: 'summary_123e4567-e89b-12d3-a456-426614174000'
+        },
+        SessionIdParam: {
+          name: 'sessionId',
+          in: 'path',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'The PDF session identifier',
+          example: 'session_123e4567-e89b-12d3-a456-426614174000'
+        },
         UserIdParam: {
           name: 'userId',
           in: 'path',
@@ -99,16 +119,24 @@ export const swaggerOptions = {
     ],
     tags: [
       {
-        name: 'Roadmap',
-        description: 'AI-powered learning roadmap generation and management'
+        name: 'AI Roadmap Generator',
+        description: 'AI-powered learning roadmap generation and management - All roadmap endpoints'
       },
       {
-        name: 'Analytics',
-        description: 'Analytics and statistics for roadmaps'
+        name: 'AI PDF Summary',
+        description: 'AI-powered PDF document summarization and chat functionality - All PDF endpoints'
       },
       {
-        name: 'Health',
-        description: 'Service health and monitoring endpoints'
+        name: 'AI Problem Solving',
+        description: 'AI-powered problem solving assistance (Coming Soon)'
+      },
+      {
+        name: 'AI Assistant',
+        description: 'Intelligent learning assistant chatbot (Coming Soon)'
+      },
+      {
+        name: 'AI Video Generator',
+        description: 'Generate educational videos from content (Coming Soon)'
       }
     ]
   },
@@ -117,6 +145,7 @@ export const swaggerOptions = {
     './src/ai-roadmap-generator/routes/*.ts',
     './src/ai-roadmap-generator/swagger/*.ts',
     './src/ai-pdf-summary/routes/*.ts',
+    './src/ai-pdf-summary/swagger/*.ts',
     './src/ai-problem-solving/routes/*.ts', 
     './src/ai-assistant/routes/*.ts',
     './src/ai-video-gen/routes/*.ts'

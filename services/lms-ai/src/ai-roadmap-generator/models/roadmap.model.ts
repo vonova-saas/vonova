@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { getServiceConnection } from '../../config/database.config';
 
 // Interface for Week structure
 export interface IWeek {
@@ -194,4 +195,4 @@ RoadmapSchema.statics.findSimilar = function(topic: string, skillLevel: string, 
   }).sort({ created_at: -1 }).limit(5);
 };
 
-export default mongoose.model<IRoadmapData>('Roadmap', RoadmapSchema);
+export default getServiceConnection('roadmap').model<IRoadmapData>('Roadmap', RoadmapSchema);
