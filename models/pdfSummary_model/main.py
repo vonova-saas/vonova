@@ -67,6 +67,8 @@ bot = None
 # In-memory session storage (our magical vault)
 session_store = {}
 
+
+
 def initialize_ai_wizard():
     """Initialize the AI wizard when the server starts"""
     global model, bot
@@ -133,6 +135,19 @@ async def health():
         "system_message": "All systems are go! The magic is flowing!"
     }
 
+@app.get("/sessions")
+async def get_sessions():
+    """Get all current sessions (for debugging)"""
+    return {
+        "active_sessions": list(session_store.keys()),
+        "session_count": len(session_store),
+        "session_details": {k: {"filename": v["filename"]} for k, v in session_store.items()}
+    }
+
+
+
+
+
 @app.post("/upload", response_model=UploadResponse)
 async def upload_pdf(file: UploadFile = File(...)):
     """
@@ -165,6 +180,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         "filename": file.filename
     }
     logger.info(f"Document stored in magical vault: {session_id}")
+    logger.info(f"Current sessions in store after upload: {list(session_store.keys())}")
 
     # Generate a brief summary with our AI wizard
     logger.info("AI wizard is crafting a brief summary...")
@@ -227,6 +243,9 @@ async def ask_question(
     session_id: Optional[str] = Form(None, description="Session ID from PDF upload"),
     question: Optional[str] = Form(None, description="Your question about the PDF content")
 ):
+    logger.info(f"Ask endpoint called with Form data - session_id: {session_id}, question: {question}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Request method: {request.method}")
     """
     Ask a question about the enchanted PDF using our AI wizard.
     
@@ -262,10 +281,14 @@ async def ask_question(
     # Try to get data from JSON if form data is not provided
     if session_id is None or question is None:
         try:
+            logger.info("Attempting to parse JSON from request body")
             json_data = await request.json()
+            logger.info(f"JSON data received: {json_data}")
             session_id = json_data.get("session_id")
             question = json_data.get("question")
-        except:
+            logger.info(f"Extracted session_id: {session_id}, question: {question}")
+        except Exception as e:
+            logger.error(f"Failed to parse JSON: {e}")
             pass
     
     # Validate required fields
@@ -277,6 +300,10 @@ async def ask_question(
     
     log_magic_moment(f"Question asked in session: {session_id}")
     log_user_mood("Curious and engaged")
+    
+    # Debug: Print current sessions
+    logger.info(f"Current sessions in store: {list(session_store.keys())}")
+    logger.info(f"Looking for session: {session_id}")
     
     if session_id not in session_store:
         log_error(f"Invalid session_id: {session_id}", "ask_question")
@@ -315,6 +342,7 @@ if __name__ == "__main__":
     print("Starting the Magical PDF Chat & Summarization AI Server...")
     print("API Documentation: http://127.0.0.1:5001/docs")
     print("Health Check: http://127.0.0.1:5001/health")
+    print("Sessions Debug: http://127.0.0.1:5001/sessions")
     print("Press Ctrl+C to stop the magical server")
     print("-" * 50)
     
