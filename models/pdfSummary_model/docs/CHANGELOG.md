@@ -2,6 +2,28 @@
 
 All notable changes to the PDF Chat & Summarization AI project will be documented in this file.
 
+## [1.1.0] - 2025-08-26
+
+### ✨ Added
+- **Enhanced API Flexibility**
+  - `/ask` endpoint now supports both form data (x-www-form-urlencoded) and JSON formats
+  - Improved error handling with better validation messages
+  - Request body parsing for multiple content types
+
+### 🔧 Improved
+- **API Usability**
+  - More flexible data input methods for the `/ask` endpoint
+  - Better compatibility with different client implementations
+  - Enhanced error messages for debugging
+
+### 📚 Documentation
+- **Updated API Reference**
+  - Added examples for both form data and JSON usage
+  - Included cURL examples for testing
+  - Clarified parameter requirements and formats
+
+---
+
 ## [1.0.0] - 2024-08-24
 
 ### ✨ Added

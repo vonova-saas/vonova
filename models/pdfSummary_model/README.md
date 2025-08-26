@@ -110,7 +110,7 @@ AI: *snaps fingers* Poof! Brief summary: [Brief Summary]
 | `GET` | `/health` | Service health status (is the magic working?) | None |
 | `POST` | `/upload` | Upload your PDF document for enchantment | `file`: PDF file |
 | `GET` | `/summarize` | Get document summary (brief or detailed) | `session_id`, `summary_type` |
-| `POST` | `/ask` | Ask questions about your enchanted PDF | `session_id`, `question` |
+| `POST` | `/ask` | Ask questions about your enchanted PDF | `session_id`, `question` (supports both form data and JSON) |
 
 ### Response Examples (The Magic Output)
 
@@ -130,10 +130,48 @@ AI: *snaps fingers* Poof! Brief summary: [Brief Summary]
 ```json
 {
   "answer": "Based on the enchanted document, the main topic is... 🪄",
-  "confidence": 0.95,
-  "magic_used": "Gemini AI",
-  "sparkles_added": true
+  "session_id": "abc123-def456",
+  "filename": "document.pdf",
+  "ai_wizard_status": "SUCCESS",
+  "magic_level": "MAXIMUM",
+  "message": "Your question has been answered by our AI wizard!"
 }
+```
+
+### Using the `/ask` Endpoint (Multiple Ways to Cast Your Spell!)
+
+The `/ask` endpoint is flexible and accepts data in multiple formats:
+
+#### Option 1: Form Data (x-www-form-urlencoded) - Recommended for simple clients
+```bash
+POST http://127.0.0.1:5001/ask
+Content-Type: application/x-www-form-urlencoded
+
+session_id=your_session_id&question=your_question_here
+```
+
+#### Option 2: JSON (Perfect for modern applications)
+```bash
+POST http://127.0.0.1:5001/ask
+Content-Type: application/json
+
+{
+  "session_id": "your_session_id",
+  "question": "your_question_here"
+}
+```
+
+#### Example with cURL:
+```bash
+# Form data approach
+curl -X POST "http://127.0.0.1:5001/ask" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "session_id=abc123-def456&question=What is the main topic?"
+
+# JSON approach
+curl -X POST "http://127.0.0.1:5001/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "abc123-def456", "question": "What is the main topic?"}'
 ```
 
 ## Getting Your API Key (The Quest Begins!)

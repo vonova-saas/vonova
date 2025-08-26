@@ -2,7 +2,9 @@ import logging
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from typing import Optional
+from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form, Request
 
 from agents.llm_agent import GeminiAnswerAgent, load_gemini_model
 from services.proccesing import extract_text_from_pdf, clean_text
@@ -11,6 +13,32 @@ from utils.utils import (
     log_event, log_upload, log_chat, log_magic_moment, 
     log_user_mood, log_ai_creativity, logger, log_error
 )
+
+# Response Models for API Documentation
+class AskResponse(BaseModel):
+    """Response model for the /ask endpoint"""
+    answer: str
+    session_id: str
+    filename: str
+    ai_wizard_status: str
+    magic_level: str
+    message: str
+
+class UploadResponse(BaseModel):
+    """Response model for the /upload endpoint"""
+    session_id: str
+    brief_summary: str
+    magic_level: str
+    enchantment_status: str
+    message: str
+
+class SummaryResponse(BaseModel):
+    """Response model for the /summarize endpoint"""
+    summary: str
+    summary_type: str
+    filename: str
+    magic_level: str
+    ai_wizard_status: str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,7 +103,6 @@ def process_pdf(file_bytes: bytes):
     return session_id, cleaned_text[:500000], chunks
 
 
-
 @app.get("/")
 async def root():
     """Welcome to our magical realm!"""
@@ -97,7 +124,7 @@ async def health():
     log_magic_moment("Health check performed - Magic system status verified!")
     
     return {
-        "status": "HEALTHY ",
+        "status": "HEALTHY",
         "service": "Magical PDF Chat & Summarization AI",
         "version": "1.0.0",
         "magic_level": "MAXIMUM",
@@ -106,7 +133,7 @@ async def health():
         "system_message": "All systems are go! The magic is flowing!"
     }
 
-@app.post("/upload")
+@app.post("/upload", response_model=UploadResponse)
 async def upload_pdf(file: UploadFile = File(...)):
     """
     Upload a PDF and get enchanted with brief summary + session_id
@@ -156,7 +183,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         "message": "Your PDF has been successfully enchanted! Ready for magical conversations!"
     }
 
-@app.get("/summarize")
+@app.get("/summarize", response_model=SummaryResponse)
 async def summarize(
     session_id: str = Query(...),
     summary_type: str = Query("detailed")
@@ -193,17 +220,60 @@ async def summarize(
         "ai_wizard_status": "SUCCESS"
     }
 
-@app.post("/ask")
+@app.post("/ask", response_model=AskResponse)
 async def ask_question(
-    session_id: str = Query(...),
-    question: str = Query(...)
+    request: Request,
+    # Form data parameters (optional)
+    session_id: Optional[str] = Form(None, description="Session ID from PDF upload"),
+    question: Optional[str] = Form(None, description="Your question about the PDF content")
 ):
     """
-    Ask a question about the enchanted PDF using our AI wizard,
-    and the conversation will be stored in our magical vault.
+    Ask a question about the enchanted PDF using our AI wizard.
+    
+    This endpoint supports multiple data formats for maximum flexibility:
+    
+    **Form Data (x-www-form-urlencoded):**
+    - Content-Type: application/x-www-form-urlencoded
+    - Parameters: session_id, question
+    
+    **JSON:**
+    - Content-Type: application/json
+    - Body: {"session_id": "uuid", "question": "your question"}
+    
+    **Example Form Data:**
+    ```
+    session_id=abc123-def456&question=What is the main topic?
+    ```
+    
+    **Example JSON:**
+    ```json
+    {
+      "session_id": "abc123-def456",
+      "question": "What is the main topic?"
+    }
+    ```
+    
+    **Response:**
+    Returns AI-generated answer based on the PDF content.
     """
     if not bot:
         raise HTTPException(status_code=503, detail="AI wizard is still loading... Please wait a moment!")
+    
+    # Try to get data from JSON if form data is not provided
+    if session_id is None or question is None:
+        try:
+            json_data = await request.json()
+            session_id = json_data.get("session_id")
+            question = json_data.get("question")
+        except:
+            pass
+    
+    # Validate required fields
+    if not session_id or not question:
+        raise HTTPException(
+            status_code=422, 
+            detail="Both session_id and question are required"
+        )
     
     log_magic_moment(f"Question asked in session: {session_id}")
     log_user_mood("Curious and engaged")
@@ -246,6 +316,7 @@ if __name__ == "__main__":
     print("API Documentation: http://127.0.0.1:5001/docs")
     print("Health Check: http://127.0.0.1:5001/health")
     print("Press Ctrl+C to stop the magical server")
-    print("" + "-" * 50 + "")
+    print("-" * 50)
     
     uvicorn.run("main:app", host="127.0.0.1", port=5001, reload=False)
+    
