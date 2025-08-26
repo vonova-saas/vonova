@@ -43,8 +43,7 @@ app.get(
           endpoints: [
             "POST /api/roadmap/generate",
             "GET /api/roadmap/:roadmapId", 
-            "PUT /api/roadmap/:roadmapId/progress",
-            "GET /api/roadmap/user/:userId"
+            "PUT /api/roadmap/:roadmapId/progress"
           ]
         },
         "AI PDF Summary": {
@@ -55,7 +54,6 @@ app.get(
             "POST /api/pdf-summary/upload",
             "POST /api/pdf-summary/chat",
             "GET /api/pdf-summary/summary/:summaryId",
-            "GET /api/pdf-summary/user/:userId/summaries",
             "GET /api/pdf-summary/session/:sessionId/chat-history"
           ]
         },
@@ -80,7 +78,7 @@ app.get(
         roadmap_ai_connection: `${Env.BASE_PATH}/roadmap/test-ai-connection`,
         pdf_summary_health: `${Env.BASE_PATH}/pdf-summary/health`,
         system_status: `${Env.BASE_PATH}/roadmap/system-status`,
-        analytics: `${Env.BASE_PATH}/roadmap/popular-topics`
+        analytics: undefined
       },
       documentation: {
         swagger_ui: "/api-docs",
