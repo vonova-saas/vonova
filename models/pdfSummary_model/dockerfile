@@ -1,0 +1,47 @@
+# Magical PDF Chat & Summarization AI Container
+# This container brings your PDFs to life with AI magic! 🪄
+
+FROM python:3.11-slim
+
+# Set magical environment variables for optimal performance
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PIP_NO_CACHE_DIR=1 \
+  PIP_DISABLE_PIP_VERSION_CHECK=1 \
+  MAGIC_LEVEL=MAXIMUM \
+  CREATIVITY_BOOST=ENABLED
+
+# Set our magical workspace directory
+WORKDIR /app
+
+# Install system dependencies (the boring but necessary stuff)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  && rm -rf /var/lib/apt/lists/* \
+  && echo "System dependencies installed successfully!"
+
+# Install Python dependencies (the magical ingredients)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+  && echo "Python packages enchanted and ready!"
+
+# Copy our magical application code
+COPY . .
+
+# Create a magical logs directory
+RUN mkdir -p logs && echo "Logs directory created for magical adventures!"
+
+# Expose the port where our AI magic happens
+EXPOSE 5001
+
+# Add some magical metadata
+LABEL maintainer="PDF Chat Magician 🪄" \
+  description="Transform PDFs into intelligent conversation partners with AI magic! ✨" \
+  version="1.0.0" \
+  magic_level="MAXIMUM" \
+  creativity="UNLIMITED"
+
+# Command to launch our magical PDF chat application
+CMD ["python", "-m", "main"]
+
+# Remember: With great AI power comes great PDF conversations!
