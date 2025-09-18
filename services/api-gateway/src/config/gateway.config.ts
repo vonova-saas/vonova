@@ -19,24 +19,17 @@ export interface RouteConfig {
 export const config = {
   // Services configuration
   services: {
-    auth: {
-      name: 'auth',
-      url: Env.AUTH_SERVICE_URL,
-      healthCheck: '/health',
-      timeout: 5000
-    } as ServiceConfig,
-
-    user: {
-      name: 'user',
-      url: Env.USER_SERVICE_URL,
-      healthCheck: '/health',
+    app: {
+      name: 'app',
+      url: Env.APP_SERVICE_URL,
+      healthCheck: '/app/health',
       timeout: 5000
     } as ServiceConfig,
 
     quiz: {
       name: 'quiz',
       url: Env.QUIZ_SERVICE_URL,
-      healthCheck: '/health',
+      healthCheck: '/quiz/health',
       timeout: 5000
     } as ServiceConfig,
   },
@@ -44,50 +37,62 @@ export const config = {
   // Route configuration
   routes: [
     {
-      path: '/api/v1/auth/*',
+      path: '/api/v1/app/*',
       method: 'GET',
-      service: 'auth',
+      service: 'app',
       target: '/*'
     },
     {
-      path: '/api/v1/auth/*',
+      path: '/api/v1/app/*',
       method: 'POST',
-      service: 'auth',
+      service: 'app',
       target: '/*'
     },
     {
-      path: '/api/v1/user/*',
-      method: 'GET',
-      service: 'user',
-      target: '/*'
-    },
-    {
-      path: '/api/v1/user/*',
-      method: 'POST',
-      service: 'user',
-      target: '/*'
-    },
-    {
-      path: '/api/v1/user/*',
+      path: '/api/v1/app/*',
       method: 'PUT',
-      service: 'user',
+      service: 'app',
       target: '/*'
     },
     {
-      path: '/api/v1/user/*',
+      path: '/api/v1/app/*',
       method: 'PATCH',
-      service: 'user',
+      service: 'app',
       target: '/*'
     },
     {
-      path: '/api/v1/user/*',
+      path: '/api/v1/app/*',
       method: 'DELETE',
-      service: 'user',
+      service: 'app',
       target: '/*'
     },
     {
       path: '/api/v1/quiz/*',
       method: 'GET',
+      service: 'quiz',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/quiz/*',
+      method: 'POST',
+      service: 'quiz',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/quiz/*',
+      method: 'PUT',
+      service: 'quiz',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/quiz/*',
+      method: 'PATCH',
+      service: 'quiz',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/quiz/*',
+      method: 'DELETE',
       service: 'quiz',
       target: '/*'
     },
@@ -100,9 +105,4 @@ export const config = {
     rateLimitWindow: 15 * 60 * 1000, // 15 minutes
     rateLimitMax: 100 // requests per window
   },
-
-  // // Auth settings
-  // auth: {
-  //   jwtSecret: process.env.JWT_SECRET || 'your_default_jwt_secret',
-  // }
 };

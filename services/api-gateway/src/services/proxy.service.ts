@@ -2,6 +2,22 @@ import { Request, Response, NextFunction } from 'express';
 import axios, { AxiosResponse } from 'axios';
 import { config, ServiceConfig } from '../config/gateway.config';
 import { NotFoundException } from '../utils/appError';
+import FormData from 'form-data';
+import { createReadStream } from 'fs';
+
+declare module 'form-data' {
+  interface FormData {
+    getHeaders(): Record<string, string>;
+    getLength(callback: (err: Error | null, length: number) => void): void;
+  }
+}
+
+interface FileData {
+  file: boolean;
+  path: string;
+  name: string;
+  type: string;
+}
 
 const services: Record<string, ServiceConfig> = {};
 Object.values(config.services).forEach(service => {
@@ -61,10 +77,16 @@ async function makeRequest(
   headers: any,
   timeout: number
 ): Promise<AxiosResponse> {
+  // Filter out headers that shouldn't be forwarded
   const filteredHeaders = { ...headers };
   delete filteredHeaders.host;
   delete filteredHeaders.connection;
   delete filteredHeaders['content-length'];
+
+  // Forward cookies if present
+  if (headers.cookie) {
+    filteredHeaders.cookie = headers.cookie;
+  }
 
   const config: any = {
     method,
@@ -74,8 +96,81 @@ async function makeRequest(
     validateStatus: () => true // Don't throw on HTTP error status
   };
 
+  // Handle request data
   if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    config.data = data;
+    // Handle multipart/form-data
+    if (headers['content-type']?.includes('multipart/form-data')) {
+      const formData = new FormData();
+
+      // Process each field in the request body
+      for (const key in data) {
+        if (data[key] !== undefined && data[key] !== null) {
+          const value = data[key];
+          // Handle file uploads
+          if (typeof value === 'object' && value !== null && 'file' in value) {
+            const file = value as FileData;
+            formData.append(key, createReadStream(file.path), {
+              filename: file.name,
+              contentType: file.type
+            });
+          }
+          // Handle array fields
+          else if (Array.isArray(value)) {
+            value.forEach((item: unknown) => {
+              if (item !== undefined && item !== null) {
+                formData.append(key, String(item));
+              }
+            });
+          }
+          // Handle regular fields
+          else {
+            formData.append(key, String(value));
+          }
+        }
+      }
+
+      // Use form-data with proper headers
+      config.data = formData;
+      const headers = formData.getHeaders();
+      config.headers = {
+        ...filteredHeaders,
+        ...headers,
+        'Content-Length': await new Promise<number>((resolve, reject) => {
+          formData.getLength((err: Error | null, length: number) => {
+            if (err) reject(err);
+            else resolve(length);
+          });
+        }).then(len => len.toString())
+      };
+    }
+    // Handle URL-encoded form data
+    else if (headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+      const formData = new URLSearchParams();
+      for (const key in data) {
+        if (Array.isArray(data[key])) {
+          data[key].forEach((item: any) => {
+            formData.append(key, item);
+          });
+        } else if (data[key] !== undefined && data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      }
+      config.data = formData.toString();
+      config.headers = {
+        ...filteredHeaders,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+    }
+    // Handle JSON data
+    else {
+      config.data = data;
+      if (!headers['content-type']) {
+        config.headers = {
+          ...filteredHeaders,
+          'Content-Type': 'application/json'
+        };
+      }
+    }
   }
 
   return await axios(config);

@@ -2,10 +2,10 @@
  * @swagger
  * openapi: 3.0.0
  * info:
- *   title: Vonova API Gateway
+ *   title: onyx API Gateway
  *   version: 1.0.0
  *   description: |
- *     API Gateway for Vonova microservices. All requests to /api/v1/auth/* and /api/v1/user/* are proxied to the respective services.
+ *     API Gateway for onyx microservices. All requests to /api/v1/auth/* and /api/v1/user/* are proxied to the respective services.
  *     
  *     - **Auth endpoints:** `/api/v1/auth/...` (proxied to auth service)
  *     - **User endpoints:** `/api/v1/user/...` (proxied to user service)

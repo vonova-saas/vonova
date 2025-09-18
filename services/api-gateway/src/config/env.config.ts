@@ -15,8 +15,8 @@ const envConfig = () => ({
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
   //* =========== Service URLs ===========
-  AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
-  USER_SERVICE_URL: getEnv("USER_SERVICE_URL"),
+  APP_SERVICE_URL: getEnv("APP_SERVICE_URL"),
+  INTERNAL_APP_API_KEY: getEnv("INTERNAL_APP_API_KEY"),
   QUIZ_SERVICE_URL: getEnv("QUIZ_SERVICE_URL"),
 
   //! =========== Security Layer===========

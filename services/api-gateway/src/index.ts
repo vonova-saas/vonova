@@ -1,7 +1,9 @@
 import "dotenv/config";
+import cookieParser from "cookie-parser";
 import express, { NextFunction, Request, Response } from "express";
 import helmet from 'helmet';
 import morgan from 'morgan';
+import multer from 'multer';
 import { config } from './config/gateway.config';
 import { createGatewayRouter } from './routes/gateway.routes';
 import {
@@ -15,10 +17,64 @@ import { Env } from "./config/env.config";
 import { swaggerUi, swaggerSpec } from "./services/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import connectDatabase from "./config/database.config";
+import { verifyToken } from "./middlewares/auth/tokenVerification.middleware";
+import * as path from 'path';
+import * as fs from 'fs';
 
 const app = express();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
+
+// Parse JSON bodies
 app.use(express.json());
+
+// Parse URL-encoded bodies (for form data)
 app.use(express.urlencoded({ extended: true }));
+
+// Parse cookies
+app.use(cookieParser());
+
+// Handle file uploads
+app.use(upload.any());
+
+// Process multipart/form-data and prepare files for forwarding
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.headers['content-type']?.includes('multipart/form-data')) {
+    // Process files and add them to req.body for the proxy service
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach((file: Express.Multer.File) => {
+        if (!req.body[file.fieldname]) {
+          req.body[file.fieldname] = {
+            file: true,
+            path: file.path,
+            name: file.originalname,
+            type: file.mimetype,
+            size: file.size
+          };
+        }
+      });
+    }
+  }
+  next();
+});
 
 // Security Layers
 applySecurityStack(app, {
@@ -34,6 +90,9 @@ app.use(helmet());
 
 // Health check
 app.use(healthCheckMiddleware);
+
+// Token verification for protected routes
+app.use(verifyToken);
 
 // Use gateway routes
 app.use(createGatewayRouter());

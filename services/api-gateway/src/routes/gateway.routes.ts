@@ -40,13 +40,13 @@ export function createGatewayRouter() {
     })
   );
 
-  // Proxy Auth endpoints (no auth required)
+  // Proxy App endpoints
   router.all(
-    '/api/v1/auth/*',
+    '/api/v1/app/*',
     asyncHandler(async (req, res, next) => {
-      const serviceName = 'auth';
+      const serviceName = 'app';
       const subPath = req.params[0] || '';
-      const targetPath = 'auth/' + subPath;
+      const targetPath = 'app/' + subPath;
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
         throw new NotFoundException(`Service '${serviceName}' is not available`);
@@ -55,22 +55,7 @@ export function createGatewayRouter() {
     })
   );
 
-  // Proxy User endpoints
-  router.all(
-    '/api/v1/user/*',
-    asyncHandler(async (req, res, next) => {
-      const serviceName = 'user';
-      const subPath = req.params[0] || '';
-      const targetPath = 'user/' + subPath;
-      const service = config.services[serviceName as keyof typeof config.services];
-      if (!service) {
-        throw new NotFoundException(`Service '${serviceName}' is not available`);
-      }
-      forwardRequest(serviceName, targetPath, req, res, next);
-    })
-  );
-
-  // Proxy Quizzes endpoints
+  // Proxy Quiz endpoints
   router.all(
     '/api/v1/quiz/*',
     asyncHandler(async (req, res, next) => {

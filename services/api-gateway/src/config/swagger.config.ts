@@ -2,9 +2,9 @@ export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Vonova API',
+      title: 'onyx API',
       version: '1.0.0',
-      description: 'Vonova API documentation with Swagger',
+      description: 'onyx API documentation with Swagger',
     },
     servers: [
       {
