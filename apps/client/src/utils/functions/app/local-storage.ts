@@ -1,5 +1,3 @@
-// src/lib/utils/local-storage.ts
-
 export class LocalStorage {
   static get<T = string>(key: string): T | null {
     if (typeof window === 'undefined') return null;

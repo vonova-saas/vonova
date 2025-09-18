@@ -12,7 +12,7 @@ import { createTree, getDisplayRoadmapId } from "@/lib/utils";
 import {
   addRecentRoadmap,
   getRecentRoadmaps,
-} from "@/utils/functions/local-storage";
+} from "@/utils/functions";
 import { motion, AnimatePresence } from "framer-motion";
 
 enum Visibility {

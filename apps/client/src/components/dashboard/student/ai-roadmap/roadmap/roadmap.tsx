@@ -26,9 +26,9 @@ import { toPng } from "html-to-image";
 import { downloadImage } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import { LocalStorage } from "@/utils/functions/local-storage";
+import { LocalStorage } from "@/utils/functions";
 import { getDisplayRoadmapId } from '@/lib/utils';
-import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions/local-storage';
+import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions';
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
