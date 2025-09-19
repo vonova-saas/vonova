@@ -413,7 +413,7 @@ export default function BookViewer() {
           className="flex items-center gap-2 text-sm text-muted-foreground px-4 pt-4 pb-2"
           aria-label="Breadcrumb"
         >
-          <span className="hover:underline cursor-pointer" onClick={() => router.push(`/student/${studentId}/material-library/online-books`)}>{gitBook.title}</span>
+          <span className="hover:underline cursor-pointer" onClick={() => router.push(`/${studentId}/material-library/online-books`)}>{gitBook.title}</span>
           <span className="mx-1">/</span>
           <span className="font-semibold text-primary">
             {currentChapter?.title}

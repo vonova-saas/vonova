@@ -103,7 +103,7 @@ export function NavAdmin({
               <DropdownMenuItem
                 onClick={() => {
                   if (adminId) {
-                    router.push(`/admin/${adminId}/settings/account`)
+                    router.push(`/${adminId}/settings/account`)
                   }
                 }}
               >
@@ -113,7 +113,7 @@ export function NavAdmin({
               <DropdownMenuItem
                 onClick={() => {
                   if (adminId) {
-                    router.push(`/admin/${adminId}/settings/notifications`)
+                    router.push(`/${adminId}/settings/notifications`)
                   }
                 }}
               >

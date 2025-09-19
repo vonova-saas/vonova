@@ -24,62 +24,62 @@ export const sidebarNavData = {
   lmsManagement: [
     {
       title: "Dashboard",
-      url: "/instructor/:instructorId",
+      url: "/:instructorId",
       icon: LayoutDashboard,
       isActive: true,
     },
     {
       title: "Courses Management",
-      url: "/instructor/:instructorId/courses-management",
+      url: "/:instructorId/courses-management",
       icon: SquareTerminal
     },
     {
       title: "Material Library Management",
-      url: "/instructor/:instructorId/material-library-management",
+      url: "/:instructorId/material-library-management",
       icon: BookOpen,
     },
     {
       title: "Problem Solving Management",
-      url: "/instructor/:instructorId/problem-solving-management",
+      url: "/:instructorId/problem-solving-management",
       icon: BrainCog,
     },
     {
       title: "Community",
-      url: "/instructor/:instructorId/community",
+      url: "/:instructorId/community",
       icon: Frame,
     },
   ],
   lmsTools: [
     {
       title: "Presentation Builder",
-      url: "/instructor/:instructorId/presentation-builder",
+      url: "/:instructorId/presentation-builder",
       icon: Presentation,
     },
     {
       title: "Course Recorder",
-      url: "/instructor/:instructorId/course-recorder",
+      url: "/:instructorId/course-recorder",
       icon: Video,
     }
   ],
   app: [
     {
       title: "Settings",
-      url: "/instructor/:instructorId/settings",
+      url: "/:instructorId/settings",
       icon: Settings2,
     },
     {
       title: "Account",
-      url: "/instructor/:instructorId/settings/account",
+      url: "/:instructorId/settings/account",
       icon: User,
     },
     {
       title: "Support",
-      url: "/instructor/:instructorId/support",
+      url: "/:instructorId/support",
       icon: LifeBuoy,
     },
     {
       title: "Feedback",
-      url: "/instructor/:instructorId/feedback",
+      url: "/:instructorId/feedback",
       icon: Send,
     },
   ],

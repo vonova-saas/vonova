@@ -296,7 +296,7 @@ const AIAssistantChat = () => {
               <AIInputButton
                 disabled={isTyping}
                 className="hover:bg-accent/50"
-                onClick={() => router.push(`/student/${studentId}/ai-assistant/voice`)}
+                onClick={() => router.push(`/${studentId}/ai-assistant/voice`)}
               >
                 <MicIcon size={16} />
               </AIInputButton>

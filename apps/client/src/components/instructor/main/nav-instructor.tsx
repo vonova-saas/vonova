@@ -111,7 +111,7 @@ export function NavInstructor({
               <DropdownMenuItem
                 onClick={() => {
                   if (instructorId) {
-                    router.push(`/instructor/${instructorId}/settings/account`)
+                    router.push(`/${instructorId}/settings/account`)
                   }
                 }}
               >
@@ -121,7 +121,7 @@ export function NavInstructor({
               <DropdownMenuItem
                 onClick={() => {
                   if (instructorId) {
-                    router.push(`/instructor/${instructorId}/settings/notifications`)
+                    router.push(`/${instructorId}/settings/notifications`)
                   }
                 }}
               >

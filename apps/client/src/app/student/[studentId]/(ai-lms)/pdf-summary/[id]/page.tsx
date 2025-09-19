@@ -44,7 +44,7 @@ export default function PDFChatPage() {
   }, [params.id]);
 
   const handleBackToFiles = () => {
-    router.push(`/student/${studentId}/pdf-summary`);
+    router.push(`/${studentId}/pdf-summary`);
   };
 
   if (loading) {

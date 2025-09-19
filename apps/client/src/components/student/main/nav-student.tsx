@@ -112,7 +112,7 @@ export function NavStudent({
               <DropdownMenuItem
                 onClick={() => {
                   if (studentId) {
-                    router.push(`/student/${studentId}/settings/account`)
+                    router.push(`/${studentId}/settings/account`)
                   }
                 }}
               >
@@ -122,7 +122,7 @@ export function NavStudent({
               <DropdownMenuItem
                 onClick={() => {
                   if (studentId) {
-                    router.push(`/student/${studentId}/settings/billing`)
+                    router.push(`/${studentId}/settings/billing`)
                   }
                 }}
               >
@@ -132,7 +132,7 @@ export function NavStudent({
               <DropdownMenuItem
                 onClick={() => {
                   if (studentId) {
-                    router.push(`/student/${studentId}/settings/notifications`)
+                    router.push(`/${studentId}/settings/notifications`)
                   }
                 }}
               >

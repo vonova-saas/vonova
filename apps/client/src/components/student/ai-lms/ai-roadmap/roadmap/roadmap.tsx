@@ -474,7 +474,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
               <div
                 key={rm.id}
                 className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition group overflow-hidden cursor-pointer border border-border"
-                onClick={() => router.push(`/student/${studentId}/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`)}
+                onClick={() => router.push(`/${studentId}/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`)}
               >
                 {/* Delete button, only visible on hover */}
                 <button

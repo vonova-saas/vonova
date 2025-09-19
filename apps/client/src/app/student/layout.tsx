@@ -64,11 +64,11 @@ export default function DashboardLayout({ children }: Props) {
   const studentId = useStudentId();
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of the 'student' segment in the URL path
-  const studentIndex = segments.indexOf('student');
+  const studentIndex = segments.indexOf(`${studentId}`);
 
   // Get all segments after student ID for breadcrumbs
   const crumbSegments = studentIndex >= 0 && studentId
-    ? segments.slice(studentIndex + 2) // +2 to skip both 'student' and studentId
+    ? segments.slice(studentIndex + 1) // +1 to skip studentId
     : [];
 
   // Get the current segment map for breadcrumb labels
@@ -86,23 +86,23 @@ export default function DashboardLayout({ children }: Props) {
 
   // Dashboard sections for search
   const studentDashboardSections = [
-    { name: "Dashboard", url: "/student/:studentId" },
-    { name: "Courses", url: "/student/:studentId/courses" },
-    { name: "Material Library", url: "/student/:studentId/material-library" },
-    { name: "Quizzes", url: "/student/:studentId/quizzes" },
-    { name: "AI Video Generator", url: "/student/:studentId/ai-video-generator" },
-    { name: "AI Roadmap Generator", url: "/student/:studentId/ai-roadmap-generator" },
-    { name: "Problem Solving", url: "/student/:studentId/problem-solving" },
-    { name: "PDF Summary", url: "/student/:studentId/pdf-summary" },
-    { name: "AI Assistant", url: "/student/:studentId/ai-assistant" },
-    { name: "AI Voice", url: "/student/:studentId/ai-voice" },
-    { name: "Community", url: "/student/:studentId/community" },
-    { name: "Support", url: "/student/:studentId/support" },
-    { name: "Feedback", url: "/student/:studentId/feedback" },
-    { name: "Settings", url: "/student/:studentId/settings" },
-    { name: "Account", url: "/student/:studentId/account" },
-    { name: "Billing", url: "/student/:studentId/billing" },
-    { name: "Notifications", url: "/student/:studentId/notifications" },
+    { name: "Dashboard", url: "/:studentId" },
+    { name: "Courses", url: "/:studentId/courses" },
+    { name: "Material Library", url: "/:studentId/material-library" },
+    { name: "Quizzes", url: "/:studentId/quizzes" },
+    { name: "AI Video Generator", url: "/:studentId/ai-video-generator" },
+    { name: "AI Roadmap Generator", url: "/:studentId/ai-roadmap-generator" },
+    { name: "Problem Solving", url: "/:studentId/problem-solving" },
+    { name: "PDF Summary", url: "/:studentId/pdf-summary" },
+    { name: "AI Assistant", url: "/:studentId/ai-assistant" },
+    { name: "AI Voice", url: "/:studentId/ai-voice" },
+    { name: "Community", url: "/:studentId/community" },
+    { name: "Support", url: "/:studentId/support" },
+    { name: "Feedback", url: "/:studentId/feedback" },
+    { name: "Settings", url: "/:studentId/settings" },
+    { name: "Account", url: "/:studentId/account" },
+    { name: "Billing", url: "/:studentId/billing" },
+    { name: "Notifications", url: "/:studentId/notifications" },
   ];
 
   const [search, setSearch] = React.useState("");
@@ -143,7 +143,7 @@ export default function DashboardLayout({ children }: Props) {
                   {/* user root link - always visible */}
                   <BreadcrumbItem className="whitespace-nowrap">
                     <BreadcrumbLink
-                      href={studentId ? `/student/${studentId}` : '/student'}
+                      href={studentId ? `/${studentId}` : '/student'}
                       className="text-sm md:text-base"
                     >
                       Dashboard
@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: Props) {
 
                   {/* Dynamic breadcrumb segments */}
                   {crumbSegments.map((segment, index) => {
-                    const href = `/student/${studentId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                    const href = `/${studentId}/${crumbSegments.slice(0, index + 1).join('/')}`;
                     const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                     const isLast = index === crumbSegments.length - 1;
                     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint

@@ -82,7 +82,7 @@ export const BookHeader: FC<BookHeaderProps> = ({
       </Button>
       <Button variant="ghost" asChild>
         <Link
-          href={`/student/${studentId}/material-library/online-books`}
+          href={`/${studentId}/material-library/online-books`}
           aria-label="Back to books list"
         >
           <Home className="w-5 h-5 mr-2" />

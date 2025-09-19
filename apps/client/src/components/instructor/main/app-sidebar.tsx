@@ -28,7 +28,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href={instructorId ? `/instructor/${instructorId}` : "/instructor"}>
+              <a href={instructorId ? `/${instructorId}` : "/instructor"}>
                 <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src="/icons/icon.png"

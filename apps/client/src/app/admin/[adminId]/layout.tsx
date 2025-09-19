@@ -58,11 +58,11 @@ export default function DashboardLayout({ children }: Props) {
   const adminId = useAdminId();
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of the 'admin' segment in the URL path
-  const adminIndex = segments.indexOf('admin');
+  const adminIndex = segments.indexOf(`${adminId}`);
 
   // Get all segments after admin ID for breadcrumbs
   const crumbSegments = adminIndex >= 0 && adminId
-    ? segments.slice(adminIndex + 2) // +2 to skip both 'admin' and adminId
+    ? segments.slice(adminIndex + 1) // +1 to skip adminId
     : [];
 
   // Get the current segment map for breadcrumb labels
@@ -80,13 +80,13 @@ export default function DashboardLayout({ children }: Props) {
 
   // Dashboard sections for search
   const adminDashboardSections = [
-    { name: "System Overview", url: "/admin" },
-    { name: "Logging & Monitoring", url: "/admin/logging-monitoring" },
-    { name: "Security Logs", url: "/admin/security-logs" },
-    { name: "Performance Metrics", url: "/admin/performance-metrics" },
-    { name: "User Management", url: "/admin/user-management" },
-    { name: "Reports", url: "/admin/reports" },
-    { name: "Settings", url: "/admin/settings" },
+    { name: "System Overview", url: "/:adminId" },
+    { name: "Logging & Monitoring", url: "/:adminId/logging-monitoring" },
+    { name: "Security Logs", url: "/:adminId/security-logs" },
+    { name: "Performance Metrics", url: "/:adminId/performance-metrics" },
+    { name: "User Management", url: "/:adminId/user-management" },
+    { name: "Reports", url: "/:adminId/reports" },
+    { name: "Settings", url: "/:adminId/settings" },
   ];
 
   const [search, setSearch] = React.useState("");
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: Props) {
                   {/* user root link - always visible */}
                   <BreadcrumbItem className="whitespace-nowrap">
                     <BreadcrumbLink
-                      href={adminId ? `/admin/${adminId}` : '/admin'}
+                      href={adminId ? `/${adminId}` : '/admin'}
                       className="text-sm md:text-base"
                     >
                       Dashboard
@@ -136,7 +136,7 @@ export default function DashboardLayout({ children }: Props) {
 
                   {/* Dynamic breadcrumb segments */}
                   {crumbSegments.map((segment, index) => {
-                    const href = `/admin/${adminId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                    const href = `/${adminId}/${crumbSegments.slice(0, index + 1).join('/')}`;
                     const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                     const isLast = index === crumbSegments.length - 1;
                     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint

@@ -59,11 +59,11 @@ export default function InstructorDashboardLayout({ children }: Props) {
   const instructorId = useInstructorId();
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of the 'instructor' segment in the URL path
-  const instructorIndex = segments.indexOf('instructor');
+  const instructorIndex = segments.indexOf(`${instructorId}`);
 
   // Get all segments after instructor ID for breadcrumbs
   const crumbSegments = instructorIndex >= 0 && instructorId
-    ? segments.slice(instructorIndex + 2) // +2 to skip both 'instructor' and instructorId
+    ? segments.slice(instructorIndex + 1) // +1 to skip instructorId
     : [];
 
   // Get the current segment map for breadcrumb labels
@@ -81,19 +81,19 @@ export default function InstructorDashboardLayout({ children }: Props) {
 
   // Dashboard sections for search
   const instructorDashboardSections = [
-    { name: "Dashboard", url: "/instructor/:instructorId" },
-    { name: "Courses Management", url: "/instructor/:instructorId/courses-management" },
-    { name: "Material Library Management", url: "/instructor/:instructorId/material-library-management" },
-    { name: "Problem Solving Management", url: "/instructor/:instructorId/problem-solving-management" },
-    { name: "Presentation Builder", url: "/instructor/:instructorId/presentation-builder" },
-    { name: "Course Recorder", url: "/instructor/:instructorId/course-recorder" },
-    { name: "Community", url: "/instructor/:instructorId/community" },
-    { name: "Support", url: "/instructor/:instructorId/support" },
-    { name: "Feedback", url: "/instructor/:instructorId/feedback" },
-    { name: "Settings", url: "/instructor/:instructorId/settings" },
-    { name: "Account", url: "/instructor/:instructorId/account" },
-    { name: "Billing", url: "/instructor/:instructorId/billing" },
-    { name: "Notifications", url: "/instructor/:instructorId/notifications" },
+    { name: "Dashboard", url: "/:instructorId" },
+    { name: "Courses Management", url: "/:instructorId/courses-management" },
+    { name: "Material Library Management", url: "/:instructorId/material-library-management" },
+    { name: "Problem Solving Management", url: "/:instructorId/problem-solving-management" },
+    { name: "Presentation Builder", url: "/:instructorId/presentation-builder" },
+    { name: "Course Recorder", url: "/:instructorId/course-recorder" },
+    { name: "Community", url: "/:instructorId/community" },
+    { name: "Support", url: "/:instructorId/support" },
+    { name: "Feedback", url: "/:instructorId/feedback" },
+    { name: "Settings", url: "/:instructorId/settings" },
+    { name: "Account", url: "/:instructorId/account" },
+    { name: "Billing", url: "/:instructorId/billing" },
+    { name: "Notifications", url: "/:instructorId/notifications" },
   ];
 
   const [search, setSearch] = React.useState("");
@@ -134,7 +134,7 @@ export default function InstructorDashboardLayout({ children }: Props) {
                   {/* user root link - always visible */}
                   <BreadcrumbItem className="whitespace-nowrap">
                     <BreadcrumbLink
-                      href={instructorId ? `/instructor/${instructorId}` : '/instructor'}
+                      href={instructorId ? `/${instructorId}` : '/instructor'}
                       className="text-sm md:text-base"
                     >
                       Dashboard
@@ -143,7 +143,7 @@ export default function InstructorDashboardLayout({ children }: Props) {
 
                   {/* Dynamic breadcrumb segments */}
                   {crumbSegments.map((segment, index) => {
-                    const href = `/instructor/${instructorId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                    const href = `/${instructorId}/${crumbSegments.slice(0, index + 1).join('/')}`;
                     const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                     const isLast = index === crumbSegments.length - 1;
                     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint

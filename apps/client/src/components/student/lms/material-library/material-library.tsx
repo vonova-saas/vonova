@@ -23,7 +23,7 @@ export default function MaterialLibrary() {
       description:
         "Browse and read free computer science books directly in Vonova.",
       icon: Book,
-      link: `/student/${studentId}/material-library/online-books`,
+      link: `/${studentId}/material-library/online-books`,
       button: "Explore Books",
       completed: true, // For demo
     },
@@ -32,7 +32,7 @@ export default function MaterialLibrary() {
       description:
         "Quick visual guides and cheatsheets for fast learning.",
       icon: ImageIcon,
-      link: `/student/${studentId}/material-library/visual-guides`,
+      link: `/${studentId}/material-library/visual-guides`,
       button: "View Guides",
       badge: "New",
     },
@@ -41,7 +41,7 @@ export default function MaterialLibrary() {
       description:
         "Presentations created by instructors for your courses.",
       icon: Presentation,
-      link: `/student/${studentId}/material-library/presentation-material`,
+      link: `/${studentId}/material-library/presentation-material`,
       button: "See Presentations",
     },
   ];

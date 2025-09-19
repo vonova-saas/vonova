@@ -107,7 +107,7 @@ export default function PDFSummaryList({
   };
 
   const handleBackToMain = () => {
-    router.push(`/student/${studentId}/pdf-summary`);
+    router.push(`/${studentId}/pdf-summary`);
   };
 
   return (

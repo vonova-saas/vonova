@@ -146,7 +146,7 @@ export function BookCard({
         </p>
         <div className="flex gap-2 w-full mt-auto">
           <Button asChild className="w-1/2">
-            <Link href={`/student/${studentId}/material-library/online-books/${book.id}`}>
+            <Link href={`/${studentId}/material-library/online-books/${book.id}`}>
               Read Book
             </Link>
           </Button>

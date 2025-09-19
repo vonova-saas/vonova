@@ -23,62 +23,62 @@ export const sidebarNavData = {
   adminDeveloper: [
     {
       title: "System Overview",
-      url: "/admin/:adminId",
+      url: "/:adminId",
       icon: MonitorCog,
       isActive: true,
     },
     {
       title: "Logging & Monitoring",
-      url: "/admin/:adminId/logging-monitoring",
+      url: "/:adminId/logging-monitoring",
       icon: Combine
     },
     {
       title: "Security Logs",
-      url: "/admin/:adminId/security-logs",
+      url: "/:adminId/security-logs",
       icon: ShieldCheck
     },
     {
       title: "Performance Metrics",
-      url: "/admin/:adminId/performance-metrics",
+      url: "/:adminId/performance-metrics",
       icon: Gauge
     },
   ],
   adminWebsiteOperations: [
     {
       title: "User Management",
-      url: "/admin/:adminId/user-management",
+      url: "/:adminId/user-management",
       icon: User
     },
     {
       title: "Reports",
-      url: "/admin/:adminId/reports",
+      url: "/:adminId/reports",
       icon: BookOpen
     },
     {
       title: "Support Management",
-      url: "/admin/:adminId/support-management",
+      url: "/:adminId/support-management",
       icon: LifeBuoy
     },
     {
       title: "Feedback Management",
-      url: "/admin/:adminId/feedback-management",
+      url: "/:adminId/feedback-management",
       icon: Send
     },
   ],
   app: [
     {
       title: "Settings",
-      url: "/admin/:adminId/settings",
+      url: "/:adminId/settings",
       icon: Settings2,
     },
     {
       title: "Account",
-      url: "/admin/:adminId/settings/account",
+      url: "/:adminId/settings/account",
       icon: User,
     },
     {
       title: "Notifications",
-      url: "/admin/:adminId/settings/notifications",
+      url: "/:adminId/settings/notifications",
       icon: Bell,
     },
   ],

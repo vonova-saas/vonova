@@ -112,7 +112,7 @@ export const GeneratorControls = (props: Props) => {
 
     // Redirect if roadmapId changes
     if (roadmapId) {
-      router.push(`/student/${studentId}/ai-roadmap-generator/${roadmapId}`);
+      router.push(`/${studentId}/ai-roadmap-generator/${roadmapId}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, dbRoadmapId, roadmapId, setModelApiKey, router]);
@@ -176,7 +176,7 @@ export const GeneratorControls = (props: Props) => {
               setRecentRoadmaps(getRecentRoadmaps());
               // Add a short delay before redirecting to ensure localStorage is updated
               setTimeout(() => {
-                router.push(`/student/${studentId}/ai-roadmap-generator/${id}`);
+                router.push(`/${studentId}/ai-roadmap-generator/${id}`);
               }, 100);
             }
           },
