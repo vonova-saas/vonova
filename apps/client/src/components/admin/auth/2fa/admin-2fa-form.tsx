@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import useAdminId from "@/hooks/admin/use-admin-id";
 
 export function Admin2FAForm({
   className,
@@ -18,6 +19,7 @@ export function Admin2FAForm({
   const [resendTime, setResendTime] = useState(30);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
+  const adminId = useAdminId();
 
   // Auto-submit when all fields are filled
   useEffect(() => {
@@ -88,7 +90,7 @@ export function Admin2FAForm({
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
-      router.push('/admin');
+      router.push(`/admin/${adminId}`);
     }, 1000);
   };
 

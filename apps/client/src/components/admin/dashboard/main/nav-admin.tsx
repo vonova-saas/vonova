@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  BadgeCheck,
+  User,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   Loader,
   LogOut,
-  Sparkles,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -102,13 +100,6 @@ export function NavAdmin({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={() => {
                   if (adminId) {
@@ -116,18 +107,8 @@ export function NavAdmin({
                   }
                 }}
               >
-                <BadgeCheck />
+                <User />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (adminId) {
-                    router.push(`/admin/${adminId}/settings/billing`)
-                  }
-                }}
-              >
-                <CreditCard />
-                Billing
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

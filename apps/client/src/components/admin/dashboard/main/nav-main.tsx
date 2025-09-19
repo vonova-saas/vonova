@@ -19,10 +19,11 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import useStudentId from "@/hooks/student/use-student-id";
+import useAdminId from "@/hooks/admin/use-admin-id";
 
 export function NavMain({
   items,
+  groupTitle,
 }: {
   items: {
     title: string;
@@ -34,26 +35,27 @@ export function NavMain({
       url: string;
     }[];
   }[];
+  groupTitle: string;
 }) {
   const pathname = usePathname();
-  const studentId = useStudentId();
+  const adminId = useAdminId();
 
-  // Function to add studentId to URL if it exists
+  // Function to add adminId to URL if it exists
   const getUrl = (url: string) => {
-    return url.replace(":studentId", studentId);
+    return url.replace(":adminId", adminId);
   };
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        Portfolio
+        {groupTitle}
       </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
-          const isActive = (studentId && pathname === getUrl(item.url));
+          const isActive = (adminId && pathname === getUrl(item.url));
 
           return item.items && item.items.length > 0 ? (
             <Collapsible

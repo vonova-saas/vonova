@@ -1,4 +1,4 @@
-import { generateMetadata } from "@/utils/functions/metadata";
+import { generateMetadata } from "@/utils/functions";
 import "../style/globals.css";
 import { cn } from "@/lib/utils";
 import { lato, cairo } from "@/utils/constants";

@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { LocalStorage } from "@/utils/functions";
 import { getDisplayRoadmapId } from '@/lib/utils';
 import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions';
+import useStudentId from "@/hooks/student/use-student-id";
 
 export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
@@ -42,6 +43,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isGeneratingTimer, setIsGeneratingTimer] = useState(false);
   const TIMER_MAX = 50; // or 20 for 20 seconds
+  const studentId = useStudentId();
 
   // Helper to load recent roadmaps from localStorage
   const loadRecentRoadmaps = () => {
@@ -472,7 +474,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
               <div
                 key={rm.id}
                 className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition group overflow-hidden cursor-pointer border border-border"
-                onClick={() => router.push(`/dashboard/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`)}
+                onClick={() => router.push(`/student/${studentId}/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`)}
               >
                 {/* Delete button, only visible on hover */}
                 <button

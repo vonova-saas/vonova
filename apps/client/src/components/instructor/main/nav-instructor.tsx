@@ -1,10 +1,9 @@
 "use client";
 
 import {
-  BadgeCheck,
+  User,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   Loader,
   LogOut,
   Sparkles,
@@ -116,18 +115,8 @@ export function NavInstructor({
                   }
                 }}
               >
-                <BadgeCheck />
+                <User />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (instructorId) {
-                    router.push(`/instructor/${instructorId}/settings/billing`)
-                  }
-                }}
-              >
-                <CreditCard />
-                Billing
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

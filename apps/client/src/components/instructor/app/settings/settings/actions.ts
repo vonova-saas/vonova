@@ -34,6 +34,7 @@ type UpdateAppearanceResult =
   | { status: 'error', message: string }
 
 export async function updateAppearance(data: AppearanceFormValues): Promise<UpdateAppearanceResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validatedData = appearanceFormSchema.parse(data)
 
   try {

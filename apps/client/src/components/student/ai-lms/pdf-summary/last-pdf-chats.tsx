@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, MessageSquare, Clock, ArrowRight } from "lucide-react";
 import { mockPDFFiles, mockMessages } from "./fake-data";
+import useStudentId from "@/hooks/student/use-student-id";
 
 interface LastPDFChatsProps {
   onChat: (pdfId: string) => void;
 }
 
 export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
+  const studentId = useStudentId();
+
   // Get PDFs that have been accessed recently (have lastAccessed date)
   const recentPDFs = mockPDFFiles
     .filter((pdf) => pdf.lastAccessed)
@@ -46,7 +49,7 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
   };
 
   const handleViewAll = () => {
-    window.location.href = "/dashboard/pdf-summary/last-pdf-chats";
+    window.location.href = `/student/${studentId}/pdf-summary/last-pdf-chats`;
   };
 
   if (recentPDFs.length === 0) {

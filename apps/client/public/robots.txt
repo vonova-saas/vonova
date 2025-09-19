@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://vonova.tech
+
+# Sitemaps
+Sitemap: https://vonova.tech/sitemap.xml

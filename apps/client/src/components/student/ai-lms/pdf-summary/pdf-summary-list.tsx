@@ -25,9 +25,11 @@ import {
 import { PDFFile } from "./types";
 import { mockPDFFiles } from "./fake-data";
 import PDFSummaryCard from "./pdf-summary-card";
+import useStudentId from "@/hooks/student/use-student-id";
 
 interface PDFSummaryListProps {
   pdfs?: PDFFile[];
+  studentId?: () => typeof useStudentId;
   onChat?: (pdfId: string) => void;
   onDelete?: (pdfId: string) => void;
   onDownload?: (pdfId: string) => void;
@@ -37,8 +39,9 @@ interface PDFSummaryListProps {
 
 export default function PDFSummaryList({
   pdfs = mockPDFFiles,
+  studentId,
   onChat = (pdfId: string) => {
-    window.location.href = `/dashboard/pdf-summary/${pdfId}`;
+    window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
   },
   onDelete = (pdfId: string) => {
     console.log("Delete PDF:", pdfId);
@@ -50,7 +53,7 @@ export default function PDFSummaryList({
     console.log("Rename PDF:", pdfId, "to", newName);
   },
   onUpload = () => {
-    window.location.href = "/dashboard/pdf-summary";
+    window.location.href = `/student/${studentId}/pdf-summary`;
   },
 }: PDFSummaryListProps) {
   const [search, setSearch] = useState("");
@@ -104,7 +107,7 @@ export default function PDFSummaryList({
   };
 
   const handleBackToMain = () => {
-    router.push("/dashboard/pdf-summary");
+    router.push(`/student/${studentId}/pdf-summary`);
   };
 
   return (

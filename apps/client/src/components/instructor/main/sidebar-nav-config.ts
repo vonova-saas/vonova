@@ -7,9 +7,9 @@ import {
   User,
   LifeBuoy,
   Send,
-  Bell,
-  Wallet,
   Presentation,
+  Video,
+  Frame
 } from "lucide-react";
 
 export const sidebarNavData = {
@@ -39,15 +39,27 @@ export const sidebarNavData = {
       icon: BookOpen,
     },
     {
+      title: "Problem Solving Management",
+      url: "/instructor/:instructorId/problem-solving-management",
+      icon: BrainCog,
+    },
+    {
+      title: "Community",
+      url: "/instructor/:instructorId/community",
+      icon: Frame,
+    },
+  ],
+  lmsTools: [
+    {
       title: "Presentation Builder",
       url: "/instructor/:instructorId/presentation-builder",
       icon: Presentation,
     },
     {
-      title: "Problem Solving Management",
-      url: "/instructor/:instructorId/problem-solving-management",
-      icon: BrainCog,
-    },
+      title: "Course Recorder",
+      url: "/instructor/:instructorId/course-recorder",
+      icon: Video,
+    }
   ],
   app: [
     {
@@ -59,16 +71,6 @@ export const sidebarNavData = {
       title: "Account",
       url: "/instructor/:instructorId/settings/account",
       icon: User,
-    },
-    {
-      title: "Billing",
-      url: "/instructor/:instructorId/settings/billing",
-      icon: Wallet,
-    },
-    {
-      title: "Notifications",
-      url: "/instructor/:instructorId/settings/notifications",
-      icon: Bell,
     },
     {
       title: "Support",

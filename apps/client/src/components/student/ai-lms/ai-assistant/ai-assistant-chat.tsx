@@ -38,6 +38,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import useStudentId from '@/hooks/student/use-student-id';
 
 interface Message {
   id: string;
@@ -77,6 +78,7 @@ const fakeResponses = [
 ];
 
 const AIAssistantChat = () => {
+  const studentId = useStudentId();
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState<string>('');
   const [model, setModel] = useState<string>(models[0].id);
@@ -294,7 +296,7 @@ const AIAssistantChat = () => {
               <AIInputButton
                 disabled={isTyping}
                 className="hover:bg-accent/50"
-                onClick={() => router.push('/dashboard/ai-assistant/voice')}
+                onClick={() => router.push(`/student/${studentId}/ai-assistant/voice`)}
               >
                 <MicIcon size={16} />
               </AIInputButton>

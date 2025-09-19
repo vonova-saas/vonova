@@ -9,12 +9,10 @@ import {
   Settings2,
   SquareTerminal,
   TvMinimalPlay,
-  User,
   Zap,
   LifeBuoy,
   Send,
-  Bell,
-  Wallet,
+  User,
 } from "lucide-react";
 
 export const sidebarNavData = {
@@ -53,8 +51,6 @@ export const sidebarNavData = {
       url: "/student/:studentId/community",
       icon: Frame,
     },
-  ],
-  ailms: [
     {
       title: "PDF Summary",
       url: "/student/:studentId/pdf-summary",
@@ -91,16 +87,6 @@ export const sidebarNavData = {
       title: "Account",
       url: "/student/:studentId/settings/account",
       icon: User,
-    },
-    {
-      title: "Billing",
-      url: "/student/:studentId/settings/billing",
-      icon: Wallet,
-    },
-    {
-      title: "Notifications",
-      url: "/student/:studentId/settings/notifications",
-      icon: Bell,
     },
     {
       title: "Support",

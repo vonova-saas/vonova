@@ -34,6 +34,7 @@ type UpdateNotificationsResult =
 
 export async function updateNotifications(data: NotificationsFormValues): Promise<UpdateNotificationsResult> {
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validatedData = notificationsFormSchema.parse(data)
 
   try {

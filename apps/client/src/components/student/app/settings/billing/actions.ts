@@ -39,6 +39,7 @@ type UpdateBillingResult =
 export async function updateBilling(
   data: BillingFormValues
 ): Promise<UpdateBillingResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validatedData = billingFormSchema.parse(data)
 
   try {

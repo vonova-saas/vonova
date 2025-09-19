@@ -14,6 +14,7 @@ import {
   getRecentRoadmaps,
 } from "@/utils/functions";
 import { motion, AnimatePresence } from "framer-motion";
+import useStudentId from "@/hooks/student/use-student-id";
 
 enum Visibility {
   PUBLIC = "public",
@@ -40,6 +41,7 @@ const isRoadmapGeneratedByUser = async (_dbRoadmapId: string) => ({
 });
 
 export const GeneratorControls = (props: Props) => {
+  const studentId = useStudentId();
   const {
     title,
     mutate,
@@ -110,8 +112,9 @@ export const GeneratorControls = (props: Props) => {
 
     // Redirect if roadmapId changes
     if (roadmapId) {
-      router.push(`/dashboard/ai-roadmap-generator/${roadmapId}`);
+      router.push(`/student/${studentId}/ai-roadmap-generator/${roadmapId}`);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, dbRoadmapId, roadmapId, setModelApiKey, router]);
 
   const onSubmit = async (
@@ -173,7 +176,7 @@ export const GeneratorControls = (props: Props) => {
               setRecentRoadmaps(getRecentRoadmaps());
               // Add a short delay before redirecting to ensure localStorage is updated
               setTimeout(() => {
-                router.push(`/dashboard/ai-roadmap-generator/${id}`);
+                router.push(`/student/${studentId}/ai-roadmap-generator/${id}`);
               }, 100);
             }
           },

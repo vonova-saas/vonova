@@ -22,6 +22,7 @@ import { FontSize, LineHeight } from "./types";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import Image from "next/image";
+import useStudentId from "@/hooks/student/use-student-id";
 
 function useDebouncedValue<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -47,6 +48,7 @@ export default function BookViewer() {
   const matchCountRef = useRef(0);
   const [showHighlightBtn, setShowHighlightBtn] = useState(false);
   const [selectionText, setSelectionText] = useState("");
+  const studentId = useStudentId();
 
   // Font size controls
   const decreaseFont = () => setFontSize((prev) =>
@@ -411,7 +413,7 @@ export default function BookViewer() {
           className="flex items-center gap-2 text-sm text-muted-foreground px-4 pt-4 pb-2"
           aria-label="Breadcrumb"
         >
-          <span className="hover:underline cursor-pointer" onClick={() => router.push('/dashboard/material-library/online-books')}>{gitBook.title}</span>
+          <span className="hover:underline cursor-pointer" onClick={() => router.push(`/student/${studentId}/material-library/online-books`)}>{gitBook.title}</span>
           <span className="mx-1">/</span>
           <span className="font-semibold text-primary">
             {currentChapter?.title}

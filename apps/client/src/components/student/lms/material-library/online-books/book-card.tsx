@@ -12,6 +12,7 @@ import { DialogTrigger } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCardProps } from "./types";
+import useStudentId from "@/hooks/student/use-student-id";
 
 export function BookCard({
   book,
@@ -19,6 +20,7 @@ export function BookCard({
   favorites,
   toggleFavorite,
 }: BookCardProps) {
+  const studentId = useStudentId();
   return (
     <Card className="flex flex-col min-h-[480px] max-h-[540px] h-full group relative justify-between">
       {/* Favorite/Bookmark Button */}
@@ -144,7 +146,7 @@ export function BookCard({
         </p>
         <div className="flex gap-2 w-full mt-auto">
           <Button asChild className="w-1/2">
-            <Link href={`/dashboard/material-library/online-books/${book.id}`}>
+            <Link href={`/student/${studentId}/material-library/online-books/${book.id}`}>
               Read Book
             </Link>
           </Button>

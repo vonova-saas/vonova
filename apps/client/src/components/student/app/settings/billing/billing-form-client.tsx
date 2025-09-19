@@ -7,7 +7,7 @@ import { updateBilling } from './actions'
 import { type BillingFormValues, billingFormSchema } from './schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { CreditCard, Loader2 } from 'lucide-react'
+import { CreditCard } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Image from 'next/image'
 // import { Icons } from '@/components/icons'
 
 interface BillingFormClientProps {
@@ -100,39 +101,39 @@ export function BillingFormClient({ defaultValues }: BillingFormClientProps) {
               render={({ field: { onChange, value, ...field } }) => {
                 const getCardType = (cardNumber: string): string => {
                   const num = cardNumber.replace(/\D/g, '')
-                  
+
                   if (/^4/.test(num)) return 'visa'
                   if (/^5[1-5]/.test(num)) return 'mastercard'
                   if (/^3[47]/.test(num)) return 'amex'
                   if (/^6(?:011|5)/.test(num)) return 'discover'
-                  
+
                   return ''
                 }
-                
+
                 const formatCardNumber = (value: string) => {
                   const numbers = value.replace(/\D/g, '')
                   return numbers.replace(/(\d{4})(?=\d)/g, '$1 ')
                 }
-                
+
                 const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                   const formattedValue = formatCardNumber(e.target.value)
                   onChange(formattedValue)
                 }
-                
+
                 const cardType = getCardType(value || '')
-                
+
                 const getCardIcon = () => {
                   if (!cardType) return <CreditCard className='h-5 w-5 text-muted-foreground' />
-                  
+
                   return (
-                    <img
+                    <Image
                       src={`/icons/cards/${cardType}.svg`}
                       alt={cardType}
                       className='h-5 w-8 object-contain'
                     />
                   )
                 }
-                
+
                 return (
                   <FormItem>
                     <FormLabel>Card Number</FormLabel>

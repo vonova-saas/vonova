@@ -58,6 +58,7 @@ import { PDFFile, PDFMessage, UploadProgress } from "./types";
 import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
+import useStudentId from "@/hooks/student/use-student-id";
 
 interface PDFSummaryChatProps {
   initialPDF?: PDFFile | null;
@@ -98,6 +99,7 @@ const PDFSummaryChat = ({
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const studentId = useStudentId();
 
   const generateFakeResponse = () => {
     const responseIndex = Math.floor(Math.random() * fakeResponses.length);
@@ -157,7 +159,7 @@ const PDFSummaryChat = ({
       }
     } else {
       // Navigate to individual chat page
-      window.location.href = `/dashboard/pdf-summary/${pdfId}`;
+      window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
     }
   };
 
@@ -175,7 +177,7 @@ const PDFSummaryChat = ({
 
   const handleBackToFiles = () => {
     if (isIndividualChat) {
-      window.location.href = "/dashboard/pdf-summary";
+      window.location.href = `/student/${studentId}/pdf-summary`;
     }
   };
 
@@ -203,6 +205,7 @@ const PDFSummaryChat = ({
     if (pdfFiles.length > 0) {
       handleFileUpload(pdfFiles);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { getRootProps, getInputProps, isDragReject } = useDropzone({
@@ -276,7 +279,7 @@ const PDFSummaryChat = ({
               setShowUploadModal(false);
               setUploadProgress([]);
               // Navigate to the new PDF chat page
-              window.location.href = `/dashboard/pdf-summary/${fileId}`;
+              window.location.href = `/student/${studentId}/pdf-summary/${fileId}`;
             }, 2000);
           }, 2000);
         } else {

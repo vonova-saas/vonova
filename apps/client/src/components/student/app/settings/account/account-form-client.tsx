@@ -39,6 +39,7 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
     defaultValues,
   })
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fields, append } = useFieldArray({
     name: 'urls',
     control: form.control,

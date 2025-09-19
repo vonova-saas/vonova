@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BadgeCheck,
+  User,
   Bell,
   ChevronsUpDown,
   CreditCard,
@@ -116,7 +116,7 @@ export function NavStudent({
                   }
                 }}
               >
-                <BadgeCheck />
+                <User />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem

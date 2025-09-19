@@ -11,6 +11,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookTOCProps } from "./types";
 import { FC, ReactNode } from "react";
+import useStudentId from "@/hooks/student/use-student-id";
 
 interface BookHeaderProps {
   isTocOpen: boolean;
@@ -30,8 +31,11 @@ export const BookHeader: FC<BookHeaderProps> = ({
   toggleBookmark,
   stats,
   TableOfContents,
-}) => (
-  <header className="flex items-center justify-between p-4 bg-background border-b z-10">
+}) => {
+  const studentId = useStudentId();
+
+  return (
+    <header className="flex items-center justify-between p-4 bg-background border-b z-10">
     <div className="flex items-center gap-4">
       {/* Mobile TOC Trigger */}
       <Sheet open={isTocOpen} onOpenChange={setIsTocOpen}>
@@ -78,7 +82,7 @@ export const BookHeader: FC<BookHeaderProps> = ({
       </Button>
       <Button variant="ghost" asChild>
         <Link
-          href="/dashboard/material-library/online-books"
+          href={`/student/${studentId}/material-library/online-books`}
           aria-label="Back to books list"
         >
           <Home className="w-5 h-5 mr-2" />
@@ -88,3 +92,4 @@ export const BookHeader: FC<BookHeaderProps> = ({
     </div>
   </header>
 );
+};

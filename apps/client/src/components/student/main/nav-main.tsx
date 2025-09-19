@@ -46,7 +46,7 @@ export function NavMain({
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        Portfolio
+        LMS
       </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {

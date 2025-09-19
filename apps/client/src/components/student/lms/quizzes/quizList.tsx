@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { QuizType } from "./types";
 import React from "react";
 import Link from "next/link";
+import useStudentId from "@/hooks/student/use-student-id";
 
 type QuizListProps = {
   quizzes: QuizType[];
 };
 
 export default function QuizList({ quizzes }: QuizListProps) {
+  const studentId = useStudentId();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
       {quizzes.length === 0 ? (
@@ -35,7 +37,7 @@ export default function QuizList({ quizzes }: QuizListProps) {
                 {quiz.description}
               </p>
               <Link
-                href={`/dashboard/quizzes/${quiz.id}`}
+                href={`/student/${studentId}/quizzes/${quiz.id}`}
                 className="w-full mt-4"
               >
                 <Button className="w-full cursor-pointer">Attempt Now</Button>

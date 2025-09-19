@@ -9,7 +9,6 @@ import {
   Settings2,
   ShieldCheck,
   User,
-  Wallet,
 } from "lucide-react";
 
 export const sidebarNavData = {
@@ -76,11 +75,6 @@ export const sidebarNavData = {
       title: "Account",
       url: "/admin/:adminId/settings/account",
       icon: User,
-    },
-    {
-      title: "Billing",
-      url: "/admin/:adminId/settings/billing",
-      icon: Wallet,
     },
     {
       title: "Notifications",

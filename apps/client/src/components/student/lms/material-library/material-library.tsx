@@ -1,46 +1,51 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Book, ImageIcon, Presentation, Library, CheckCircle2, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from "@/components/ui/dialog";
-
-const fakeUser = {
-  name: "Badawi",
-  exploredSections: 1, // For demo
-  totalSections: 3,
-};
-
-const sections = [
-  {
-    title: "Online Books",
-    description:
-      "Browse and read free computer science books directly in Vonova.",
-    icon: Book,
-    link: "/dashboard/material-library/online-books",
-    button: "Explore Books",
-    completed: true, // For demo
-  },
-  {
-    title: "Visual Guides",
-    description:
-      "Quick visual guides and cheatsheets for fast learning.",
-    icon: ImageIcon,
-    link: "/dashboard/material-library/visual-guides",
-    button: "View Guides",
-    badge: "New",
-  },
-  {
-    title: "Presentation Material",
-    description:
-      "Presentations created by instructors for your courses.",
-    icon: Presentation,
-    link: "/dashboard/material-library/presentation-material",
-    button: "See Presentations",
-  },
-];
+import useStudentId from "@/hooks/student/use-student-id";
 
 export default function MaterialLibrary() {
+  const studentId = useStudentId();
+
+  const fakeUser = {
+    name: "Badawi",
+    exploredSections: 1, // For demo
+    totalSections: 3,
+  };
+
+  const sections = [
+    {
+      title: "Online Books",
+      description:
+        "Browse and read free computer science books directly in Vonova.",
+      icon: Book,
+      link: `/student/${studentId}/material-library/online-books`,
+      button: "Explore Books",
+      completed: true, // For demo
+    },
+    {
+      title: "Visual Guides",
+      description:
+        "Quick visual guides and cheatsheets for fast learning.",
+      icon: ImageIcon,
+      link: `/student/${studentId}/material-library/visual-guides`,
+      button: "View Guides",
+      badge: "New",
+    },
+    {
+      title: "Presentation Material",
+      description:
+        "Presentations created by instructors for your courses.",
+      icon: Presentation,
+      link: `/student/${studentId}/material-library/presentation-material`,
+      button: "See Presentations",
+    },
+  ];
+
   // Fake stats for summary card
   const totalSections = sections.length;
   const totalMaterials = 24; // Example fake stat
@@ -60,7 +65,7 @@ export default function MaterialLibrary() {
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <h1 className="text-4xl font-bold leading-tight" tabIndex={0} aria-label="Material Library">Material Library</h1>
-        <Library className="w-7 h-7 text-primary animate-pulse" aria-hidden="true" focusable="false"/>
+        <Library className="w-7 h-7 text-primary animate-pulse" aria-hidden="true" focusable="false" />
       </div>
       {/* Summary Card with Help Button */}
       <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm relative">
@@ -107,7 +112,7 @@ export default function MaterialLibrary() {
           {/* Icon and Main Stat */}
           <div className="flex items-center gap-4">
             <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-              <Library className="w-8 h-8" aria-hidden="true" focusable="false"/>
+              <Library className="w-8 h-8" aria-hidden="true" focusable="false" />
             </div>
             <div className="min-w-[220px] md:min-w-[300px] w-full">
               {/* Personalized Greeting */}

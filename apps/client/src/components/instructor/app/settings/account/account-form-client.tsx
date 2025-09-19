@@ -39,7 +39,7 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
     defaultValues,
   })
 
-  const { fields, append } = useFieldArray({
+  const { fields } = useFieldArray({
     name: 'urls',
     control: form.control,
   })

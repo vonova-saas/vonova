@@ -36,6 +36,7 @@ type UpdateAccountResult =
 
 export async function updateAccount(data: AccountFormValues): Promise<UpdateAccountResult> {
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validatedData = accountFormSchema.parse(data)
 
   try {
