@@ -55,13 +55,13 @@ export function createGatewayRouter() {
     })
   );
 
-  // Proxy Quiz endpoints
+  // Proxy LMS endpoints
   router.all(
-    '/api/v1/quiz/*',
+    '/api/v1/lms/*',
     asyncHandler(async (req, res, next) => {
-      const serviceName = 'quiz';
+      const serviceName = 'lms';
       const subPath = req.params[0] || '';
-      const targetPath = 'quiz/' + subPath;
+      const targetPath = 'lms/' + subPath;
       const service = config.services[serviceName as keyof typeof config.services];
       if (!service) {
         throw new NotFoundException(`Service '${serviceName}' is not available`);

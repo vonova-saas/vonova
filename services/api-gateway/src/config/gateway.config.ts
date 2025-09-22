@@ -26,10 +26,10 @@ export const config = {
       timeout: 5000
     } as ServiceConfig,
 
-    quiz: {
-      name: 'quiz',
-      url: Env.QUIZ_SERVICE_URL,
-      healthCheck: '/quiz/health',
+    lms: {
+      name: 'lms',
+      url: Env.LMS_SERVICE_URL,
+      healthCheck: '/lms/health',
       timeout: 5000
     } as ServiceConfig,
   },
@@ -67,33 +67,33 @@ export const config = {
       target: '/*'
     },
     {
-      path: '/api/v1/quiz/*',
+      path: '/api/v1/lms/*',
       method: 'GET',
-      service: 'quiz',
+      service: 'lms',
       target: '/*'
     },
     {
-      path: '/api/v1/quiz/*',
+      path: '/api/v1/lms/*',
       method: 'POST',
-      service: 'quiz',
+      service: 'lms',
       target: '/*'
     },
     {
-      path: '/api/v1/quiz/*',
+      path: '/api/v1/lms/*',
       method: 'PUT',
-      service: 'quiz',
+      service: 'lms',
       target: '/*'
     },
     {
-      path: '/api/v1/quiz/*',
+      path: '/api/v1/lms/*',
       method: 'PATCH',
-      service: 'quiz',
+      service: 'lms',
       target: '/*'
     },
     {
-      path: '/api/v1/quiz/*',
+      path: '/api/v1/lms/*',
       method: 'DELETE',
-      service: 'quiz',
+      service: 'lms',
       target: '/*'
     },
   ] as RouteConfig[],

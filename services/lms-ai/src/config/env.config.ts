@@ -27,6 +27,12 @@ const envConfig = () => ({
   MONGO_URI_VIDEO_GEN: getEnv("MONGO_URI_VIDEO_GEN", "mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/VIDEO_GEN"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
+  // Signed Auth Context from API Gateway
+  LMS_SIGNING_SECRET: getEnv("LMS_SIGNING_SECRET"),
+  TRUST_SIGNED_CONTEXT: getEnv("TRUST_SIGNED_CONTEXT"),
+  SIGNED_CONTEXT_SKEW_SECONDS: parseInt(getEnv("SIGNED_CONTEXT_SKEW_SECONDS")),
+  INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
+
   //! Security Layer
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: getEnv("RATE_LIMIT_WINDOW_MS", "900000"), // 15 minutes
@@ -64,7 +70,7 @@ const envConfig = () => ({
   EMAIL_PASSWORD: getEnv("EMAIL_PASSWORD", "jaxy whio zpia tjsz"),
   EMAIL_USER: getEnv("EMAIL_USER", "vonovacompany@gmail.com"),
   EMAIL_FROM: getEnv("EMAIL_FROM", "vonovacompany@gmail.com"),
-  
+
   // PDF Summary Notifications
   PDF_SUMMARY_ENABLE_EMAIL_NOTIFICATIONS: getEnv("PDF_SUMMARY_ENABLE_EMAIL_NOTIFICATIONS", "false") === "true",
   PDF_SUMMARY_EMAIL_TEMPLATE_PATH: getEnv("PDF_SUMMARY_EMAIL_TEMPLATE_PATH", "templates/pdf-summary"),
@@ -73,41 +79,41 @@ const envConfig = () => ({
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL", "none"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN", "none"),
-  
+
   // ============ Logging Configuration ============
   // Log levels and output
   LOG_LEVEL: getEnv("LOG_LEVEL", "info"),
   ENABLE_CONSOLE_LOGGING: getEnv("ENABLE_CONSOLE_LOGGING", "true") === "true",
   ENABLE_FILE_LOGGING: getEnv("ENABLE_FILE_LOGGING", "true") === "true",
-  
+
   // File logging settings
   LOG_DIRECTORY: getEnv("LOG_DIRECTORY", "logs"),
   MAX_LOG_FILE_SIZE: parseInt(getEnv("MAX_LOG_FILE_SIZE", "5242880")), // 5MB default
   MAX_LOG_FILES: parseInt(getEnv("MAX_LOG_FILES", "5")),
-  
+
   // Performance logging
   ENABLE_PERFORMANCE_LOGGING: getEnv("ENABLE_PERFORMANCE_LOGGING", "true") === "true",
   PERFORMANCE_THRESHOLD: parseInt(getEnv("PERFORMANCE_THRESHOLD", "1000")), // 1 second
-  
+
   // Security logging
   ENABLE_SECURITY_LOGGING: getEnv("ENABLE_SECURITY_LOGGING", "true") === "true",
   LOG_SENSITIVE_DATA: getEnv("LOG_SENSITIVE_DATA", "false") === "true",
-  
+
   // AI service logging
   ENABLE_AI_SERVICE_LOGGING: getEnv("ENABLE_AI_SERVICE_LOGGING", "true") === "true",
   LOG_AI_REQUESTS: getEnv("LOG_AI_REQUESTS", "true") === "true",
   LOG_AI_RESPONSES: getEnv("LOG_AI_RESPONSES", "false") === "true",
-  
+
   // Database logging
   ENABLE_DATABASE_LOGGING: getEnv("ENABLE_DATABASE_LOGGING", "true") === "true",
   LOG_DATABASE_QUERIES: getEnv("LOG_DATABASE_QUERIES", "false") === "true",
   LOG_QUERY_TIME: getEnv("LOG_QUERY_TIME", "true") === "true",
-  
+
   // User tracking
   ENABLE_USER_TRACKING: getEnv("ENABLE_USER_TRACKING", "true") === "true",
   LOG_USER_ACTIONS: getEnv("LOG_USER_ACTIONS", "true") === "true",
   LOG_USER_PROGRESS: getEnv("LOG_USER_PROGRESS", "true") === "true",
-  
+
   // PDF Summary Service Configuration
   PDF_SUMMARY_MAX_FILE_SIZE: parseInt(getEnv("PDF_SUMMARY_MAX_FILE_SIZE", "10485760")), // 10MB default
   PDF_SUMMARY_ALLOWED_TYPES: getEnv("PDF_SUMMARY_ALLOWED_TYPES", "application/pdf"),
@@ -118,13 +124,13 @@ const envConfig = () => ({
   PDF_SUMMARY_AI_MODEL: getEnv("PDF_SUMMARY_AI_MODEL", "gpt-4"),
   PDF_SUMMARY_AI_TEMPERATURE: parseFloat(getEnv("PDF_SUMMARY_AI_TEMPERATURE", "0.7")),
   PDF_SUMMARY_AI_MAX_TOKENS: parseInt(getEnv("PDF_SUMMARY_AI_MAX_TOKENS", "4000")),
-  
+
   // PDF Summary User Limits
   PDF_SUMMARY_USER_DAILY_LIMIT: parseInt(getEnv("PDF_SUMMARY_USER_DAILY_LIMIT", "10")),
   PDF_SUMMARY_USER_MONTHLY_LIMIT: parseInt(getEnv("PDF_SUMMARY_USER_MONTHLY_LIMIT", "100")),
   PDF_SUMMARY_CHAT_DAILY_LIMIT: parseInt(getEnv("PDF_SUMMARY_CHAT_DAILY_LIMIT", "50")),
   PDF_SUMMARY_CHAT_MONTHLY_LIMIT: parseInt(getEnv("PDF_SUMMARY_CHAT_MONTHLY_LIMIT", "500")),
-  
+
   // Error logging
   ENABLE_ERROR_LOGGING: getEnv("ENABLE_ERROR_LOGGING", "true") === "true",
   LOG_ERROR_STACK: getEnv("LOG_ERROR_STACK", "true") === "true",

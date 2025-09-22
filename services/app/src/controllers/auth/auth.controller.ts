@@ -14,9 +14,8 @@ import {
   resetPasswordService,
   logoutService,
   logoutAllDevicesService,
-  getUserPermissionsService,
-  verifyTokenService,
   validateRoleChangeService,
+  verifyAndPermissionsService,
 } from "../../services/auth/auth.service";
 import { UnauthorizedException } from "../../utils/appError";
 
@@ -356,7 +355,7 @@ export const logOutAllDevicesController = asyncHandler(
 export const validateRoleChangeController = asyncHandler(
   async (req: Request, res: Response) => {
     const result = await validateRoleChangeService(req.body);
-    
+
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
       data: result.data,
@@ -365,22 +364,14 @@ export const validateRoleChangeController = asyncHandler(
 );
 
 // ============== Utility Controllers for Inter-Service Communication ==============
-export const getUserPermissionsController = asyncHandler(
+export const verifyAndPermissionsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    const result = await getUserPermissionsService(userId);
+    const accessToken = req.cookies?.accessToken;
+    if (!accessToken) {
+      throw new UnauthorizedException("Missing or invalid access token");
+    }
 
-    return res.status(HTTPSTATUS.OK).json({
-      message: "User permissions retrieved successfully",
-      data: result,
-    });
-  }
-);
-
-export const verifyTokenController = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { token } = req.body;
-    const result = await verifyTokenService(token);
+    const result = await verifyAndPermissionsService(accessToken);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Token verification successful",

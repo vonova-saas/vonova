@@ -16,8 +16,7 @@ import {
   logOutController,
   logOutAllDevicesController,
   validateRoleChangeController,
-  getUserPermissionsController,
-  verifyTokenController,
+  verifyAndPermissionsController,
 } from "../../controllers/auth/auth.controller";
 import {
   loginSchema,
@@ -26,10 +25,10 @@ import {
   requestResetPasswordSchema,
   verifyResetCodeSchema,
   resetPasswordSchema,
-  validateRoleChangeSchema,
-  verifyTokenSchema
+  validateRoleChangeSchema
 } from "../../validation/auth/auth.validation";
 import { securityStack } from "../../middlewares/security";
+import { requireInternalKey } from "../../middlewares/security/internal-only.middleware";
 
 const googleFailedUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`;
 
@@ -96,15 +95,10 @@ authRoutes.post(
 );
 
 // Utility endpoints for inter-service communication
-authRoutes.get(
-  "/user/:userId/permissions",
-  getUserPermissionsController
-);
-
 authRoutes.post(
-  "/verify-token",
-  validateRequest(verifyTokenSchema),
-  verifyTokenController
+  "/verify-and-permissions",
+  requireInternalKey,
+  verifyAndPermissionsController
 );
 
 export default authRoutes;

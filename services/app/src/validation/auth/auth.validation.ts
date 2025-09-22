@@ -107,12 +107,3 @@ export const validateRoleChangeSchema = z.object({
     })
     .min(1, "Admin user ID is required"),
 });
-
-// Token verification validation
-export const verifyTokenSchema = z.object({
-  token: z
-    .string({
-      required_error: "Token is required",
-    })
-    .min(1, "Token is required"),
-});

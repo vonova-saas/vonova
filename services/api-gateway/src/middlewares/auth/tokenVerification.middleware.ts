@@ -30,22 +30,51 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // Call App service to verify token
+    // Call App service to verify token and retrieve permissions
+    // App endpoint expects the token in an http-only cookie and an internal key header
     const response = await axios.post(
-      `${Env.APP_SERVICE_URL}/app/auth/verify-token`,
-      { token },
+      `${Env.APP_SERVICE_URL}/app/auth/verify-and-permissions`,
+      {},
       {
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': Env.INTERNAL_APP_API_KEY,
+          'x-internal-key': Env.INTERNAL_API_SECRET_KEY,
+          // Forward token as cookie so App can read it
+          'Cookie': `accessToken=${token}`,
         },
+        // Ensure cookies are included in cross-service requests if needed
+        withCredentials: true,
       }
     );
 
-    // Attach user data to request object for use in route handlers
-    req.user = response.data.data.user;
-    next();
-  } catch (error) {
+    const data = response.data?.data;
+    if (!data?.valid || !data?.user) {
+      return res.status(HTTPSTATUS.UNAUTHORIZED).json({
+        success: false,
+        message: 'Invalid authentication context returned from App service',
+      });
+    }
+
+    // Attach user and permissions to request object for downstream handlers
+    req.user = {
+      userId: data.user.userId,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
+      isActive: data.user.isActive,
+      isVerified: data.user.isVerified,
+      permissions: Array.isArray(data.permissions) ? data.permissions : [],
+    };
+
+    return next();
+  } catch (error: any) {
+    // Normalize axios errors
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status || HTTPSTATUS.UNAUTHORIZED;
+      const message = (error.response?.data as any)?.message || 'Error verifying token';
+      return res.status(status).json({ success: false, message });
+    }
+
     console.error('Token verification error:', error);
     return res.status(HTTPSTATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
@@ -59,9 +88,13 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: string;
+        userId: string;
+        name: string;
         email: string;
         role: string;
+        isActive: boolean;
+        isVerified: boolean;
+        permissions: string[];
       };
     }
   }

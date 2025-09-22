@@ -16,8 +16,12 @@ const envConfig = () => ({
 
   //* =========== Service URLs ===========
   APP_SERVICE_URL: getEnv("APP_SERVICE_URL"),
-  INTERNAL_APP_API_KEY: getEnv("INTERNAL_APP_API_KEY"),
-  QUIZ_SERVICE_URL: getEnv("QUIZ_SERVICE_URL"),
+  LMS_SERVICE_URL: getEnv("LMS_SERVICE_URL"),
+  // Internal inter-service communication
+  // Shared secret used by API Gateway to authenticate internal-only endpoints
+  INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
+  // Secret used by API Gateway to sign auth context headers for downstream services
+  GATEWAY_SIGNING_SECRET: getEnv("GATEWAY_SIGNING_SECRET"),
 
   //! =========== Security Layer===========
   // Rate limiting

@@ -4,6 +4,8 @@ import { config, ServiceConfig } from '../config/gateway.config';
 import { NotFoundException } from '../utils/appError';
 import FormData from 'form-data';
 import { createReadStream } from 'fs';
+import crypto from 'crypto';
+import { Env } from '../config/env.config';
 
 declare module 'form-data' {
   interface FormData {
@@ -40,11 +42,14 @@ export async function forwardRequest(
     const targetUrl = buildTargetUrl(service.url, targetPath);
     console.log(`Forwarding ${req.method} ${req.path} -> ${targetUrl}`);
 
+    // Merge original headers with Gateway-signed auth context (if available)
+    const downstreamHeaders = attachSignedAuthHeaders(req.headers, req);
+
     const response = await makeRequest(
       targetUrl,
       req.method as any,
       req.body,
-      req.headers,
+      downstreamHeaders,
       service.timeout
     );
 
@@ -174,6 +179,36 @@ async function makeRequest(
   }
 
   return await axios(config);
+}
+
+function attachSignedAuthHeaders(originalHeaders: any, req: Request) {
+  const headers = { ...originalHeaders };
+
+  // If user context is present (set by tokenVerification.middleware), sign and attach
+  const user = (req as any).user as undefined | {
+    userId: string;
+    name?: string;
+    email?: string;
+    role: string;
+    permissions: string[];
+  };
+
+  if (user && Env.GATEWAY_SIGNING_SECRET) {
+    const ts = Math.floor(Date.now() / 1000);
+    const perms = Array.isArray(user.permissions) ? user.permissions.join(',') : '';
+    const payload = `${user.userId}|${user.role}|${perms}|${ts}`;
+    const sig = crypto.createHmac('sha256', Env.GATEWAY_SIGNING_SECRET).update(payload).digest('hex');
+
+    headers['x-user-id'] = user.userId;
+    headers['x-user-role'] = user.role;
+    headers['x-user-permissions'] = perms;
+    headers['x-ctx-ts'] = String(ts);
+    headers['x-ctx-sig'] = sig;
+    if (user.name) headers['x-user-name'] = user.name;
+    if (user.email) headers['x-user-email'] = user.email;
+  }
+
+  return headers;
 }
 
 export async function checkServiceHealth(serviceName: string): Promise<boolean> {

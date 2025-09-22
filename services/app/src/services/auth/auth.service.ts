@@ -671,29 +671,7 @@ export const validateRoleChangeService = async (params: {
 };
 
 // ============== Utility Services for Inter-Service Communication ==============
-export const getUserPermissionsService = async (userId: string) => {
-  const user = await UserModel.findById(userId);
-  if (!user) {
-    throw new NotFoundException("User not found");
-  }
-
-  const permissions = (RolePermissions as Record<string, string[]>)[user.role] || [];
-
-  return {
-    userId: user._id,
-    role: user.role,
-    permissions: permissions,
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      isActive: user.isActive,
-      isVerified: user.isVerified
-    }
-  };
-};
-
-export const verifyTokenService = async (token: string) => {
+export const verifyAndPermissionsService = async (token: string) => {
   const { payload, error } = verifyAccessToken(token);
 
   if (error || !payload) {
@@ -705,6 +683,8 @@ export const verifyTokenService = async (token: string) => {
     throw new UnauthorizedException("User not found");
   }
 
+  const permissions = (RolePermissions as Record<string, string[]>)[user.role] || [];
+
   if (!user.isActive) {
     throw new UnauthorizedException("User account is deactivated");
   }
@@ -712,12 +692,13 @@ export const verifyTokenService = async (token: string) => {
   return {
     valid: true,
     user: {
-      id: user._id,
+      userId: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       isActive: user.isActive,
       isVerified: user.isVerified
-    }
+    },
+    permissions: permissions
   };
 };

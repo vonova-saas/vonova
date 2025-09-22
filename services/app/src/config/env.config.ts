@@ -39,6 +39,10 @@ const envConfig = () => ({
   CORS_BLACKLIST: getEnv("CORS_BLACKLIST"),
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
 
+  // Internal inter-service communication
+  // Shared secret used by API Gateway to authenticate internal-only endpoints
+  INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
+
   //? Email configuration
   EMAIL_HOST: getEnv("EMAIL_HOST"),
   EMAIL_PORT: parseInt(getEnv("EMAIL_PORT") || "465"),
