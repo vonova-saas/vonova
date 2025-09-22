@@ -12,7 +12,7 @@ export const authServiceClient = {
   }) => {
     try {
       const response = await axios.post(
-        `${Env.AUTH_SERVICE_URL}/auth/validate-role-change`,
+        `${Env.AUTH_SERVICE_URL}/app/auth/validate-role-change`,
         params,
         {
           headers: {
@@ -28,25 +28,13 @@ export const authServiceClient = {
     }
   },
 
-  // Get user permissions from auth service
-  getUserPermissions: async (userId: string) => {
-    try {
-      const response = await axios.get(
-        `${Env.AUTH_SERVICE_URL}/user/${userId}/permissions`
-      );
-      return response.data.permissions;
-    } catch (error) {
-      console.error('Failed to get user permissions:', error);
-      return [];
-    }
-  },
-
   // Verify JWT token with auth service
   verifyToken: async (token: string) => {
     try {
       const response = await axios.post(
-        `${Env.AUTH_SERVICE_URL}/auth/verify-token`,
-        { token }
+        `${Env.AUTH_SERVICE_URL}/app/auth/verify-and-permissions`,
+        { token },
+        { headers: { 'x-internal-key': Env.INTERNAL_API_SECRET_KEY } }
       );
       return response.data.data;
     } catch (error) {
@@ -71,4 +59,4 @@ export const extractUserFromToken = (token: string) => {
     console.error('Failed to extract user from token:', error);
     return null;
   }
-}; 
+};

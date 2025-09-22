@@ -10,7 +10,7 @@ import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import { applySecurityStack, securityStack } from "./middlewares/security";
 import { swaggerSpec, swaggerUi } from "./services/docs/swagger.service";
 import quizRouter from "./routes/quizzes/quiz.routes";
-//import quizRouter from "./routes/quiz.routes";
+import assignmentRouter from "./routes/assignment/assignment.routes";
 
 const app = express();
 
@@ -23,11 +23,11 @@ applySecurityStack(app, {
 });
 
 app.get(
-  `/health`,
+  `/lms/health`,
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     return res.status(HTTPSTATUS.OK).json({
       status: "Healthy!",
-      service: "Quiz Service",
+      service: "LMS Service",
       version: "1.0.0",
       timestamp: new Date().toISOString(),
     });
@@ -40,12 +40,14 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
-app.use("/quizzes", quizRouter);
+app.use("/lms/quizzes", quizRouter);
+app.use("/lms/assignments", assignmentRouter);
+
 app.use(errorHandler);
 
 
 app.listen(Env.PORT, async () => {
-  console.log(`🚀 Quiz Service listening on port ${Env.PORT} in ${Env.NODE_ENV} mode`);
+  console.log(`🚀 LMS Service listening on port ${Env.PORT} in ${Env.NODE_ENV} mode`);
   console.log(`📚 Swagger docs available at http://localhost:${Env.PORT}/api-docs`);
   console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
   await connectDatabase();

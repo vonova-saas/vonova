@@ -12,7 +12,7 @@ export interface Question {
   correctOptionId: string;
 }
 
-export interface QuizDocument extends Document {
+export interface AssignmentDocument extends Document {
   title: string;
   description?: string;
   topic: string;
@@ -58,7 +58,7 @@ const questionSchema = new Schema<Question>(
   { _id: false }
 );
 
-const quizSchema = new Schema<QuizDocument>(
+const assignmentSchema = new Schema<AssignmentDocument>(
   {
     title: {
       type: String,
@@ -92,7 +92,7 @@ const quizSchema = new Schema<QuizDocument>(
     timestamps: true,
     toJSON: {
       transform(doc, ret) {
-        ret.id = `quiz-${ret._id!.toString().slice(0, 6)}`;
+        ret.id = `assignment-${ret._id!.toString().slice(0, 6)}`;
         delete ret._id;
         // delete ret.__v;
         return ret;
@@ -101,5 +101,5 @@ const quizSchema = new Schema<QuizDocument>(
   }
 );
 
-const QuizModel = mongoose.model<QuizDocument>("Quiz", quizSchema);
-export default QuizModel;
+const AssignmentModel = mongoose.model<AssignmentDocument>("Assignment", assignmentSchema);
+export default AssignmentModel;

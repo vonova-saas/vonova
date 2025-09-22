@@ -12,6 +12,7 @@ declare global {
         role: string;
         isActive: boolean;
         isVerified: boolean;
+        permissions?: string[];
       };
     }
   }
@@ -23,23 +24,21 @@ export const isAuthenticated = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    const accessToken = req.cookies?.accessToken;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new UnauthorizedException("Access token is required");
+    if (!accessToken) {
+      throw new UnauthorizedException("Access token required");
     }
 
-    const token = authHeader.split(" ")[1];
-
     // Verify token with auth service
-    const result = await authServiceClient.verifyToken(token);
+    const result = await authServiceClient.verifyToken(accessToken);
 
     if (!result || !result.valid) {
       throw new UnauthorizedException("Invalid or expired token");
     }
 
     // Attach user info to request
-    req.user = result.user;
+    req.user = { ...result.user, id: result.user.userId || result.user.id, permissions: result.permissions } as any;
 
     next();
   } catch (error) {

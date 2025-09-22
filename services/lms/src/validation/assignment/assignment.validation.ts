@@ -14,8 +14,8 @@ const questionSchema = z.object({
   correctOptionId: z.string().min(1, "Correct option ID is required"),
 });
 
-// Quiz Schema
-export const createQuizSchema = z.object({
+// Assignment Schema
+export const createAssignmentSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   topic: z.string().min(1, "Topic is required"),
@@ -26,7 +26,7 @@ export const createQuizSchema = z.object({
   questions: z.array(questionSchema).min(1, "At least 1 question is required"),
 });
 
-export const updateQuizSchema = z.object({
+export const updateAssignmentSchema = z.object({
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
   topic: z.string().min(1, "Topic is required").optional(),
@@ -38,7 +38,7 @@ export const updateQuizSchema = z.object({
 });
 
 // Submit Answers Schema
-export const submitQuizAnswersSchema = z.object({
+export const submitAssignmentAnswersSchema = z.object({
   answers: z.array(
     z.object({
       questionId: z.string().min(1, "Question ID is required"),
