@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import { Env } from "../../config/env.config";
 import { UnauthorizedException } from "../../utils/appError";
-import { isAuthenticated } from "./isAuthenticated.middleware";
 
 const HEADER_USER_ID = "x-user-id";
 const HEADER_USER_ROLE = "x-user-role";
@@ -30,11 +29,14 @@ function verifySignature(req: Request) {
 
   const payload = `${userId}|${role}|${perms}|${ts}`;
   const hmac = crypto
-    .createHmac("sha256", Env.LMS_SIGNING_SECRET || "")
+    .createHmac("sha256", Env.APP_SIGNING_SECRET || "")
     .update(payload)
     .digest("hex");
 
-  if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(sig))) {
+  // Protect against different length inputs throwing from timingSafeEqual
+  const hmacBuf = Buffer.from(hmac);
+  const sigBuf = Buffer.from(sig);
+  if (hmacBuf.length !== sigBuf.length || !crypto.timingSafeEqual(hmacBuf, sigBuf)) {
     return { ok: false, reason: "invalid_signature" as const };
   }
 
@@ -47,30 +49,23 @@ export const isAuthenticatedOrSignedContext = async (
   next: NextFunction
 ) => {
   try {
-    const trustSigned = (Env.TRUST_SIGNED_CONTEXT || "false").toLowerCase() === "true";
-
-    // Try signed context first
+    // Always require valid signed context from API Gateway
     const verified = verifySignature(req);
-    if (verified.ok) {
-      req.user = {
-        id: verified.userId,
-        name: (req.headers["x-user-name"] as string) || "",
-        email: (req.headers["x-user-email"] as string) || "",
-        role: verified.role,
-        isActive: true,
-        isVerified: true,
-        permissions: verified.perms,
-      } as any;
-      return next();
-    }
-
-    // If we require signed context in this environment, reject
-    if (trustSigned) {
+    if (!verified.ok) {
       throw new UnauthorizedException("Invalid or missing signed auth context");
     }
 
-    // Fallback to standard authentication using App service
-    return isAuthenticated(req, res, next);
+    req.user = {
+      id: verified.userId,
+      name: (req.headers["x-user-name"] as string) || "",
+      email: (req.headers["x-user-email"] as string) || "",
+      role: verified.role,
+      isActive: true,
+      isVerified: true,
+      permissions: verified.perms,
+    } as any;
+
+    return next();
   } catch (err) {
     return next(err);
   }

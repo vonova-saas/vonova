@@ -16,8 +16,10 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     // LMS
     Permissions.ENROLL_COURSE,
     Permissions.VIEW_INSTRUCTORS,
+    Permissions.VIEW_QUIZ,
     Permissions.SUBMIT_QUIZ,
     Permissions.VIEW_GRADES,
+    Permissions.VIEW_ASSIGNMENT,
     Permissions.SUBMIT_ASSIGNMENT,
     Permissions.VIEW_ASSIGNMENT_GRADES,
     // Problem Solving

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { securityStack } from "../../middlewares/security";
-import { validateRequest } from "../../middlewares/validateRequest.middleware";
+import { validateRequest } from "../../middlewares/validation/validateRequest.middleware";
 import { isAuthenticatedOrSignedContext } from "../../middlewares/auth/verifySignedContext.middleware";
 import { hasPermission } from "../../middlewares/auth/hasPermission.middleware";
 import { Permissions } from "../../enums/permissions.enum";
@@ -9,19 +9,21 @@ import { createQuizController, deleteQuizController, getAllQuizzesController, ge
 
 const quizRouter = Router();
 
-quizRouter.use(...securityStack)
+// Apply security stack to all auth routes
+quizRouter.use(...securityStack);
+
+// Apply authentication to all Feedback routes
+quizRouter.use(isAuthenticatedOrSignedContext);
 
 quizRouter.post(
   "/addQuiz",
-  isAuthenticatedOrSignedContext,
-  hasPermission(Permissions.CREATE_QUIZ),
   validateRequest(createQuizSchema),
+  hasPermission(Permissions.CREATE_QUIZ),
   createQuizController
 );
 
 quizRouter.patch(
   '/updateQuiz/:id',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.EDIT_QUIZ),
   validateRequest(updateQuizSchema),
   updateQuizController
@@ -29,21 +31,18 @@ quizRouter.patch(
 
 quizRouter.get(
   '/getAllQuizzes',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.VIEW_QUIZ),
   getAllQuizzesController
 )
 
 quizRouter.get(
   '/getQuiz/:id',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.VIEW_QUIZ),
   getQuizController
 )
 
 quizRouter.delete(
   '/deleteQuiz/:id',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.DELETE_QUIZ),
   deleteQuizController
 );
@@ -52,7 +51,6 @@ quizRouter.delete(
 // Submit answers to a quiz and receive grade
 quizRouter.post(
   '/:quizId/submit',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.SUBMIT_QUIZ),
   validateRequest(submitQuizAnswersSchema),
   submitQuizAnswersController
@@ -61,7 +59,6 @@ quizRouter.post(
 // Get my attempts for a quiz (own submissions)
 quizRouter.get(
   '/:quizId/my-attempts',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.VIEW_GRADES),
   getMyAttemptsForQuizController
 );
@@ -69,7 +66,6 @@ quizRouter.get(
 // Get specific attempt (own)
 quizRouter.get(
   '/attempts/:attemptId',
-  isAuthenticatedOrSignedContext,
   hasPermission(Permissions.VIEW_GRADES),
   getMyAttemptController
 );
