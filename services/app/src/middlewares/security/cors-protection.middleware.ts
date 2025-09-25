@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { Env } from "../../config/env.config";
-import { logSecurityEvent } from '../../services/app/securityLogger.service';
+import { logSecurityEvent } from '../../services/security/securityLogger.service';
 
 /**
  * CORS Protection Configuration

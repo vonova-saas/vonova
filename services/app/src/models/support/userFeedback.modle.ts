@@ -1,5 +1,11 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export interface UserFeedbackMessage {
+  sender: 'user' | 'agent';
+  message: string;
+  createdAt?: Date;
+}
+
 export interface UserFeedbackDocument extends Document {
   id: string;
   userId: mongoose.Schema.Types.ObjectId;
@@ -9,6 +15,8 @@ export interface UserFeedbackDocument extends Document {
   userSuggestion?: string;
   userOther?: string;
   email?: string;
+  status: 'open' | 'pending' | 'resolved' | 'closed';
+  messages: UserFeedbackMessage[];
 }
 
 const userFeedbackSchema = new Schema<UserFeedbackDocument>(
@@ -45,6 +53,22 @@ const userFeedbackSchema = new Schema<UserFeedbackDocument>(
       trim: true,
       lowercase: true,
     },
+    status: {
+      type: String,
+      enum: ['open', 'pending', 'resolved', 'closed'],
+      default: 'open',
+      required: true,
+    },
+    messages: [
+      new Schema<UserFeedbackMessage>(
+        {
+          sender: { type: String, enum: ['user', 'agent'], required: true },
+          message: { type: String, required: true, maxlength: 2000 },
+          createdAt: { type: Date, default: Date.now },
+        },
+        { _id: false }
+      ),
+    ],
   },
   {
     timestamps: true,

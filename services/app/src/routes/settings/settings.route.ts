@@ -5,13 +5,13 @@ import {
   updateUserSettingsController,
 } from "../../controllers/settings/settings.controller";
 import { validateRequest } from "../../middlewares/validation/validateRequest.middleware";
-import { authenticateToken } from "../../middlewares/auth/isAuthenticated.middleware";
-import { isAuthorization } from "../../middlewares/auth/isAuthorization.middleware";
+import { isAuthenticatedOrSignedContext } from "../../middlewares/auth/verifySignedContext.middleware";
+import { hasPermission } from "../../middlewares/auth/hasPermission.middleware";
+import { Permissions } from "../../enums/permissions.enum";
 import {
   updateUserSettingsSchema,
 } from "../../validation/settings/settings.validation";
 import { securityStack } from "../../middlewares/security";
-import { Permissions } from "../../enums/role.enum";
 
 const userSettingsRoutes = Router();
 
@@ -19,7 +19,7 @@ const userSettingsRoutes = Router();
 userSettingsRoutes.use(...securityStack);
 
 // Apply authentication to all settings routes
-userSettingsRoutes.use(authenticateToken);
+userSettingsRoutes.use(isAuthenticatedOrSignedContext);
 
 //! Settings routes - users can only access their own settings
 // Users can view/update their own settings OR admins can manage any user
@@ -27,7 +27,7 @@ userSettingsRoutes.use(authenticateToken);
 // Get user settings
 userSettingsRoutes.get(
   "/:userId",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.VIEW_SETTINGS] }),
+  hasPermission(Permissions.VIEW_SETTINGS),
   getUserSettingsController
 );
 
@@ -35,14 +35,14 @@ userSettingsRoutes.get(
 userSettingsRoutes.put(
   "/:userId",
   validateRequest(updateUserSettingsSchema),
-  isAuthorization({ allowSelf: true, permissions: [Permissions.MANAGE_SETTINGS] }),
+  hasPermission(Permissions.MANAGE_SETTINGS),
   updateUserSettingsController
 );
 
 // Reset user settings to default
 userSettingsRoutes.get(
   "/:userId/reset",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.MANAGE_SETTINGS] }),
+  hasPermission(Permissions.MANAGE_SETTINGS),
   resetUserSettingsController
 );
 

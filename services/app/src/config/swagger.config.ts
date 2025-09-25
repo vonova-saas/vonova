@@ -2,13 +2,13 @@ export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Vonova App Service API Endpoint',
+      title: 'onyx APP Service API Endpoint',
       version: '1.0.0',
-      description: 'Vonova App Service API Endpoint documentation with Swagger',
+      description: 'onyx APP Service API Endpoint documentation with Swagger',
     },
     servers: [
       {
-        url: 'http://localhost:4001/app', // Change if needed
+        url: 'http://localhost:4001/api', // Change if needed
       },
     ],
     components: {

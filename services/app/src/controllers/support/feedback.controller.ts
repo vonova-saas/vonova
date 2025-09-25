@@ -6,7 +6,10 @@ import {
   deleteUserFeedbackService,
   getUserFeedbackByIdService,
   getUserFeedbacksService,
-  updateUserFeedbackService
+  updateUserFeedbackService,
+  addUserFeedbackMessageService,
+  getUserFeedbackMessagesService,
+  updateUserFeedbackStatusService
 } from "../../services/support/feedback.service";
 
 // ============ User Feedback Controllers ============
@@ -70,6 +73,43 @@ export const deleteUserFeedbackController = asyncHandler(
 
     return res.status(HTTPSTATUS.OK).json({
       message: feedback,
+    });
+  }
+);
+
+// ==================== Feedback Messages User Side Controllers ====================
+export const addUserFeedbackMessageController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const messages = await addUserFeedbackMessageService(userId, id, req.body.message, 'user');
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Message added successfully",
+      data: messages,
+    });
+  }
+);
+
+export const getUserFeedbackMessagesController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const messages = await getUserFeedbackMessagesService(userId, id);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Messages fetched successfully",
+      data: messages,
+    });
+  }
+);
+
+export const updateUserFeedbackStatusController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const updated = await updateUserFeedbackStatusService(userId, id, req.body.status);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Status updated successfully",
+      data: updated,
     });
   }
 );

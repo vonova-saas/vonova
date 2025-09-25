@@ -5,18 +5,14 @@ import { HTTPSTATUS } from "./config/http.config";
 import { errorHandler } from "./middlewares/errors/errorHandler.middleware";
 import { Env } from "./config/env.config";
 import connectDatabase from "./config/database.config";
-import "./config/passport.config";
-import passport from "passport";
 import { swaggerUi, swaggerSpec } from "./services/app/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
-import authRoutes from "./routes/auth/auth.route";
 import { applySecurityStack, securityStack } from "./middlewares/security";
 import cookieParser from "cookie-parser";
 import userSettingsRoutes from "./routes/settings/settings.route";
 import userAccountRoutes from "./routes/settings/account.route";
 import userBillingRoutes from "./routes/settings/billing.route";
 import userNotificationRoutes from "./routes/settings/notification.route";
-import userRoutes from "./routes/user/user.route";
 import userSupportRoutes from "./routes/support/support.route";
 import userFeedbackRoutes from "./routes/support/feedback.route";
 
@@ -25,8 +21,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-app.use(passport.initialize());
 
 applySecurityStack(app, {
   cors: {},
@@ -51,8 +45,6 @@ if (Env.NODE_ENV !== 'development') {
   app.use(`/app/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
-app.use(`/app/auth`, authRoutes);
-app.use(`/app/user`, userRoutes);
 app.use(`/app/settings`, userSettingsRoutes);
 app.use(`/app/account`, userAccountRoutes);
 app.use(`/app/billing`, userBillingRoutes);

@@ -27,7 +27,6 @@ import AccountModel from "../../models/auth/account.model";
 import { ProviderEnum } from "../../enums/account-provider.enum";
 import { Roles } from "../../enums/role.enum";
 import { RolePermissions } from "../../utils/role-permission";
-import UserAccountModel from "../../models/settings/userAccount.model";
 
 //? ************* Email Flow Services *************
 // ============== Register Service ==============
@@ -153,13 +152,6 @@ export const welcomeUserEmailService = async (body: {
     jti,
     deviceHash,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  });
-
-  await UserAccountModel.create({
-    userId: user._id,
-    name: user.name,
-    email: user.email,
-    avatarUrl: user.profilePicture,
   });
 
   await sendWelcomeEmail(user.email, user.name);
@@ -378,6 +370,7 @@ export const welcomeUseroAuthGoogleService = async (body: {
   };
 }
 
+
 // ============== Refresh Token Service ==============
 export const refreshTokenService = async (
   refresh_token: string,
@@ -593,6 +586,27 @@ export const logoutAllDevicesService = async (
   await revokeAllUserTokens(payload.userId as string);
 
   return { message: "Logged out from all devices successfully" };
+};
+
+// ============== Current User Service ============== 
+export const getCurrentUserService = async (accessToken: string) => {
+  const { payload } = verifyJwtToken<AccessTPayload>(accessToken);
+
+  if (!payload) {
+    throw new UnauthorizedException("Invalid access token unauthorized");
+  }
+
+  const user = await UserModel.findById(payload.userId)
+    .populate("isVerified")
+    .select("-password");
+
+  if (!user) {
+    throw new NotFoundException("User not found");
+  }
+
+  return {
+    user,
+  };
 };
 
 // ============== Role Change Validation Service ==============

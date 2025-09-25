@@ -1,9 +1,24 @@
 import { Request, Response, NextFunction } from "express";
+import { authServiceClient } from "../../utils/service-communication";
 import { UnauthorizedException } from "../../utils/appError";
-import { verifyAccessToken } from "../../utils/jwt";
-import UserModel from "../../models/auth/user.model";
 
-export const authenticateToken = async (
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+        isActive: boolean;
+        isVerified: boolean;
+        permissions?: string[];
+      };
+    }
+  }
+}
+
+export const isAuthenticated = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -15,35 +30,15 @@ export const authenticateToken = async (
       throw new UnauthorizedException("Access token required");
     }
 
-    const { payload, error } = verifyAccessToken(accessToken);
+    // Verify token with auth service
+    const result = await authServiceClient.verifyToken(accessToken);
 
-    if (error || !payload) {
-      throw new UnauthorizedException("Invalid or expired access token");
+    if (!result || !result.valid) {
+      throw new UnauthorizedException("Invalid or expired token");
     }
 
-    // Verify user still exists and is active
-    const user = await UserModel.findById(payload.userId);
-
-    if (!user) {
-      throw new UnauthorizedException("User not found");
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException("Account has been deactivated");
-    }
-
-    // Attach to request with global types
-    req.user = {
-      id: user._id!.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      isVerified: user.isVerified,
-    };
-
-    req.userDoc = user; // raw mongoose doc if needed
-    req.userId = user._id!.toString();
+    // Attach user info to request
+    req.user = { ...result.user, id: result.user.userId || result.user.id, permissions: result.permissions } as any;
 
     next();
   } catch (error) {

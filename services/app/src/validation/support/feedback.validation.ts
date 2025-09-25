@@ -8,3 +8,11 @@ export const userFeedbackSchema = z.object({
   userOther: z.string().max(2000, "Your other feedback must be at most 2000 characters").nullable().optional(),
   email: z.string({ required_error: "Email is required", }).email("Invalid email address").toLowerCase().trim().min(1).nullable().optional(),
 });
+
+export const userFeedbackMessageSchema = z.object({
+  message: z.string().max(2000, "Message must be at most 2000 characters"),
+});
+
+export const userFeedbackStatusSchema = z.object({
+  status: z.enum(['open', 'pending', 'resolved', 'closed']),
+});

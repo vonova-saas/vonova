@@ -14,19 +14,6 @@ const envConfig = () => ({
   MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
-  // Authentication Layer
-  JWT: {
-    JWT_ACCESS_SECRET: getEnv("JWT_ACCESS_SECRET"),
-    JWT_ACCESS_EXPIRES_IN: getEnv("JWT_ACCESS_EXPIRES_IN"),
-    JWT_REFRESH_SECRET: getEnv("JWT_REFRESH_SECRET"),
-    JWT_REFRESH_EXPIRES_IN: getEnv("JWT_REFRESH_EXPIRES_IN"),
-  },
-
-  GOOGLE_CLIENT_ID: getEnv("GOOGLE_CLIENT_ID"),
-  GOOGLE_CLIENT_SECRET: getEnv("GOOGLE_CLIENT_SECRET"),
-  GOOGLE_CALLBACK_URL: getEnv("GOOGLE_CALLBACK_URL"),
-  FRONTEND_GOOGLE_CALLBACK_URL: getEnv("FRONTEND_GOOGLE_CALLBACK_URL"),
-
   //! Security Layer
   // CORS Protection
   CORS_ORIGIN: getEnv("CORS_ORIGIN", "http://localhost:3000"),
@@ -39,11 +26,14 @@ const envConfig = () => ({
   CORS_BLACKLIST: getEnv("CORS_BLACKLIST"),
   CORS_SECURITY_HEADERS: getEnv("CORS_SECURITY_HEADERS", "true"),
 
-  // Internal inter-service communication
-  // Shared secret used by API Gateway to authenticate internal-only endpoints
+  // Signed Auth Context from API Gateway
+  API_GATEWAY_SERVICE_URL: getEnv("API_GATEWAY_SERVICE_URL"),
+  APP_SIGNING_SECRET: getEnv("APP_SIGNING_SECRET"),
+  TRUST_SIGNED_CONTEXT: getEnv("TRUST_SIGNED_CONTEXT"),
+  SIGNED_CONTEXT_SKEW_SECONDS: parseInt(getEnv("SIGNED_CONTEXT_SKEW_SECONDS")),
   INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
 
-  //? Email configuration
+  //? Notification Service (Email configuration)
   EMAIL_HOST: getEnv("EMAIL_HOST"),
   EMAIL_PORT: parseInt(getEnv("EMAIL_PORT") || "465"),
   EMAIL_SECURE: getEnv("EMAIL_SECURE", "true") === "true",

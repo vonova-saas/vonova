@@ -3,9 +3,9 @@ import { NotFoundException } from "../../utils/appError";
 
 //! ============ User settings Service ============
 export const getDefaultSettings = () => ({
-  font: "Inter",
+  font: "cairo",
   fontSize: "16",
-  theme: "system",
+  theme: "light",
   language: "en",
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   dateFormat: "MM/DD/YYYY",
@@ -28,7 +28,7 @@ export const updateUserSettingsService = async (userId: string, update: any) => 
   const settings = await UserSettingsModel.findOneAndUpdate(
     { userId },
     { $set: update },
-    { upsert: true, runValidators: true }
+    { upsert: true, runValidators: true, new: true }
   ).lean();
 
   if (!settings) {
@@ -42,7 +42,7 @@ export const resetUserSettingsService = async (userId: string) => {
   const settings = await UserSettingsModel.findOneAndUpdate(
     { userId },
     { $set: getDefaultSettings() },
-    { runValidators: true }
+    { runValidators: true, new: true }
   ).lean();
 
   if (!settings) {

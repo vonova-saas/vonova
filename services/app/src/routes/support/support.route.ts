@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { validateRequest } from "../../middlewares/validation/validateRequest.middleware";
-import { authenticateToken } from "../../middlewares/auth/isAuthenticated.middleware";
-import { isAuthorization } from "../../middlewares/auth/isAuthorization.middleware";
+import { isAuthenticatedOrSignedContext } from "../../middlewares/auth/verifySignedContext.middleware";
+import { hasPermission } from "../../middlewares/auth/hasPermission.middleware";
+import { Permissions } from "../../enums/permissions.enum";
 import {
+  userSupportMessageSchema,
   userSupportSchema,
+  userSupportStatusSchema,
 } from "../../validation/support/support.validation";
 import { securityStack } from "../../middlewares/security";
-import { Permissions } from "../../enums/role.enum";
-import { addUserSupportController, deleteUserSupportController, getUserSupportByIdController, getUserSupportsController, updateUserSupportController } from "../../controllers/support/support.controller";
+import { addUserSupportController, addUserSupportMessageController, deleteUserSupportController, getUserSupportByIdController, getUserSupportMessagesController, getUserSupportsController, updateUserSupportController, updateUserSupportStatusController } from "../../controllers/support/support.controller";
 
 const userSupportRoutes = Router();
 
@@ -15,7 +17,7 @@ const userSupportRoutes = Router();
 userSupportRoutes.use(...securityStack);
 
 // Apply authentication to all support routes
-userSupportRoutes.use(authenticateToken);
+userSupportRoutes.use(isAuthenticatedOrSignedContext);
 
 //! support routes - users can only access their own support
 // Users can view/update their own support OR admins can manage any user
@@ -24,21 +26,21 @@ userSupportRoutes.use(authenticateToken);
 userSupportRoutes.post(
   "/:userId/add",
   validateRequest(userSupportSchema),
-  isAuthorization({ allowSelf: true, permissions: [Permissions.CREATE_SUPPORT] }),
+  hasPermission(Permissions.CREATE_SUPPORT),
   addUserSupportController
 );
 
 // Get user support
 userSupportRoutes.get(
   "/:userId",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.VIEW_SUPPORT] }),
+  hasPermission(Permissions.VIEW_SUPPORT),
   getUserSupportsController
 );
 
 // Get user support by id
 userSupportRoutes.get(
   "/:userId/:id",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.VIEW_SUPPORT] }),
+  hasPermission(Permissions.VIEW_SUPPORT),
   getUserSupportByIdController
 );
 
@@ -46,15 +48,39 @@ userSupportRoutes.get(
 userSupportRoutes.put(
   "/:userId/:id",
   validateRequest(userSupportSchema),
-  isAuthorization({ allowSelf: true, permissions: [Permissions.EDIT_SUPPORT] }),
+  hasPermission(Permissions.EDIT_SUPPORT),
   updateUserSupportController
 );
 
 // Delete user support
 userSupportRoutes.delete(
   "/:userId/:id",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.DELETE_SUPPORT] }),
+  hasPermission(Permissions.DELETE_SUPPORT),
   deleteUserSupportController
+);
+
+//! ==================== Support Messages User Side Routes ====================
+// Add message to a support ticket
+userSupportRoutes.post(
+  "/:userId/:id/messages",
+  validateRequest(userSupportMessageSchema),
+  hasPermission(Permissions.EDIT_SUPPORT),
+  addUserSupportMessageController
+);
+
+// Get messages for a support ticket
+userSupportRoutes.get(
+  "/:userId/:id/messages",
+  hasPermission(Permissions.VIEW_SUPPORT),
+  getUserSupportMessagesController
+);
+
+// Update support ticket status
+userSupportRoutes.put(
+  "/:userId/:id/status",
+  validateRequest(userSupportStatusSchema),
+  hasPermission(Permissions.EDIT_SUPPORT),
+  updateUserSupportStatusController
 );
 
 export default userSupportRoutes;

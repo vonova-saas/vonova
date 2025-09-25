@@ -13,7 +13,6 @@ const httpConfig = () => ({
   CONFLICT: 409,
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
-
   // Server error responses
   INTERNAL_SERVER_ERROR: 500,
   NOT_IMPLEMENTED: 501,

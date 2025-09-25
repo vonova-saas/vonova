@@ -14,7 +14,30 @@ const envConfig = () => ({
   MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
-  //* =========== Service URLs ===========
+  //! =========== Authentication Layer ===========
+  JWT: {
+    JWT_ACCESS_SECRET: getEnv("JWT_ACCESS_SECRET"),
+    JWT_ACCESS_EXPIRES_IN: getEnv("JWT_ACCESS_EXPIRES_IN"),
+    JWT_REFRESH_SECRET: getEnv("JWT_REFRESH_SECRET"),
+    JWT_REFRESH_EXPIRES_IN: getEnv("JWT_REFRESH_EXPIRES_IN"),
+  },
+
+  GOOGLE_CLIENT_ID: getEnv("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: getEnv("GOOGLE_CLIENT_SECRET"),
+  GOOGLE_CALLBACK_URL: getEnv("GOOGLE_CALLBACK_URL"),
+  FRONTEND_GOOGLE_CALLBACK_URL: getEnv("FRONTEND_GOOGLE_CALLBACK_URL"),
+
+  //? Email configuration (NodeMailer STMP)
+  EMAIL_HOST: getEnv("EMAIL_HOST"),
+  EMAIL_PORT: parseInt(getEnv("EMAIL_PORT") || "465"),
+  EMAIL_SECURE: getEnv("EMAIL_SECURE", "true") === "true",
+  EMAIL_PASSWORD: getEnv("EMAIL_PASSWORD"),
+  EMAIL_USER: getEnv("EMAIL_USER"),
+  EMAIL_FROM: getEnv("EMAIL_FROM"),
+  //* Resend (Email Service)
+  RESEND_API_KEY: getEnv("RESEND_API_KEY"),
+
+  //! =========== Service URLs ===========
   APP_SERVICE_URL: getEnv("APP_SERVICE_URL"),
   LMS_SERVICE_URL: getEnv("LMS_SERVICE_URL"),
   // Internal inter-service communication

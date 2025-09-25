@@ -1,4 +1,4 @@
-import SecurityLog from '../models/securityLog.model';
+import SecurityLog from '../../models/securityLog.model';
 
 export async function logSecurityEvent(event: {
   ip: string;

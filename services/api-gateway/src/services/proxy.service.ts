@@ -181,58 +181,58 @@ async function makeRequest(
   return await axios(config);
 }
 
-function attachSignedAuthHeaders(originalHeaders: any, req: Request) {
-  const headers = { ...originalHeaders };
+  function attachSignedAuthHeaders(originalHeaders: any, req: Request) {
+    const headers = { ...originalHeaders };
 
-  // If user context is present (set by tokenVerification.middleware), sign and attach
-  const user = (req as any).user as undefined | {
-    userId: string;
-    name?: string;
-    email?: string;
-    role: string;
-    permissions: string[];
-  };
+    // If user context is present (set by tokenVerification.middleware), sign and attach
+    const user = (req as any).user as undefined | {
+      id: string;
+      name?: string;
+      email?: string;
+      role: string;
+      permissions: string[];
+    };
 
-  if (user && Env.GATEWAY_SIGNING_SECRET) {
-    const ts = Math.floor(Date.now() / 1000);
-    const perms = Array.isArray(user.permissions) ? user.permissions.join(',') : '';
-    const payload = `${user.userId}|${user.role}|${perms}|${ts}`;
-    const sig = crypto.createHmac('sha256', Env.GATEWAY_SIGNING_SECRET).update(payload).digest('hex');
+    if (user && Env.GATEWAY_SIGNING_SECRET) {
+      const ts = Math.floor(Date.now() / 1000);
+      const perms = Array.isArray(user.permissions) ? user.permissions.join(',') : '';
+      const payload = `${user.id}|${user.role}|${perms}|${ts}`;
+      const sig = crypto.createHmac('sha256', Env.GATEWAY_SIGNING_SECRET).update(payload).digest('hex');
 
-    headers['x-user-id'] = user.userId;
-    headers['x-user-role'] = user.role;
-    headers['x-user-permissions'] = perms;
-    headers['x-ctx-ts'] = String(ts);
-    headers['x-ctx-sig'] = sig;
-    if (user.name) headers['x-user-name'] = user.name;
-    if (user.email) headers['x-user-email'] = user.email;
+      headers['x-user-id'] = user.id;
+      headers['x-user-role'] = user.role;
+      headers['x-user-permissions'] = perms;
+      headers['x-ctx-ts'] = String(ts);
+      headers['x-ctx-sig'] = sig;
+      if (user.name) headers['x-user-name'] = user.name;
+      if (user.email) headers['x-user-email'] = user.email;
+    }
+
+    return headers;
   }
 
-  return headers;
-}
-
-export async function checkServiceHealth(serviceName: string): Promise<boolean> {
-  try {
-    const service = services[serviceName];
-    if (!service) return false;
-    const response = await axios.get(`${service.url}${service.healthCheck}`, { timeout: 3000 });
-    return response.status === 200;
-  } catch (error) {
-    return false;
+  export async function checkServiceHealth(serviceName: string): Promise<boolean> {
+    try {
+      const service = services[serviceName];
+      if (!service) return false;
+      const response = await axios.get(`${service.url}${service.healthCheck}`, { timeout: 3000 });
+      return response.status === 200;
+    } catch (error) {
+      return false;
+    }
   }
-}
 
-export async function getServiceStatus(): Promise<Record<string, boolean>> {
-  const status: Record<string, boolean> = {};
-  const promises: Promise<[string, boolean]>[] = [];
-  Object.entries(services).forEach(([name, service]) => {
-    promises.push(
-      checkServiceHealth(name).then(health => [name, health])
-    );
-  });
-  const results = await Promise.all(promises);
-  results.forEach(([name, health]) => {
-    status[name] = health;
-  });
-  return status;
+  export async function getServiceStatus(): Promise<Record<string, boolean>> {
+    const status: Record<string, boolean> = {};
+    const promises: Promise<[string, boolean]>[] = [];
+    Object.entries(services).forEach(([name, service]) => {
+      promises.push(
+        checkServiceHealth(name).then(health => [name, health])
+      );
+    });
+    const results = await Promise.all(promises);
+    results.forEach(([name, health]) => {
+      status[name] = health;
+    });
+    return status;
 }

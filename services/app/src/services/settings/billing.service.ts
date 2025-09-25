@@ -3,7 +3,7 @@ import { NotFoundException } from "../../utils/appError";
 
 //! ============ User Billing Service ============
 export const getDefaultBilling = () => ({
-  plan: "Basic",
+  plan: "basic",
   cardNumber: "4242424242424242",
   nameOfCard: "John Doe",
   expiryDate: "MM/YY",
@@ -32,7 +32,7 @@ export const updateUserBillingService = async (userId: string, update: any) => {
   const billing = await UserBillingModel.findOneAndUpdate(
     { userId },
     { $set: update },
-    { upsert: true, runValidators: true }
+    { upsert: true, runValidators: true, new: true }
   ).lean();
 
   if (!billing) {

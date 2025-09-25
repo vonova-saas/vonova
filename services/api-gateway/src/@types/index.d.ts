@@ -10,7 +10,6 @@ declare global {
         role: string;
         isActive: boolean;
         isVerified: boolean;
-        permissions?: string[];
       };
       userDoc?: UserDocument;
       userId?: string;

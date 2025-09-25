@@ -16,6 +16,7 @@ import {
   logoutAllDevicesService,
   validateRoleChangeService,
   verifyAndPermissionsService,
+  getCurrentUserService,
 } from "../../services/auth/auth.service";
 import { UnauthorizedException } from "../../utils/appError";
 
@@ -27,6 +28,15 @@ import { ProviderEnum } from "../../enums/account-provider.enum";
 export const registerUserController = asyncHandler(
   async (req: Request, res: Response) => {
     const result = await registerUserService(req.body);
+    
+    // Set a public (non-HTTP-only) auth presence cookie for client-side UX
+    res.cookie('onyx_auth', '1', {
+      httpOnly: false,
+      secure: Env.NODE_ENV === 'production',
+      sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day
+      path: '/',
+    });
 
     return res.status(HTTPSTATUS.CREATED).json({
       message: result.message,
@@ -322,9 +332,15 @@ export const logOutController = asyncHandler(
 
     const result = await logoutService(refreshToken, userAgent);
 
-    // Clear the cookies after logout
-    res.clearCookie('accessToken', { path: '/' });
-    res.clearCookie('refreshToken', { path: '/' });
+    // Clear the cookies after logout using the same options as set
+    const cookieOpts = {
+      path: '/',
+      secure: Env.NODE_ENV === 'production',
+      sameSite: (Env.NODE_ENV === 'production' ? 'none' : 'lax') as 'lax' | 'strict' | 'none',
+    } as const;
+    res.clearCookie('accessToken', cookieOpts);
+    res.clearCookie('refreshToken', cookieOpts);
+    res.clearCookie('onyx_auth', { path: '/', secure: cookieOpts.secure, sameSite: cookieOpts.sameSite });
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
@@ -341,13 +357,36 @@ export const logOutAllDevicesController = asyncHandler(
 
     const result = await logoutAllDevicesService(refreshToken);
 
-    // Clear the cookies after logout
-    res.clearCookie('accessToken', { path: '/' });
-    res.clearCookie('refreshToken', { path: '/' });
+    // Clear the cookies after logout using the same options as set
+    const cookieOpts = {
+      path: '/',
+      secure: Env.NODE_ENV === 'production',
+      sameSite: (Env.NODE_ENV === 'production' ? 'none' : 'lax') as 'lax' | 'strict' | 'none',
+    } as const;
+    res.clearCookie('accessToken', cookieOpts);
+    res.clearCookie('refreshToken', cookieOpts);
 
     return res.status(HTTPSTATUS.OK).json({
       message: result.message,
     });
+  }
+);
+
+// ============== Current User Controller ============== 
+export const getCurrentUserController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const accessToken = req.cookies?.accessToken;
+
+    if (!accessToken) {
+      throw new UnauthorizedException("Missing or invalid access token");
+    }
+
+    const user = await getCurrentUserService(accessToken);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Current user fetched successfully",
+      user: user.user,
+    })
   }
 );
 

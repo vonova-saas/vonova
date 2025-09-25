@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface UserNotificationDocument extends Document {
   id: string;
   userId: mongoose.Schema.Types.ObjectId;
-  notifyMe: 'All' | 'Direct' | 'None';
+  notifyMe: 'all' | 'mentions' | 'none';
   communicationEmails?: boolean;
   marketingEmails?: boolean;
   socialEmails?: boolean;
@@ -19,8 +19,8 @@ const userNotificationSchema = new Schema<UserNotificationDocument>(
     },
     notifyMe: {
       type: String,
-      enum: ['All', 'Direct', 'None'],
-      default: 'All',
+      enum: ['all', 'mentions', 'none'],
+      default: 'all',
       trim: true,
     },
     communicationEmails: {

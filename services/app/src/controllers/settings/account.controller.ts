@@ -11,7 +11,14 @@ export const getUserAccountController = asyncHandler(
   async (req: Request, res: Response) => {
     const { userId } = req.params;
 
-    const account = await getUserAccountService(userId);
+    // Use signed headers (injected by API Gateway) as defaults for lazy init
+    const name = (req.headers["x-user-name"] as string) || "";
+    const email = (req.headers["x-user-email"] as string) || "";
+
+    const account = await getUserAccountService(userId, {
+      name,
+      email,
+    });
 
     return res.status(HTTPSTATUS.OK).json({
       message: "User account fetched successfully",

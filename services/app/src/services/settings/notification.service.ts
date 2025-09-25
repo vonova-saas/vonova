@@ -3,7 +3,7 @@ import { NotFoundException } from "../../utils/appError";
 
 //! ============ User Notification Service ============
 export const getDefaultNotification = () => ({
-  notifyMe: "All",
+  notifyMe: "all",
   communicationEmails: true,
   marketingEmails: true,
   socialEmails: true,
@@ -27,7 +27,7 @@ export const updateUserNotificationService = async (userId: string, update: any)
   const notification = await UserNotificationModel.findOneAndUpdate(
     { userId },
     { $set: update },
-    { upsert: true, runValidators: true }
+    { upsert: true, runValidators: true, new: true }
   ).lean();
 
   if (!notification) {
@@ -41,7 +41,7 @@ export const resetUserNotificationService = async (userId: string) => {
   const notification = await UserNotificationModel.findOneAndUpdate(
     { userId },
     { $set: getDefaultNotification() },
-    { runValidators: true }
+    { runValidators: true, new: true }
   ).lean();
 
   if (!notification) {

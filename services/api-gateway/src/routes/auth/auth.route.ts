@@ -17,6 +17,7 @@ import {
   logOutAllDevicesController,
   validateRoleChangeController,
   verifyAndPermissionsController,
+  getCurrentUserController,
 } from "../../controllers/auth/auth.controller";
 import {
   loginSchema,
@@ -25,10 +26,10 @@ import {
   requestResetPasswordSchema,
   verifyResetCodeSchema,
   resetPasswordSchema,
-  validateRoleChangeSchema
+  validateRoleChangeSchema,
 } from "../../validation/auth/auth.validation";
 import { securityStack } from "../../middlewares/security";
-import { requireInternalKey } from "../../middlewares/security/internal-only.middleware";
+import { requireInternalSecret } from "../../middlewares/security/internalSecret.middleware";
 
 const googleFailedUrl = `${Env.FRONTEND_GOOGLE_CALLBACK_URL}?status=failure`;
 
@@ -87,6 +88,12 @@ authRoutes.post("/reset-password", validateRequest(resetPasswordSchema), resetPa
 authRoutes.post("/logout", logOutController);
 authRoutes.post("/logout-all", logOutAllDevicesController);
 
+// Current User routes
+authRoutes.get(
+  "/currentUser",
+  getCurrentUserController
+);
+
 // Role change validation endpoint (for inter-service communication)
 authRoutes.post(
   "/validate-role-change",
@@ -97,7 +104,7 @@ authRoutes.post(
 // Utility endpoints for inter-service communication
 authRoutes.post(
   "/verify-and-permissions",
-  requireInternalKey,
+  requireInternalSecret,
   verifyAndPermissionsController
 );
 

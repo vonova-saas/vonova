@@ -2,11 +2,14 @@ import { Request, Response } from "express";
 import { HTTPSTATUS } from "../../config/http.config";
 import { asyncHandler } from "../../middlewares/api/asyncHandler.middleware";
 import {
+  addUserSupportMessageService,
   addUserSupportService,
   deleteUserSupportService,
   getUserSupportByIdService,
+  getUserSupportMessagesService,
   getUserSupportsService,
-  updateUserSupportService
+  updateUserSupportService,
+  updateUserSupportStatusService
 } from "../../services/support/support.service";
 
 // ============ User Support Controllers ============
@@ -70,6 +73,43 @@ export const deleteUserSupportController = asyncHandler(
 
     return res.status(HTTPSTATUS.OK).json({
       message: support,
+    });
+  }
+);
+
+//* ==================== Support Messages User Side Controllers ====================
+export const addUserSupportMessageController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const messages = await addUserSupportMessageService(userId, id, req.body.message, 'user');
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Message added successfully",
+      data: messages,
+    });
+  }
+);
+
+export const getUserSupportMessagesController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const messages = await getUserSupportMessagesService(userId, id);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Messages fetched successfully",
+      data: messages,
+    });
+  }
+);
+
+export const updateUserSupportStatusController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const updated = await updateUserSupportStatusService(userId, id, req.body.status);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Status updated successfully",
+      data: updated,
     });
   }
 );

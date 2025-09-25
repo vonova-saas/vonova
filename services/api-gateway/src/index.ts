@@ -14,12 +14,14 @@ import { HTTPSTATUS } from './config/http.config';
 import { errorHandler } from './middlewares/errors/errorHandler.middleware';
 import { asyncHandler } from './middlewares/api/asyncHandler.middleware';
 import { Env } from "./config/env.config";
-import { swaggerUi, swaggerSpec } from "./services/swagger.service";
+import { swaggerUi, swaggerSpec } from "./services/docs/swagger.service";
 import { swaggerAuth } from "./middlewares/docs/swagger-docs.middleware";
 import connectDatabase from "./config/database.config";
-import { verifyToken } from "./middlewares/auth/tokenVerification.middleware";
+import "./config/passport.config";
+import passport from "passport";
 import * as path from 'path';
 import * as fs from 'fs';
+import { allowDenyMiddleware } from "./middlewares/api/allow-deny.middleware";
 
 const app = express();
 
@@ -43,18 +45,6 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
-// Parse JSON bodies
-app.use(express.json());
-
-// Parse URL-encoded bodies (for form data)
-app.use(express.urlencoded({ extended: true }));
-
-// Parse cookies
-app.use(cookieParser());
-
-// Handle file uploads
-app.use(upload.any());
-
 // Process multipart/form-data and prepare files for forwarding
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.headers['content-type']?.includes('multipart/form-data')) {
@@ -76,6 +66,21 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Parse JSON bodies
+app.use(express.json());
+
+// Parse URL-encoded bodies (for form data)
+app.use(express.urlencoded({ extended: true }));
+
+// Parse cookies
+app.use(cookieParser());
+
+// Initialize passport
+app.use(passport.initialize());
+
+// Handle file uploads
+app.use(upload.any());
+
 // Security Layers
 applySecurityStack(app, {
   cors: {},
@@ -91,14 +96,18 @@ app.use(helmet());
 // Health check
 app.use(healthCheckMiddleware);
 
-// Token verification for protected routes
-app.use(verifyToken);
-
 // Use gateway routes
 app.use(createGatewayRouter());
 
 // Global error handler
 app.use(errorHandler);
+
+// Honor X-Forwarded-* headers for proper client IP/origin handling behind proxies
+//ToDo: make this after use Vercel’s Outbound IPs
+// app.set('trust proxy', true);
+
+// Early allow/deny guard (pre CORS/body parsing ideal for cheap rejections)
+app.use(allowDenyMiddleware());
 
 // Logging
 if (Env.NODE_ENV === 'development') {
@@ -115,13 +124,7 @@ app.get(
       message: 'API Gateway is running',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
-      services: Object.keys(config.services),
-      endpoints: {
-        health: '/health',
-        services: '/services',
-        serviceStatus: '/services/status',
-        apiRoutes: '/api/v1/{service}/*'
-      }
+      services: Object.keys(config.services)
     });
   })
 );
@@ -132,13 +135,6 @@ app.use(
     res.status(HTTPSTATUS.NOT_FOUND).json({
       error: 'Not Found',
       message: 'The requested endpoint was not found',
-      availableRoutes: [
-        'GET /health - Gateway health check',
-        'GET /services - List available services',
-        'GET /services/status - Service health status',
-        'ALL /api/v1/{service} - Forward to service root',
-        'ALL /api/v1/{service}/{path} - Forward to service path'
-      ]
     });
   })
 );
@@ -162,6 +158,7 @@ app.listen(Env.PORT, async () => {
   console.log(`🔒 Security stack enabled with ${securityStack.length} protection layers`);
   await connectDatabase();
 });
+
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

@@ -4,13 +4,13 @@ import {
   updateUserBillingController,
 } from "../../controllers/settings/billing.controller";
 import { validateRequest } from "../../middlewares/validation/validateRequest.middleware";
-import { authenticateToken } from "../../middlewares/auth/isAuthenticated.middleware";
-import { isAuthorization } from "../../middlewares/auth/isAuthorization.middleware";
+import { isAuthenticatedOrSignedContext } from "../../middlewares/auth/verifySignedContext.middleware";
+import { hasPermission } from "../../middlewares/auth/hasPermission.middleware";
+import { Permissions } from "../../enums/permissions.enum";
 import {
   updateUserBillingSchema,
 } from "../../validation/settings/billing.validation";
 import { securityStack } from "../../middlewares/security";
-import { Permissions } from "../../enums/role.enum";
 
 const userBillingRoutes = Router();
 
@@ -18,7 +18,7 @@ const userBillingRoutes = Router();
 userBillingRoutes.use(...securityStack);
 
 // Apply authentication to all settings routes
-userBillingRoutes.use(authenticateToken);
+userBillingRoutes.use(isAuthenticatedOrSignedContext);
 
 //! Settings routes - users can only access their own settings
 // Users can view/update their own settings OR admins can manage any user
@@ -26,7 +26,7 @@ userBillingRoutes.use(authenticateToken);
 // Get user billing
 userBillingRoutes.get(
   "/:userId",
-  isAuthorization({ allowSelf: true, permissions: [Permissions.VIEW_BILLING] }),
+  hasPermission(Permissions.VIEW_BILLING),
   getUserBillingController
 );
 
@@ -34,7 +34,7 @@ userBillingRoutes.get(
 userBillingRoutes.put(
   "/:userId",
   validateRequest(updateUserBillingSchema),
-  isAuthorization({ allowSelf: true, permissions: [Permissions.MANAGE_BILLING] }),
+  hasPermission(Permissions.MANAGE_BILLING),
   updateUserBillingController
 );
 
