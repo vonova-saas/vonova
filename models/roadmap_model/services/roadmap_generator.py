@@ -1,242 +1,103 @@
-from models.roadmap import RoadmapData
+from models.roadmap_schema import RoadmapData
 from utils.logging_utils import setup_ai_logger
-import cohere
+from services.cohere_api_client import CohereAPIClient
+from services.roadmap_formatter import RoadmapFormatter
 import json
 import re
-import uuid
 
 class RoadmapGenerator:
-    def __init__(self, api_key):
-        self.co = cohere.Client(api_key)  # No timeout - let AI take its time
+    def __init__(self, api_key, cohere_model_name='command-r-plus-08-2024'):
+        self.cohere_client = CohereAPIClient(api_key, model_name=cohere_model_name, log_level="INFO")
+        self.formatter = RoadmapFormatter(log_level="INFO")
         self.logger = setup_ai_logger(__name__, "roadmap_generator.log", "INFO")
-    
-    def _sanitize_json(self, json_string):
-        """Convert single quotes to double quotes and handle common JSON formatting issues"""
-        try:
-            # First try to parse as-is
-            json.loads(json_string)
-            return json_string
-        except json.JSONDecodeError:
-            # If parsing fails, try to sanitize
-            sanitized = json_string
-            
-            # Replace single quotes with double quotes for property names
-            sanitized = re.sub(r"(\w+)\s*:\s*'", r'"\1": "', sanitized)
-            sanitized = re.sub(r",\s*'", ', "', sanitized)
-            sanitized = re.sub(r"{\s*'", '{ "', sanitized)
-            sanitized = re.sub(r"'\s*}", '" }', sanitized)
-            sanitized = re.sub(r"'\s*,", '",', sanitized)
-            sanitized = re.sub(r"'\s*:", '":', sanitized)
-            
-            self.logger.info("Sanitized JSON attempt")
-            return sanitized
-        except Exception as e:
-            self.logger.error(f"Error sanitizing JSON: {str(e)}")
-            return json_string
+        self.logger.info("RoadmapGenerator initialized")
 
-    def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12, focus_areas=None):
+    def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12):
         self.logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
         
-        focus_text = f" with focus on {', '.join(focus_areas)}" if focus_areas else ""
-        self.logger.info(f"Focus areas: {focus_areas}")
-        
         prompt = f"""
-        Create a {duration_weeks}-week {topic} roadmap for {skill_level} level{focus_text}.
-        Return ONLY valid JSON in this format:
+        ***
+        SYSTEM INSTRUCTION: You are an expert learning roadmap generator. Your task is to generate a comprehensive, structured learning plan based on the user's request.
+        ***
+
+        Create a {duration_weeks}-week {topic} roadmap for a {skill_level} level learner.
+
+        **STRICT OUTPUT REQUIREMENT:**
+        Return a single, complete, and valid JSON object that **strictly adheres** to the specified format. **Do not include any text, narrative, markdown formatting (like ```json), or commentary outside of the JSON object itself.**
+
+        **JSON SCHEMA CONSTRAINTS:**
+        1. The "weeks" array must contain **exactly {duration_weeks}** elements, numbered sequentially from 1 to {duration_weeks}.
+        2. The `estimated_hours` value must be an integer between 6 and 15.
+        3. Every `milestones` week number must match an existing week in the `weeks` array.
+
+        **REQUIRED JSON FORMAT:**
         {{
-            "title": "{topic} Learning Roadmap",
-            "overview": "Brief overview",
-            "prerequisites": ["prerequisite1", "prerequisite2"],
+            "title": "{topic} Learning Roadmap: {skill_level.title()}",
+            "overview": "A concise summary of this learning path.",
+            "prerequisites": ["list", "of", "prerequisites"],
             "weeks": [
                 {{
                     "week": 1,
-                    "title": "Week 1 Title",
-                    "objectives": ["objective1", "objective2"],
-                    "topics": ["topic1", "topic2"],
-                    "resources": ["resource1"],
-                    "projects": ["project1"],
-                    "estimated_hours": 8
+                    "title": "Week 1 Title (e.g., Foundation & Setup)",
+                    "objectives": ["list of goals for the week"],
+                    "topics": ["list of specific concepts to cover"],
+                    "resources": ["Concrete resource 1 (e.g., Book or Link)", "Concrete resource 2"],
+                    "projects": ["list of practical exercises or mini-projects"],
+                    "estimated_hours": 8 
                 }}
+                // ... all {duration_weeks} weeks
             ],
             "milestones": [
                 {{
-                    "week": 4,
-                    "milestone": "Milestone name",
-                    "deliverable": "What to deliver"
+                    "week": 4, 
+                    "milestone": "Milestone Name (e.g., Core Competency Achieved)",
+                    "deliverable": "A tangible outcome"
                 }}
             ],
-            "final_project": "Capstone project description",
+            "final_project": "Detailed description of the capstone project",
             "next_steps": ["Next step 1", "Next step 2"]
         }}
         """
         
-        self.logger.info("Sending request to Cohere API")
+        roadmap_data = None
         try:
-            response = self.co.generate(
-                model='command-r-plus',
-                prompt=prompt,
-                max_tokens=2500,
-                temperature=0.3,
-                frequency_penalty=0.3, 
-                presence_penalty=0.2,          
-            )
-            response_text = response.generations[0].text
-            self.logger.info("Received response from Cohere API")
-            
+            response_text = self.cohere_client.chat_with_model(prompt)
+            self.logger.info("Received response from Cohere API (via client)")
+
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
-                self.logger.info("Found JSON pattern in response")
                 json_str = json_match.group()
-                self.logger.info(f"Raw JSON string: {json_str[:200]}...")  # Log first 200 chars for debugging
                 
                 try:
-                    # First try to parse the JSON as-is
                     roadmap_data = json.loads(json_str)
                     self.logger.info("Successfully parsed JSON from response")
                 except json.JSONDecodeError as e:
-                    self.logger.warning(f"JSON parsing failed: {str(e)}, attempting sanitization")
-                    
-                    # Try to sanitize the JSON
-                    sanitized_json = self._sanitize_json(json_str)
-                    try:
-                        roadmap_data = json.loads(sanitized_json)
-                        self.logger.info("Successfully parsed sanitized JSON")
-                    except json.JSONDecodeError as e2:
-                        self.logger.error(f"Sanitized JSON also failed: {str(e2)}, using fallback parsing")
-                        self.logger.info(f"Sanitized JSON attempt: {sanitized_json[:200]}...")
-                        roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
+                    self.logger.error(f"JSON parsing failed: {str(e)}. Cannot generate roadmap.")
+                    raise ValueError("Failed to parse AI response into valid JSON. (Parsing error was not recoverable)")
                 
-                # Validate and filter milestones
-                if 'milestones' in roadmap_data and 'weeks' in roadmap_data:
+                if roadmap_data and 'milestones' in roadmap_data and 'weeks' in roadmap_data and roadmap_data['weeks']:
+                    valid_weeks = {w['week'] for w in roadmap_data['weeks']}
                     roadmap_data['milestones'] = [
-                        m for m in roadmap_data['milestones']
-                        if m['week'] in [w['week'] for w in roadmap_data['weeks']]
+                        m for m in roadmap_data.get('milestones', [])
+                        if m.get('week') in valid_weeks
                     ]
-                    self.logger.info(f"Generated roadmap with {len(roadmap_data.get('weeks', []))} weeks")
                 else:
-                    self.logger.warning("Missing required fields in roadmap data, using fallback")
-                    roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
+                    self.logger.error("Parsed data is incomplete or empty. Cannot proceed without full data structure.")
+                    raise ValueError("AI response structure is critically incomplete.")
+
             else:
-                self.logger.warning("Failed to find JSON pattern in response, using fallback parsing")
-                roadmap_data = self._parse_text_response(response_text, topic, duration_weeks)
-            
-            return roadmap_data
-            
+                self.logger.error("No JSON pattern found in AI response. Cannot generate roadmap.")
+                raise ValueError("AI response did not contain the expected JSON structure.")
+                
+            if roadmap_data:
+                try:
+                    validated_roadmap = RoadmapData(**roadmap_data)
+                    self.logger.info("Roadmap successfully validated with Pydantic schema.")
+                    return self.formatter.generate_json_response(validated_roadmap, topic, skill_level, duration_weeks)
+                except Exception as e:
+                    self.logger.error(f"Pydantic validation failed: {str(e)}. Cannot generate roadmap.", exc_info=True)
+                    raise ValueError(f"Roadmap failed Pydantic validation: {str(e)}")
+
         except Exception as e:
-            self.logger.error(f"Error generating roadmap: {str(e)}", exc_info=True)
-            self.logger.info("Using fallback roadmap")
-            return self._create_fallback_roadmap(topic, skill_level, duration_weeks)
-
-    def _parse_text_response(self, text, topic, duration_weeks):
-        milestones = []
-        if duration_weeks >= 3:
-            milestones.append({
-                "week": duration_weeks // 3,
-                "milestone": "Foundation Complete",
-                "deliverable": "Basic project"
-            })
-        if duration_weeks >= 6:
-            milestones.append({
-                "week": 2 * duration_weeks // 3,
-                "milestone": "Intermediate Level",
-                "deliverable": "Complex project"
-            })
-        estimated_hours = 11 if topic == "AI Foundations" and duration_weeks == 3 else 8
-        return {
-            "title": f"{topic} Learning Roadmap",
-            "overview": f"Comprehensive {duration_weeks}-week learning path for {topic}",
-            "prerequisites": ["Basic computer skills", "Motivation to learn"],
-            "weeks": [
-                {
-                    "week": i,
-                    "title": f"Week {i}: Foundation" if i <= 2 else f"Week {i}: Advanced Topics",
-                    "objectives": [f"Learn core concepts for week {i}"],
-                    "topics": [f"Topic {i}.1", f"Topic {i}.2", f"Topic {i}.3"],
-                    "resources": ["Online tutorials", "Documentation"],
-                    "projects": [f"Week {i} project"],
-                    "estimated_hours": estimated_hours if i <= duration_weeks - 1 else 32 - (duration_weeks - 1) * estimated_hours
-                }
-                for i in range(1, duration_weeks + 1)
-            ],
-            "milestones": milestones,
-            "final_project": f"Comprehensive {topic} application",
-            "next_steps": ["Advanced topics", "Specialization areas"]
-        }
-        
-    def _create_fallback_roadmap(self, topic, skill_level, duration_weeks):
-        milestones = []
-        if duration_weeks >= 4:
-            milestones.append({
-                "week": max(1, duration_weeks // 3),
-                "milestone": "Foundation Established",
-                "deliverable": "Basic competency"
-            })
-        if duration_weeks >= 8:
-            milestones.append({
-                "week": max(1, 2 * duration_weeks // 3),
-                "milestone": "Intermediate Proficiency",
-                "deliverable": "Complex project"
-            })
-        estimated_hours = 11 if topic == "AI Foundations" and duration_weeks == 3 else 8
-        return {
-            "title": f"{topic} Learning Roadmap - {skill_level.title()} Level",
-            "overview": f"A structured {duration_weeks}-week journey to master {topic}",
-            "prerequisites": ["Basic understanding of related concepts"],
-            "weeks": [
-                {
-                    "week": i,
-                    "title": f"Week {i}: {'Fundamentals' if i <= 3 else 'Advanced Applications'}",
-                    "objectives": [f"Master week {i} concepts"],
-                    "topics": [f"{topic} Basics", "Practical Applications", "Hands-on Practice"],
-                    "resources": ["Official documentation", "Online courses", "Practice exercises"],
-                    "projects": [f"Week {i} hands-on project"],
-                    "estimated_hours": estimated_hours if i <= duration_weeks - 1 else 32 - (duration_weeks - 1) * estimated_hours
-                }
-                for i in range(1, duration_weeks + 1)
-            ],
-            "milestones": milestones,
-            "final_project": f"Capstone {topic} project demonstrating mastery",
-            "next_steps": [f"Advanced {topic} concepts", "Related technologies", "Professional applications"]
-        }
-
-    def generate_json_response(self, roadmap_data, topic, skill_level, duration_weeks):
-        total_weeks = len(roadmap_data['weeks'])
-        phase_size = max(1, total_weeks // 4)
-        chapters = {
-            "First Steps": [],
-            "Core Concepts": [],
-            "Interactivity": [],
-            "Advanced": []
-        }
-        for i, week in enumerate(roadmap_data['weeks']):
-            phase = (
-                "First Steps" if i < phase_size else
-                "Core Concepts" if i < 2 * phase_size else
-                "Interactivity" if i < 3 * phase_size else
-                "Advanced"
-            )
-            chapters[phase].extend(week['topics'])
-        tree = [{
-            "name": topic,
-            "children": [
-                {"name": "First Steps", "children": [{"name": topic} for topic in chapters["First Steps"]]},
-                {"name": "Core Concepts", "children": [{"name": topic} for topic in chapters["Core Concepts"]]},
-                {"name": "Interactivity", "children": [{"name": topic} for topic in chapters["Interactivity"]]},
-                {"name": "Advanced", "children": [{"name": topic} for topic in chapters["Advanced"]]}
-            ]
-        }]
-        total_hours = sum(week['estimated_hours'] for week in roadmap_data['weeks'])
-        response = {
-            "status": True,
-            "text": {
-                "query": topic,
-                "chapters": chapters
-            },
-            "tree": tree,
-            "roadmapId": str(uuid.uuid4()),
-            "metadata": {
-                "generated": f"{topic}: A {duration_weeks}-Week {skill_level.title()} Roadmap",
-                "summary": f"{duration_weeks} weeks, {total_hours} total hours"
-            }
-        }
-        return response
+            self.logger.error(f"Critical error during roadmap generation: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Roadmap generation failed completely: {str(e)}")
