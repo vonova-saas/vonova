@@ -22,6 +22,8 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.VIEW_ASSIGNMENT,
     Permissions.SUBMIT_ASSIGNMENT,
     Permissions.VIEW_ASSIGNMENT_GRADES,
+    Permissions.READ_LIBRARY_ITEM,
+    Permissions.WRITE_LIBRARY_REVIEW,
     // Problem Solving
     Permissions.VIEW_STUDENT_PROBLEMS_SOLVING_CONTEST,
     Permissions.ENROLL_PROBLEMS_SOLVING_CONTEST,
@@ -107,6 +109,10 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.CREATE_MATERIAL,
     Permissions.VIEW_MATERIAL,
     Permissions.EDIT_MATERIAL,
+    Permissions.MANAGE_MATERIAL,
+    Permissions.READ_LIBRARY_ITEM,
+    Permissions.WRITE_LIBRARY_REVIEW,
+    Permissions.PUBLISH_MATERIAL,
     Permissions.DELETE_MATERIAL,
     // Certificates
     Permissions.GENERATE_CERTIFICATE,

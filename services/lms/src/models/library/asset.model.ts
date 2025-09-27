@@ -13,7 +13,7 @@ export interface LibraryAssetDocument extends Document {
   ownerId: Types.ObjectId;
   itemType: "BOOK" | "GUIDE" | "PRESENTATION";
   itemId: Types.ObjectId;
-  provider: "S3";
+  provider: "S3" | "BUNNY";
   objectKey: string;
   originalFileName: string;
   mimeType: string;
