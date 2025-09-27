@@ -53,7 +53,7 @@ export function createGatewayRouter() {
   );
 
   // Auth Layer
-  router.use('/api/v1/auth', authRoutes);
+  router.use('/auth', authRoutes);
 
   // Auto-register dynamic routes from config.routes
   // Derive service base segment from route.path e.g. '/api/v1/app/*' -> 'app'

@@ -22,6 +22,11 @@ const nextConfig = {
       return [];
     }
     return [
+      // Auth lives at the gateway root as /auth/*; keep frontend at /api/v1/auth/*
+      {
+        source: '/api/v1/auth/:path*',
+        destination: `${gateway}/auth/:path*`,
+      },
       // General API proxy for other services under /api/* (e.g., /api/v1/...)
       {
         source: '/api/:path*',
