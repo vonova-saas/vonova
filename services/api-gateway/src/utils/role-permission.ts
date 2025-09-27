@@ -22,6 +22,7 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.VIEW_ASSIGNMENT,
     Permissions.SUBMIT_ASSIGNMENT,
     Permissions.VIEW_ASSIGNMENT_GRADES,
+    Permissions.VIEW_MATERIAL,
     Permissions.READ_LIBRARY_ITEM,
     Permissions.WRITE_LIBRARY_REVIEW,
     // Problem Solving
