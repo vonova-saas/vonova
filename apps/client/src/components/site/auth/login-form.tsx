@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Loader } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { loginMutationFn, getCurrentUserQueryFn } from "@/services";
+import { loginMutationFn } from "@/services";
 import { baseURL } from "@/services/base-url";
 
 export function LoginForm({
@@ -46,13 +46,12 @@ export function LoginForm({
     e.preventDefault();
     setFormError(null);
     try {
-      await login({ email, password });
+      const me = await login({ email, password });
       // Invalidate auth user to fetch fresh user (http-only cookies are set by backend)
       await queryClient.invalidateQueries({ queryKey: ["authUser"] });
       // Fetch the freshly authenticated user to get the userId and role
-      const me = await getCurrentUserQueryFn();
-      const userId = me?.user?._id;
-      const role = me?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
+      const userId = me?.data?.user?._id;
+      const role = me?.data?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
       if (userId) {
         // Choose target base domain by role, with sensible localhost fallbacks
         const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;

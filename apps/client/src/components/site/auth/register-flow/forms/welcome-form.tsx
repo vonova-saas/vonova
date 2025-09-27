@@ -8,6 +8,7 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUserQueryFn, welcomeUserMutationFn, welcomeUserOAuthGoogleMutationFn } from "@/services";
+import { welcomeUserResponseType } from "@/types/api/app/auth/auth.type";
 
 type ServiceType = 'student' | 'instructor' | null;
 
@@ -134,6 +135,7 @@ export function WelcomeForm({
       // Map UI selection to backend role
       const role = selectedService === 'student' ? 'STUDENT_USER' : 'INSTRUCTORS_USER';
       const email = typeof window !== 'undefined' ? sessionStorage.getItem('verifyEmail') : null;
+      let me: welcomeUserResponseType;
 
       // Build answers payload expected by backend
       const answerPayload: Record<string, string> = {};
@@ -145,19 +147,19 @@ export function WelcomeForm({
 
       if (email) {
         // Email registration flow
-        await welcomeEmail({ email, role, answerOne: 'one' });
+        me = await welcomeEmail({ email, role, answerOne: 'one' });
         // await welcomeEmail({ email, role, ...answerPayload });
       } else {
         // OAuth flow (providerId is read by backend from http-only cookie)
-        await welcomeOAuth({ role, answerOne: 'one' });
+        me = await welcomeOAuth({ role, answerOne: 'one' });
         // await welcomeOAuth({ role, ...answerPayload });
       }
 
       // Invalidate and fetch current user then route to admin dashboard
       await queryClient.invalidateQueries({ queryKey: ['authUser'] });
-      const me = await getCurrentUserQueryFn();
-      const userId = me?.user?._id;
-      const userRole = me?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTORS_USER'
+      // const me = await getCurrentUserQueryFn();
+      const userId = me?.data?.userId;
+      const userRole = me?.data?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTORS_USER'
       if (userId) {
         // Choose target base domain by role, with sensible localhost fallbacks
         const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;
