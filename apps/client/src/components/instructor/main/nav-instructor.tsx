@@ -99,7 +99,6 @@ export function NavInstructor({
         sessionStorage.removeItem('resetEmail');
         sessionStorage.removeItem('resetToken');
       }
-      await queryClient.invalidateQueries({ queryKey: ["authUser"] });
       toast.success("Logged out successfully");
       window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}/?logout=1`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
