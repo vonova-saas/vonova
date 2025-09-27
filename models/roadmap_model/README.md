@@ -14,19 +14,21 @@ The Learning Roadmap Generator is a FastAPI-based web application that generates
 models/roadmap_model/
 ├── main.py                 # FastAPI application and endpoints
 ├── requirements.txt        # Python dependencies
-├── README.md              # Setup and usage instructions
-├── .env.example           # Environment variables template
-├── Dockerfile             # Containerization configuration
-├── .gitignore            # Git ignore rules
-├── docs/                  # Documentation
+├── README.md               # Setup and usage instructions
+├── Dockerfile              # Containerization configuration
+├── .gitignore             # Git ignore rules
+├── docs/                   # Documentation
+│   ├── CONFIG.md
 │   └── Learning_Roadmap_Generator_Documentation.markdown
-├── models/                # Data models
+├── models/                 # Data models
 │   ├── __init__.py
-│   └── roadmap.py
-├── services/              # Business logic services
+│   └── roadmap_schema.py
+├── services/               # Business logic services
 │   ├── __init__.py
+│   ├── cohere_api_client.py
+│   ├── roadmap_formatter.py
 │   └── roadmap_generator.py
-└── utils/                 # Utility functions
+└── utils/                  # Utility functions
     ├── __init__.py
     └── logging_utils.py
 ```
@@ -36,11 +38,11 @@ models/roadmap_model/
 ### 1. Clone the Repository
 If the project is hosted in a repository, clone it to your local machine:
 ```bash
-git clone <https://github.com/vonova-saas/Ai-Gerneration-RoadMap.git>
-cd learning-roadmap-generator
+git clone <https://github.com/vonova-saas/models/roadmap_model.git>
+cd roadmap_model
 ```
 
-Alternatively, create a new directory and save `main.py`, `model.py`, and `requirements.txt` in it.
+Alternatively, create a new directory and set up the project structure as shown above.
 
 ### 2. Create and Activate a Virtual Environment
 To isolate dependencies, create a virtual environment:
@@ -82,10 +84,6 @@ Create a `.env` file in the project root directory with the following configurat
 # Cohere API Configuration
 COHERE_API_KEY=your_cohere_api_key_here
 
-# AI Service Configuration  
-AI_SERVICE_HOST=127.0.0.1
-AI_SERVICE_PORT=5000
-
 # Logging Configuration
 LOG_LEVEL=INFO
 ```
@@ -95,16 +93,12 @@ To obtain a Cohere API key:
 2. Navigate to the API keys section in your dashboard.
 3. Copy the API key and add it to your `.env` file.
 
-**Note**: Make sure to keep your `.env` file secure and never commit it to version control. Use the provided `.env.example` file as a template.
+**Note**: Make sure to keep your `.env` file secure and never commit it to version control.
 
 ### 5. Run the Application
 Start the FastAPI server using Uvicorn:
 ```bash
-python main.py api
-```
----
-```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 5000
 ```
 
 This command runs the server on `http://127.0.0.1:5000` with auto-reload enabled for development. You should see output indicating the server is running:
@@ -150,13 +144,12 @@ deactivate
   - Verify the `.env` file is in the correct directory (project root).
   - Check that the variable names in `.env` match the expected names exactly.
 - **Error: Server not responding**:
-  - Ensure the server is running (`python main.py api`) and the port `5000` (default) is not in use.
-  - Check that the `AI_SERVICE_PORT` in your `.env` file matches the port you're trying to access.
+  - Ensure the server is running (`uvicorn main:app --reload --port 5000`) and the port `5000` is not in use.
   - Stop and restart the server if needed.
 
 ## Notes
 - The application requires an active internet connection to communicate with the Cohere API.
-- Ensure `main.py`, `model.py`, and `requirements.txt` are in the same directory.
+- Ensure the project structure matches the one shown above.
 - For production, consider using a WSGI server like Gunicorn instead of Uvicorn's development server, and disable `reload=True`.
 - The application now uses environment variables for configuration, making it more flexible and secure.
 
