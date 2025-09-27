@@ -22,6 +22,7 @@ const nextConfig = {
       return [];
     }
     return [
+      // General API proxy for other services under /api/* (e.g., /api/v1/...)
       {
         source: '/api/:path*',
         destination: `${gateway}/:path*`,
