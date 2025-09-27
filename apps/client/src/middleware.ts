@@ -6,6 +6,22 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const isLocalhost = hostname.includes("localhost");
 
+  // Only enforce canonical domain in production to keep previews/local usable
+  const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (!isProd) return NextResponse.next();
+
+  const configuredSite = process.env.NEXT_PUBLIC_APP_DOMAIN || 'vonova.tech';
+  const primaryHost = configuredSite.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const host = request.headers.get('host') || '';
+
+  // Redirect all traffic from *.vercel.app or www.<primary> to the primary domain
+  if (host.endsWith('.vercel.app') || host === `www.${primaryHost}`) {
+    const url = request.nextUrl.clone();
+    url.host = primaryHost;
+    url.protocol = 'https';
+    return NextResponse.redirect(url, 308);
+  }
+
   // Skip Next.js internals and static files
   if (
     url.pathname.startsWith("/_next") ||
@@ -74,3 +90,10 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    // Run on all paths except static assets
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
+  ],
+};
