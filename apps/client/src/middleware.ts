@@ -39,14 +39,8 @@ export function middleware(request: NextRequest) {
   // 🚫 Block access to certain routes until logic is ready
   // Block in production only
   if (!isLocalhost) {
-  //   const forbiddenPaths = ["/auth"];
-  //   if (forbiddenPaths.some(path => url.pathname.startsWith(path))) {
-  //     url.pathname = "/site/forbidden"; // 👈 Redirect
-  //     return NextResponse.rewrite(url);
-  //   }
-
-    // 🚫 Block admin. and instructor. subdomains in production
-    if (hostname.startsWith("admin.") || hostname.startsWith("instructor.")) {
+    // 🚫 Block admin. subdomains in production
+    if (hostname.startsWith("admin.")) {
       url.pathname = "/site/forbidden";
       return NextResponse.rewrite(url);
     }
