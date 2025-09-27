@@ -6,9 +6,6 @@ const envConfig = () => ({
   NODE_ENV: getEnv("NODE_ENV"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN"),
 
-  // Service URLs for inter-service communication
-  AUTH_SERVICE_URL: getEnv("AUTH_SERVICE_URL"),
-
   //? Swagger Docs Configuration
   SWAGGER_USER: getEnv("SWAGGER_USER"),
   SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD"),
@@ -35,6 +32,14 @@ const envConfig = () => ({
   TRUST_SIGNED_CONTEXT: getEnv("TRUST_SIGNED_CONTEXT"),
   SIGNED_CONTEXT_SKEW_SECONDS: parseInt(getEnv("SIGNED_CONTEXT_SKEW_SECONDS")),
   INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
+
+  //! Course Environment Variabls
+  // Storage (S3) for video uploads
+  S3_REGION: getEnv("S3_REGION"),
+  S3_BUCKET: getEnv("S3_BUCKET"),
+  S3_ACCESS_KEY_ID: getEnv("S3_ACCESS_KEY_ID"),
+  S3_SECRET_ACCESS_KEY: getEnv("S3_SECRET_ACCESS_KEY"),
+  S3_PRESIGN_EXPIRES: parseInt(getEnv("S3_PRESIGN_EXPIRES", "180")),
 
   //? Notification Service (Email configuration)
   EMAIL_HOST: getEnv("EMAIL_HOST"),

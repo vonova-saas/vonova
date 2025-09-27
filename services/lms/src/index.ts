@@ -11,6 +11,7 @@ import { applySecurityStack, securityStack } from "./middlewares/security";
 import { swaggerSpec, swaggerUi } from "./services/docs/swagger.service";
 import quizRouter from "./routes/quizzes/quiz.routes";
 import assignmentRouter from "./routes/assignment/assignment.routes";
+import libraryRouter from "./routes/library/library.routes";
 
 const app = express();
 
@@ -42,6 +43,7 @@ if (Env.NODE_ENV !== 'development') {
 
 app.use("/lms/quizzes", quizRouter);
 app.use("/lms/assignments", assignmentRouter);
+app.use("/lms/library", libraryRouter);
 
 app.use(errorHandler);
 
