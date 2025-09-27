@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { updateNotifications } from './actions'
 import { type NotificationsFormValues, notificationsFormSchema } from './schema'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -34,18 +34,11 @@ export function NotificationsFormClient({ defaultValues }: NotificationsFormClie
     const result = await updateNotifications(data)
 
     if (result.status === 'error') {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      })
+      toast(result.message)
       return
     }
 
-    toast({
-      title: 'Success',
-      description: result.message,
-    })
+    toast(result.message)
   }
 
   return (

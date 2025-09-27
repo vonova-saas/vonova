@@ -1,7 +1,35 @@
 {
   "name": "vonova-web",
   "version": "1.0.0-beta.1",
+  "main": "index.js",
+  "license": "CC-BY-4.0",
   "private": true,
+  "author": {
+    "name": "Vonova Company",
+    "email": "vonovacompany@gmail.com",
+    "url": "https://vonova.tech"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vonova-saas"
+  },
+  "description": "Vonova is an upcoming AI-powered Learning Management System tailored for CS students and developers in the Arab world. Join our waitlist today to get early access to personalized, engaging, and structured learning journeys.",
+  "homepage": "https://vonova.tech",
+  "bugs": {
+    "url": "https://github.com/vonova-saas"
+  },
+  "keywords": [
+    "Vonova",
+    "AI Learning Management System",
+    "AI LMS",
+    "Education Technology",
+    "Online Courses",
+    "AI Tutoring",
+    "Student Platform",
+    "Developer Learning",
+    "Personalized Learning",
+    "Middle East EdTech"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

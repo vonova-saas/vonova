@@ -1,14 +1,14 @@
 import {
+  // Bot,
   BookOpen,
-  Bot,
-  BrainCog,
+  // BrainCog,
   Component,
   FileText,
-  Frame,
+  // Frame,
   LayoutDashboard,
   Settings2,
   SquareTerminal,
-  TvMinimalPlay,
+  // TvMinimalPlay,
   Zap,
   LifeBuoy,
   Send,
@@ -17,9 +17,9 @@ import {
 
 export const sidebarNavData = {
   studentData: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "",
+    email: "",
+    avatar: "",
   },
   roles: {
     student: "Student",
@@ -46,36 +46,36 @@ export const sidebarNavData = {
       url: "/:studentId/quizzes",
       icon: Component,
     },
-    {
-      title: "Community",
-      url: "/:studentId/community",
-      icon: Frame,
-    },
+    // {
+    //   title: "Community",
+    //   url: "/:studentId/community",
+    //   icon: Frame,
+    // },
     {
       title: "PDF Summary",
       url: "/:studentId/pdf-summary",
       icon: FileText,
     },
-    {
-      title: "AI Video Generator",
-      url: "/:studentId/ai-video-generator",
-      icon: TvMinimalPlay,
-    },
+    // {
+    //   title: "AI Video Generator",
+    //   url: "/:studentId/ai-video-generator",
+    //   icon: TvMinimalPlay,
+    // },
     {
       title: "AI Roadmap Generator",
       url: "/:studentId/ai-roadmap-generator",
       icon: Zap,
     },
-    {
-      title: "Problem Solving",
-      url: "/:studentId/problem-solving",
-      icon: BrainCog,
-    },
-    {
-      title: "AI Assistant",
-      url: "/:studentId/ai-assistant",
-      icon: Bot,
-    },
+    // {
+    //   title: "Problem Solving",
+    //   url: "/:studentId/problem-solving",
+    //   icon: BrainCog,
+    // },
+    // {
+    //   title: "AI Assistant",
+    //   url: "/:studentId/ai-assistant",
+    //   icon: Bot,
+    // },
   ],
   app: [
     {

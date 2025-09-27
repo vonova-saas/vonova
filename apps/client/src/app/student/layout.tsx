@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/command";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import useStudentId from "@/hooks/student/use-student-id";
+import { useUserId } from "@/hooks";
+import { AuthProvider } from "@/context/app/auth/auth-context";
 
 interface Props {
   children: React.ReactNode;
@@ -61,13 +62,13 @@ const segmentNameMap = {
 
 export default function DashboardLayout({ children }: Props) {
   const pathname = usePathname();
-  const studentId = useStudentId();
+  const userId = useUserId();
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of the 'student' segment in the URL path
-  const studentIndex = segments.indexOf(`${studentId}`);
+  const studentIndex = segments.indexOf(`${userId}`);
 
   // Get all segments after student ID for breadcrumbs
-  const crumbSegments = studentIndex >= 0 && studentId
+  const crumbSegments = studentIndex >= 0 && userId
     ? segments.slice(studentIndex + 1) // +1 to skip studentId
     : [];
 
@@ -86,23 +87,23 @@ export default function DashboardLayout({ children }: Props) {
 
   // Dashboard sections for search
   const studentDashboardSections = [
-    { name: "Dashboard", url: "/:studentId" },
-    { name: "Courses", url: "/:studentId/courses" },
-    { name: "Material Library", url: "/:studentId/material-library" },
-    { name: "Quizzes", url: "/:studentId/quizzes" },
-    { name: "AI Video Generator", url: "/:studentId/ai-video-generator" },
-    { name: "AI Roadmap Generator", url: "/:studentId/ai-roadmap-generator" },
-    { name: "Problem Solving", url: "/:studentId/problem-solving" },
-    { name: "PDF Summary", url: "/:studentId/pdf-summary" },
-    { name: "AI Assistant", url: "/:studentId/ai-assistant" },
-    { name: "AI Voice", url: "/:studentId/ai-voice" },
-    { name: "Community", url: "/:studentId/community" },
-    { name: "Support", url: "/:studentId/support" },
-    { name: "Feedback", url: "/:studentId/feedback" },
-    { name: "Settings", url: "/:studentId/settings" },
-    { name: "Account", url: "/:studentId/account" },
-    { name: "Billing", url: "/:studentId/billing" },
-    { name: "Notifications", url: "/:studentId/notifications" },
+    { name: "Dashboard", url: `/${userId}` },
+    { name: "Courses", url: `/${userId}/courses` },
+    { name: "Material Library", url: `/${userId}/material-library` },
+    { name: "Quizzes", url: `/${userId}/quizzes` },
+    { name: "AI Video Generator", url: `/${userId}/ai-video-generator` },
+    { name: "AI Roadmap Generator", url: `/${userId}/ai-roadmap-generator` },
+    { name: "Problem Solving", url: `/${userId}/problem-solving` },
+    { name: "PDF Summary", url: `/${userId}/pdf-summary` },
+    { name: "AI Assistant", url: `/${userId}/ai-assistant` },
+    { name: "AI Voice", url: `/${userId}/ai-voice` },
+    { name: "Community", url: `/${userId}/community` },
+    { name: "Support", url: `/${userId}/support` },
+    { name: "Feedback", url: `/${userId}/feedback` },
+    { name: "Settings", url: `/${userId}/settings` },
+    { name: "Account", url: `/${userId}/account` },
+    { name: "Billing", url: `/${userId}/billing` },
+    { name: "Notifications", url: `/${userId}/notifications` },
   ];
 
   const [search, setSearch] = React.useState("");
@@ -123,6 +124,7 @@ export default function DashboardLayout({ children }: Props) {
   }, []);
 
   return (
+    <AuthProvider>
     <div className="flex min-h-screen w-full">
       <SidebarProvider>
         <AppSidebar />
@@ -143,7 +145,7 @@ export default function DashboardLayout({ children }: Props) {
                   {/* user root link - always visible */}
                   <BreadcrumbItem className="whitespace-nowrap">
                     <BreadcrumbLink
-                      href={studentId ? `/${studentId}` : '/student'}
+                      href={userId ? `/${userId}` : '/student'}
                       className="text-sm md:text-base"
                     >
                       Dashboard
@@ -152,7 +154,7 @@ export default function DashboardLayout({ children }: Props) {
 
                   {/* Dynamic breadcrumb segments */}
                   {crumbSegments.map((segment, index) => {
-                    const href = `/${studentId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                    const href = `/${userId}/${crumbSegments.slice(0, index + 1).join('/')}`;
                     const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                     const isLast = index === crumbSegments.length - 1;
                     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint
@@ -268,5 +270,6 @@ export default function DashboardLayout({ children }: Props) {
         <SidebarRight />
       </SidebarProvider>
     </div>
+    </AuthProvider>
   );
 }

@@ -19,8 +19,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import useStudentId from "@/hooks/student/use-student-id";
-
+import { useUserId } from "@/hooks";
 export function NavSubMain({
   title,
   items,
@@ -38,11 +37,11 @@ export function NavSubMain({
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   const pathname = usePathname();
-  const studentId = useStudentId();
+  const userId = useUserId();
 
   // Function to add userId to URL if it exists
   const getUrl = (url: string) => {
-    return url.replace(":studentId", studentId);
+    return url.replace(":studentId", userId);
   };
 
   return (
@@ -53,7 +52,7 @@ export function NavSubMain({
           const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
-          const isActive = (studentId && pathname === getUrl(item.url));
+          const isActive = (userId && pathname === getUrl(item.url));
 
           return item.items && item.items.length > 0 ? (
             <Collapsible

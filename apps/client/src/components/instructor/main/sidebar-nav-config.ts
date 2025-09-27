@@ -14,9 +14,9 @@ import {
 
 export const sidebarNavData = {
   instructorData: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "",
+    email: "",
+    avatar: "",
   },
   roles: {
     instructor: "Instructor"

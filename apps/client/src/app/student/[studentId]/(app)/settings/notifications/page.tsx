@@ -1,6 +1,6 @@
 
-import ContentSection from '@/components/student/app/settings/shared/content-section';
-import NotificationsForm from '@/components/student/app/settings/notifications/notifications-form';
+import ContentSection from '@/components/shared/settings/shared/content-section';
+import NotificationsForm from '@/components/shared/settings/notifications/notifications-form';
 
 export default function SettingsNotifications() {
   return (

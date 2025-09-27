@@ -1,5 +1,5 @@
-import ContentSection from '@/components/student/app/settings/shared/content-section';
-import SettingsForm from '@/components/student/app/settings/settings/settings-form';
+import ContentSection from '@/components/shared/settings/shared/content-section';
+import SettingsForm from '@/components/shared/settings/settings/settings-form';
 
 export default function SettingsPage() {
   return (

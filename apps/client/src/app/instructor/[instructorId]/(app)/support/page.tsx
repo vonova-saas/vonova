@@ -1,4 +1,4 @@
-import { SupportForm } from '@/components/instructor/app/support/support-form';
+import { SupportForm } from '@/components/shared/support/support-form';
 
 export default function SupportPage() {
   return (

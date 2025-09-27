@@ -16,11 +16,11 @@ import {
 } from "@/components/ui/sidebar";
 import { sidebarNavData } from "./sidebar-nav-config";
 import Image from "next/image";
-import useInstructorId from "@/hooks/instructor/use-instructor-id";
+import { useUserId } from "@/hooks";
 import { NavSubMain } from "./nav-sub-main";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const instructorId = useInstructorId();
+  const userId = useUserId();
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -28,7 +28,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href={instructorId ? `/${instructorId}` : "/instructor"}>
+              <a href={userId ? `/${userId}` : "/instructor"}>
                 <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src="/icons/icon.png"

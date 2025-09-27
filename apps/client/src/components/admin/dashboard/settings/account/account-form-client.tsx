@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { updateAccount } from './actions'
 import { type AccountFormValues, accountFormSchema } from './schema'
 import { cn } from '@/utils/functions'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -48,18 +48,11 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
     const result = await updateAccount(data)
 
     if (result.status === 'error') {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      })
+      toast(result.message)
       return
     }
 
-    toast({
-      title: 'Success',
-      description: result.message,
-    })
+    toast(result.message)
   }
 
   return (

@@ -1,5 +1,5 @@
-import ContentSection from '@/components/student/app/settings/shared/content-section';
-import AccountForm from '@/components/student/app/settings/account/account-form';
+import ContentSection from '@/components/shared/settings/shared/content-section';
+import AccountForm from '@/components/shared/settings/account/account-form';
 
 export default function SettingsAccount() {
   return (

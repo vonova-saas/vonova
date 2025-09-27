@@ -1,4 +1,4 @@
-import { FeedbackForm } from '@/components/student/app/feedback/feedback-form';
+import { FeedbackForm } from '@/components/shared/feedback/feedback-form';
 
 export default function FeedbackPage() {
   return (

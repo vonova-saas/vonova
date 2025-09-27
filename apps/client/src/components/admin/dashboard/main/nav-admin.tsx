@@ -24,7 +24,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks";
 import useAdminId from "@/hooks/admin/use-admin-id";
 import { useState } from "react";
 import { toast } from "sonner";

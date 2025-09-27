@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LogoWithTitle } from "@/components/global/logo";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/global/theme-toggle";
 import React from "react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +89,7 @@ export const Header = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+                <ThemeToggle />
                 <Button
                   asChild
                   variant="outline"

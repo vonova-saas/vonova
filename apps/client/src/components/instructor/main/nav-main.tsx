@@ -19,7 +19,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import useInstructorId from "@/hooks/instructor/use-instructor-id";
+import { useUserId } from "@/hooks";
 
 export function NavMain({
   items,
@@ -36,11 +36,11 @@ export function NavMain({
   }[];
 }) {
   const pathname = usePathname();
-  const instructorId = useInstructorId();
+  const userId = useUserId();
 
   // Function to add instructorId to URL if it exists
   const getUrl = (url: string) => {
-    return url.replace(":instructorId", instructorId);
+    return url.replace(":instructorId", userId);
   };
 
   return (
@@ -53,7 +53,7 @@ export function NavMain({
           const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
-          const isActive = (instructorId && pathname === getUrl(item.url));
+          const isActive = (userId && pathname === getUrl(item.url));
 
           return item.items && item.items.length > 0 ? (
             <Collapsible

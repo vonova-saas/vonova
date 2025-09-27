@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { updateAppearance } from './actions'
 import { type AppearanceFormValues, appearanceFormSchema, languages } from './schema'
 import { cn } from '@/utils/functions'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Form,
@@ -48,18 +48,11 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
     const result = await updateAppearance(data)
 
     if (result.status === 'error') {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      })
+      toast(result.message)
       return
     }
 
-    toast({
-      title: 'Success',
-      description: result.message,
-    })
+    toast(result.message)
   }
 
   return (

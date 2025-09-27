@@ -3,11 +3,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
 import { Icons } from "@/components/global/icons";
 import { useState } from "react";
 import { Loader } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { loginMutationFn, getCurrentUserQueryFn } from "@/services";
+import { baseURL } from "@/services/base-url";
 
 export function LoginForm({
   className,
@@ -15,13 +17,16 @@ export function LoginForm({
 }: React.ComponentProps<"form">) {
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleOAuth = (method: string) => {
     if (method === "google") {
       setIsGoogleLoading(true);
-      window.location.assign("/api/auth/google");
+      const target = `${baseURL}/api/v1/auth/google`;
+      window.location.assign(target);
     } else if (method === "github") {
       // window.location.href = `${baseURL}/auth/github`;
       // setIsGitHubLoading(true);
@@ -29,10 +34,40 @@ export function LoginForm({
   };
 
   // Add submit handler
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // Add submit handler
+  const { mutateAsync: login, isPending } = useMutation({
+    mutationFn: loginMutationFn,
+    onSettled: () => {
+      // no-op
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Add authentication logic here
-    router.push("/dashboard");
+    setFormError(null);
+    try {
+      await login({ email, password });
+      // Invalidate auth user to fetch fresh user (http-only cookies are set by backend)
+      await queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      // Fetch the freshly authenticated user to get the userId and role
+      const me = await getCurrentUserQueryFn();
+      const userId = me?.user?._id;
+      const role = me?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
+      if (userId) {
+        // Choose target base domain by role, with sensible localhost fallbacks
+        const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;
+        const instructorBase = process.env.NEXT_PUBLIC_APP_INSTRUCTOR_DOMAIN;
+        const targetBase = role === "INSTRUCTORS_USER" ? instructorBase : studentBase;
+        window.location.assign(`${targetBase}/${userId}`);
+      } else {
+        // Fallback if userId is not found
+        window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}`);
+      }
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: { message?: string } } };
+      const msg = maybeAxios?.response?.data?.message || "Login failed. Please check your credentials.";
+      setFormError(msg);
+    }
   };
 
   return (
@@ -56,6 +91,8 @@ export function LoginForm({
               type="email"
               placeholder="m@example.com"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="grid gap-3">
@@ -75,6 +112,8 @@ export function LoginForm({
                 placeholder="Enter your password"
                 required
                 className="pr-10"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -87,9 +126,15 @@ export function LoginForm({
               </button>
             </div>
           </div>
-          <Button type="submit" className="w-full cursor-pointer">
-            Login
+          <Button type="submit" className="w-full cursor-pointer" disabled={isPending}>
+            {isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {isPending ? "Logging in..." : "Login"}
           </Button>
+
+          {formError && (
+            <p className="text-sm text-red-500" role="alert">{formError}</p>
+          )}
+
           <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
             <span className="bg-background text-muted-foreground relative z-10 px-2">
               Or continue with
@@ -114,7 +159,7 @@ export function LoginForm({
         </div>
         <div className="text-center text-sm">
           Don&apos;t have an account?{" "}
-          <a href="/auth/register" className="underline underline-offset-4">
+          <a href="/auth/register" className="underline underline-offset-2 hover:text-primary">
             Register
           </a>
         </div>

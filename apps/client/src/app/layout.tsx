@@ -22,11 +22,6 @@ export default function RootLayout({
           cairo.variable,
         )}
       >
-        {/* <AuthProvider>
-          <QueryProvider>
-            <NuqsAdapter>{children}</NuqsAdapter>
-          </QueryProvider>
-        </AuthProvider> */}
         <Providers>
           <NextTopLoader showSpinner={false} color="black" />
           <ThemeProvider>{children}</ThemeProvider>

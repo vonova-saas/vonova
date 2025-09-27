@@ -1,5 +1,5 @@
-import ContentSection from "@/components/student/app/settings/shared/content-section";
-import { BillingForm } from "@/components/student/app/settings/billing/billing-form";
+import ContentSection from "@/components/shared/settings/shared/content-section";
+import { BillingForm } from "@/components/shared/settings/billing/billing-form";
 
 export default function BillingPage() {
   return (

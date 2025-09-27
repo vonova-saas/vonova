@@ -25,10 +25,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
-import { useIsMobile } from "@/hooks/use-mobile";
-import useInstructorId from "@/hooks/instructor/use-instructor-id";
-import { useState } from "react";
+import { useIsMobile, useUserId } from "@/hooks";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { logoutMutationFn, getCurrentUserQueryFn } from "@/services";
+import { getAccountMutationFn } from "@/services/app/settings/account.api";
 
 export function NavInstructor({
   instructor,
@@ -42,14 +44,64 @@ export function NavInstructor({
   const isMobile = useIsMobile();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
-  const instructorId = useInstructorId();
+  const userId = useUserId();
+  const queryClient = useQueryClient();
+  const { mutateAsync: logout } = useMutation({ mutationFn: logoutMutationFn });
+  const { data: me } = useQuery({ queryKey: ["authUser"], queryFn: getCurrentUserQueryFn });
+  const { data: account, refetch: refetchAccount } = useQuery({
+    queryKey: ["account", userId],
+    queryFn: () => getAccountMutationFn(userId),
+    enabled: !!userId,
+  });
+
+  // Listen for account updates triggered by AccountFormClient and refresh data
+  useEffect(() => {
+    const onAccountUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["account", userId] });
+        refetchAccount();
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('account:updated', onAccountUpdated);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('account:updated', onAccountUpdated);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Prefer live user data; fall back to provided props
+  const userName = me?.user?.name || instructor.name;
+  const userEmail = me?.user?.email || instructor.email;
+  // Prefer auth profilePicture; fallback to account.avatarUrl; finally to provided prop
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userAvatar = me?.user?.profilePicture || (account as any)?.data?.avatarUrl || instructor.avatar;
+  const initials = userName
+    ? userName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("")
+    : "";
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // await logout();
-      router.push('/auth/login');
+      await logout();
+      // Best-effort clean up of any temporary client state
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('verifyEmail');
+        sessionStorage.removeItem('resetEmail');
+        sessionStorage.removeItem('resetToken');
+      }
+      await queryClient.invalidateQueries({ queryKey: ["authUser"] });
       toast.success("Logged out successfully");
+      window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}/?logout=1`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error("Logout failed", {
@@ -57,7 +109,6 @@ export function NavInstructor({
       });
     } finally {
       setIsLoggingOut(false);
-      router.push('/auth/login');
     }
   };
 
@@ -71,12 +122,21 @@ export function NavInstructor({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={instructor.avatar} alt={instructor.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                {userAvatar ? (
+                  <AvatarImage
+                    src={userAvatar}
+                    alt={userName}
+                    onError={(e) => {
+                      // Hide broken image so fallback initials are visible
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <AvatarFallback className="rounded-lg">{initials || "?"}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{instructor.name}</span>
-                <span className="truncate text-xs">{instructor.email}</span>
+                <span className="truncate font-medium">{userName}</span>
+                <span className="truncate text-xs">{userEmail}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -90,12 +150,21 @@ export function NavInstructor({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={instructor.avatar} alt={instructor.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  {userAvatar ? (
+                    <AvatarImage
+                      src={userAvatar}
+                      alt={userName}
+                      onError={(e) => {
+                        // Hide broken image so fallback initials are visible
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                  <AvatarFallback className="rounded-lg">{initials || "??"}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{instructor.name}</span>
-                  <span className="truncate text-xs">{instructor.email}</span>
+                  <span className="truncate font-medium">{userName}</span>
+                  <span className="truncate text-xs">{userEmail}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -110,8 +179,8 @@ export function NavInstructor({
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={() => {
-                  if (instructorId) {
-                    router.push(`/${instructorId}/settings/account`)
+                  if (userId) {
+                    router.push(`/${userId}/settings/account`)
                   }
                 }}
               >
@@ -120,8 +189,8 @@ export function NavInstructor({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  if (instructorId) {
-                    router.push(`/${instructorId}/settings/notifications`)
+                  if (userId) {
+                    router.push(`/${userId}/settings/notifications`)
                   }
                 }}
               >
