@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 from dotenv import load_dotenv
 
 from utils.logging_utils import setup_ai_logger
@@ -12,16 +11,16 @@ import os
 load_dotenv()
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST", "127.0.0.1")
-AI_SERVICE_PORT = int(os.getenv("AI_SERVICE_PORT", "5000"))
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST")
+AI_SERVICE_PORT = os.getenv("AI_SERVICE_PORT")
 logger = setup_ai_logger(__name__, "roadmap_ai.log", LOG_LEVEL)
 
 logger.info("Starting Roadmap AI Application")
 logger.info("Loading environment variables")
 logger.info(f"Log level: {LOG_LEVEL}")
-logger.info(f"Service host: {AI_SERVICE_HOST}")
-logger.info(f"Service port: {AI_SERVICE_PORT}")
+logger.info(f"AI Service Host: {AI_SERVICE_HOST}")
+logger.info(f"AI Service Port: {AI_SERVICE_PORT}")
 
 if not COHERE_API_KEY:
     logger.error("COHERE_API_KEY not found in environment variables")
@@ -48,28 +47,19 @@ class RoadmapRequest(BaseModel):
     topic: str
     skill_level: str
     duration_weeks: int
-    focus_areas: Optional[str] = None
 
 @app.post("/generate-roadmap")
 async def generate_roadmap_api(request: RoadmapRequest):
     try:
         logger.info(f"Received generate-roadmap request: {request.topic}, {request.skill_level}, {request.duration_weeks} weeks")
 
-        roadmap = generator.generate_roadmap(
+        json_response = generator.generate_roadmap(
             topic=request.topic,
             skill_level=request.skill_level,
             duration_weeks=request.duration_weeks,
-            focus_areas=request.focus_areas.split(', ') if request.focus_areas else None
         )
-        
+
         logger.info(f"Roadmap generated successfully: {request.topic}, {request.skill_level}, {request.duration_weeks} weeks")
-        json_response = generator.generate_json_response(
-            roadmap,
-            request.topic,
-            request.skill_level,
-            request.duration_weeks
-        )
-        
         logger.info(f"Response prepared with roadmap ID: {json_response.get('roadmapId')}")
         return JSONResponse(content=json_response)
         
@@ -81,10 +71,3 @@ async def generate_roadmap_api(request: RoadmapRequest):
 async def health_check():
     logger.info("Health check endpoint accessed")
     return JSONResponse(content={"status": "healthy", "service": "roadmap-ai"})
-
-if __name__ == "__main__":
-    import sys
-    import uvicorn
-    logger.info("Starting FastAPI server")
-    if len(sys.argv) > 1 and sys.argv[1] == "api":
-        uvicorn.run("main:app", host=AI_SERVICE_HOST, port=AI_SERVICE_PORT, reload=os.getenv("RELOAD", "false").lower() == "true")

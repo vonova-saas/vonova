@@ -5,11 +5,10 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy application files
-COPY main.py .
-COPY model.py .
+COPY . .
 
 # Install dependencies
-RUN pip install --no-cache-dir fastapi uvicorn python-dotenv cohere pydantic
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port 5000
 EXPOSE 5000

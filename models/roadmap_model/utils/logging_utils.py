@@ -1,4 +1,3 @@
-# Placeholder for logging utilities
 import logging
 
 def setup_ai_logger(name: str, log_file: str = "roadmap_ai.log", level: str = "INFO") -> logging.Logger:
