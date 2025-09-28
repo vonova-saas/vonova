@@ -67,8 +67,7 @@ export const deleteQuizController = asyncHandler(
   async (req: Request, res: Response) => {
     const quiz = await deleteQuizService(req.params.id, req.user!.id);
     res.status(HTTPSTATUS.OK).json({
-      message: "Quiz deleted successfully",
-      data: quiz,
+      message: quiz,
     });
   }
 );

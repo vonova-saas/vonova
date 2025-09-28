@@ -87,7 +87,7 @@ export const deleteQuizService = async (quizId: string, userId: string) => {
   }
 
   await quiz.deleteOne();
-  return quiz;
+  return "Quiz deleted successfully";
 }
 
 // ===== Quiz Answers & Grading =====
