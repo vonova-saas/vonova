@@ -20,8 +20,8 @@ export const createQuizController = asyncHandler(
       message: "quiz created successfully",
       data: quiz
     })
-  });
-
+  }
+);
 
 export const updateQuizController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -41,7 +41,8 @@ export const updateQuizController = asyncHandler(
       message: "Quiz updated successfully",
       data: quiz,
     });
-  });
+  }
+);
 
 export const getAllQuizzesController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -59,7 +60,8 @@ export const getQuizController = asyncHandler(
       message: "Quiz retrieved successfully",
       data: quiz,
     });
-  });
+  }
+);
 
 export const deleteQuizController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -68,7 +70,8 @@ export const deleteQuizController = asyncHandler(
       message: "Quiz deleted successfully",
       data: quiz,
     });
-  });
+  }
+);
 
 // ===== Quiz Answers & Attempts =====
 export const submitQuizAnswersController = asyncHandler(

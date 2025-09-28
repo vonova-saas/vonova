@@ -90,14 +90,6 @@ const quizSchema = new Schema<QuizDocument>(
   },
   {
     timestamps: true,
-    toJSON: {
-      transform(doc, ret) {
-        ret.id = `quiz-${ret._id!.toString().slice(0, 6)}`;
-        delete ret._id;
-        // delete ret.__v;
-        return ret;
-      },
-    },
   }
 );
 
