@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { QuizType } from "./types";
+import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import React from "react";
 import Link from "next/link";
 import useStudentId from "@/hooks/student/use-student-id";
@@ -12,6 +12,10 @@ type QuizListProps = {
 
 export default function QuizList({ quizzes }: QuizListProps) {
   const studentId = useStudentId();
+  const displayCode = (id: string) => {
+    const digits = (id.match(/\d+/g)?.join("") || id).slice(0, 6);
+    return `quiz-${digits}`;
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
       {quizzes.length === 0 ? (
@@ -21,12 +25,15 @@ export default function QuizList({ quizzes }: QuizListProps) {
       ) : (
         quizzes.map((quiz) => (
           <Card
-            key={quiz.id}
+            key={quiz._id}
             className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold flex items-center">
                 {quiz.title}
+                <span className="inline-block bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-[10px] font-semibold ml-2 align-middle border">
+                  {displayCode(quiz._id)}
+                </span>
                 <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold ml-2 align-middle">
                   {quiz.noOfQuestions} Questions
                 </span>
@@ -37,7 +44,7 @@ export default function QuizList({ quizzes }: QuizListProps) {
                 {quiz.description}
               </p>
               <Link
-                href={`/student/${studentId}/quizzes/${quiz.id}`}
+                href={`/student/${studentId}/quizzes/${quiz._id}`}
                 className="w-full mt-4"
               >
                 <Button className="w-full cursor-pointer">Attempt Now</Button>

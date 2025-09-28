@@ -1,4 +1,4 @@
-import { Question } from "./types";
+import { Question } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Button } from "@/components/ui/button";
 import React from "react";
 

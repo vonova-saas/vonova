@@ -1,4 +1,4 @@
-import { QuizType, Question } from "./types";
+import { QuizType, Question } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import React from "react";

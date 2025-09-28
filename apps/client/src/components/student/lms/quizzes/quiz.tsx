@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import QuizList from "./quizList";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockQuizzes, topics } from "./fakeQuizzes";
+import { getAllQuizzesMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
 import { BookOpen, Search, Filter, Component } from "lucide-react";
 
@@ -12,28 +13,58 @@ export default function Quiz() {
   const [search, setSearch] = useState("");
   const [topic, setTopic] = useState("All");
   const [page, setPage] = useState(1);
+  const [quizzes, setQuizzes] = useState<QuizType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const pageSize = 6;
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getAllQuizzesMutationFn();
+        if (mounted) setQuizzes(res.data || []);
+      } catch (e: unknown) {
+        let message = "Failed to load quizzes";
+        if (e && typeof e === "object" && "message" in e) {
+          message = String((e as { message?: string }).message) || message;
+        }
+        if (mounted) setError(message);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const topics = useMemo(() => [
+    "All",
+    ...Array.from(new Set(quizzes.map((q) => q.topic)))
+  ], [quizzes]);
+
   // Calculate total questions
-  const totalQuestions = mockQuizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
+  const totalQuestions = useMemo(() => quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0), [quizzes]);
   const totalTopics = topics.length - 1; // Exclude 'All'
 
   // Filter quizzes by search and topic
   const filteredQuizzes = useMemo(() => {
-    return mockQuizzes.filter((quiz) => {
+    return quizzes.filter((quiz) => {
       const matchesTopic = topic === "All" || quiz.topic === topic;
       const matchesSearch =
         quiz.title.toLowerCase().includes(search.toLowerCase()) ||
         quiz.description.toLowerCase().includes(search.toLowerCase());
       return matchesTopic && matchesSearch;
     });
-  }, [search, topic]);
+  }, [search, topic, quizzes]);
 
   const totalPages = Math.ceil(filteredQuizzes.length / pageSize);
   const paginatedQuizzes = filteredQuizzes.slice((page - 1) * pageSize, page * pageSize);
 
   // Reset to first page when filter/search changes
-  React.useEffect(() => {
+  useEffect(() => {
     setPage(1);
   }, [search, topic]);
 
@@ -54,7 +85,7 @@ export default function Quiz() {
               </div>
               <div>
                 <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-primary drop-shadow-sm">{mockQuizzes.length}</span>
+                  <span className="text-4xl font-extrabold text-primary drop-shadow-sm">{quizzes.length}</span>
                   <span className="text-base font-medium text-muted-foreground mb-1">Total Quizzes</span>
                 </div>
                 <div className="flex gap-2 mt-2">
@@ -100,7 +131,18 @@ export default function Quiz() {
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
         </div>
       </div>
-      {filteredQuizzes.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <BookOpen className="w-16 h-16 text-primary/20 mb-4" />
+          <span className="text-lg font-semibold text-muted-foreground mb-2">Loading quizzes...</span>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <BookOpen className="w-16 h-16 text-destructive/40 mb-4" />
+          <span className="text-lg font-semibold text-destructive mb-2">{error}</span>
+          <span className="text-sm text-muted-foreground">Please try again later.</span>
+        </div>
+      ) : filteredQuizzes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <BookOpen className="w-16 h-16 text-primary/20 mb-4" />
           <span className="text-lg font-semibold text-muted-foreground mb-2">No quizzes found</span>
