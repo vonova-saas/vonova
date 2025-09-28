@@ -29,7 +29,7 @@ const nextConfig = {
       },
       // General API proxy for other services under /api/* (e.g., /api/v1/...)
       {
-        source: '/api/:path*',
+        source: '/api/v1/:path*',
         destination: `${gateway}/api/v1/:path*`,
       },
     ];
