@@ -10,8 +10,8 @@ COPY . .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port 5000
-EXPOSE 5000
+# Expose port (Railway sets PORT env var)
+EXPOSE $PORT
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--reload", "--port", "5000"]
+# Command to run the application (use PORT env var with default 5000)
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-5000}"]
