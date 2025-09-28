@@ -9,7 +9,7 @@ class CohereAPIClient:
         self.logger = setup_ai_logger(__name__, "cohere_api_client.log", log_level)
         self.logger.info(f"CohereAPIClient initialized with model: {self.model_name}")
 
-    def chat_with_model(self, message, max_tokens=4000, temperature=0.0, frequency_penalty=0.5, presence_penalty=0.4, k=1, p=0.9, stop_sequences=["```"]):
+    def chat_with_model(self, message, max_tokens=4000, temperature=0.0, presence_penalty=0.4, k=1, p=0.9, stop_sequences=["```"]):
         self.logger.debug(f"Sending message to Cohere model '{self.model_name}'")
         try:
             response = self.co.chat(
@@ -17,7 +17,6 @@ class CohereAPIClient:
                 message=message,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
                 k=k,
                 p=p,
