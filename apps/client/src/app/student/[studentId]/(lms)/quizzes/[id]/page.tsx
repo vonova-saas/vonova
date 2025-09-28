@@ -5,11 +5,12 @@ import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { getQuizByIdMutationFn } from "@/services/student/lms/quizzes/quiz.api";
 import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
+import useStudentId from "@/hooks/student/use-student-id";
+import { useParams } from "next/navigation";
 
-type Params = { id: string; studentId: string };
-
-export default function QuizDetailPage({ params }: { params: Params }) {
-  const { id, studentId } = params;
+export default function QuizDetailPage() {
+  const { id } = useParams() as { id: string };
+  const studentId = useStudentId();
   const [quiz, setQuiz] = useState<QuizType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function QuizDetailPage({ params }: { params: Params }) {
         <BookOpen className="w-20 h-20 text-primary/20 mb-6" />
         <div className="text-2xl font-bold text-destructive mb-2">Quiz not found</div>
         <div className="text-muted-foreground text-base mb-4">{error || "The quiz you are looking for does not exist or has been removed."}</div>
-        <Link href={`/student/${studentId}/quizzes`} className="inline-block bg-primary text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-primary/90 transition">Back to Quizzes</Link>
+        <Link href={`/${studentId}/quizzes`} className="inline-block bg-primary text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-primary/90 transition">Back to Quizzes</Link>
       </div>
     );
   }
