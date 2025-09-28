@@ -8,6 +8,7 @@ import QuestionComponent from "./question";
 import QuizResult from "./quizResult";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
+import { submitQuizMutationFn, getAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
 
 function getQuestions(quiz: QuizType): Question[] {
   return quiz.questions.length > 0 ? quiz.questions : [];
@@ -19,6 +20,32 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
   const [timedOut, setTimedOut] = useState<{ [questionId: string]: boolean }>({});
   const [showResult, setShowResult] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    attemptId: string;
+    quizId: string;
+    score: number;
+    total: number;
+    percentage: number;
+    answers: { questionId: string; selectedOptionId: string; correct: boolean }[];
+  } | null>(null);
+  type Attempt = {
+    id: string;
+    quiz: string;
+    userId: string;
+    score: number;
+    total: number;
+    percentage: number;
+    answers?: { questionId: string; selectedOptionId: string; correct: boolean }[];
+    submittedAt?: string;
+    gradedAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
+  const [attemptsError, setAttemptsError] = useState<string | null>(null);
   const [timer, setTimer] = useState(10);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -54,7 +81,54 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
     if (current < questions.length - 1) {
       setTimeout(() => setCurrent((c) => c + 1), 200); // short delay for feedback
     } else {
-      setTimeout(() => setShowResult(true), 300);
+      // Last question answered: submit to backend
+      setTimeout(() => submitQuiz(), 200);
+    }
+  };
+
+  const submitQuiz = async () => {
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      const payload = {
+        answers: Object.entries(answers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
+      };
+      const res = await submitQuizMutationFn(quiz._id, payload);
+      setResult(res.data);
+      setShowResult(true);
+    } catch (e: unknown) {
+      let message = "Failed to submit quiz";
+      if (e && typeof e === "object" && "message" in e) {
+        message = String((e as { message?: string }).message) || message;
+      }
+      setSubmitError(message);
+      setShowResult(true); // still show results section with error
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const loadAttempts = async () => {
+    try {
+      setLoadingAttempts(true);
+      setAttemptsError(null);
+      const res = await getAttemptsMutationFn(quiz._id);
+      const data: unknown = (res as { data: unknown }).data;
+      let parsed: Attempt[] = [];
+      if (Array.isArray(data)) {
+        parsed = data as Attempt[];
+      } else if (data && typeof data === "object") {
+        parsed = [data as Attempt];
+      }
+      setAttempts(parsed);
+    } catch (e: unknown) {
+      let message = "Failed to load attempts";
+      if (e && typeof e === "object" && "message" in e) {
+        message = String((e as { message?: string }).message) || message;
+      }
+      setAttemptsError(message);
+    } finally {
+      setLoadingAttempts(false);
     }
   };
 
@@ -73,6 +147,13 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
         questions={questions}
         answers={answers}
         timedOut={timedOut}
+        submitting={submitting}
+        submitError={submitError}
+        result={result || undefined}
+        attempts={attempts}
+        loadingAttempts={loadingAttempts}
+        attemptsError={attemptsError}
+        onLoadAttempts={loadAttempts}
         onRestart={handleRestart}
         onBack={() => router.back()}
       />
