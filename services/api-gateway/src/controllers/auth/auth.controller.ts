@@ -32,7 +32,7 @@ export const registerUserController = asyncHandler(
     // Set a public (non-HTTP-only) auth presence cookie for client-side UX
     res.cookie('vonova_auth', '1', {
       httpOnly: false,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day
@@ -65,7 +65,7 @@ export const welcomeUserEmailController = asyncHandler(
 
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
@@ -74,7 +74,7 @@ export const welcomeUserEmailController = asyncHandler(
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
@@ -102,7 +102,7 @@ export const loginUserEmailController = asyncHandler(
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
@@ -111,7 +111,7 @@ export const loginUserEmailController = asyncHandler(
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
@@ -151,7 +151,7 @@ export const oAuthGoogleLoginController = asyncHandler(
       res.cookie('providerId', providerId,
         {
           httpOnly: true,
-          domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+          domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
           secure: true,
           sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
         });
@@ -160,13 +160,13 @@ export const oAuthGoogleLoginController = asyncHandler(
     else if (user.role === "INSTRUCTORS_USER") {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
         secure: Env.NODE_ENV === 'production',
         sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
       });
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
         secure: Env.NODE_ENV === 'production',
         sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
       });
@@ -175,13 +175,13 @@ export const oAuthGoogleLoginController = asyncHandler(
     else if (user.role === "STUDENT_USER") {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
         secure: Env.NODE_ENV === 'production',
         sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
       });
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+        domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
         secure: Env.NODE_ENV === 'production',
         sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax'
       });
@@ -220,7 +220,7 @@ export const welcomeUseroAuthGoogleController = asyncHandler(
     // Set tokens as HTTP-only cookies
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
@@ -229,7 +229,7 @@ export const welcomeUseroAuthGoogleController = asyncHandler(
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
@@ -267,7 +267,7 @@ export const refreshTokenController = asyncHandler(
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1, // 1 day in ms
@@ -276,7 +276,7 @@ export const refreshTokenController = asyncHandler(
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
@@ -306,7 +306,7 @@ export const verifyResetPassCodeController = asyncHandler(
 
     res.cookie('resetToken', result.resetToken, {
       httpOnly: true,
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: Env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1000 * 60 * 10, // 10m in ms
@@ -350,7 +350,7 @@ export const logOutController = asyncHandler(
     // Clear the cookies after logout using the same options as set
     const cookieOpts = {
       path: '/',
-      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost',
+      domain: Env.NODE_ENV === 'production' ? 'vonova.tech' : 'localhost:3000',
       secure: Env.NODE_ENV === 'production',
       sameSite: (Env.NODE_ENV === 'production' ? 'none' : 'lax') as 'lax' | 'strict' | 'none',
     } as const;
