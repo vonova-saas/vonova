@@ -37,4 +37,4 @@ LABEL maintainer="PDF Chat Magician " \
   creativity="UNLIMITED"
 
 # Command to launch our magical PDF chat application
-CMD ["python", "-m", "main"]
+CMD ["python", "main"]
