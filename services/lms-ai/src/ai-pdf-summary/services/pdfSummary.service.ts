@@ -30,7 +30,7 @@ export class PDFSummaryService {
   private readonly DEFAULT_TIMEOUT = 300000; // 5 minutes timeout
 
   constructor() {
-    this.PYTHON_SERVICE_URL = Env.PDF_SUMMARY_AI_SERVICE_URL || 'http://localhost:5001';
+    this.PYTHON_SERVICE_URL = Env.PDF_SUMMARY_AI_SERVICE_URL || 'http://localhost:5000';
   }
 
 
@@ -266,8 +266,8 @@ export class PDFSummaryService {
         // Try different approach: send Buffer directly with proper headers
         const formData = new FormData();
 
-        // Method 1: Try sending as Buffer directly
-        formData.append('file', new Blob([fileContent], { type: 'application/pdf' }), filename);
+        // Method 1: Try sending as Buffer directly (convert Buffer to Uint8Array for Blob)
+        formData.append('file', new Blob([new Uint8Array(fileContent)], { type: 'application/pdf' }), filename);
 
         // Method 2: Also try sending as raw Buffer
         formData.append('file_buffer', fileContent.toString('base64'));

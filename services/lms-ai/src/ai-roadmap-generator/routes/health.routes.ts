@@ -1,13 +1,22 @@
 import { Router } from 'express';
 import { healthController } from '../controllers/health.controller';
 import { corsProtectionMiddleware } from '../../middlewares/security/cors-protection.middleware';
-import { botProtectionMiddleware } from '../../middlewares/security/bot-protection.middleware';
+import { createBotProtectionMiddleware } from '../../middlewares/security/bot-protection.middleware';
 
 const router = Router();
 
 // Apply security middleware to all health routes
 router.use(corsProtectionMiddleware);
-router.use(botProtectionMiddleware);
+// Skip bot protection for health and diagnostics endpoints to allow curl and tooling
+router.use(
+  createBotProtectionMiddleware({
+    skipRoutes: [
+      '/',
+      '/test-ai-connection',
+      '/system-status'
+    ]
+  })
+);
 
 // ============ HEALTH & MONITORING ENDPOINTS ============
 

@@ -24,11 +24,11 @@ app.use(express.urlencoded({ extended: true }));
 app.get(
   `/`,
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-                return res.status(HTTPSTATUS.OK).json({
-              status: "Healthy!",
-              service: "Vonova LMS AI - Complete AI Platform",
-              version: "1.0.0",
-              description: "AI-powered learning platform with roadmap generation, PDF summarization, and more",
+    return res.status(HTTPSTATUS.OK).json({
+      status: "Healthy!",
+      service: "Vonova LMS AI - Complete AI Platform",
+      version: "1.0.0",
+      description: "AI-powered learning platform with roadmap generation, PDF summarization, and more",
       timestamp: new Date().toISOString(),
       ports: {
         backend: parseInt(Env.PORT),
@@ -42,7 +42,7 @@ app.get(
           description: "Generate personalized learning roadmaps using AI",
           endpoints: [
             "POST /api/roadmap/generate",
-            "GET /api/roadmap/:roadmapId", 
+            "GET /api/roadmap/:roadmapId",
             "PUT /api/roadmap/:roadmapId/progress"
           ]
         },
@@ -58,7 +58,7 @@ app.get(
           ]
         },
         "AI Problem Solving": {
-          status: "Coming Soon", 
+          status: "Coming Soon",
           description: "AI-powered problem solving assistance",
           endpoints: ["POST /api/problem-solving/solve"]
         },
@@ -110,9 +110,9 @@ app.use(errorHandler);
 
 // ============ SERVER STARTUP ============
 app.listen(Env.PORT, async () => {
-          console.log('');
-        console.log('VONOVA LMS AI PLATFORM - STARTING UP');
-        console.log('');
+  console.log('');
+  console.log('VONOVA LMS AI PLATFORM - STARTING UP');
+  console.log('');
   console.log(`Backend Service: http://localhost:${Env.PORT}`);
   console.log(`Roadmap AI Service: ${Env.ROADMAP_AI_SERVICE_URL}`);
   console.log(`PDF Summary AI Service: ${Env.PDF_SUMMARY_AI_SERVICE_URL}`);
@@ -123,7 +123,7 @@ app.listen(Env.PORT, async () => {
   console.log('');
   console.log(`Environment: ${Env.NODE_ENV}`);
   console.log(`Server listening on port ${Env.PORT}`);
-  
+
   // Connect to database (optional for testing)
   try {
     await connectDatabase();
@@ -133,15 +133,15 @@ app.listen(Env.PORT, async () => {
     console.warn('Database connection failed (service will run with limited functionality):', errorMessage);
     console.log('To enable full functionality, configure MONGO_URI_ROADMAP_AI in your .env file');
   }
-  
-            console.log('');
-          console.log('LMS AI PLATFORM IS READY!');
-          console.log('');
-          console.log('Available Services:');
-          console.log('AI Roadmap Generator');
-          console.log('AI PDF Summary & Chat');
-          console.log('AI Problem Solving (Coming Soon)');
-          console.log('AI Assistant (Coming Soon)');
-          console.log('AI Video Generator (Coming Soon)');
-          console.log('');
+
+  console.log('');
+  console.log('LMS AI PLATFORM IS READY!');
+  console.log('');
+  console.log('Available Services:');
+  console.log('AI Roadmap Generator');
+  console.log('AI PDF Summary & Chat');
+  console.log('AI Problem Solving (Coming Soon)');
+  console.log('AI Assistant (Coming Soon)');
+  console.log('AI Video Generator (Coming Soon)');
+  console.log('');
 });

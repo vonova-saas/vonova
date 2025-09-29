@@ -471,6 +471,7 @@
  *                         ai_service:
  *                           type: integer
  *                           example: 5000
+ *                           description: "AI roadmap generator service port"
  */
 
 
