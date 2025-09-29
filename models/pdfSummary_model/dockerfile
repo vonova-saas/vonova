@@ -7,15 +7,31 @@ WORKDIR /app
 # Copy application files
 COPY . .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system build tools and libs required by wheels/source builds
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+     build-essential \
+     gcc \
+     g++ \
+     make \
+     pkg-config \
+     libjpeg-dev \
+     zlib1g-dev \
+     libfreetype6-dev \
+     libopenjp2-7-dev \
+     libtiff5-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip tooling and install Python dependencies (prefer wheels)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+  && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Expose port (Railway sets PORT env var)
 EXPOSE 5000
 
 # Add some magical metadata
-LABEL maintainer="PDF Chat Magician 🪄" \
-  description="Transform PDFs into intelligent conversation partners with AI magic! ✨" \
+LABEL maintainer="PDF Chat Magician " \
+  description="Transform PDFs into intelligent conversation partners with AI magic! " \
   version="1.0.0" \
   magic_level="MAXIMUM" \
   creativity="UNLIMITED"
