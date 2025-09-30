@@ -1,4 +1,5 @@
 import { SupportForm } from '@/components/shared/support/support-form';
+import { SupportList } from '@/components/shared/support/support-list';
 
 export default function SupportPage() {
   return (
@@ -14,8 +15,10 @@ export default function SupportPage() {
         <SupportForm />
       </div>
 
+      <SupportList />
+
       <div className="mt-12 text-center text-sm text-muted-foreground">
-        <p>Can&apos;t find what you&apos;re looking for? Email us at <a href="mailto:support@onyx.com" className="text-primary hover:underline">support@onyx.com</a></p>
+        <p>Can&apos;t find what you&apos;re looking for? Email us at <a href="mailto:onyxtapeg@gmail.com" className="text-primary hover:underline">support@onyx.com</a></p>
       </div>
     </div>
   );
