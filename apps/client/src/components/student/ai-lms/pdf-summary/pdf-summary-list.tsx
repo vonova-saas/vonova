@@ -41,7 +41,7 @@ export default function PDFSummaryList({
   pdfs = mockPDFFiles,
   studentId,
   onChat = (pdfId: string) => {
-    window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
+    window.location.href = `/${studentId}/pdf-summary/${pdfId}`;
   },
   onDelete = (pdfId: string) => {
     console.log("Delete PDF:", pdfId);
@@ -53,7 +53,7 @@ export default function PDFSummaryList({
     console.log("Rename PDF:", pdfId, "to", newName);
   },
   onUpload = () => {
-    window.location.href = `/student/${studentId}/pdf-summary`;
+    window.location.href = `/${studentId}/pdf-summary`;
   },
 }: PDFSummaryListProps) {
   const [search, setSearch] = useState("");

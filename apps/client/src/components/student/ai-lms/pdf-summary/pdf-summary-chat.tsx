@@ -159,7 +159,7 @@ const PDFSummaryChat = ({
       }
     } else {
       // Navigate to individual chat page
-      window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
+      window.location.href = `/${studentId}/pdf-summary/${pdfId}`;
     }
   };
 
@@ -177,7 +177,7 @@ const PDFSummaryChat = ({
 
   const handleBackToFiles = () => {
     if (isIndividualChat) {
-      window.location.href = `/student/${studentId}/pdf-summary`;
+      window.location.href = `/${studentId}/pdf-summary`;
     }
   };
 
@@ -279,7 +279,7 @@ const PDFSummaryChat = ({
               setShowUploadModal(false);
               setUploadProgress([]);
               // Navigate to the new PDF chat page
-              window.location.href = `/student/${studentId}/pdf-summary/${fileId}`;
+              window.location.href = `/${studentId}/pdf-summary/${fileId}`;
             }, 2000);
           }, 2000);
         } else {

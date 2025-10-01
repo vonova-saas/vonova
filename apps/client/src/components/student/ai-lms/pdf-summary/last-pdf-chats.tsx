@@ -49,7 +49,7 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
   };
 
   const handleViewAll = () => {
-    window.location.href = `/student/${studentId}/pdf-summary/last-pdf-chats`;
+    window.location.href = `/${studentId}/pdf-summary/last-pdf-chats`;
   };
 
   if (recentPDFs.length === 0) {
