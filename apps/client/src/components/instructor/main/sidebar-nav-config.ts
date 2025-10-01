@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  ClipboardCheck,
   BrainCog,
   LayoutDashboard,
   Settings2,
@@ -37,6 +38,11 @@ export const sidebarNavData = {
       title: "Material Library Management",
       url: "/:instructorId/material-library-management",
       icon: BookOpen,
+    },
+    {
+      title: "Quiz Management",
+      url: "/:instructorId/quiz-managment",
+      icon: ClipboardCheck,
     },
     {
       title: "Problem Solving Management",

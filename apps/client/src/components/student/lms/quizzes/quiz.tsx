@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
-import QuizList from "./quizList";
+import QuizList from "./quiz-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllQuizzesMutationFn } from "@/services/student/lms/quizzes/quiz.api";
 import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
-import { BookOpen, Search, Filter, Component } from "lucide-react";
+import { BookOpen, Search, Filter, Component, RefreshCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Quiz() {
   const [search, setSearch] = useState("");
@@ -18,26 +19,23 @@ export default function Quiz() {
   const [error, setError] = useState<string | null>(null);
   const pageSize = 6;
 
+  const loadQuizzes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getAllQuizzesMutationFn();
+      setQuizzes(res.data || []);
+    } catch (e: unknown) {
+      let msg = "Failed to load quizzes";
+      if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await getAllQuizzesMutationFn();
-        if (mounted) setQuizzes(res.data || []);
-      } catch (e: unknown) {
-        let message = "Failed to load quizzes";
-        if (e && typeof e === "object" && "message" in e) {
-          message = String((e as { message?: string }).message) || message;
-        }
-        if (mounted) setError(message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    loadQuizzes();
   }, []);
 
   const topics = useMemo(() => [
@@ -69,11 +67,25 @@ export default function Quiz() {
   }, [search, topic]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center overflow-auto relative bg-background p-6" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}>
-      <div className="flex items-center gap-2 mb-4">
-        <h1 className="text-4xl font-bold leading-tight">Quizzes</h1>
-        <Component className="w-7 h-7 text-primary animate-pulse" />
+    <div className="h-full w-full flex flex-col items-center justify-center overflow-auto relative  p-6"
+      style={{
+        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
+        backgroundSize: "18px 18px"
+      }}
+    >
+      <div className="flex items-center mb-4 w-full max-w-3xl">
+        <div className="flex items-center gap-2">
+          <h1 className="text-4xl font-bold leading-tight">Quizzes</h1>
+          <Component className="w-7 h-7 text-primary animate-pulse" />
+        </div>
+
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" onClick={() => loadQuizzes()} title="Refresh" className="cursor-pointer">
+            <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
+
       {/* Enhanced Summary Card */}
       <Card className="w-full max-w-3xl mb-6 shadow-lg border-2 backdrop-blur-sm">
         <CardContent className="py-6">
@@ -106,6 +118,7 @@ export default function Quiz() {
           </div>
         </CardContent>
       </Card>
+
       {/* Search and Filter */}
       <div className="w-full max-w-3xl flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">

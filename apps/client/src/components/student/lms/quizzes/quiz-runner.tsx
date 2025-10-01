@@ -4,17 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { QuizType, Question } from "@/types/api/student/lms/quizzes/quiz.type";
 import React, { useState, useEffect, useRef } from "react";
-import QuestionComponent from "./question";
-import QuizResult from "./quizResult";
+import QuestionComponent from "./quiz-question";
+import QuizResult from "./quiz-result";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { submitQuizMutationFn, getAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { getAttemptsTypeResponse } from "@/types/api/student/lms/quizzes/quiz.type";
 
 function getQuestions(quiz: QuizType): Question[] {
   return quiz.questions.length > 0 ? quiz.questions : [];
 }
 
-export default function QuizRunner({ quiz }: { quiz: QuizType}) {
+export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   const questions = getQuestions(quiz);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
@@ -30,20 +31,20 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
     percentage: number;
     answers: { questionId: string; selectedOptionId: string; correct: boolean }[];
   } | null>(null);
-  type Attempt = {
-    id: string;
-    quiz: string;
-    userId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers?: { questionId: string; selectedOptionId: string; correct: boolean }[];
-    submittedAt?: string;
-    gradedAt?: string;
-    createdAt?: string;
-    updatedAt?: string;
-  };
-  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  // type Attempt = {
+  //   id: string;
+  //   quiz: string;
+  //   userId: string;
+  //   score: number;
+  //   total: number;
+  //   percentage: number;
+  //   answers?: { questionId: string; selectedOptionId: string; correct: boolean }[];
+  //   submittedAt?: string;
+  //   gradedAt?: string;
+  //   createdAt?: string;
+  //   updatedAt?: string;
+  // };
+  const [attempts, setAttempts] = useState<getAttemptsTypeResponse["data"][]>([]);
   const [loadingAttempts, setLoadingAttempts] = useState(false);
   const [attemptsError, setAttemptsError] = useState<string | null>(null);
   const [timer, setTimer] = useState(10);
@@ -114,11 +115,11 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
       setAttemptsError(null);
       const res = await getAttemptsMutationFn(quiz._id);
       const data: unknown = (res as { data: unknown }).data;
-      let parsed: Attempt[] = [];
+      let parsed: getAttemptsTypeResponse["data"][] = [];
       if (Array.isArray(data)) {
-        parsed = data as Attempt[];
+        parsed = data as getAttemptsTypeResponse["data"][];
       } else if (data && typeof data === "object") {
-        parsed = [data as Attempt];
+        parsed = [data as getAttemptsTypeResponse["data"]];
       }
       setAttempts(parsed);
     } catch (e: unknown) {
@@ -161,7 +162,12 @@ export default function QuizRunner({ quiz }: { quiz: QuizType}) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[85vh] w-full">
+    <div className="flex items-center justify-center min-h-[85vh] w-full"
+      style={{
+        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
+        backgroundSize: "18px 18px"
+      }}
+      >
       <Card className="w-full max-w-xl mx-auto">
         <CardHeader className="flex flex-col gap-2 pb-2">
           <div className="flex items-center gap-2 mb-2">
