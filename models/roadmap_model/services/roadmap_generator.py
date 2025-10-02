@@ -12,7 +12,7 @@ class RoadmapGenerator:
         self.logger = setup_ai_logger(__name__, "roadmap_generator.log", "INFO")
         self.logger.info("RoadmapGenerator initialized")
 
-    def generate_roadmap(self, topic, skill_level="beginner", duration_weeks=12):
+    def generate_roadmap(self, topic, skill_level, duration_weeks):
         self.logger.info(f"Starting roadmap generation for topic: {topic}, skill_level: {skill_level}, duration: {duration_weeks} weeks")
         
         prompt = f"""
