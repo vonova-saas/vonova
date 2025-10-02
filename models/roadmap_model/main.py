@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from utils.logging_utils import setup_ai_logger
 import os
+import uvicorn
 
 load_dotenv()
 
@@ -71,3 +72,6 @@ async def generate_roadmap_api(request: RoadmapRequest):
 async def health_check():
     logger.info("Health check endpoint accessed")
     return JSONResponse(content={"status": "healthy", "service": "roadmap-ai"})
+
+if __name__ == "__main__":
+    uvicorn.run(app, host=AI_SERVICE_HOST , port=AI_SERVICE_PORT, reload=False)
