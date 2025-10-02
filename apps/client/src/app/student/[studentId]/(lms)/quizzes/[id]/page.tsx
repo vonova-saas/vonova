@@ -3,12 +3,15 @@ import React, { useEffect, useState } from "react";
 import QuizRunner from "@/components/student/lms/quizzes/quiz-runner";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
-import { getQuizByIdMutationFn } from "@/services/student/lms/quizzes/quiz.api";
-import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { useUserId } from "@/hooks";
+import { useParams } from "next/navigation";
+import { useQuizStore } from "@/lib/stores";
+import type { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 
 export default function QuizDetailPage() {
   const userId = useUserId();
+  const { id } = useParams() as { id: string };
+  const { fetchById } = useQuizStore();
 
   const [quiz, setQuiz] = useState<QuizType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +22,8 @@ export default function QuizDetailPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await getQuizByIdMutationFn(userId);
-        if (mounted) setQuiz(res.data as QuizType);
+        const q = await fetchById(id);
+        if (mounted) setQuiz(q ?? null);
       } catch (e: unknown) {
         let message = "Failed to load quiz";
         if (e && typeof e === "object" && "message" in e) {
@@ -34,7 +37,7 @@ export default function QuizDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [id, fetchById]);
 
   if (loading) {
     return (

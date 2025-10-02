@@ -54,6 +54,9 @@ export type createQuizTypeResponse = {
 
 export type updateQuizType = {
   title: string;
+  description?: string;
+  topic?: string;
+  noOfQuestions?: string;
   questions: Question[];
 }
 

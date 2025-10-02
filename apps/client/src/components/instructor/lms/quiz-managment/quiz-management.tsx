@@ -1,42 +1,32 @@
 "use client";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useUserId } from "@/hooks";
-import { deleteQuizMutationFn, getAllQuizzesMutationFn } from "@/services/student/lms/quizzes/quiz.api";
-import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
+import { Button } from "@/components/ui/button";
 import { BookOpen, Component, Plus, RefreshCcw } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
+import { useQuizStore } from "@/lib/stores";
 import InstructorQuizList from "./quiz-list";
+import Link from "next/link";
+import { useUserId } from "@/hooks";
+import { useRouter } from "next/navigation";
 
 export default function QuizManagement() {
   const [quizzes, setQuizzes] = useState<QuizType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { quizzesById, allIds, loading, error, fetchAll, deleteQuiz } = useQuizStore();
   const [search, setSearch] = useState("");
   const userId = useUserId();
   const router = useRouter();
 
-  const loadQuizzes = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getAllQuizzesMutationFn();
-      setQuizzes(res.data || []);
-    } catch (e: unknown) {
-      let msg = "Failed to load quizzes";
-      if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   useEffect(() => {
-    loadQuizzes();
-  }, []);
+    // project map to array for filtering
+    const list = allIds.map((id) => quizzesById[id]).filter(Boolean) as QuizType[];
+    setQuizzes(list);
+  }, [allIds, quizzesById]);
 
   const filtered = useMemo(() => {
     return quizzes.filter(q =>
@@ -50,8 +40,7 @@ export default function QuizManagement() {
   const totalQuizzes = quizzes.length;
 
   const handleDelete = async (id: string) => {
-    await deleteQuizMutationFn(id);
-    await loadQuizzes();
+    await deleteQuiz(id);
   };
 
   return (
@@ -62,7 +51,7 @@ export default function QuizManagement() {
         <h1 className="text-4xl font-bold leading-tight">Quiz Management</h1>
         <Component className="w-7 h-7 text-primary animate-pulse" />
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" onClick={() => loadQuizzes()} title="Refresh" className="cursor-pointer">
+          <Button variant="outline" onClick={() => fetchAll()} title="Refresh" className="cursor-pointer">
             <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
           </Button>
           <Link href={`/${userId}/quiz-managment/create`}>
@@ -108,7 +97,11 @@ export default function QuizManagement() {
 
       {/* Content */}
       {loading ? (
-        <div className="text-muted-foreground">Loading quizzes...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-48 rounded border bg-muted animate-pulse" />
+          ))}
+        </div>
       ) : error ? (
         <div className="text-destructive">{error}</div>
       ) : (

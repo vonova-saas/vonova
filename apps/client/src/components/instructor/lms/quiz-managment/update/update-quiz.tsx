@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, CheckCircle, Component as ComponentIcon, BookOpen } from "lucide-react";
-import { getQuizByIdMutationFn, updateQuizMutationFn } from "@/services/student/lms/quizzes/quiz.api";
-import type { QuizType, Question } from "@/types/api/student/lms/quizzes/quiz.type";
+import { useQuizStore } from "@/lib/stores";
+import type { Question } from "@/types/api/student/lms/quizzes/quiz.type";
 
 export default function EditQuizPage() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
+  const { fetchById, updateQuiz } = useQuizStore();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,20 +24,53 @@ export default function EditQuizPage() {
   const [noOfQuestions, setNoOfQuestions] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
+  // ============== (draft) ============== 
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftKey = `lms_quiz_draft_${id}`;
+  // ============== (draft) ============== 
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const res = await getQuizByIdMutationFn(id);
-        const quiz = (res as { data: QuizType }).data;
+        const quiz = await fetchById(id);
         if (!mounted) return;
-        setTitle(quiz.title || "");
-        setDescription(quiz.description || "");
-        setTopic(quiz.topic || "");
-        setNoOfQuestions(typeof quiz.noOfQuestions === "string" ? quiz.noOfQuestions : String(quiz.noOfQuestions ?? ""));
-        setQuestions(quiz.questions || []);
+        if (quiz) {
+          setTitle(quiz.title || "");
+          setDescription(quiz.description || "");
+          setTopic(quiz.topic || "");
+          setNoOfQuestions(typeof quiz.noOfQuestions === "string" ? quiz.noOfQuestions : String(quiz.noOfQuestions ?? ""));
+          setQuestions(quiz.questions || []);
+
+          // Offer restoring draft if exists ============== (draft) ==============
+          try {
+            const draft = localStorage.getItem(draftKey);
+            if (draft) {
+              const parsed = JSON.parse(draft) as {
+                title: string; description: string; topic: string; noOfQuestions: string; questions: Question[];
+              };
+              const isDifferent = (
+                parsed.title !== (quiz.title || "") ||
+                parsed.description !== (quiz.description || "") ||
+                parsed.topic !== (quiz.topic || "") ||
+                parsed.noOfQuestions !== (typeof quiz.noOfQuestions === "string" ? quiz.noOfQuestions : String(quiz.noOfQuestions ?? "")) ||
+                JSON.stringify(parsed.questions) !== JSON.stringify(quiz.questions || [])
+              );
+              if (isDifferent && window.confirm("A saved draft was found for this quiz. Restore it?")) {
+                setTitle(parsed.title);
+                setDescription(parsed.description);
+                setTopic(parsed.topic);
+                setNoOfQuestions(parsed.noOfQuestions);
+                setQuestions(parsed.questions || []);
+              }
+            }
+          } catch { }
+          // ============== (draft) ==============
+
+        } else {
+          setError("Quiz not found");
+        }
       } catch (e: unknown) {
         let msg = "Failed to load quiz";
         if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;
@@ -46,7 +80,18 @@ export default function EditQuizPage() {
       }
     })();
     return () => { mounted = false; };
-  }, [id]);
+  }, [id, fetchById, draftKey]);
+
+  // Draft autosave (debounced) ============== (draft) ============== 
+  useEffect(() => {
+    const payload = { title, description, topic, noOfQuestions, questions };
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      try { localStorage.setItem(draftKey, JSON.stringify(payload)); } catch { }
+    }, 600);
+    return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
+  }, [title, description, topic, noOfQuestions, questions, draftKey]);
+  // ============== (draft) ============== 
 
   const canSave = useMemo(() => {
     if (!title.trim()) return false;
@@ -55,6 +100,34 @@ export default function EditQuizPage() {
   }, [title, questions]);
 
   const setQuestion = (qid: string, updater: (q: Question) => Question) => setQuestions((prev) => prev.map((q) => (q.id === qid ? updater(q) : q)));
+
+  // Reorder helpers ============== (draft) ==============
+  const moveQuestion = (qid: string, direction: "up" | "down") => {
+    setQuestions((prev) => {
+      const idx = prev.findIndex((q) => q.id === qid);
+      if (idx === -1) return prev;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const clone = [...prev];
+      const [item] = clone.splice(idx, 1);
+      clone.splice(newIdx, 0, item);
+      return clone;
+    });
+  };
+
+  const moveOption = (qid: string, oid: string, direction: "up" | "down") => {
+    setQuestion(qid, (q) => {
+      const idx = q.options.findIndex((o) => o.id === oid);
+      if (idx === -1) return q;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= q.options.length) return q;
+      const opts = [...q.options];
+      const [item] = opts.splice(idx, 1);
+      opts.splice(newIdx, 0, item);
+      return { ...q, options: opts };
+    });
+  };
+  // ============== (draft) ============== 
 
   const addQuestion = () => {
     const qid = `q${Date.now()}`;
@@ -79,7 +152,18 @@ export default function EditQuizPage() {
     try {
       setSaving(true);
       setError(null);
-      await updateQuizMutationFn(id, { title: title.trim(), questions });
+      await updateQuiz(id, {
+        title: title.trim(),
+        description: description.trim(),
+        topic: topic.trim(),
+        noOfQuestions: typeof noOfQuestions === "string" ? noOfQuestions.trim() : String(noOfQuestions ?? ""),
+        questions,
+      });
+
+      // ============== (draft) ==============
+      try { localStorage.removeItem(draftKey); } catch { }
+      // ============== (draft) ==============
+
       router.back();
     } catch (e: unknown) {
       let msg = "Failed to update quiz";
@@ -92,8 +176,12 @@ export default function EditQuizPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[85vh] w-full flex items-center justify-center">
-        <div className="text-muted-foreground">Loading quiz...</div>
+      <div className="min-h-[85vh] w-full flex items-start justify-center p-6">
+        <div className="w-full max-w-5xl space-y-4">
+          <div className="h-10 w-64 bg-muted animate-pulse rounded" />
+          <div className="h-28 w-full bg-muted animate-pulse rounded" />
+          <div className="h-72 w-full bg-muted animate-pulse rounded" />
+        </div>
       </div>
     );
   }
@@ -125,7 +213,7 @@ export default function EditQuizPage() {
               </div>
               <div className="flex-1">
                 <div className="text-lg font-semibold text-primary">Update quiz content</div>
-                <div className="text-sm text-muted-foreground">Edit the title and questions. Description and topic are currently view-only.</div>
+                <div className="text-sm text-muted-foreground">Edit the title, topic, description, number of questions, and questions/options.</div>
               </div>
             </div>
           </CardContent>
@@ -145,15 +233,15 @@ export default function EditQuizPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Topic</label>
-                <Input value={topic} disabled />
+                <Input value={topic} onChange={(e) => setTopic(e.target.value)} />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Description</label>
-                <Textarea rows={3} value={description} disabled />
+                <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm font-medium">Number of Questions</label>
-                <Input value={noOfQuestions} disabled />
+                <Input value={noOfQuestions} onChange={(e) => setNoOfQuestions(e.target.value)} />
               </div>
             </div>
 
@@ -168,7 +256,13 @@ export default function EditQuizPage() {
               {questions.map((q, idx) => (
                 <Card key={q.id} className="border">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Question {idx + 1}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">Question {idx + 1}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => moveQuestion(q.id, "up")} title="Move up">↑</Button>
+                        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => moveQuestion(q.id, "down")} title="Move down">↓</Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Input
@@ -189,6 +283,10 @@ export default function EditQuizPage() {
                           >
                             <CheckCircle className="w-4 h-4" />
                           </Button>
+                          <div className="flex flex-col gap-1">
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6 cursor-pointer" onClick={() => moveOption(q.id, o.id, "up")} title="Move option up">↑</Button>
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6 cursor-pointer" onClick={() => moveOption(q.id, o.id, "down")} title="Move option down">↓</Button>
+                          </div>
                           <Input
                             className="flex-1"
                             placeholder="Option text"
