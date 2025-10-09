@@ -160,7 +160,6 @@ export class HealthController {
         },
         configuration: {
           ai_service_url: Env.ROADMAP_AI_SERVICE_URL,
-          base_path: Env.BASE_PATH,
           frontend_origin: Env.FRONTEND_ORIGIN,
           mongo_connected: true, // This would be checked in real implementation
         },

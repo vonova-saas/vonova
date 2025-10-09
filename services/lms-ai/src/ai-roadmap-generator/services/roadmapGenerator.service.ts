@@ -1,11 +1,11 @@
-import { 
-  IRoadmapRequest, 
-  IRoadmapResponse, 
-  IRoadmapData, 
-  IWeek, 
-  IMilestone, 
-  IChapter, 
-  ITreeNode 
+import {
+  IRoadmapRequest,
+  IRoadmapResponse,
+  IRoadmapData,
+  IWeek,
+  IMilestone,
+  IChapter,
+  ITreeNode
 } from '../models/roadmap.model';
 import RoadmapModel from '../models/roadmap.model';
 import RoadmapHistoryModel from '../models/roadmapHistory.model';
@@ -14,13 +14,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppError, BadRequestException, InternalServerException } from '../../utils/appError';
 import { HTTPSTATUS } from '../../config/http.config';
 import { Env } from '../../config/env.config';
-import { 
-  roadmapLogger, 
-  logAIServiceCall, 
-  logDatabaseOperation, 
-  logPerformance, 
-  logRoadmapGeneration, 
-  logUserActivity 
+import {
+  roadmapLogger,
+  logAIServiceCall,
+  logDatabaseOperation,
+  logPerformance,
+  logRoadmapGeneration,
+  logUserActivity
 } from '../utils/logger';
 import { logAIServiceCallWrapper, logDatabaseOperationWrapper } from '../middlewares/logging.middleware';
 
@@ -42,14 +42,14 @@ export class RoadmapGeneratorService {
   async generateRoadmap(request: IRoadmapRequest, userIp?: string, userAgent?: string): Promise<any> {
     const startTime = Date.now();
     const roadmapId = uuidv4();
-    
+
     try {
       // Log request start
       roadmapLogger.info('Starting roadmap generation', {
         topic: request.topic,
         skill_level: request.skill_level,
         duration_weeks: request.duration_weeks,
-        user_id: request.user_id,
+        userId: request.userId,
         roadmapId
       });
 
@@ -86,7 +86,7 @@ export class RoadmapGeneratorService {
           }
 
           const data = await response.json();
-          
+
           if (!data.status) {
             throw new Error(data.error || 'Python service returned error');
           }
@@ -108,8 +108,8 @@ export class RoadmapGeneratorService {
       });
 
       // Log user activity
-      if (request.user_id) {
-        logUserActivity(request.user_id, 'roadmap_generated', finalRoadmapId, {
+      if (request.userId) {
+        logUserActivity(request.userId.toString(), 'roadmap_generated', finalRoadmapId, {
           topic: request.topic,
           skill_level: request.skill_level
         });
@@ -117,13 +117,13 @@ export class RoadmapGeneratorService {
 
       // Optionally save to database in background (don't wait for it)
       this.processAndSaveRoadmapInBackground(aiResponse, request, startTime, userIp, userAgent);
-      
+
       // Return the Python AI service response directly
       return aiResponse;
-      
+
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      
+
       // Log error with safe property access
       roadmapLogger.error('Roadmap generation failed', {
         topic: request.topic,
@@ -136,33 +136,33 @@ export class RoadmapGeneratorService {
       });
 
       logRoadmapGeneration(roadmapId, request.topic, request.skill_level, duration, false, error);
-      
+
       if (error instanceof AppError) {
         throw error;
       }
-      
+
       // Try fallback roadmap generation
-      roadmapLogger.info('Attempting fallback roadmap generation', { 
+      roadmapLogger.info('Attempting fallback roadmap generation', {
         roadmapId,
         original_error: error?.message || 'Unknown error'
       });
-      
+
       try {
         const fallbackResponse = this.generateFallbackRoadmap(request);
         fallbackResponse.roadmapId = roadmapId;
-        
+
         const fallbackDuration = Date.now() - startTime;
         logRoadmapGeneration(roadmapId, request.topic, request.skill_level, fallbackDuration, true);
-        
+
         roadmapLogger.info('Fallback roadmap generated successfully', {
           roadmapId,
           topic: request.topic,
           fallback_duration: fallbackDuration
         });
-        
+
         // Save fallback roadmap in background
         this.processAndSaveRoadmapInBackground(fallbackResponse, request, startTime, userIp, userAgent);
-        
+
         return fallbackResponse;
       } catch (fallbackError: any) {
         roadmapLogger.error('Fallback roadmap generation also failed', {
@@ -171,11 +171,11 @@ export class RoadmapGeneratorService {
           fallback_error: fallbackError?.message || 'Unknown fallback error',
           total_duration: Date.now() - startTime
         });
-        
+
         // Log the final failure
         logRoadmapGeneration(roadmapId, request.topic, request.skill_level, Date.now() - startTime, false, fallbackError);
       }
-      
+
       throw new InternalServerException('Failed to generate roadmap. Please try again.');
     }
   }
@@ -186,7 +186,7 @@ export class RoadmapGeneratorService {
   async getRoadmapById(roadmapId: string, userId?: string, userIp?: string, userAgent?: string): Promise<IRoadmapResponse> {
     try {
       const roadmap = await RoadmapModel.findOne({ roadmapId });
-      
+
       if (!roadmap) {
         throw new BadRequestException('Roadmap not found');
       }
@@ -195,14 +195,18 @@ export class RoadmapGeneratorService {
       if (userId) {
         await this.logRoadmapHistory(roadmapId, userId, 'viewed', userIp, userAgent);
       }
-      
+
+      if (!userId) {
+        throw new BadRequestException('Roadmap not found or access denied');
+      }
+
       return this.formatRoadmapResponse(roadmap);
-      
+
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
-      
+
       throw new InternalServerException('Failed to retrieve roadmap');
     }
   }
@@ -213,9 +217,9 @@ export class RoadmapGeneratorService {
    * Update roadmap progress
    */
   async updateProgress(
-    roadmapId: string, 
-    userId: string, 
-    weekNumber?: number, 
+    roadmapId: string,
+    userId: string,
+    weekNumber?: number,
     milestoneWeek?: number,
     progressPercentage?: number,
     timeSpentMinutes?: number,
@@ -224,15 +228,15 @@ export class RoadmapGeneratorService {
     userAgent?: string
   ): Promise<void> {
     try {
-      const roadmap = await RoadmapModel.findOne({ roadmapId, user_id: userId });
-      
+      const roadmap = await RoadmapModel.findOne({ roadmapId, userId: userId });
+
       if (!roadmap) {
         throw new BadRequestException('Roadmap not found or access denied');
       }
 
       // Determine action type
       let action: 'started' | 'week_completed' | 'milestone_reached' | 'completed' = 'started';
-      
+
       if (progressPercentage === 100) {
         action = 'completed';
         roadmap.status = 'completed';
@@ -251,10 +255,10 @@ export class RoadmapGeneratorService {
 
       // Log progress history
       await this.logRoadmapHistory(
-        roadmapId, 
-        userId, 
-        action, 
-        userIp, 
+        roadmapId,
+        userId,
+        action,
+        userIp,
         userAgent,
         {
           week_number: weekNumber,
@@ -264,12 +268,12 @@ export class RoadmapGeneratorService {
           notes
         }
       );
-      
+
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
-      
+
       throw new InternalServerException('Failed to update progress');
     }
   }
@@ -326,9 +330,9 @@ export class RoadmapGeneratorService {
   private shouldUseCachedRoadmap(existingRoadmap: IRoadmapData, request: IRoadmapRequest): boolean {
     // Use cached roadmap if it's less than 7 days old and matches closely
     const daysSinceCreation = (Date.now() - existingRoadmap.created_at.getTime()) / (1000 * 60 * 60 * 24);
-    return daysSinceCreation < 7 && 
-           existingRoadmap.topic.toLowerCase().includes(request.topic.toLowerCase()) &&
-           existingRoadmap.skill_level === request.skill_level;
+    return daysSinceCreation < 7 &&
+      existingRoadmap.topic.toLowerCase().includes(request.topic.toLowerCase()) &&
+      existingRoadmap.skill_level === request.skill_level;
   }
 
 
@@ -385,7 +389,7 @@ export class RoadmapGeneratorService {
     try {
       const roadmapData = await this.processAndSaveRoadmap(aiResponse, request, startTime);
       await this.saveCompleteAIResponse(aiResponse, request, startTime);
-      await this.logRoadmapHistory(roadmapData.roadmapId, request.user_id, 'generated', userIp, userAgent);
+      await this.logRoadmapHistory(roadmapData.roadmapId, request.userId.toString(), 'generated', userIp, userAgent);
     } catch (error) {
       console.warn('Background roadmap saving failed:', error);
     }
@@ -416,14 +420,14 @@ export class RoadmapGeneratorService {
           milestones: roadmapData.milestones || [],
           final_project: roadmapData.final_project || 'Complete the learning journey',
           next_steps: roadmapData.next_steps || [],
-          
+
           // Request metadata
           topic: request.topic,
           skill_level: request.skill_level,
           duration_weeks: request.duration_weeks,
           focus_areas: request.focus_areas,
-          user_id: request.user_id,
-          
+          userId: request.userId,
+
           // Generation metadata
           ai_model_used: 'cohere-command-r-plus',
           generation_time_ms: generationTime,
@@ -434,7 +438,7 @@ export class RoadmapGeneratorService {
         return await roadmap.save();
       }
     );
-    
+
     // Log successful save
     roadmapLogger.info('Roadmap saved successfully', {
       roadmapId,
@@ -447,13 +451,13 @@ export class RoadmapGeneratorService {
       weeks_count: roadmapData.weeks.length,
       milestones_count: roadmapData.milestones.length
     });
-    
+
     return roadmap;
   }
 
   private async saveCompleteAIResponse(aiResponse: any, request: IRoadmapRequest, startTime: number): Promise<void> {
     const roadmapId = aiResponse.roadmapId || uuidv4();
-    
+
     await logDatabaseOperationWrapper(
       'create',
       'roadmapresponses',
@@ -473,21 +477,21 @@ export class RoadmapGeneratorService {
             skill_level: request.skill_level,
             duration_weeks: request.duration_weeks,
             focus_areas: request.focus_areas,
-            user_id: request.user_id
+            userId: request.userId
           },
           generation_time_ms: generationTime,
           ai_model_used: 'cohere-command-r-plus'
         });
 
         const saved = await responseData.save();
-        
+
         roadmapLogger.info('Complete AI response saved', {
           roadmapId,
           topic: request.topic,
           response_size: JSON.stringify(aiResponse).length,
           chapters_count: Object.keys(aiResponse.text?.chapters || {}).length
         });
-        
+
         return saved;
       }
     ).catch(error => {
@@ -503,11 +507,11 @@ export class RoadmapGeneratorService {
     // Extract comprehensive data from the AI response
     const chapters = aiResponse.text?.chapters || {};
     const metadata = aiResponse.metadata || {};
-    
+
     // Convert chapters to weeks structure
     const weeks: IWeek[] = [];
     let weekCounter = 1;
-    
+
     Object.entries(chapters).forEach(([chapterName, topics]: [string, any]) => {
       if (Array.isArray(topics)) {
         topics.forEach((topic: string, index: number) => {
@@ -557,7 +561,7 @@ export class RoadmapGeneratorService {
     // Create chapters for frontend visualization
     const totalWeeks = roadmap.weeks.length;
     const phaseSize = Math.max(1, Math.floor(totalWeeks / 4));
-    
+
     const chapters: Record<string, string[]> = {
       'First Steps': [],
       'Core Concepts': [],
@@ -567,8 +571,8 @@ export class RoadmapGeneratorService {
 
     roadmap.weeks.forEach((week, index) => {
       const phase = index < phaseSize ? 'First Steps' :
-                   index < 2 * phaseSize ? 'Core Concepts' :
-                   index < 3 * phaseSize ? 'Interactivity' : 'Advanced';
+        index < 2 * phaseSize ? 'Core Concepts' :
+          index < 3 * phaseSize ? 'Interactivity' : 'Advanced';
       if (chapters[phase]) {
         chapters[phase].push(...week.topics);
       }
@@ -600,8 +604,8 @@ export class RoadmapGeneratorService {
   }
 
   private async logRoadmapHistory(
-    roadmapId: string, 
-    userId?: string, 
+    roadmapId: string,
+    userId?: string,
     action: 'generated' | 'viewed' | 'started' | 'week_completed' | 'milestone_reached' | 'completed' | 'archived' = 'viewed',
     userIp?: string,
     userAgent?: string,
@@ -610,7 +614,7 @@ export class RoadmapGeneratorService {
     try {
       await RoadmapHistoryModel.create({
         roadmapId,
-        user_id: userId,
+        userId: userId,
         action,
         ip_address: userIp,
         user_agent: userAgent,

@@ -4,7 +4,7 @@ import { getServiceConnection } from '../../config/database.config';
 // Interface for Roadmap History (for analytics and tracking)
 export interface IRoadmapHistory extends Document {
   roadmapId: string;
-  user_id?: string;
+  userId: mongoose.Schema.Types.ObjectId;
   action: 'generated' | 'viewed' | 'started' | 'week_completed' | 'milestone_reached' | 'completed' | 'archived';
   week_number?: number;
   milestone_week?: number;
@@ -25,7 +25,11 @@ const RoadmapHistorySchema = new Schema<IRoadmapHistory>({
     index: true,
     ref: 'Roadmap'
   },
-  user_id: { type: String, index: true },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   action: { 
     type: String, 
     required: true,
@@ -62,7 +66,7 @@ const RoadmapHistorySchema = new Schema<IRoadmapHistory>({
 
 // Compound indexes for better query performance
 RoadmapHistorySchema.index({ roadmapId: 1, timestamp: -1 });
-RoadmapHistorySchema.index({ user_id: 1, action: 1, timestamp: -1 });
+RoadmapHistorySchema.index({ userId: 1 }, { unique: true });
 RoadmapHistorySchema.index({ action: 1, timestamp: -1 });
 
 // Removed static analytics helpers: getUserProgress, getCompletionStats, getPopularTopics

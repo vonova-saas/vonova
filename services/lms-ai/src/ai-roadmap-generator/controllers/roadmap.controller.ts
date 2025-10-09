@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoadmapGeneratorService } from '../services/roadmapGenerator.service';
 import { asyncHandler } from '../../middlewares/api/asyncHandler.middleware';
-import { 
-  GenerateRoadmapRequestSchema, 
+import {
+  GenerateRoadmapRequestSchema,
   GetRoadmapRequestSchema,
   UpdateProgressRequestSchema
 } from '../validation/roadmap.validation';
@@ -17,7 +17,7 @@ export class RoadmapController {
 
   generateRoadmap = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const validationResult = GenerateRoadmapRequestSchema.safeParse(req.body);
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -32,8 +32,9 @@ export class RoadmapController {
       topic: validatedData.topic,
       skill_level: validatedData.skill_level,
       duration_weeks: validatedData.duration_weeks,
+      userId: req.userId!,
       focus_areas: validatedData.focus_areas || [],
-      ...(validatedData.user_id && { user_id: validatedData.user_id })
+      ...(req.userId && { userId: req.userId })
     };
 
     const roadmap = await this.roadmapService.generateRoadmap(
@@ -48,9 +49,9 @@ export class RoadmapController {
 
   getRoadmapById = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const validationResult = GetRoadmapRequestSchema.safeParse({
-      roadmapId: req.params.roadmapId
+      roadmapId: req.params.roadmapId,
     });
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -61,10 +62,9 @@ export class RoadmapController {
     }
 
     const validatedData = validationResult.data;
-    const userId = (req.query.user_id as string) || (req.body.user_id as string);
     const roadmap = await this.roadmapService.getRoadmapById(
       validatedData.roadmapId,
-      userId,
+      req.userId,
       req.ip,
       req.get('User-Agent')
     );
@@ -83,7 +83,7 @@ export class RoadmapController {
       roadmapId: req.params.roadmapId,
       ...req.body
     });
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -94,11 +94,10 @@ export class RoadmapController {
     }
 
     const validatedData = validationResult.data;
-    const userId = (req.body.user_id as string) || (req.headers['x-user-id'] as string) || '';
-    
+
     await this.roadmapService.updateProgress(
       validatedData.roadmapId,
-      userId,
+      req.userId!,
       validatedData.week_number,
       validatedData.milestone_week,
       validatedData.progress_percentage,

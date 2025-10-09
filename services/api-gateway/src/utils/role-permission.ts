@@ -14,23 +14,27 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
   // --------------------------------------
   STUDENT_USER: [
     // LMS
+    // Courses
     Permissions.ENROLL_COURSE,
     Permissions.VIEW_INSTRUCTORS,
+    // Quizzes
     Permissions.VIEW_QUIZ,
     Permissions.SUBMIT_QUIZ,
     Permissions.VIEW_GRADES,
     Permissions.VIEW_ASSIGNMENT,
     Permissions.SUBMIT_ASSIGNMENT,
     Permissions.VIEW_ASSIGNMENT_GRADES,
-    Permissions.VIEW_MATERIAL,
+    // Library
+    Permissions.VIEW_LIBRARY_ITEM,
     Permissions.READ_LIBRARY_ITEM,
     Permissions.WRITE_LIBRARY_REVIEW,
+
+    // AI LMS Tools (Student-focused)
     // Problem Solving
     Permissions.VIEW_STUDENT_PROBLEMS_SOLVING_CONTEST,
     Permissions.ENROLL_PROBLEMS_SOLVING_CONTEST,
     Permissions.VIEW_STUDENT_PROBLEMS_SOLVING_PROBLEM,
     Permissions.SUBMIT_STUDENT_PROBLEMS_SOLVING_PROBLEM,
-    // AI LMS Tools (Student-focused)
     // Roadmap
     Permissions.AI_ROADMAP_GENERATOR,
     Permissions.GENRATE_ROADMAP,
@@ -48,6 +52,7 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.AI_PRACTICE_PROBLEMS_SOLVING,
     // Pdf Summary
     Permissions.AI_PDF_SUMMARY,
+
     // Settings & Account & Notifications & Billing
     Permissions.EDIT_ACCOUNT,
     Permissions.VIEW_ACCOUNT,
@@ -81,11 +86,9 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.MANAGE_STUDENT_PROGRESS,
     Permissions.DELETE_STUDENT,
     // Course Management
-    Permissions.CREATE_COURSE,
+    Permissions.MANAGE_COURSE,
     Permissions.VIEW_COURSE,
-    Permissions.EDIT_COURSE,
     Permissions.ASSIGN_COURSE,
-    Permissions.DELETE_COURSE,
     // Quiz Management
     Permissions.CREATE_QUIZ,
     Permissions.VIEW_QUIZ,
@@ -107,14 +110,11 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.EDIT_PROBLEMS_SOLVING_PROBLEM,
     Permissions.DELETE_PROBLEMS_SOLVING_PROBLEM,
     // Material Management
-    Permissions.CREATE_MATERIAL,
-    Permissions.VIEW_MATERIAL,
-    Permissions.EDIT_MATERIAL,
-    Permissions.MANAGE_MATERIAL,
+    Permissions.MANAGE_LIBRARY_ITEM,
+    Permissions.VIEW_LIBRARY_ITEM,
     Permissions.READ_LIBRARY_ITEM,
     Permissions.WRITE_LIBRARY_REVIEW,
-    Permissions.PUBLISH_MATERIAL,
-    Permissions.DELETE_MATERIAL,
+    Permissions.PUBLISH_LIBRARY_ITEM,
     // Certificates
     Permissions.GENERATE_CERTIFICATE,
     Permissions.VIEW_CERTIFICATE,

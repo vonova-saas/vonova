@@ -41,43 +41,43 @@ app.get(
           status: "Active",
           description: "Generate personalized learning roadmaps using AI",
           endpoints: [
-            "POST /api/roadmap/generate",
-            "GET /api/roadmap/:roadmapId",
-            "PUT /api/roadmap/:roadmapId/progress"
+            "POST /roadmap/generate",
+            "GET /roadmap/:roadmapId/:userId",
+            "PUT /roadmap/:roadmapId/progress/:userId"
           ]
         },
         "AI PDF Summary": {
           status: "Active",
           description: "Intelligent PDF document summarization and chat",
           endpoints: [
-            "POST /api/pdf-summary/generate",
-            "POST /api/pdf-summary/upload",
-            "POST /api/pdf-summary/chat",
-            "GET /api/pdf-summary/summary/:summaryId",
-            "GET /api/pdf-summary/session/:sessionId/chat-history"
+            "POST /pdf-summary/generate",
+            "POST /pdf-summary/upload",
+            "POST /pdf-summary/chat",
+            "GET /pdf-summary/summary/:summaryId",
+            "GET /pdf-summary/session/:sessionId/chat-history"
           ]
         },
         "AI Problem Solving": {
           status: "Coming Soon",
           description: "AI-powered problem solving assistance",
-          endpoints: ["POST /api/problem-solving/solve"]
+          endpoints: ["POST /problem-solving/solve"]
         },
         "AI Assistant": {
           status: "Coming Soon",
           description: "Intelligent learning assistant chatbot",
-          endpoints: ["POST /api/assistant/chat"]
+          endpoints: ["POST /assistant/chat"]
         },
         "AI Video Generator": {
           status: "Coming Soon",
           description: "Generate educational videos from content",
-          endpoints: ["POST /api/video-gen/create"]
+          endpoints: ["POST /video-gen/create"]
         }
       },
       monitoring: {
-        health: `${Env.BASE_PATH}/roadmap/health`,
-        roadmap_ai_connection: `${Env.BASE_PATH}/roadmap/test-ai-connection`,
-        pdf_summary_health: `${Env.BASE_PATH}/pdf-summary/health`,
-        system_status: `${Env.BASE_PATH}/roadmap/system-status`,
+        health: `/roadmap/health`,
+        roadmap_ai_connection: `/roadmap/test-ai-connection`,
+        pdf_summary_health: `/pdf-summary/health`,
+        system_status: `/roadmap/system-status`,
         analytics: undefined
       },
       documentation: {
@@ -97,8 +97,8 @@ app.get(
 
 // API ROUTES
 
-app.use(`${Env.BASE_PATH}/roadmap`, roadmapRoutes);
-app.use(`${Env.BASE_PATH}/pdf-summary`, pdfSummaryRoutes);
+app.use(`/roadmap`, roadmapRoutes);
+app.use(`/pdf-summary`, pdfSummaryRoutes);
 
 if (Env.NODE_ENV !== 'development') {
   app.use(`/api-docs`, swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -117,9 +117,9 @@ app.listen(Env.PORT, async () => {
   console.log(`Roadmap AI Service: ${Env.ROADMAP_AI_SERVICE_URL}`);
   console.log(`PDF Summary AI Service: ${Env.PDF_SUMMARY_AI_SERVICE_URL}`);
   console.log(`API Documentation: http://localhost:${Env.PORT}/api-docs`);
-  console.log(`Roadmap Health: http://localhost:${Env.PORT}${Env.BASE_PATH}/roadmap/health`);
-  console.log(`PDF Summary Health: http://localhost:${Env.PORT}${Env.BASE_PATH}/pdf-summary/health`);
-  console.log(`AI Connection Test: http://localhost:${Env.PORT}${Env.BASE_PATH}/roadmap/test-ai-connection`);
+  console.log(`Roadmap Health: http://localhost:${Env.PORT}/roadmap/health`);
+  console.log(`PDF Summary Health: http://localhost:${Env.PORT}/pdf-summary/health`);
+  console.log(`AI Connection Test: http://localhost:${Env.PORT}/roadmap/test-ai-connection`);
   console.log('');
   console.log(`Environment: ${Env.NODE_ENV}`);
   console.log(`Server listening on port ${Env.PORT}`);

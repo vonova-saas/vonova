@@ -19,9 +19,6 @@ export const FocusAreasSchema = z.array(z.string().min(1).max(100))
   .max(10, 'Maximum 10 focus areas allowed')
   .optional();
 
-export const UserIdSchema = z.string()
-  .uuid('Invalid user ID format')
-  .optional();
 
 export const RoadmapIdSchema = z.string()
   .uuid('Invalid roadmap ID format');
@@ -32,7 +29,6 @@ export const GenerateRoadmapRequestSchema = z.object({
   skill_level: SkillLevelSchema,
   duration_weeks: DurationWeeksSchema,
   focus_areas: FocusAreasSchema,
-  user_id: UserIdSchema
 }).strict();
 
 export const GetRoadmapRequestSchema = z.object({
@@ -122,7 +118,6 @@ export const RoadmapDataResponseSchema = z.object({
   skill_level: SkillLevelSchema,
   duration_weeks: z.number(),
   focus_areas: z.array(z.string()).optional(),
-  user_id: z.string().optional(),
   created_at: z.date(),
   updated_at: z.date(),
   total_estimated_hours: z.number().optional(),

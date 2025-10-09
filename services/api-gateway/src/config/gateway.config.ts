@@ -32,6 +32,13 @@ export const config = {
       healthCheck: '/lms/health',
       timeout: 5000
     } as ServiceConfig,
+
+    lms_ai: {
+      name: 'lms_ai',
+      url: Env.LMS_AI_SERVICE_URL,
+      healthCheck: '/roadmap/health',
+      timeout: 5000
+    } as ServiceConfig,
   },
 
   // Route configuration
@@ -94,6 +101,36 @@ export const config = {
       path: '/api/v1/lms/*',
       method: 'DELETE',
       service: 'lms',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/roadmap/*',
+      method: 'GET',
+      service: 'lms_ai',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/roadmap/*',
+      method: 'POST',
+      service: 'lms_ai',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/roadmap/*',
+      method: 'PUT',
+      service: 'lms_ai',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/roadmap/*',
+      method: 'PATCH',
+      service: 'lms_ai',
+      target: '/*'
+    },
+    {
+      path: '/api/v1/roadmap/*',
+      method: 'DELETE',
+      service: 'lms_ai',
       target: '/*'
     },
   ] as RouteConfig[],

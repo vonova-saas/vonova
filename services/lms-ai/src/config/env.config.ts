@@ -4,7 +4,7 @@ const envConfig = () => ({
   //? Backend Configuration
   PORT: getEnv("PORT", "4005"),
   NODE_ENV: getEnv("NODE_ENV", "development"),
-  BASE_PATH: getEnv("BASE_PATH", "/api"),
+  // BASE_PATH: getEnv("BASE_PATH"),
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   //? AI Service Configuration - Each AI service has its own port by default

@@ -29,7 +29,7 @@ export interface IRoadmapResponseData extends Document {
     skill_level: 'beginner' | 'intermediate' | 'advanced';
     duration_weeks: number;
     focus_areas?: string[];
-    user_id?: string;
+    userId: mongoose.Schema.Types.ObjectId;
   };
   
   // Tracking
@@ -70,7 +70,7 @@ const RoadmapResponseSchema = new Schema<IRoadmapResponseData>({
     },
     duration_weeks: { type: Number, required: true },
     focus_areas: [{ type: String }],
-    user_id: { type: String }
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   },
   
   // Tracking
@@ -85,6 +85,6 @@ const RoadmapResponseSchema = new Schema<IRoadmapResponseData>({
 // Indexes for better query performance
 RoadmapResponseSchema.index({ 'original_request.topic': 1 });
 RoadmapResponseSchema.index({ 'original_request.skill_level': 1 });
-RoadmapResponseSchema.index({ 'original_request.user_id': 1, created_at: -1 });
+RoadmapResponseSchema.index({ 'original_request.userId': 1, created_at: -1 });
 
 export default getServiceConnection('roadmap').model<IRoadmapResponseData>('RoadmapResponse', RoadmapResponseSchema);

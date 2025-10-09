@@ -33,11 +33,11 @@ export interface ITreeNode {
 
 // Interface for Roadmap Generation Request
 export interface IRoadmapRequest {
+  userId: string;
   topic: string;
   skill_level: 'beginner' | 'intermediate' | 'advanced';
   duration_weeks: number;
   focus_areas?: string[];
-  user_id?: string;
 }
 
 // Interface for Roadmap Response
@@ -74,7 +74,7 @@ export interface IRoadmapData extends Document {
   focus_areas?: string[];
   
   // User and tracking
-  user_id?: string;
+  userId: mongoose.Schema.Types.ObjectId;
   created_at: Date;
   updated_at: Date;
   
@@ -139,7 +139,11 @@ const RoadmapSchema = new Schema<IRoadmapData>({
   focus_areas: [{ type: String }],
   
   // User and tracking
-  user_id: { type: String, index: true },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   created_at: { type: Date, default: Date.now, index: true },
   updated_at: { type: Date, default: Date.now },
   
@@ -161,7 +165,7 @@ const RoadmapSchema = new Schema<IRoadmapData>({
 
 // Indexes for better query performance
 RoadmapSchema.index({ topic: 1, skill_level: 1, duration_weeks: 1 });
-RoadmapSchema.index({ user_id: 1, created_at: -1 });
+RoadmapSchema.index({ userId: 1 }, { unique: true });
 RoadmapSchema.index({ status: 1, created_at: -1 });
 
 // Virtual for total estimated hours calculation
@@ -184,7 +188,7 @@ RoadmapSchema.statics.findByTopic = function(topic: string) {
 };
 
 RoadmapSchema.statics.findByUser = function(userId: string) {
-  return this.find({ user_id: userId }).sort({ created_at: -1 });
+  return this.find({ userId: userId }).sort({ created_at: -1 });
 };
 
 RoadmapSchema.statics.findSimilar = function(topic: string, skillLevel: string, durationWeeks: number) {

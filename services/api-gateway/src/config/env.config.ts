@@ -40,6 +40,7 @@ const envConfig = () => ({
   //! =========== Service URLs ===========
   APP_SERVICE_URL: getEnv("APP_SERVICE_URL"),
   LMS_SERVICE_URL: getEnv("LMS_SERVICE_URL"),
+  LMS_AI_SERVICE_URL: getEnv("LMS_AI_SERVICE_URL"),
   // Internal inter-service communication
   // Shared secret used by API Gateway to authenticate internal-only endpoints
   INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),

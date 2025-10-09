@@ -9,6 +9,7 @@ import {
   GenerateRoadmapRequestSchema,
   UpdateProgressRequestSchema 
 } from '../validation/roadmap.validation';
+import { isAuthenticatedOrSignedContext } from '../../middlewares/auth/verifySignedContext.middleware';
 
 const router = Router();
 
@@ -16,11 +17,12 @@ const router = Router();
 router.use(requestLoggingMiddleware);
 
 // ============ MODULE ROUTES ============
-
-
-
 // Health routes
 router.use('/health', healthRoutes);
+
+
+// Apply authentication to all settings routes
+router.use(isAuthenticatedOrSignedContext);
 
 // ============ ROADMAP ENDPOINTS ============
 
@@ -43,10 +45,10 @@ router.get('/system-status', healthController.getSystemStatus);
 // ============ INDIVIDUAL ROADMAP OPERATIONS ============
 
 // Get roadmap by ID (must be last to avoid conflicts)
-router.get('/:roadmapId', roadmapController.getRoadmapById);
+router.get('/:roadmapId/:userId', roadmapController.getRoadmapById);
 
 // Update roadmap progress
-router.put('/:roadmapId/progress', 
+router.put('/:roadmapId/progress/:userId', 
   validateRequest(UpdateProgressRequestSchema),
   roadmapController.updateProgress
 );
