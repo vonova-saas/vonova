@@ -8,7 +8,7 @@ const envConfig = () => ({
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   //? AI Service Configuration - Each AI service has its own port by default
-  ROADMAP_AI_SERVICE_URL: getEnv("ROADMAP_AI_SERVICE_URL", "https://vonova-ai-roadmap.up.railway.app"),
+  ROADMAP_AI_SERVICE_URL: getEnv("ROADMAP_AI_SERVICE_URL", "https://ai-roadmap-generator-production.up.railway.app"),
   PDF_SUMMARY_AI_SERVICE_URL: getEnv("PDF_SUMMARY_AI_SERVICE_URL", "https://vonova-ai-pdfsummary.up.railway.app"),
   PROBLEM_SOLVER_AI_SERVICE_URL: getEnv("PROBLEM_SOLVER_AI_SERVICE_URL", "http://127.0.0.1:5002"),
   ASSISTANT_AI_SERVICE_URL: getEnv("ASSISTANT_AI_SERVICE_URL", "http://127.0.0.1:5003"),
