@@ -321,13 +321,19 @@ export default function EditQuizPage() {
                 </Card>
               ))}
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
+            {/* <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => router.back()} className="cursor-pointer">Cancel</Button>
               <Button onClick={handleSubmit} disabled={!canSave || saving} className="cursor-pointer">Update</Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
+        {/* Sticky footer actions (scoped to content width) */}
+        <div className="sticky bottom-4 z-40 w-full px-2">
+          <div className="rounded-md border bg-background/95 backdrop-blur shadow-md p-3 flex items-center justify-end gap-2">
+            <Button variant="outline" onClick={() => router.back()} className="cursor-pointer">Cancel</Button>
+            <Button onClick={handleSubmit} disabled={!canSave || saving} className="cursor-pointer">{saving ? "Saving..." : "Update"}</Button>
+          </div>
+        </div>
       </div>
     </div>
   );

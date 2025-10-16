@@ -3,6 +3,7 @@ import "../style/globals.css";
 import { cn } from "@/lib/utils";
 import { lato, cairo } from "@/utils/constants";
 import { ThemeProvider } from "@/providers/theme-provider";
+import ChatbotWidget from "@/components/shared/chatbot/chatbot-widget";
 import Providers from "@/providers/providers";
 import NextTopLoader from "nextjs-toploader";
 
@@ -24,7 +25,10 @@ export default function RootLayout({
       >
         <Providers>
           <NextTopLoader showSpinner={false} color="black" />
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            {children}
+            <ChatbotWidget />
+          </ThemeProvider>
         </Providers>
       </body>
     </html>

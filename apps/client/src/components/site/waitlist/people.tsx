@@ -17,6 +17,7 @@ export default function People({
   className = "",
   maxDisplay = 6,
 }: PeopleProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [users, setUsers] = useState<WaitlistUser[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,18 +32,18 @@ export default function People({
           setLoading(true);
         }
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/waitlist/all-users`,
-        );
+        // const response = await fetch(
+        //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/waitlist/all-users`,
+        // );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch waitlist users");
-        }
+        // if (!response.ok) {
+        //   throw new Error("Failed to fetch waitlist users");
+        // }
 
-        const data = await response.json();
+        // const data = await response.json();
         // Use the users array directly from the response
-        setUsers(data.users || []);
-        setTotalCount((data.count || 0) + 20);
+        // setUsers(data.users || []);
+        // setTotalCount((data.count || 0) + 20);
       } catch (err) {
         console.error("Error fetching waitlist users:", err);
         // Only show error if we don't have any users yet
