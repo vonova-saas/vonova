@@ -28,7 +28,7 @@ export const POST = async (req: NextRequest) => {
     }
 
     const model = new ChatCohere({
-      apiKey: apiKey || process.env.COHERE_API_KEY,
+      apiKey: apiKey || process.env.NEXT_PUBLIC_COHERE_API_KEY,
       model: "command",
     });
 

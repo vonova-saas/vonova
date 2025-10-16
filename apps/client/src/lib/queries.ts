@@ -26,7 +26,7 @@ export const useGenerateRoadmap = (
 ) => {
   return MutationFactory(
     ["Generate Roadmap"],
-    `${process.env.NEXT_PUBLIC_API_URL}/generate-roadmap`,
+    `https://vonova-ai-roadmap.up.railway.app/api/roadmap/generate`,
     "POST",
     options,
   );
