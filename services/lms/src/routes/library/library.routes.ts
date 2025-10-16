@@ -35,44 +35,48 @@ libraryRouter.use(isAuthenticatedOrSignedContext);
 libraryRouter.post(
   '/book/createBook',
   validateRequest(createBookSchema),
-  bookController.createBook
-);
-
-libraryRouter.patch(
-  '/book/updateBook/:id',
-  validateRequest(updateBookSchema),
-  bookController.updateBook
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
+  bookController.createBookController
 );
 
 libraryRouter.patch(
   '/book/publishBook/:id',
   validateRequest(publishBookSchema),
-  bookController.publishBook
-);
-
-libraryRouter.delete(
-  '/book/deleteBook/:id',
-  bookController.deleteBook
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
+  bookController.publishBookController
 );
 
 libraryRouter.get(
   '/book/getAllBooks',
-  bookController.getBooks
+  bookController.getBooksController
 );
 
 libraryRouter.get(
   '/book/getBookById/:id',
-  bookController.getBookById
+  bookController.getBookByIdController
 );
 
 libraryRouter.get(
   '/book/slug/:slug',
-  bookController.getBookBySlug
+  bookController.getBookBySlugController
+);
+
+libraryRouter.patch(
+  '/book/updateBook/:id',
+  validateRequest(updateBookSchema),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
+  bookController.updateBookController
 );
 
 libraryRouter.post(
   '/book/:bookId/progress',
-  bookController.updateBookProgress
+  bookController.updateBookProgressController
+);
+
+libraryRouter.delete(
+  '/book/deleteBook/:id',
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
+  bookController.deleteBookController
 );
 
 // ========== Guides ==========
@@ -93,28 +97,28 @@ libraryRouter.get(
 
 libraryRouter.post(
   '/guides',
-  hasPermission(Permissions.CREATE_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   validateRequest(createGuideSchema),
   createGuideController
 );
 
 libraryRouter.patch(
   '/guides/:id',
-  hasPermission(Permissions.EDIT_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   validateRequest(updateGuideSchema),
   updateGuideController
 );
 
 libraryRouter.patch(
   '/guides/:id/publish',
-  hasPermission(Permissions.PUBLISH_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   validateRequest(publishGuideSchema),
   publishGuideController
 );
 
 libraryRouter.delete(
   '/guides/:id',
-  hasPermission(Permissions.DELETE_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   deleteGuideController
 );
 
@@ -176,14 +180,14 @@ libraryRouter.get(
 // ========== Uploads (Books/Guides/Presentations) ==========
 libraryRouter.post(
   "/items/:itemType/:itemId/file/presign",
-  hasPermission(Permissions.MANAGE_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   validateRequest(presignLibraryFileSchema),
   presignLibraryFileController
 );
 
 libraryRouter.post(
   "/items/:itemType/:itemId/file/complete",
-  hasPermission(Permissions.MANAGE_MATERIAL),
+  hasPermission(Permissions.MANAGE_LIBRARY_ITEM),
   validateRequest(completeLibraryFileSchema),
   completeLibraryFileController
 );
@@ -246,7 +250,7 @@ libraryRouter.get(
 
 libraryRouter.get(
   "/items/:itemType/:itemId/reviews/me",
-  hasPermission(Permissions.VIEW_MATERIAL),
+  hasPermission(Permissions.WRITE_LIBRARY_REVIEW),
   getMyLibraryReviewController
 );
 

@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 export type LibraryAssetStatus = "PENDING" | "UPLOADING" | "UPLOADED" | "PROCESSING" | "READY" | "FAILED";
 
@@ -10,9 +10,9 @@ export interface LibraryAssetUrls {
 }
 
 export interface LibraryAssetDocument extends Document {
-  ownerId: Types.ObjectId;
+  ownerId: mongoose.Schema.Types.ObjectId;
   itemType: "BOOK" | "GUIDE" | "PRESENTATION";
-  itemId: Types.ObjectId;
+  itemId: mongoose.Schema.Types.ObjectId;
   provider: "S3" | "BUNNY";
   objectKey: string;
   originalFileName: string;
@@ -32,16 +32,50 @@ const urlsSchema = new Schema<LibraryAssetUrls>({
 }, { _id: false });
 
 const assetSchema = new Schema<LibraryAssetDocument>({
-  ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  itemType: { type: String, enum: ["BOOK", "GUIDE", "PRESENTATION"], required: true, index: true },
-  itemId: { type: Schema.Types.ObjectId, required: true, index: true },
-  provider: { type: String, default: "S3" },
-  objectKey: { type: String, required: true },
-  originalFileName: { type: String, required: true },
-  mimeType: { type: String, required: true },
-  size: { type: Number },
-  status: { type: String, enum: ["PENDING", "UPLOADING", "UPLOADED", "PROCESSING", "READY", "FAILED"], default: "PENDING" },
-  urls: { type: urlsSchema, default: {} },
+  ownerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+  itemType: {
+    type: String,
+    enum: ["BOOK", "GUIDE", "PRESENTATION"],
+    required: true,
+    index: true
+  },
+  itemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    index: true
+  },
+  provider: {
+    type: String,
+    default: "S3"
+  },
+  objectKey: {
+    type: String,
+    required: true
+  },
+  originalFileName: {
+    type: String,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number
+  },
+  status: {
+    type: String,
+    enum: ["PENDING", "UPLOADING", "UPLOADED", "PROCESSING", "READY", "FAILED"],
+    default: "PENDING"
+  },
+  urls: {
+    type: urlsSchema,
+    default: {}
+  },
 }, { timestamps: true });
 
 assetSchema.index({ itemType: 1, itemId: 1 });

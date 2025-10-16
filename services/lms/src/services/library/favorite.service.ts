@@ -7,7 +7,10 @@ export const createFavorite = async (itemType: "BOOK" | "GUIDE" | "PRESENTATION"
   if (itemType === "BOOK") {
     await BookModel.updateOne({ _id: itemId }, { $inc: { "metrics.favoritesCount": 1 } }).catch(() => { });
   }
-  return { favorited: true };
+
+  return {
+    favorited: true
+  };
 };
 
 // Toggle favorite: if exists => remove and decrement, else => create and increment

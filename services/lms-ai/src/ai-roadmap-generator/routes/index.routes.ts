@@ -22,7 +22,7 @@ router.use('/health', healthRoutes);
 
 
 // Apply authentication to all settings routes
-// router.use(isAuthenticatedOrSignedContext);
+router.use(isAuthenticatedOrSignedContext);
 
 // ============ ROADMAP ENDPOINTS ============
 
