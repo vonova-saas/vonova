@@ -1,6 +1,6 @@
 # Magical PDF Chat & Summarization AI
 
-> **Transform any PDF into your intelligent conversation partner with AI magic! 🪄**
+> ***Transform any PDF into your intelligent conversation partner with AI magic!***
 
 Welcome to the most enchanting PDF chat experience ever created! This isn't just another boring document reader - it's a magical AI companion that brings your PDFs to life with Google's Gemini AI. Upload any document and prepare to be amazed as you chat, question, and explore your content in ways you never imagined!
 
@@ -21,7 +21,7 @@ Welcome to the most enchanting PDF chat experience ever created! This isn't just
 ### Step 1: Environment Setup (The Magic Begins!)
 
 ```bash
-# 🪄 Create your magical virtual environment
+#  Create your magical virtual environment
 python -m venv venv
 
 #  Activate the magic (choose your platform)
@@ -184,19 +184,28 @@ curl -X POST "http://127.0.0.1:5001/ask" \
 ## Project Architecture (The Magical Blueprint)
 
 ```text
-chat_with_pdf_and_summarization/
+models/pdfSummary_model/
 ├── main.py                 # FastAPI application (the magic portal)
 ├── requirements.txt        # Python dependencies (magical ingredients)
 ├── README.md              # This magical documentation
 ├── .env                   # Environment configuration (secret spells)
+├── .gitignore
+├── .tool-versions
+├── dockerfile
+├── Procfile
 ├── agents/
 │   └── llm_agent.py          # Gemini AI integration (the wise wizard)
+├── docs/
+│   ├── CHANGELOG.md
+│   └── CONTRIBUTING.md
+├── models/
+│   ├── __init__.py
+│   └── pdf_schema.py         # Pydantic models for API responses
 ├── services/
+│   ├── __init__.py
 │   ├── embedding_index.py    # Text processing & chunking (document alchemy)
-│   └── entity_extractor.py   # Content analysis (magical insights)
-├── storage/
-│   ├── chat_history.py       # Conversation persistence (memory keeper)
-│   └── chat_history.json     # Chat data storage (conversation vault)
+│   ├── pdf_service.py        # Main service logic
+│   └── proccesing.py         # PDF text extraction and cleaning
 └── utils/
     ├── __init__.py
     └── utils.py              # Helper functions (magical utilities)
@@ -208,13 +217,3 @@ chat_with_pdf_and_summarization/
 - **Creative Responses**: AI responses are enhanced with personality and charm
 - **Performance Magic**: Optimized for speed and efficiency
 - **Interactive Experience**: More than just an API - it's an adventure!
-
-## Ready to Begin Your Magical Journey?
-
-**Now you can chat with any PDF naturally and magically!**
-
----
-
-*Built with , 🪄 magic, and lots of  creativity by the PDF Chat Magicians!*
-
-**May your PDF conversations be ever enchanting!**
