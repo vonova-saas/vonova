@@ -1,0 +1,18 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { SettingsController } from './settings.controller';
+import { SettingsService } from './settings.service';
+import { UserSettings } from '../schemas/UserSettings.schema';
+import UserSettingsSchema from '../schemas/UserSettings.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: UserSettings.name, schema: UserSettingsSchema },
+    ]),
+  ],
+  controllers: [SettingsController],
+  providers: [SettingsService],
+  exports: [SettingsService],
+})
+export class SettingsModule {}
