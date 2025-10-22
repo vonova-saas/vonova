@@ -13,7 +13,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { CreateSettingDto } from './dto/create-setting.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
-import { UserSettings } from '../schemas/UserSettings.schema';
+import { UserSettings } from '../../schemas/UserSettings.schema';
 
 @ApiTags('settings')
 @Controller('settings')
