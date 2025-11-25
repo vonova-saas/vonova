@@ -1,4 +1,3 @@
-# llm_agent.py
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import deque
@@ -13,7 +12,7 @@ def load_gemini_model(model_name: str = "gemini-2.5-flash"):
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("❌ GEMINI_API_KEY is missing. Please set it in your .env file.")
+        raise ValueError("GEMINI_API_KEY is missing. Please set it in your .env file.")
 
     genai.configure(api_key=api_key)
 
@@ -21,13 +20,12 @@ def load_gemini_model(model_name: str = "gemini-2.5-flash"):
         model = genai.GenerativeModel(model_name)
         return model
     except Exception as e:
-        raise RuntimeError(f"❌ Failed to load Gemini model: {e}")
-
+        raise RuntimeError(f"Failed to load Gemini model: {e}")
 
 class GeminiAnswerAgent:
     def __init__(self, model):
         self.model = model
-        self.memory: deque[Tuple[str, str]] = deque(maxlen=10)  # (question, answer)
+        self.memory: deque[Tuple[str, str]] = deque(maxlen=10)
 
     def answer_question(self, question: str, chunks: List[str]) -> str:
         context = "\n\n".join(chunks[:15])
@@ -60,7 +58,7 @@ User Question: {question}
             return answer
 
         except Exception as e:
-            return f"⚠️ Error during Q&A: {e}"
+            return f"Error during Q&A: {e}"
 
     def summarize_short(self, full_text: str) -> str:
         """

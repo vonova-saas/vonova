@@ -1,84 +1,53 @@
 import logging
-import os
-import sys
 from pathlib import Path
 from datetime import datetime
 
-def setup_logging():
-    """Configure creative and colorful logging to file and console"""
-    try:
-        # Get the project root directory
-        project_root = Path(__file__).resolve().parent.parent
-        logs_dir = project_root / "logs"
-        
-        # Create logs directory if it doesn't exist
-        logs_dir.mkdir(exist_ok=True, parents=True)
-        
-        # Set up log file path with creative naming (Windows-safe)
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        log_file = logs_dir / f"magical_pdf_chat_{current_date}.log"
-        
-        # Creative logging configuration with emojis and fun formatting (Windows-safe)
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s | %(name)s | %(levelname)s |%(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
-        )
-        
-        logger = logging.getLogger("PDF_Chat_Magician")
-        logger.info("Magical logging system activated!")
-        logger.info(f"Log file location: {log_file.absolute()}")
-        logger.info("Let the PDF conversation magic begin!")
-        
+def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
+    """
+    Set up a logger with console and file handlers.
+
+    Args:
+        name (str): The name for the logger.
+        level (str): The logging level (e.g., "INFO", "DEBUG").
+
+    Returns:
+        logging.Logger: The configured logger instance.
+    """
+    logger = logging.getLogger(name)
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logger.setLevel(log_level)
+
+    # Avoid adding duplicate handlers
+    if logger.handlers:
         return logger
-        
-    except Exception as e:
-        print(f"Critical error setting up magical logging: {e}")
-        # Fallback to basic console logging
-        logging.basicConfig(level=logging.INFO)
-        return logging.getLogger("chat_logger_emergency")
 
-# Initialize logger
-logger = setup_logging()
+    # Create logs directory if it doesn't exist
+    logs_dir = Path(__file__).resolve().parent.parent / "logs"
+    logs_dir.mkdir(exist_ok=True)
 
-def log_event(event: str):
-    """Record any magical public events with creative flair"""
-    logger.info(f"Event: {event}")
+    # Define log file path
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    log_file = logs_dir / f"pdf_service_{current_date}.log"
 
-def log_chat(session_id: str, question: str, answer: str):
-    """Creative chat logging with conversation magic"""
-    logger.info(f"Chat Magic - Session: {session_id}")
-    logger.info(f"Question: {question[:100]}...")
-    logger.info(f"AI Response: {answer[:100]}...")
-    logger.info("Conversation sparkles added!")
+    # Define formatter
+    formatter = logging.Formatter(
+        '%(asctime)s | %(name)s | %(levelname)s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
-def log_upload(session_id: str, filename: str, file_size: int):
-    """Creative upload logging with file magic"""
-    logger.info(f"File Upload Magic - Session: {session_id}")
-    logger.info(f"Document: {filename}")
-    logger.info(f"Size: {file_size} bytes")
-    logger.info("Document successfully enchanted!")
+    # File Handler
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    
+    # Console Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
 
-def log_error(error: str, context: str = ""):
-    """Creative error logging with magical error handling"""
-    if context:
-        logger.error(f"Oops! Magic went wrong in {context}: {error}")
-    else:
-        logger.error(f"Unexpected magical mishap: {error}")
-    logger.error("Don't worry, the magic will be restored!")
+    # Add handlers
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
 
-def log_magic_moment(moment: str):
-    """Log special magical moments in the PDF chat journey"""
-    logger.info(f"Magical Moment: {moment}")
-
-def log_user_mood(mood: str):
-    """Log user mood and interaction style"""
-    logger.info(f"User Mood: {mood} - Spreading positive vibes!")
-
-def log_ai_creativity(creativity_level: str):
-    """Log AI creativity levels and artistic responses"""
-    logger.info(f"AI Creativity Level: {creativity_level} - Painting with words!")
+# Initialize and export the logger instance for the app to use
+logger = setup_logger("PDF_Service")

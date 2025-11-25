@@ -1,0 +1,8 @@
+crewai==0.201.1
+crewai-tools==0.1.0
+langchain-cohere==0.4.6
+python-dotenv==1.1.1
+fastapi==0.118.0
+uvicorn==0.37.0
+pydantic==2.11.10
+starlette==0.27.0
