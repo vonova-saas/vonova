@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type PdfChatHistoryDocument = PdfChatHistory & Document;
 
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+@Schema({
+  collection: 'PDF_SUMMARY_CHAT',
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+})
 export class PdfChatHistory {
   @Prop({ required: true, unique: true, index: true })
   chatId: string;

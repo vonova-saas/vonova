@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type PdfSummaryDocument = PdfSummary & Document;
 
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+@Schema({
+  collection: 'PDF_SUMMARY',
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+})
 export class PdfSummary {
   @Prop({ required: true, unique: true, index: true })
   summaryId: string;

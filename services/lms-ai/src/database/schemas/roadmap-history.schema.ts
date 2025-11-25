@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type RoadmapHistoryDocument = RoadmapHistory & Document;
 
-@Schema({ timestamps: false })
+@Schema({
+  collection: 'ROADMAP_AI_HISTORY',
+  timestamps: false
+})
 export class RoadmapHistory {
   @Prop({
     type: String,

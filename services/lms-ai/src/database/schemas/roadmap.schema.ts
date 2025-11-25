@@ -39,7 +39,10 @@ export class Milestone {
   deliverable: string;
 }
 
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+@Schema({
+  collection: 'ROADMAP_AI',
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+})
 export class Roadmap {
   @Prop({ required: true, unique: true, index: true })
   roadmapId: string;
