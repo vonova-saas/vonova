@@ -16,7 +16,7 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stagee
+# Production stage
 FROM node:18-alpine
 
 # Set working directory
