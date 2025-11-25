@@ -6,6 +6,7 @@ export const envConfig = registerAs('env', () => ({
 
   // Database
   mongoUriRoadmapAi: process.env.MONGO_URI_ROADMAP_AI || 'mongodb://localhost:27017/ROADMAP_AI',
+  mongoUriPdfSummaryAi: process.env.MONGO_URI_PDF_SUMMARY_AI || 'mongodb://localhost:27017/PDF_SUMMARY_AI',
 
   // AI Services
   roadmapAiServiceUrl: process.env.ROADMAP_AI_SERVICE_URL || 'http://localhost:5000',
