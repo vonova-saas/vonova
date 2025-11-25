@@ -5,8 +5,8 @@ export const envConfig = registerAs('env', () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
 
   // Database
-  mongoUriRoadmapAi: process.env.MONGO_URI_ROADMAP_AI || 'mongodb://localhost:27017/ROADMAP_AI',
-  mongoUriPdfSummaryAi: process.env.MONGO_URI_PDF_SUMMARY_AI || 'mongodb://localhost:27017/PDF_SUMMARY_AI',
+  mongoUriRoadmapAi: process.env.MONGO_URI_ROADMAP_AI || 'mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/LMS_AI/ROADMAP_AI',
+  mongoUriPdfSummaryAi: process.env.MONGO_URI_PDF_SUMMARY_AI || 'mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/LMS_AI/PDF_SUMMARY',
 
   // AI Services
   roadmapAiServiceUrl: process.env.ROADMAP_AI_SERVICE_URL || 'http://localhost:5000',
