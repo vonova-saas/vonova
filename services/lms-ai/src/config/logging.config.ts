@@ -1,92 +1,68 @@
-import { getEnv } from '../utils/get-env';
+import * as winston from 'winston';
+import * as DailyRotateFile from 'winston-daily-rotate-file';
+import * as path from 'path';
 
-export interface LoggingConfig {
-  // Log levels
-  level: string;
-  enableConsole: boolean;
-  enableFile: boolean;
-  
-  // File logging settings
-  logDirectory: string;
-  maxFileSize: number; // in bytes
-  maxFiles: number;
-  
-  // Log rotation settings
-  enableRotation: boolean;
-  rotationInterval: string; // 'daily', 'hourly', 'weekly'
-  
-  // Performance logging
-  enablePerformanceLogging: boolean;
-  performanceThreshold: number; // in milliseconds
-  
-  // Security logging
-  enableSecurityLogging: boolean;
-  logSensitiveData: boolean;
-  
-  // AI service logging
-  enableAIServiceLogging: boolean;
-  logAIRequests: boolean;
-  logAIResponses: boolean;
-  
-  // Database logging
-  enableDatabaseLogging: boolean;
-  logQueries: boolean;
-  logQueryTime: boolean;
-  
-  // User tracking
-  enableUserTracking: boolean;
-  logUserActions: boolean;
-  logUserProgress: boolean;
-  
-  // Error logging
-  enableErrorLogging: boolean;
-  logErrorStack: boolean;
-  logErrorContext: boolean;
-}
+export const createWinstonConfig = () => {
+  const logsDir = path.join(process.cwd(), 'logs', 'lms-ai');
 
-export const getLoggingConfig = (): LoggingConfig => ({
-  // Log levels
-  level: getEnv('LOG_LEVEL', 'info'),
-  enableConsole: getEnv('ENABLE_CONSOLE_LOGGING', 'true') === 'true',
-  enableFile: getEnv('ENABLE_FILE_LOGGING', 'true') === 'true',
-  
-  // File logging settings
-  logDirectory: getEnv('LOG_DIRECTORY', 'logs'),
-  maxFileSize: parseInt(getEnv('MAX_LOG_FILE_SIZE', '5242880')), // 5MB default
-  maxFiles: parseInt(getEnv('MAX_LOG_FILES', '5')),
-  
-  // Log rotation settings
-  enableRotation: getEnv('ENABLE_LOG_ROTATION', 'true') === 'true',
-  rotationInterval: getEnv('LOG_ROTATION_INTERVAL', 'daily'),
-  
-  // Performance logging
-  enablePerformanceLogging: getEnv('ENABLE_PERFORMANCE_LOGGING', 'true') === 'true',
-  performanceThreshold: parseInt(getEnv('PERFORMANCE_THRESHOLD', '1000')), // 1 second
-  
-  // Security logging
-  enableSecurityLogging: getEnv('ENABLE_SECURITY_LOGGING', 'true') === 'true',
-  logSensitiveData: getEnv('LOG_SENSITIVE_DATA', 'false') === 'true',
-  
-  // AI service logging
-  enableAIServiceLogging: getEnv('ENABLE_AI_SERVICE_LOGGING', 'true') === 'true',
-  logAIRequests: getEnv('LOG_AI_REQUESTS', 'true') === 'true',
-  logAIResponses: getEnv('LOG_AI_RESPONSES', 'false') === 'true', // Don't log full AI responses by default
-  
-  // Database logging
-  enableDatabaseLogging: getEnv('ENABLE_DATABASE_LOGGING', 'true') === 'true',
-  logQueries: getEnv('LOG_DATABASE_QUERIES', 'false') === 'true', // Don't log queries by default
-  logQueryTime: getEnv('LOG_QUERY_TIME', 'true') === 'true',
-  
-  // User tracking
-  enableUserTracking: getEnv('ENABLE_USER_TRACKING', 'true') === 'true',
-  logUserActions: getEnv('LOG_USER_ACTIONS', 'true') === 'true',
-  logUserProgress: getEnv('LOG_USER_PROGRESS', 'true') === 'true',
-  
-  // Error logging
-  enableErrorLogging: getEnv('ENABLE_ERROR_LOGGING', 'true') === 'true',
-  logErrorStack: getEnv('LOG_ERROR_STACK', 'true') === 'true',
-  logErrorContext: getEnv('LOG_ERROR_CONTEXT', 'true') === 'true',
-});
+  // Custom log format
+  const logFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.json(),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      return JSON.stringify({
+        timestamp,
+        level: level.toUpperCase(),
+        message,
+        ...meta
+      });
+    })
+  );
 
-// Export the configuration
-export const LoggingConfig = getLoggingConfig();
+  // Console format for development
+  const consoleFormat = winston.format.combine(
+    winston.format.colorize(),
+    winston.format.timestamp({ format: 'HH:mm:ss' }),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+      return `[${timestamp}] ${level}: ${message}${metaStr}`;
+    })
+  );
+
+  const transports: winston.transport[] = [];
+
+  // File transport
+  if (process.env.ENABLE_FILE_LOGGING !== 'false') {
+    transports.push(
+      new (DailyRotateFile as any)({
+        filename: path.join(logsDir, 'lms-ai-%DATE%.log'),
+        datePattern: 'YYYY-MM-DD',
+        maxSize: process.env.MAX_LOG_FILE_SIZE || '50m',
+        maxFiles: process.env.MAX_LOG_FILES || '30d',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        )
+      })
+    );
+  }
+
+  // Console transport
+  if (process.env.ENABLE_CONSOLE_LOGGING !== 'false') {
+    transports.push(
+      new winston.transports.Console({
+        format: consoleFormat,
+        level: process.env.LOG_LEVEL || 'debug'
+      })
+    );
+  }
+
+  return {
+    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+    format: logFormat,
+    defaultMeta: { service: 'lms-ai' },
+    transports
+  };
+};

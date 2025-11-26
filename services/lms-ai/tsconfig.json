@@ -1,107 +1,33 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "allowJs": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
     "declaration": true,
-    "declarationMap": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2020",
     "sourceMap": true,
-    "removeComments": false,
-    "importHelpers": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "outDir": "./dist",
     "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": [
         "src/*"
-      ],
-      "@/config/*": [
-        "src/config/*"
-      ],
-      "@/middlewares/*": [
-        "src/middlewares/*"
-      ],
-      "@/utils/*": [
-        "src/utils/*"
-      ],
-      "@/services/*": [
-        "src/services/*"
-      ],
-      "@/models/*": [
-        "src/models/*"
-      ],
-      "@/enums/*": [
-        "src/enums/*"
-      ],
-      "@/ai-roadmap-generator/*": [
-        "src/ai-roadmap-generator/*"
-      ],
-      "@/ai-assistant/*": [
-        "src/ai-assistant/*"
-      ],
-      "@/ai-pdf-summary/*": [
-        "src/ai-pdf-summary/*"
-      ],
-      "@/ai-problem-solving/*": [
-        "src/ai-problem-solving/*"
-      ],
-      "@/ai-video-gen/*": [
-        "src/ai-video-gen/*"
       ]
-    },
-    "types": [
-      "node",
-      "express",
-      "jest"
-    ],
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "useDefineForClassFields": false
+    }
   },
   "include": [
-    "src/**/*",
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.js",
-    "src/**/*.jsx"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "build",
-    "coverage",
-    "*.test.ts",
-    "*.spec.ts",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
-  "ts-node": {
-    "require": [
-      "tsconfig-paths/register"
-    ],
-    "transpileOnly": true,
-    "files": true
-  }
+    "dist"
+  ]
 }
