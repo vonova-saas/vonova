@@ -86,5 +86,7 @@ export interface IPDFUploadResponse {
     file_size_bytes: number;
     total_pages: number;
     processing_time_ms: number;
+    s3_key?: string;
+    s3_url?: string;
   };
 }

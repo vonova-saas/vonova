@@ -26,4 +26,10 @@ export const envConfig = registerAs('env', () => ({
   enableFileLogging: process.env.ENABLE_FILE_LOGGING !== 'false',
   maxLogFileSize: process.env.MAX_LOG_FILE_SIZE || '50m',
   maxLogFiles: process.env.MAX_LOG_FILES || '30d',
+
+  // AWS S3 Configuration
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  awsRegion: process.env.AWS_REGION || 'eu-north-1',
+  awsS3Bucket: process.env.AWS_S3_BUCKET,
 }));

@@ -218,7 +218,9 @@ export class PdfUploadResponseDto {
       filename: { type: 'string', example: 'document.pdf' },
       file_size_bytes: { type: 'number', example: 1024000 },
       total_pages: { type: 'number', example: 25 },
-      processing_time_ms: { type: 'number', example: 500 }
+      processing_time_ms: { type: 'number', example: 500 },
+      s3_key: { type: 'string', example: 'pdfs/1234567890-document.pdf' },
+      s3_url: { type: 'string', example: 'https://cv-pdf-1234567890.s3.eu-north-1.amazonaws.com/pdfs/1234567890-document.pdf' }
     }
   })
   metadata: {
@@ -226,6 +228,8 @@ export class PdfUploadResponseDto {
     file_size_bytes: number;
     total_pages: number;
     processing_time_ms: number;
+    s3_key?: string;
+    s3_url?: string;
   };
 }
 

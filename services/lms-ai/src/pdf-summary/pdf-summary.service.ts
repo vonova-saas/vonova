@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException, InternalServerErrorException }
 import { ConfigService } from '@nestjs/config';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
+import { S3Service } from '../common/services/s3.service';
 import {
   IPDFSummaryRequest,
   IPDFSummaryResponse,
@@ -24,7 +25,8 @@ export class PdfSummaryService {
   constructor(
     private readonly pdfSummaryRepository: PdfSummaryRepository,
     private readonly pdfChatHistoryRepository: PdfChatHistoryRepository,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly s3Service: S3Service
   ) {
     // Prefer env; default to 127.0.0.1 to avoid IPv6 (::1) resolution issues with localhost
     const primary = this.configService.get('PDF_SUMMARY_AI_SERVICE_URL') || 'http://127.0.0.1:5001';
@@ -129,6 +131,17 @@ export class PdfSummaryService {
       const totalPages = await this.extractPageCount(fileContent);
       const fileHash = this.generateFileHash(fileContent);
 
+      // Upload file to S3
+      this.logger.log(`Uploading PDF file to S3: ${filename}`);
+      const s3Key = await this.s3Service.uploadFile(
+        fileContent,
+        filename,
+        'application/pdf',
+        'pdfs'
+      );
+      const s3Url = this.s3Service.getFileUrl(s3Key);
+      this.logger.log(`PDF file uploaded to S3: ${s3Key}`);
+
       // Check for existing session with same hash
       const existingSummary = await this.findExistingSummary(fileHash, 'brief');
       if (existingSummary) {
@@ -143,7 +156,9 @@ export class PdfSummaryService {
             filename: existingSummary.filename,
             file_size_bytes: existingSummary.file_size_bytes,
             total_pages: existingSummary.total_pages,
-            processing_time_ms: 0
+            processing_time_ms: 0,
+            s3_key: s3Key,
+            s3_url: s3Url
           }
         };
       }
@@ -184,7 +199,9 @@ export class PdfSummaryService {
           filename,
           file_size_bytes: fileSize,
           total_pages: totalPages,
-          processing_time_ms: Date.now() - startTime
+          processing_time_ms: Date.now() - startTime,
+          s3_key: s3Key,
+          s3_url: s3Url
         }
       };
 
