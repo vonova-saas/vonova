@@ -10,7 +10,8 @@ import {
   UploadedFile,
   Req,
   Ip,
-  Headers
+  Headers,
+  BadRequestException
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
@@ -151,6 +152,7 @@ export class PdfSummaryController {
     }
   })
   @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getSessionChatHistory(
     @Param('sessionId') sessionId: string,
@@ -166,8 +168,16 @@ export class PdfSummaryController {
       totalPages: number;
     };
   }> {
-    const pageNum = parseInt(page || '1');
-    const limitNum = parseInt(limit || '20');
+    if (!sessionId || sessionId.trim() === '') {
+      throw new BadRequestException('sessionId is required');
+    }
+
+    const pageNum = Math.max(1, parseInt(page || '1', 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));
+
+    if (isNaN(pageNum) || isNaN(limitNum)) {
+      throw new BadRequestException('Invalid page or limit parameter');
+    }
 
     const result = await this.pdfSummaryService.getSessionChatHistory(sessionId, pageNum, limitNum);
 

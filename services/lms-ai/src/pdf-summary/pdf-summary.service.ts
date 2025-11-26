@@ -221,7 +221,31 @@ export class PdfSummaryService {
     page: number;
     totalPages: number;
   }> {
-    return await this.pdfChatHistoryRepository.findBySessionId(sessionId, page, limit);
+    try {
+      if (!sessionId || sessionId.trim() === '') {
+        throw new BadRequestException('Session ID is required');
+      }
+
+      // Validate pagination parameters
+      const validPage = Math.max(1, page);
+      const validLimit = Math.min(100, Math.max(1, limit));
+
+      this.logger.log(`Fetching chat history for session: ${sessionId}, page: ${validPage}, limit: ${validLimit}`);
+
+      const result = await this.pdfChatHistoryRepository.findBySessionId(sessionId, validPage, validLimit);
+
+      this.logger.log(`Found ${result.total} chat entries for session: ${sessionId}`);
+
+      return result;
+    } catch (error) {
+      this.logger.error(`Error fetching chat history for session ${sessionId}:`, error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `Failed to retrieve chat history: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   async getFullSummary(
