@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
 import helmet from 'helmet';
 import * as cors from 'cors';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -42,6 +43,36 @@ async function bootstrap() {
   // Global logging interceptor
   app.useGlobalInterceptors(new LoggingInterceptor());
 
+  // Basic Authentication Middleware for Root and Swagger
+  const swaggerUser = process.env.SWAGGER_USER || 'admin';
+  const swaggerPassword = process.env.SWAGGER_PASSWORD || 'vonova2024';
+
+  const basicAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // Protect root route (/) and Swagger documentation (/api-docs)
+    const isProtectedRoute = req.path === '/' || req.path === '/roadmap/health' || req.path === '/pdf-summary/health' || req.path === '/roadmap/test-ai-connection' || req.path.startsWith('/api-docs');
+
+    if (isProtectedRoute) {
+      const authHeader = req.headers.authorization;
+
+      if (!authHeader || !authHeader.startsWith('Basic ')) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Vonova LMS AI Platform"');
+        return res.status(401).send('Unauthorized');
+      }
+
+      const credentials = Buffer.from(authHeader.substring(6), 'base64').toString('utf-8');
+      const [username, password] = credentials.split(':');
+
+      if (username !== swaggerUser || password !== swaggerPassword) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Vonova LMS AI Platform"');
+        return res.status(401).send('Unauthorized');
+      }
+    }
+    next();
+  };
+
+  // Apply basic authentication middleware
+  app.use(basicAuthMiddleware);
+
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Vonova LMS AI Platform')
@@ -61,19 +92,18 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env.PORT || 4005;
-  await app.listen(port);
+  await app.listen(process.env.PORT || 4005);
 
   console.log('\nVONOVA LMS AI PLATFORM - STARTING UP\n');
-  console.log(`Backend Service: http://localhost:${port}`);
-  console.log('Roadmap AI Service: https://vonova-ai-roadmap.up.railway.app');
-  console.log('PDF Summary AI Service: https://vonova-ai-pdfsummary.up.railway.app');
-  console.log(`API Documentation: http://localhost:${port}/api-docs`);
-  console.log(`Roadmap Health: http://localhost:${port}/roadmap/health`);
-  console.log(`PDF Summary Health: http://localhost:${port}/pdf-summary/health`);
-  console.log(`AI Connection Test: http://localhost:${port}/roadmap/test-ai-connection`);
+  console.log(`Backend Service: ${process.env.BASE_URL}`);
+  console.log(`Roadmap AI Service: ${process.env.ROADMAP_AI_SERVICE_URL}`);
+  console.log(`PDF Summary AI Service: ${process.env.PDF_SUMMARY_AI_SERVICE_URL}`);
+  console.log(`API Documentation: ${process.env.URL_SERVER}/api-docs`);
+  console.log(`Roadmap Health: ${process.env.URL_SERVER}/roadmap/health`);
+  console.log(`PDF Summary Health: ${process.env.URL_SERVER}/pdf-summary/health`);
+  console.log(`AI Connection Test: ${process.env.URL_SERVER}/roadmap/test-ai-connection`);
   console.log(`\nEnvironment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Server listening on port ${port}\n`);
+  console.log(`Server listening on port ${process.env.PORT || 4005}\n`);
   console.log('LMS AI PLATFORM IS READY!\n');
   console.log('Available Services:');
   console.log('AI Roadmap Generator');
