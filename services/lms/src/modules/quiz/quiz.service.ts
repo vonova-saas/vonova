@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Quiz } from '../../schemas/quiz.schema';
-import { QuizAnswer } from '../../schemas/quiz-answer.schema';
+import { Quiz } from '../../schemas/quiz/quiz.schema';
+import { QuizAnswer } from '../../schemas/quiz/quiz-answer.schema';
 import { CreateQuizDto, QuestionDto, UpdateQuizDto } from './dto/quiz.dto';
 
 @Injectable()
