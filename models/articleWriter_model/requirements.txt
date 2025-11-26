@@ -5,4 +5,3 @@ python-dotenv==1.1.1
 fastapi==0.118.0
 uvicorn==0.37.0
 pydantic==2.11.10
-starlette==0.27.0
