@@ -128,7 +128,8 @@ export class PdfSummaryController {
 
   @Get('session/:sessionId/chat-history')
   @ApiOperation({ summary: 'Get session chat history' })
-  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID (can also be passed as query parameter)' })
+  @ApiQuery({ name: 'sessionId', description: 'Session ID (alternative to path parameter)', required: false })
   @ApiQuery({ name: 'page', description: 'Page number for pagination', required: false })
   @ApiQuery({ name: 'limit', description: 'Number of items per page', required: false })
   @ApiResponse({
@@ -155,7 +156,8 @@ export class PdfSummaryController {
   @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getSessionChatHistory(
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId') pathSessionId: string,
+    @Query('sessionId') querySessionId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ): Promise<{
@@ -168,9 +170,19 @@ export class PdfSummaryController {
       totalPages: number;
     };
   }> {
-    if (!sessionId || sessionId.trim() === '') {
-      throw new BadRequestException('sessionId is required');
+    // Support both path parameter and query parameter for sessionId
+    // Prefer query parameter if path parameter is the literal '{sessionId}' or empty
+    let sessionId = pathSessionId;
+    if ((!sessionId || sessionId.trim() === '' || sessionId === '{sessionId}') && querySessionId) {
+      sessionId = querySessionId;
     }
+
+    if (!sessionId || sessionId.trim() === '' || sessionId === '{sessionId}') {
+      throw new BadRequestException('sessionId is required. Provide it either as a path parameter or query parameter.');
+    }
+
+    // Clean the sessionId
+    sessionId = sessionId.trim();
 
     const pageNum = Math.max(1, parseInt(page || '1', 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));

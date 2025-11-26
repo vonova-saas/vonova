@@ -226,15 +226,26 @@ export class PdfSummaryService {
         throw new BadRequestException('Session ID is required');
       }
 
+      // Clean and trim sessionId
+      const cleanSessionId = sessionId.trim();
+
       // Validate pagination parameters
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit));
 
-      this.logger.log(`Fetching chat history for session: ${sessionId}, page: ${validPage}, limit: ${validLimit}`);
+      this.logger.log(`Fetching chat history for session: "${cleanSessionId}" (length: ${cleanSessionId.length}), page: ${validPage}, limit: ${validLimit}`);
 
-      const result = await this.pdfChatHistoryRepository.findBySessionId(sessionId, validPage, validLimit);
+      const result = await this.pdfChatHistoryRepository.findBySessionId(cleanSessionId, validPage, validLimit);
 
-      this.logger.log(`Found ${result.total} chat entries for session: ${sessionId}`);
+      this.logger.log(`Query result - Found ${result.total} total, ${result.chats.length} chats returned for session: ${cleanSessionId}`);
+
+      // Log the actual query being executed for debugging
+      if (result.total === 0) {
+        this.logger.warn(`No chat history found for session_id: "${cleanSessionId}". This might indicate:`);
+        this.logger.warn(`1. The session_id doesn't exist in the database`);
+        this.logger.warn(`2. The session_id format doesn't match (check for extra spaces or encoding issues)`);
+        this.logger.warn(`3. The collection name might be different`);
+      }
 
       return result;
     } catch (error) {

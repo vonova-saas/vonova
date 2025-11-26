@@ -15,23 +15,40 @@ export class PdfChatHistoryRepository {
   }
 
   async findBySessionId(sessionId: string, page: number = 1, limit: number = 20): Promise<{
-    chats: PdfChatHistoryDocument[];
+    chats: any[];
     total: number;
     page: number;
     totalPages: number;
   }> {
+    // Ensure sessionId is trimmed and not empty
+    const cleanSessionId = sessionId?.trim() || '';
+
+    if (!cleanSessionId) {
+      return {
+        chats: [],
+        total: 0,
+        page,
+        totalPages: 0
+      };
+    }
+
     const skip = (page - 1) * limit;
+
+    // Use exact match for session_id
+    const query = { session_id: cleanSessionId };
+
     const [chats, total] = await Promise.all([
-      this.pdfChatHistoryModel.find({ session_id: sessionId })
+      this.pdfChatHistoryModel.find(query)
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
+        .lean() // Use lean() for better performance - returns plain objects
         .exec(),
-      this.pdfChatHistoryModel.countDocuments({ session_id: sessionId }).exec()
+      this.pdfChatHistoryModel.countDocuments(query).exec()
     ]);
 
     return {
-      chats,
+      chats: chats as any[], // lean() returns plain objects, not Mongoose documents
       total,
       page,
       totalPages: Math.ceil(total / limit)
