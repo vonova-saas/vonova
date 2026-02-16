@@ -1,5 +1,4 @@
 # Pinned dependencies for this project (target Python 3.10)
-Python==3.10
 fastapi==0.95.2
 uvicorn==0.22.0
 pydantic==1.10.12
