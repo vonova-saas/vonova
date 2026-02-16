@@ -8,7 +8,7 @@ cohere==5.0.0
 langchain-cohere==0.1.0
 langchain==0.1.0
 langdetect==1.0.9
-google-generative-ai==0.8.0
+google-generative-ai==0.3.2
 PyMuPDF==1.22.0
 starlette==0.27.0
 anyio==3.7.1
