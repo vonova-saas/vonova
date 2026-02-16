@@ -142,4 +142,9 @@ export const RolePermissions: Record<RoleType, Array<PermissionType>> = {
     Permissions.EDIT_FEEDBACK,
     Permissions.DELETE_FEEDBACK,
   ],
+
+  // --------------------------------------
+  // Owner (All Permissions)
+  // --------------------------------------
+  OWNER: Object.values(Permissions) as Array<PermissionType>,
 };

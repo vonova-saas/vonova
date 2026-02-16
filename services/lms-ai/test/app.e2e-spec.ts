@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 
@@ -12,16 +12,32 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
+    // Set global prefix to match main.ts configuration
+    app.setGlobalPrefix('api/v1', {
+      exclude: ['/health', '/roadmap/health', '/pdf-summary/health']
+    });
+
+    // Set up validation pipe to match main.ts configuration
+    app.useGlobalPipes(new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }));
+
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('/ (GET)', () => {
+  it('/api/v1 (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/api/v1')
       .set('Authorization', 'Bearer test-token')
       .set('User-Agent', 'Supertest')
       .expect(200)

@@ -25,7 +25,7 @@ export class AppController {
           properties: {
             backend: { type: 'number', example: 4005 },
             roadmap_ai_service: { type: 'number', example: 5000 },
-            pdf_summary_ai_service: { type: 'number', example: 5001 },
+            pdf_summary_ai_service: { type: 'number', example: 5015 },
             frontend: { type: 'number', example: 3000 }
           }
         },

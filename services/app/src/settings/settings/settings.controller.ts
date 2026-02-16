@@ -37,7 +37,10 @@ export class SettingsController {
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get settings for a specific user' })
   @ApiResponse({ status: HttpStatus.OK, type: UserSettings })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Settings not found' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Settings not found',
+  })
   findOne(
     @Param('userId', new ParseUUIDPipe()) userId: string,
   ): Promise<UserSettings> {
@@ -57,7 +60,10 @@ export class SettingsController {
   @Delete('user/:userId')
   @ApiOperation({ summary: 'Delete user settings' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Settings not found' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Settings not found',
+  })
   async remove(
     @Param('userId', new ParseUUIDPipe()) userId: string,
   ): Promise<void> {

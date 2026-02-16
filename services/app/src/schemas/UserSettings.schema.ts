@@ -9,7 +9,9 @@ export interface IUserSettingsModel extends Model<UserSettingsDocument> {
 
 @Schema({ timestamps: true, minimize: false })
 export class UserSettings {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  // Index is defined below via `UserSettingsSchema.index(...)` (unique),
+  // so we avoid duplicate index definitions here.
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
 
   // General Settings
@@ -29,7 +31,10 @@ export class UserSettings {
   @Prop({ type: String, default: 'en' })
   language: string;
 
-  @Prop({ type: String, default: () => Intl.DateTimeFormat().resolvedOptions().timeZone })
+  @Prop({
+    type: String,
+    default: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  })
   timezone: string;
 
   @Prop({ type: String, default: 'MM/DD/YYYY' })

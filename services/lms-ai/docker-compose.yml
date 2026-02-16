@@ -9,12 +9,18 @@ services:
       - NODE_ENV=development
       - PORT=4005
       - MONGO_URI_ROADMAP_AI=mongodb://mongo:27017/ROADMAP_AI
+      - MONGO_URI_PDF_SUMMARY_AI=mongodb://mongo:27017/LMS_AI
       - ROADMAP_AI_SERVICE_URL=http://roadmap-ai:5000
       - PDF_SUMMARY_AI_SERVICE_URL=http://pdf-summary-ai:5001
       - CORS_ORIGIN=http://localhost:3000
       - ALLOWED_ORIGINS=http://localhost:3000
       - SWAGGER_USER=admin
       - SWAGGER_PASSWORD=vonova2024
+      # AWS S3 Configuration (set these in production)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-eu-north-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-cv-pdf-1234567890}
     depends_on:
       - mongo
     volumes:

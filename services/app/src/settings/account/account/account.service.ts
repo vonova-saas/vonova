@@ -6,14 +6,12 @@ import { UpdateUserAccountDto } from './dto/account.dto';
 
 @Injectable()
 export class AccountService {
-
- constructor(
+  constructor(
     @InjectModel(UserAccount.name)
     private readonly userAccountModel: Model<UserAccount>,
   ) {}
 
-
- async getUserAccount(
+  async getUserAccount(
     userId: string,
     defaults?: { name?: string; email?: string; avatarUrl?: string },
   ) {
@@ -40,12 +38,14 @@ export class AccountService {
 
   async updateUserAccount(userId: string, update: UpdateUserAccountDto) {
     const account = await this.userAccountModel
-      .findOneAndUpdate({ userId }, { $set: update }, { upsert: true, new: true, runValidators: true })
+      .findOneAndUpdate(
+        { userId },
+        { $set: update },
+        { upsert: true, new: true, runValidators: true },
+      )
       .lean();
 
     if (!account) throw new NotFoundException('User account not found');
     return account;
   }
-
-
 }

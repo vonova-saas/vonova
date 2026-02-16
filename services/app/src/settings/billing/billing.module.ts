@@ -5,9 +5,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserBilling, UserBillingSchema } from 'src/schemas/userBilling.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: UserBilling.name, schema: UserBillingSchema }])],
+  imports: [
+    MongooseModule.forFeature([
+      { name: UserBilling.name, schema: UserBillingSchema },
+    ]),
+  ],
   controllers: [BillingController],
   providers: [BillingService],
-  exports: [BillingService]
+  exports: [BillingService],
 })
 export class BillingModule {}

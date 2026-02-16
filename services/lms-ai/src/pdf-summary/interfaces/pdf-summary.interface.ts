@@ -71,6 +71,7 @@ export interface IPDFUploadRequest {
   user_id?: string;
   auto_summarize?: boolean;
   summary_type?: 'brief' | 'detailed' | 'comprehensive';
+  language?: string;
 }
 
 export interface IPDFUploadResponse {

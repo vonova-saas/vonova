@@ -1,18 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UserBilling, UserBillingDocument } from 'src/schemas/userBilling.schema';
+import {
+  UserBilling,
+  UserBillingDocument,
+} from 'src/schemas/userBilling.schema';
 import { UpdateUserBillingDto } from './dto/billing.dto';
 
 @Injectable()
 export class BillingService {
-
-constructor(
+  constructor(
     @InjectModel(UserBilling.name)
     private readonly billingModel: Model<UserBillingDocument>,
   ) {}
 
- private getDefaultBilling() {
+  private getDefaultBilling() {
     return {
       plan: 'basic',
       cardNumber: '4242424242424242',
@@ -38,16 +40,19 @@ constructor(
     return billing;
   }
 
-async updateUserBilling(
-  userId: string,
-  update: UpdateUserBillingDto,
-): Promise<Record<string, any>> {
-  const billing = await this.billingModel
-    .findOneAndUpdate({ userId }, { $set: update }, { new: true, upsert: true })
-    .lean();
+  async updateUserBilling(
+    userId: string,
+    update: UpdateUserBillingDto,
+  ): Promise<Record<string, any>> {
+    const billing = await this.billingModel
+      .findOneAndUpdate(
+        { userId },
+        { $set: update },
+        { new: true, upsert: true },
+      )
+      .lean();
 
-  if (!billing) throw new NotFoundException('User billing not found');
-  return billing;
-}
-
+    if (!billing) throw new NotFoundException('User billing not found');
+    return billing;
+  }
 }

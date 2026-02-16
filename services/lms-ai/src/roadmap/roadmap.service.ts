@@ -396,4 +396,177 @@ export class RoadmapService {
       }
     };
   }
+
+  async deleteRoadmap(
+    roadmapId: string,
+    userId?: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1. Get roadmap from database to check ownership
+      const roadmap = await this.roadmapRepository.findById(roadmapId);
+      if (!roadmap) {
+        throw new BadRequestException('Roadmap not found');
+      }
+
+      // Optional: Check user ownership if userId provided
+      if (userId && roadmap.userId && roadmap.userId !== userId) {
+        throw new BadRequestException('You do not have permission to delete this roadmap');
+      }
+
+      // 2. Delete roadmap from database
+      const roadmapDeleted = await this.roadmapRepository.deleteById(roadmapId);
+      this.logger.log(`Roadmap deleted from database: ${roadmapDeleted}`);
+
+      // 3. Delete history records
+      const historyDeleted = await this.roadmapHistoryRepository.deleteByRoadmapId(roadmapId);
+      this.logger.log(`History deleted from database: ${historyDeleted}`);
+
+      return {
+        success: true,
+        message: 'Roadmap and all associated data deleted successfully'
+      };
+    } catch (error) {
+      this.logger.error(`Error deleting roadmap: ${error instanceof Error ? error.message : 'Unknown error'}`, error instanceof Error ? error.stack : '');
+      throw error;
+    }
+  }
+
+  async getRoadmapHistory(
+    roadmapId: string,
+    page: number,
+    limit: number
+  ): Promise<{
+    history: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      // Verify roadmap exists
+      const roadmap = await this.roadmapRepository.findById(roadmapId);
+      if (!roadmap) {
+        throw new BadRequestException('Roadmap not found');
+      }
+
+      return await this.roadmapHistoryRepository.findByRoadmapIdPaginated(roadmapId, page, limit);
+    } catch (error) {
+      this.logger.error(`Error getting roadmap history: ${error instanceof Error ? error.message : 'Unknown error'}`, error instanceof Error ? error.stack : '');
+      throw error;
+    }
+  }
+
+  async getServiceStats(): Promise<{
+    total_roadmaps: number;
+    total_generations: number;
+    active_roadmaps: number;
+    average_generation_time: number;
+    roadmaps_by_status: Record<string, number>;
+  }> {
+    try {
+      const [totalRoadmaps, totalGenerations, activeRoadmaps, avgGenerationTime, roadmapsByStatus] = await Promise.all([
+        this.roadmapRepository.getTotalCount(),
+        this.roadmapHistoryRepository.getTotalCount({ startDate: undefined, endDate: undefined }),
+        this.roadmapRepository.getActiveRoadmapsCount(),
+        this.roadmapRepository.getAverageGenerationTime(),
+        this.roadmapRepository.getRoadmapsByStatus()
+      ]);
+
+      return {
+        total_roadmaps: totalRoadmaps,
+        total_generations: totalGenerations,
+        active_roadmaps: activeRoadmaps,
+        average_generation_time: Math.round(avgGenerationTime),
+        roadmaps_by_status: roadmapsByStatus
+      };
+    } catch (error) {
+      this.logger.error('Error getting service stats:', error);
+      return {
+        total_roadmaps: 0,
+        total_generations: 0,
+        active_roadmaps: 0,
+        average_generation_time: 0,
+        roadmaps_by_status: {}
+      };
+    }
+  }
+
+  async bulkDeleteRoadmaps(
+    roadmapIds: string[],
+    userId?: string
+  ): Promise<{
+    total_requested: number;
+    deleted: number;
+    failed: number;
+    failed_roadmap_ids: string[];
+  }> {
+    const results = {
+      total_requested: roadmapIds.length,
+      deleted: 0,
+      failed: 0,
+      failed_roadmap_ids: [] as string[]
+    };
+
+    for (const roadmapId of roadmapIds) {
+      try {
+        await this.deleteRoadmap(roadmapId, userId);
+        results.deleted++;
+      } catch (error) {
+        results.failed++;
+        results.failed_roadmap_ids.push(roadmapId);
+        this.logger.warn(`Failed to delete roadmap ${roadmapId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return results;
+  }
+
+  async getQueryAnalytics(
+    startDate?: string,
+    endDate?: string,
+    userId?: string
+  ): Promise<{
+    total_generations: number;
+    popular_topics: Array<{ topic: string; count: number }>;
+    skill_level_distribution: Record<string, number>;
+    average_duration_weeks: number;
+    completion_rate: number;
+  }> {
+    try {
+      const filters: { userId?: string; startDate?: Date; endDate?: Date } = {};
+      if (userId) {
+        filters.userId = userId;
+      }
+      if (startDate) {
+        filters.startDate = new Date(startDate);
+      }
+      if (endDate) {
+        filters.endDate = new Date(endDate);
+      }
+
+      const [
+        totalGenerations,
+        popularTopics,
+        skillLevelDistribution,
+        averageDuration,
+        completionRate
+      ] = await Promise.all([
+        this.roadmapHistoryRepository.getTotalCount(filters),
+        this.roadmapRepository.getPopularTopics(10),
+        this.roadmapRepository.getSkillLevelDistribution(),
+        this.roadmapRepository.getAverageDuration(),
+        this.roadmapRepository.getCompletionRate()
+      ]);
+
+      return {
+        total_generations: totalGenerations,
+        popular_topics: popularTopics,
+        skill_level_distribution: skillLevelDistribution,
+        average_duration_weeks: Math.round(averageDuration * 10) / 10,
+        completion_rate: Math.round(completionRate * 100) / 100
+      };
+    } catch (error) {
+      this.logger.error('Error getting query analytics:', error);
+      throw new InternalServerErrorException('Failed to retrieve query analytics');
+    }
+  }
 }

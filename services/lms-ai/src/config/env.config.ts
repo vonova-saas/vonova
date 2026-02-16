@@ -5,20 +5,20 @@ export const envConfig = registerAs('env', () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
 
   // Database
-  mongoUriRoadmapAi: process.env.MONGO_URI_ROADMAP_AI || 'mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/LMS_AI?retryWrites=true&w=majority',
-  mongoUriPdfSummaryAi: process.env.MONGO_URI_PDF_SUMMARY_AI || 'mongodb+srv://vonovacompany:SsaTK2cOSSWJi0DQ@auth.6dsl9nu.mongodb.net/LMS_AI?retryWrites=true&w=majority',
+  mongoUriRoadmapAi: process.env.MONGO_URI_ROADMAP_AI,
+  mongoUriPdfSummaryAi: process.env.MONGO_URI_PDF_SUMMARY_AI,
 
   // AI Services
-  roadmapAiServiceUrl: process.env.ROADMAP_AI_SERVICE_URL || 'http://localhost:5000',
-  pdfSummaryAiServiceUrl: process.env.PDF_SUMMARY_AI_SERVICE_URL || 'http://localhost:5001',
+  roadmapAiServiceUrl: process.env.ROADMAP_AI_SERVICE_URL,
+  pdfSummaryAiServiceUrl: process.env.PDF_SUMMARY_AI_SERVICE_URL,
 
   // CORS
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  allowedOrigins: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+  corsOrigin: process.env.CORS_ORIGIN,
+  allowedOrigins: process.env.ALLOWED_ORIGINS,
 
   // Swagger
-  swaggerUser: process.env.SWAGGER_USER || 'admin',
-  swaggerPassword: process.env.SWAGGER_PASSWORD || 'vonova2024',
+  swaggerUser: process.env.SWAGGER_USER,
+  swaggerPassword: process.env.SWAGGER_PASSWORD,
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
@@ -30,6 +30,6 @@ export const envConfig = registerAs('env', () => ({
   // AWS S3 Configuration
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  awsRegion: process.env.AWS_REGION || 'eu-north-1',
+  awsRegion: process.env.AWS_REGION,
   awsS3Bucket: process.env.AWS_S3_BUCKET,
 }));

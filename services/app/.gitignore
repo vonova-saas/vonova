@@ -4,8 +4,9 @@
 /build
 
 # Logs
-logs
+/logs/
 *.log
+debug.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
@@ -21,6 +22,8 @@ lerna-debug.log*
 
 # IDEs and editors
 /.idea
+.eslintcache
+.npmrc
 .project
 .classpath
 .c9/

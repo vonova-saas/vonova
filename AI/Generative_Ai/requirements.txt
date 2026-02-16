@@ -1,0 +1,15 @@
+# Pinned dependencies for this project (target Python 3.13.5)
+# Python==3.13.5
+fastapi==0.95.2
+uvicorn==0.22.0
+pydantic==1.10.12
+python-dotenv==1.0.0
+cohere==5.0.0
+langchain-cohere==0.0.4
+langchain==0.1.0
+langdetect==1.0.9
+google-generative-ai==0.8.0
+PyMuPDF==1.22.0
+starlette==0.27.0
+anyio==3.7.1
+typing_extensions==4.7.1

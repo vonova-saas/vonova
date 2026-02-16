@@ -1,0 +1,50 @@
+# Use official Python slim image for a smaller footprint
+FROM python:3.13.5-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy application files
+COPY . .
+
+# Install system build tools and libs required by wheels/source builds
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  build-essential \
+  gcc \
+  g++ \
+  make \
+  pkg-config \
+  libjpeg-dev \
+  zlib1g-dev \
+  libfreetype6-dev \
+  libopenjp2-7-dev \
+  libtiff5-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip tooling and install Python dependencies (prefer wheels)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install main application dependencies
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Set default port for the application
+ENV AI_SERVICE_PORT=5010
+
+# Expose the application port
+EXPOSE 5010
+
+# Add metadata
+LABEL maintainer="AI Agents Orchestrator" \
+  description="Multi-agent AI system orchestrating Article Generation, PDF Q&A, Quiz Generation, and Roadmap Generation" \
+  version="1.0.0"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5010/health').read()" || exit 1
+
+# Command to run the application
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5010"]

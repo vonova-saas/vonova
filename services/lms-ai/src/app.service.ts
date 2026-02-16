@@ -15,7 +15,7 @@ export class AppService {
       ports: {
         backend: parseInt(this.configService.get('PORT', '4005')),
         roadmap_ai_service: 5000,
-        pdf_summary_ai_service: 5001,
+        pdf_summary_ai_service: 5015,
         frontend: 3000
       },
       features: {

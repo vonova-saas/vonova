@@ -36,7 +36,7 @@ export class PdfSummary {
   @Prop({ required: true })
   total_pages: number;
 
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, index: true })
   file_hash: string;
 
   @Prop({ default: 'gemini' })
@@ -57,6 +57,15 @@ export class PdfSummary {
     index: true
   })
   status: 'processing' | 'completed' | 'failed';
+
+  @Prop({ type: String })
+  s3_key: string;
+
+  @Prop({ type: String })
+  s3_url: string;
+
+  @Prop({ type: String })
+  language: string;
 
   @Prop({ default: Date.now })
   created_at: Date;

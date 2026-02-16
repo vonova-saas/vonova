@@ -2,16 +2,16 @@ import { getEnv } from "../utils/get-env";
 
 const envConfig = () => ({
   //? =========== Backend Configuration ===========
-  PORT: getEnv("PORT"),
-  NODE_ENV: getEnv("NODE_ENV"),
-  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN"),
+  PORT: getEnv("PORT", "4004"),
+  NODE_ENV: getEnv("NODE_ENV", "development"),
+  FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:3000"),
 
   // Swagger Docs Configuration
-  SWAGGER_USER: getEnv("SWAGGER_USER"),
-  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD"),
+  SWAGGER_USER: getEnv("SWAGGER_USER", ""),
+  SWAGGER_PASSWORD: getEnv("SWAGGER_PASSWORD", ""),
 
   //* Database configuration (MongoDB),
-  MONGO_URI_RMOTE: getEnv("MONGO_URI_RMOTE"),
+  MONGO_URI_REMOTE: getEnv("MONGO_URI_REMOTE", "mongodb://localhost:27017/vonova"),
   // MONGO_URI_LOCAL: getEnv("MONGO_URI_LOCAL"),
 
   //! =========== Authentication Layer ===========
@@ -41,6 +41,8 @@ const envConfig = () => ({
   APP_SERVICE_URL: getEnv("APP_SERVICE_URL"),
   LMS_SERVICE_URL: getEnv("LMS_SERVICE_URL"),
   LMS_AI_SERVICE_URL: getEnv("LMS_AI_SERVICE_URL"),
+  ROADMAP_AI_SERVICE_URL: getEnv("ROADMAP_AI_SERVICE_URL", "http://127.0.0.1:5000"),
+  PDF_SUMMARY_AI_SERVICE_URL: getEnv("PDF_SUMMARY_AI_SERVICE_URL", "http://127.0.0.1:5015"),
   // Internal inter-service communication
   // Shared secret used by API Gateway to authenticate internal-only endpoints
   INTERNAL_API_SECRET_KEY: getEnv("INTERNAL_API_SECRET_KEY"),
@@ -80,6 +82,12 @@ const envConfig = () => ({
   // ============ Anothers Configuration ============
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
+
+  //! =========== NATS Messaging =============
+  NATS_URL: getEnv("NATS_URL", "nats://localhost:4222"),
+  NATS_USER: getEnv("NATS_USER"),
+  NATS_PASSWORD: getEnv("NATS_PASSWORD"),
+  NATS_PREFIX: getEnv("NATS_PREFIX", "vonova"),
 });
 
 export const Env = envConfig();

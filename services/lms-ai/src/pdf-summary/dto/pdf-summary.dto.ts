@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsEnum, IsNumber, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum, IsNumber, Min, Max, IsNotEmpty, IsArray, ArrayMinSize, ArrayMaxSize } from 'class-validator';
 
 export class UploadPdfDto {
   @ApiProperty({
@@ -29,6 +29,15 @@ export class UploadPdfDto {
   @IsOptional()
   @IsEnum(['brief', 'detailed', 'comprehensive'])
   summary_type?: 'brief' | 'detailed' | 'comprehensive';
+
+  @ApiProperty({
+    description: 'Language code for the PDF (ISO 639-1, e.g., en, es, fr, de, ar)',
+    example: 'en',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  language?: string;
 }
 
 export class ChatWithPdfDto {
@@ -272,5 +281,133 @@ export class PdfChatResponseDto {
     ai_model_used: string;
     response_time_ms: number;
     tokens_used: number;
+  };
+}
+
+// Batch Operations DTOs
+export class BulkDeleteSessionsDto {
+  @ApiProperty({
+    description: 'Array of session IDs to delete',
+    example: ['session-uuid-1', 'session-uuid-2', 'session-uuid-3'],
+    type: [String],
+    minItems: 1,
+    maxItems: 100
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  session_ids: string[];
+
+  @ApiProperty({
+    description: 'Optional user identifier for ownership validation',
+    example: 'user-uuid-123',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  user_id?: string;
+}
+
+export class BulkDeleteResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({ example: 'Bulk delete operation completed' })
+  message: string;
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      total_requested: { type: 'number', example: 3 },
+      deleted: { type: 'number', example: 2 },
+      failed: { type: 'number', example: 1 },
+      failed_session_ids: { type: 'array', items: { type: 'string' }, example: ['session-uuid-3'] }
+    }
+  })
+  data: {
+    total_requested: number;
+    deleted: number;
+    failed: number;
+    failed_session_ids: string[];
+  };
+}
+
+// Analytics DTOs
+export class QueryAnalyticsDto {
+  @ApiProperty({
+    description: 'Start date for analytics (ISO 8601 format)',
+    example: '2024-01-01T00:00:00Z',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  start_date?: string;
+
+  @ApiProperty({
+    description: 'End date for analytics (ISO 8601 format)',
+    example: '2024-12-31T23:59:59Z',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  end_date?: string;
+
+  @ApiProperty({
+    description: 'User identifier to filter analytics',
+    example: 'user-uuid-123',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  user_id?: string;
+}
+
+export class QueryAnalyticsResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({ example: 'Query analytics retrieved successfully' })
+  message: string;
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      total_queries: { type: 'number', example: 150 },
+      average_response_time_ms: { type: 'number', example: 850 },
+      most_common_queries: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            query: { type: 'string' },
+            count: { type: 'number' }
+          }
+        }
+      },
+      queries_by_hour: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            hour: { type: 'string' },
+            count: { type: 'number' }
+          }
+        }
+      },
+      average_rating: { type: 'number', example: 4.2 },
+      language_distribution: {
+        type: 'object',
+        additionalProperties: { type: 'number' }
+      }
+    }
+  })
+  data: {
+    total_queries: number;
+    average_response_time_ms: number;
+    most_common_queries: Array<{ query: string; count: number }>;
+    queries_by_hour: Array<{ hour: string; count: number }>;
+    average_rating: number;
+    language_distribution: Record<string, number>;
   };
 }

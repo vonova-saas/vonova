@@ -4,17 +4,13 @@ import { UpdateUserBillingDto } from './dto/billing.dto';
 
 @Controller('billing')
 export class BillingController {
-
-
-
- constructor(private readonly billingService: BillingService) {}
+  constructor(private readonly billingService: BillingService) {}
 
   @Get(':userId')
   async getBilling(@Param('userId') userId: string) {
     const billing = await this.billingService.getUserBilling(userId);
     return { message: 'User billing fetched successfully', data: billing };
   }
-
 
   @Put(':userId')
   async updateBilling(
@@ -24,7 +20,4 @@ export class BillingController {
     const billing = await this.billingService.updateUserBilling(userId, body);
     return { message: 'User billing updated successfully', data: billing };
   }
-
-
-    
 }

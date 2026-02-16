@@ -48,83 +48,86 @@ const emailTemplate = (title: string, body: string): string => {
       </div>
 
       <!-- Footer -->
-      <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 13px; color: #6b7280;">
-        © ${new Date().getFullYear()} Onyx. All rights reserved.<br/>
-        <a href="onyxtap.com" style="color: #2BC8B7; text-decoration: none;">Visit Onyx</a>
+      <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; font-size: 12px; color: #6b7280;">
+          © ${new Date().getFullYear()} Vonova. All rights reserved.
+        </p>
       </div>
     </div>
-  </div>`;
+  </div>
+  `;
 };
 
 // -----------------------------
-// Email Services (unchanged)
+// Email Functions
 // -----------------------------
-export const sendVerificationEmail = async (email: string, verificationCode: string): Promise<void> => {
-  const subject = "Verify Your Email - Onyx";
-  const html = emailTemplate(
-    "Verify Your Email Address",
-    `
-      <p>Thank you for joining Onyx! Please use the following code to verify your email address:</p>
-      <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px;">
-        <h1 style="color: #2BC8B7; font-size: 32px; margin: 0;">${verificationCode}</h1>
-      </div>
-      <p>This code will expire in <strong>10 minutes</strong>.</p>
-      <p>If you did not create an account, please ignore this email.</p>
-    `
-  );
 
-  const text = `Your Onyx verification code is ${verificationCode}. It expires in 10 minutes.`;
+export const sendVerificationEmail = async (email: string, code: string): Promise<void> => {
+  const title = "Verify Your Email Address";
+  const body = `
+    <p>Thank you for registering with Vonova!</p>
+    <p>Please use the following verification code to verify your email address:</p>
+    <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;">
+      <h1 style="margin: 0; font-size: 32px; letter-spacing: 4px; color: #111; font-family: monospace;">${code}</h1>
+    </div>
+    <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
+    <p>If you didn't create an account, please ignore this email.</p>
+  `;
 
-  await sendEmail({ to: email, subject, html, text });
+  await sendEmail({
+    to: email,
+    subject: "Verify Your Email - Vonova",
+    html: emailTemplate(title, body),
+  });
 };
 
-export const sendPasswordResetEmail = async (email: string, resetCode: string): Promise<void> => {
-  const subject = "Password Reset Request - Onyx";
-  const html = emailTemplate(
-    "Password Reset Request",
-    `
-      <p>You requested a password reset. Please use the following code to reset your password:</p>
-      <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px;">
-        <h1 style="color: #dc3545; font-size: 32px; margin: 0;">${resetCode}</h1>
-      </div>
-      <p>This code will expire in <strong>15 minutes</strong>.</p>
-      <p>If you did not request this, please ignore this email.</p>
-    `
-  );
+export const sendPasswordResetEmail = async (email: string, code: string): Promise<void> => {
+  const title = "Reset Your Password";
+  const body = `
+    <p>We received a request to reset your password.</p>
+    <p>Please use the following reset code:</p>
+    <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;">
+      <h1 style="margin: 0; font-size: 32px; letter-spacing: 4px; color: #111; font-family: monospace;">${code}</h1>
+    </div>
+    <p style="color: #6b7280; font-size: 14px;">This code will expire in 15 minutes.</p>
+    <p>If you didn't request a password reset, please ignore this email.</p>
+  `;
 
-  const text = `Your Onyx password reset code is ${resetCode}. It expires in 15 minutes.`;
-
-  await sendEmail({ to: email, subject, html, text });
+  await sendEmail({
+    to: email,
+    subject: "Reset Your Password - Vonova",
+    html: emailTemplate(title, body),
+  });
 };
 
 export const sendPasswordResetConfirmationEmail = async (email: string): Promise<void> => {
-  const subject = "Your Onyx Password Has Been Reset";
-  const html = emailTemplate(
-    "Password Reset Successful",
-    `
-      <p>Your Onyx password has been <strong>successfully reset</strong>.</p>
-      <p>If you did not perform this action, please contact our support team immediately.</p>
-      <p>For your security, you have been logged out of all devices.</p>
-    `
-  );
+  const title = "Password Reset Successful";
+  const body = `
+    <p>Your password has been successfully reset.</p>
+    <p>If you didn't make this change, please contact our support team immediately.</p>
+  `;
 
-  const text = `Your Onyx password has been successfully reset. If this wasn't you, contact support immediately.`;
-
-  await sendEmail({ to: email, subject, html, text });
+  await sendEmail({
+    to: email,
+    subject: "Password Reset Confirmation - Vonova",
+    html: emailTemplate(title, body),
+  });
 };
 
 export const sendWelcomeEmail = async (email: string, name: string): Promise<void> => {
-  const subject = "Welcome to Onyx!";
-  const html = emailTemplate(
-    `Welcome to Onyx, ${name}!`,
-    `
-      <p>We’re excited to have you on board 🎉</p>
-      <p>You can now explore the full features of Onyx, from your personal portfolio card to our powerful e-commerce platform.</p>
-      <p>If you have any questions, our support team is always here to help.</p>
-    `
-  );
+  const title = "Welcome to Vonova!";
+  const body = `
+    <p>Hi ${name},</p>
+    <p>Welcome to Vonova! We're excited to have you on board.</p>
+    <p>Get started by exploring our platform and discover amazing learning opportunities.</p>
+    <p>If you have any questions, feel free to reach out to our support team.</p>
+    <p>Happy learning!</p>
+  `;
 
-  const text = `Welcome to Onyx, ${name}! You can now enjoy the full features of our platform.`;
-
-  await sendEmail({ to: email, subject, html, text });
+  await sendEmail({
+    to: email,
+    subject: "Welcome to Vonova!",
+    html: emailTemplate(title, body),
+  });
 };
+

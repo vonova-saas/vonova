@@ -1,6 +1,6 @@
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
 export class S3Service {
@@ -10,16 +10,16 @@ export class S3Service {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    const accessKeyId = this.configService.get<string>('env.awsAccessKeyId') || 
-                        this.configService.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>('env.awsSecretAccessKey') || 
-                           this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-    this.region = this.configService.get<string>('env.awsRegion') || 
-                   this.configService.get<string>('AWS_REGION') || 
-                   'eu-north-1';
-    this.bucketName = this.configService.get<string>('env.awsS3Bucket') || 
-                     this.configService.get<string>('AWS_S3_BUCKET') || 
-                     'cv-pdf-1234567890';
+    const accessKeyId = this.configService.get<string>('env.awsAccessKeyId') ||
+      this.configService.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get<string>('env.awsSecretAccessKey') ||
+      this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+    this.region = this.configService.get<string>('env.awsRegion') ||
+      this.configService.get<string>('AWS_REGION') ||
+      'eu-north-1';
+    this.bucketName = this.configService.get<string>('env.awsS3Bucket') ||
+      this.configService.get<string>('AWS_S3_BUCKET') ||
+      'cv-pdf-1234567890';
 
     if (!accessKeyId || !secretAccessKey) {
       this.logger.warn('AWS credentials not configured. S3 uploads will fail.');
@@ -56,9 +56,9 @@ export class S3Service {
       const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileExtension = fileName.split('.').pop() || 'pdf';
       const uniqueFileName = `${timestamp}-${sanitizedFileName}`;
-      
+
       // Construct the S3 key
-      const s3Key = folder 
+      const s3Key = folder
         ? `${folder}/${uniqueFileName}`
         : `pdfs/${uniqueFileName}`;
 
@@ -94,6 +94,36 @@ export class S3Service {
    */
   getFileUrl(s3Key: string): string {
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+  }
+
+  /**
+   * Delete a file from S3
+   * @param s3Key - The S3 key (object key) to delete
+   * @returns True if deletion was successful
+   */
+  async deleteFile(s3Key: string): Promise<boolean> {
+    try {
+      if (!s3Key) {
+        this.logger.warn('No S3 key provided for deletion');
+        return false;
+      }
+
+      this.logger.log(`Deleting file from S3: ${s3Key}`);
+
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: s3Key,
+      });
+
+      await this.s3Client.send(command);
+
+      this.logger.log(`File deleted successfully from S3: ${s3Key}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Error deleting file from S3: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't throw error, just log it - file might not exist
+      return false;
+    }
   }
 
   /**

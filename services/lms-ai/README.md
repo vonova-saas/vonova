@@ -171,9 +171,6 @@ The service includes comprehensive logging:
 # Run tests
 npm test
 
-# Run tests with coverage
-npm run test:coverage
-
 # Run e2e tests
 npm run test:e2e
 

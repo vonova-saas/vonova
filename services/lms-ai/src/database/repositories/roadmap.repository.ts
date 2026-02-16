@@ -50,4 +50,104 @@ export class RoadmapRepository {
     const result = await this.roadmapModel.deleteOne({ roadmapId }).exec();
     return result.deletedCount > 0;
   }
+
+  async getTotalCount(): Promise<number> {
+    return this.roadmapModel.countDocuments().exec();
+  }
+
+  async getActiveRoadmapsCount(): Promise<number> {
+    return this.roadmapModel.countDocuments({ status: { $in: ['generated', 'in_progress'] } }).exec();
+  }
+
+  async getAverageGenerationTime(): Promise<number> {
+    const result = await this.roadmapModel.aggregate([
+      {
+        $match: { generation_time_ms: { $exists: true, $ne: null } }
+      },
+      {
+        $group: {
+          _id: null,
+          avgTime: { $avg: '$generation_time_ms' }
+        }
+      }
+    ]).exec();
+    return result.length > 0 ? result[0].avgTime : 0;
+  }
+
+  async getRoadmapsByStatus(): Promise<Record<string, number>> {
+    const result = await this.roadmapModel.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]).exec();
+    const statusMap: Record<string, number> = {};
+    result.forEach(item => {
+      statusMap[item._id] = item.count;
+    });
+    return statusMap;
+  }
+
+  async getPopularTopics(limit: number = 10): Promise<Array<{ topic: string; count: number }>> {
+    const result = await this.roadmapModel.aggregate([
+      {
+        $group: {
+          _id: '$topic',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      },
+      {
+        $limit: limit
+      },
+      {
+        $project: {
+          topic: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
+    ]).exec();
+    return result;
+  }
+
+  async getSkillLevelDistribution(): Promise<Record<string, number>> {
+    const result = await this.roadmapModel.aggregate([
+      {
+        $group: {
+          _id: '$skill_level',
+          count: { $sum: 1 }
+        }
+      }
+    ]).exec();
+    const distribution: Record<string, number> = {};
+    result.forEach(item => {
+      distribution[item._id] = item.count;
+    });
+    return distribution;
+  }
+
+  async getAverageDuration(): Promise<number> {
+    const result = await this.roadmapModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          avgDuration: { $avg: '$duration_weeks' }
+        }
+      }
+    ]).exec();
+    return result.length > 0 ? result[0].avgDuration : 0;
+  }
+
+  async getCompletionRate(): Promise<number> {
+    const [completed, total] = await Promise.all([
+      this.roadmapModel.countDocuments({ status: 'completed' }).exec(),
+      this.roadmapModel.countDocuments().exec()
+    ]);
+    return total > 0 ? completed / total : 0;
+  }
 }

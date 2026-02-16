@@ -74,4 +74,129 @@ export class PdfChatHistoryRepository {
   async countByUserId(userId: string): Promise<number> {
     return this.pdfChatHistoryModel.countDocuments({ user_id: userId }).exec();
   }
+
+  async deleteBySessionId(sessionId: string): Promise<boolean> {
+    const result = await this.pdfChatHistoryModel.deleteMany({ session_id: sessionId }).exec();
+    return result.deletedCount > 0;
+  }
+
+  async deleteByUserId(userId: string): Promise<number> {
+    const result = await this.pdfChatHistoryModel.deleteMany({ user_id: userId }).exec();
+    return result.deletedCount;
+  }
+
+  async getTotalCount(filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+    const query: any = {};
+    if (filters?.userId) {
+      query.user_id = filters.userId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      query.created_at = {};
+      if (filters.startDate) {
+        query.created_at.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        query.created_at.$lte = filters.endDate;
+      }
+    }
+    return this.pdfChatHistoryModel.countDocuments(query).exec();
+  }
+
+  async getAverageResponseTime(filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+    const match: any = {};
+    if (filters?.userId) {
+      match.user_id = filters.userId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      match.created_at = {};
+      if (filters.startDate) {
+        match.created_at.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        match.created_at.$lte = filters.endDate;
+      }
+    }
+
+    const result = await this.pdfChatHistoryModel.aggregate([
+      { $match: match },
+      { $group: { _id: null, avg: { $avg: '$response_time_ms' } } }
+    ]).exec();
+    return result.length > 0 ? result[0].avg || 0 : 0;
+  }
+
+  async getMostCommonQueries(limit: number = 10, filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<Array<{ query: string; count: number }>> {
+    const match: any = {};
+    if (filters?.userId) {
+      match.user_id = filters.userId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      match.created_at = {};
+      if (filters.startDate) {
+        match.created_at.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        match.created_at.$lte = filters.endDate;
+      }
+    }
+
+    const result = await this.pdfChatHistoryModel.aggregate([
+      { $match: match },
+      { $group: { _id: '$question', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: limit },
+      { $project: { query: '$_id', count: 1, _id: 0 } }
+    ]).exec();
+    return result;
+  }
+
+  async getQueriesByHour(filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<Array<{ hour: string; count: number }>> {
+    const match: any = {};
+    if (filters?.userId) {
+      match.user_id = filters.userId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      match.created_at = {};
+      if (filters.startDate) {
+        match.created_at.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        match.created_at.$lte = filters.endDate;
+      }
+    }
+
+    const result = await this.pdfChatHistoryModel.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d %H:00', date: '$created_at' } },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } },
+      { $project: { hour: '$_id', count: 1, _id: 0 } }
+    ]).exec();
+    return result;
+  }
+
+  async getAverageRating(filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+    const match: any = { rating: { $exists: true, $ne: null } };
+    if (filters?.userId) {
+      match.user_id = filters.userId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      match.created_at = {};
+      if (filters.startDate) {
+        match.created_at.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        match.created_at.$lte = filters.endDate;
+      }
+    }
+
+    const result = await this.pdfChatHistoryModel.aggregate([
+      { $match: match },
+      { $group: { _id: null, avg: { $avg: '$rating' } } }
+    ]).exec();
+    return result.length > 0 ? result[0].avg || 0 : 0;
+  }
 }

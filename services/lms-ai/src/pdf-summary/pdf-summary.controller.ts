@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   Query,
@@ -11,7 +12,9 @@ import {
   Req,
   Ip,
   Headers,
-  BadRequestException
+  BadRequestException,
+  HttpCode,
+  HttpStatus
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
@@ -22,7 +25,10 @@ import {
   RateChatResponseDto,
   PdfSummaryResponseDto,
   PdfUploadResponseDto,
-  PdfChatResponseDto
+  PdfChatResponseDto,
+  BulkDeleteSessionsDto,
+  BulkDeleteResponseDto,
+  QueryAnalyticsResponseDto
 } from './dto/pdf-summary.dto';
 import { SignedContextGuard } from '../common/guards/signed-context.guard';
 import { LoggingInterceptor } from '../common/interceptors/logging.interceptor';
@@ -69,7 +75,8 @@ export class PdfSummaryController {
       },
       ...(uploadPdfDto.user_id && { user_id: uploadPdfDto.user_id }),
       auto_summarize: uploadPdfDto.auto_summarize,
-      ...(uploadPdfDto.summary_type && { summary_type: uploadPdfDto.summary_type })
+      ...(uploadPdfDto.summary_type && { summary_type: uploadPdfDto.summary_type }),
+      ...(uploadPdfDto.language && { language: uploadPdfDto.language })
     };
 
     return this.pdfSummaryService.uploadPDF(request, ip, userAgent);
@@ -262,8 +269,30 @@ export class PdfSummaryController {
     };
   }
 
+  @Delete('session/:sessionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete session and cleanup resources' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID to delete' })
+  @ApiQuery({ name: 'user_id', description: 'Optional user identifier for ownership validation', required: false })
+  @ApiResponse({
+    status: 204,
+    description: 'Session deleted successfully (idempotent operation)'
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed or permission denied' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async deleteSession(
+    @Param('sessionId') sessionId: string,
+    @Query('user_id') userId?: string
+  ): Promise<void> {
+    if (!sessionId || sessionId.trim() === '') {
+      throw new BadRequestException('Session ID is required');
+    }
+
+    await this.pdfSummaryService.deleteSession(sessionId.trim(), userId);
+  }
+
   @Get('stats')
-  @ApiOperation({ summary: 'Get service statistics' })
+  @ApiOperation({ summary: 'Get service statistics and metrics' })
   @ApiResponse({
     status: 200,
     description: 'Statistics retrieved successfully',
@@ -275,26 +304,70 @@ export class PdfSummaryController {
         data: {
           type: 'object',
           properties: {
-            total_summaries: { type: 'number', example: 0 },
-            total_chats: { type: 'number', example: 0 },
-            active_sessions: { type: 'number', example: 0 },
-            average_processing_time: { type: 'number', example: 0 }
+            total_summaries: { type: 'number', example: 150 },
+            total_chats: { type: 'number', example: 1250 },
+            active_sessions: { type: 'number', example: 45 },
+            average_processing_time: { type: 'number', example: 850 }
           }
         }
       }
     }
   })
   async getServiceStats() {
-    // TODO: Implement statistics collection
+    const stats = await this.pdfSummaryService.getServiceStats();
     return {
       success: true,
       message: 'Service statistics retrieved successfully',
-      data: {
-        total_summaries: 0,
-        total_chats: 0,
-        active_sessions: 0,
-        average_processing_time: 0
-      }
+      data: stats
+    };
+  }
+
+  @Post('batch/delete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Bulk delete multiple sessions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk delete operation completed',
+    type: BulkDeleteResponseDto
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async bulkDeleteSessions(
+    @Body() bulkDeleteDto: BulkDeleteSessionsDto
+  ): Promise<BulkDeleteResponseDto> {
+    const result = await this.pdfSummaryService.bulkDeleteSessions(
+      bulkDeleteDto.session_ids,
+      bulkDeleteDto.user_id
+    );
+
+    return {
+      success: true,
+      message: 'Bulk delete operation completed',
+      data: result
+    };
+  }
+
+  @Get('analytics/queries')
+  @ApiOperation({ summary: 'Get query pattern analytics and insights' })
+  @ApiQuery({ name: 'start_date', description: 'Start date (ISO 8601)', required: false })
+  @ApiQuery({ name: 'end_date', description: 'End date (ISO 8601)', required: false })
+  @ApiQuery({ name: 'user_id', description: 'Filter by user ID', required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'Query analytics retrieved successfully',
+    type: QueryAnalyticsResponseDto
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async getQueryAnalytics(
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+    @Query('user_id') userId?: string
+  ): Promise<QueryAnalyticsResponseDto> {
+    const analytics = await this.pdfSummaryService.getQueryAnalytics(startDate, endDate, userId);
+    return {
+      success: true,
+      message: 'Query analytics retrieved successfully',
+      data: analytics
     };
   }
 }

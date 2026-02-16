@@ -49,7 +49,14 @@ async function bootstrap() {
 
   const basicAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
     // Protect root route (/) and Swagger documentation (/api-docs)
-    const isProtectedRoute = req.path === '/' || req.path === '/roadmap/health' || req.path === '/pdf-summary/health' || req.path === '/roadmap/test-ai-connection' || req.path.startsWith('/api-docs');
+    const isProtectedRoute = req.path === '/' ||
+      req.path === '/health' ||
+      req.path === '/roadmap/health' ||
+      req.path === '/pdf-summary/health' ||
+      req.path === '/api/v1/roadmap/health' ||
+      req.path === '/api/v1/pdf-summary/health' ||
+      req.path === '/roadmap/test-ai-connection' ||
+      req.path.startsWith('/api-docs');
 
     if (isProtectedRoute) {
       const authHeader = req.headers.authorization;
@@ -73,16 +80,24 @@ async function bootstrap() {
   // Apply basic authentication middleware
   app.use(basicAuthMiddleware);
 
+  // Set global API prefix for versioning (excluding health endpoints)
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['/health', '/roadmap/health', '/pdf-summary/health']
+  });
+
   // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('Vonova LMS AI Platform')
-    .setDescription('AI-powered learning platform with roadmap generation, PDF summarization, and more')
+    .setTitle('Vonova LMS AI Platform API')
     .setVersion('1.0.0')
     .addBearerAuth()
+    .addServer(process.env.BASE_URL || 'http://localhost:4005', 'Production Server')
+    .addServer('http://localhost:4005', 'Local Development Server')
     .addTag('Application', 'Application status and information')
     .addTag('Roadmap', 'AI-powered learning roadmap generation')
     .addTag('PDF Summary', 'AI-powered PDF summarization and chat')
     .addTag('Health', 'Health check endpoints')
+    .addTag('Analytics', 'Query pattern analysis and insights')
+    .addTag('Batch Operations', 'Bulk upload and delete operations')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

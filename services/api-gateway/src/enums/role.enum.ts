@@ -2,6 +2,7 @@ export const Roles = {
   PENDING: "PENDING",
   STUDENT_USER: "STUDENT_USER",
   INSTRUCTORS_USER: "INSTRUCTORS_USER",
+  OWNER: "OWNER",
 } as const;
 
 export type RoleType = keyof typeof Roles;

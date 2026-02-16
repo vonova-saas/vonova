@@ -45,6 +45,19 @@ export class LoggingInterceptor implements NestInterceptor {
           const responseTime = Date.now() - startTime;
           const { statusCode } = response;
 
+          // Safely calculate response size (handles undefined / circular structures)
+          let dataSize = 0;
+          try {
+            if (data !== undefined && data !== null) {
+              const json = JSON.stringify(data);
+              if (typeof json === 'string') {
+                dataSize = json.length;
+              }
+            }
+          } catch {
+            // If JSON.stringify fails (e.g. circular refs), keep dataSize as 0
+          }
+
           // Log successful response
           this.logger.log(`Outgoing Response: ${method} ${url} - ${statusCode}`, {
             method,
@@ -54,7 +67,7 @@ export class LoggingInterceptor implements NestInterceptor {
             ip,
             userAgent,
             timestamp: new Date().toISOString(),
-            dataSize: JSON.stringify(data).length
+            dataSize
           });
 
           // Winston structured logging
