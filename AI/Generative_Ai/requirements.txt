@@ -19,4 +19,4 @@ crewai==1.9.3
 crewai-tools==1.9.3
 
 # File processing
-PyMuPDF==1.25.1
+PyMuPDF==1.26.6
