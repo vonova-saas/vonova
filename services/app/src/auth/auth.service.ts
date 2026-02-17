@@ -1,86 +1,112 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { JwtService } from '@nestjs/jwt';
+import { RpcException } from '@nestjs/microservices';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { User, UserDocument } from './schemas/user.schema';
-import { Account, AccountDocument } from './schemas/account.schema';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import configuration from '../common/config/configuration';
+import type { UploadedFile } from '../common/interfaces/file.interface';
+import { WaitlistService } from '../waitlist/waitlist.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { WelcomeEmailDto } from './dto/welcome-email.dto';
+import { RequestResetPasswordDto } from './dto/request-reset-password.dto';
+import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CheckCouponDto } from './dto/check-coupon.dto';
+import { UploadProfilePictureDto } from './dto/upload-profile-picture.dto';
+import { OAuthGoogleLoginDto } from './dto/oauth-google-login.dto';
+import { OAuthWelcomeDto } from './dto/oauth-welcome.dto';
+import { User, UserDocument } from './schema/user.schema';
+import { Account, AccountDocument } from './schema/account.schema';
 import {
   RefreshToken,
   RefreshTokenDocument,
-} from './schemas/refresh-token.schema';
+} from './schema/refreshToken.schema';
 import {
   EmailVerification,
   EmailVerificationDocument,
-} from './schemas/email-verification.schema';
+} from './schema/emailVerification.schema';
 import {
   PasswordReset,
   PasswordResetDocument,
-} from './schemas/password-reset.schema';
-import {
-  BadRequestException,
-  NotFoundException,
-  UnauthorizedException,
-} from '@app/utils/appError';
-import { generateDeviceHash, hashValue } from '@app/utils/bcrypt';
-import {
-  AccessTPayload,
-  refreshTokenSignOptions,
-  RefreshTPayload,
-  signJwtToken,
-  verifyAccessToken,
-  verifyJwtToken,
-} from '@app/utils/jwt';
-import { EmailService } from './email.service';
-import { ProviderEnum } from '@app/enums/account-provider.enum';
-import { Roles } from '@app/enums/role.enum';
-import { RolePermissions } from '@app/utils/role-permission';
-import { createLogger } from '@app/utils/logger';
+} from './schema/passwordReset.schema';
+import { ProviderEnum } from './enums/provider.enum';
+import { Role } from './enums/role.enum';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = createLogger('AuthService');
-
   constructor(
     @InjectModel(User.name)
-    private userModel: Model<
-      UserDocument & {
-        comparePassword: (value: string) => Promise<boolean>;
-        omitPassword: () => any;
-      }
-    >,
-    @InjectModel(Account.name) private accountModel: Model<AccountDocument>,
+    private readonly userModel: Model<UserDocument>,
+    @InjectModel(Account.name)
+    private readonly accountModel: Model<AccountDocument>,
     @InjectModel(RefreshToken.name)
-    private refreshTokenModel: Model<RefreshTokenDocument>,
+    private readonly refreshTokenModel: Model<RefreshTokenDocument>,
     @InjectModel(EmailVerification.name)
-    private emailVerificationModel: Model<EmailVerificationDocument>,
+    private readonly emailVerificationModel: Model<EmailVerificationDocument>,
     @InjectModel(PasswordReset.name)
-    private passwordResetModel: Model<PasswordResetDocument>,
-    private emailService: EmailService,
-  ) { }
+    private readonly passwordResetModel: Model<PasswordResetDocument>,
+    private readonly jwtService: JwtService,
+    @Inject(forwardRef(() => WaitlistService))
+    private readonly waitlistService: WaitlistService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
-  async registerUser(body: { name: string; email: string; password: string }) {
-    const { email, name, password } = body;
+  // ========== Helpers ==========
 
-    this.logger.logAuth('Registration attempt', { email, name });
+  private signAccessToken(userId: string, role: Role | string) {
+    return this.jwtService.sign({ userId, role });
+  }
 
-    const existingUser = await this.userModel.findOne({ email }).exec();
-    if (existingUser) {
-      this.logger.warn('Registration failed: Email already exists', { email });
-      throw new BadRequestException('Email already exist');
+  private signRefreshToken(userId: string, role: Role | string) {
+    return this.jwtService.sign(
+      { userId, role, type: 'refresh' },
+      {
+        secret:
+          configuration().JWT.JWT_REFRESH_SECRET ||
+          'fallback-refresh-secret-key',
+        expiresIn: (configuration().JWT.JWT_REFRESH_EXPIRES_IN || '7d') as any,
+      },
+    );
+  }
+
+  // ========== Register Flow Services ==========
+
+  async register(dto: RegisterDto) {
+    const existing = await this.userModel
+      .findOne({ email: dto.email.toLowerCase() })
+      .exec();
+    if (existing) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Email already exists',
+        error: 'Bad Request',
+      });
     }
 
     const user = new this.userModel({
-      name,
-      email,
-      password,
-      role: Roles.PENDING,
+      name: dto.name,
+      email: dto.email,
+      password: dto.password,
+      role: Role.PENDING,
+      isVerified: false,
+      isActive: true,
     });
     await user.save();
 
     const account = new this.accountModel({
       userId: user._id,
       provider: ProviderEnum.EMAIL,
-      providerId: email,
+      providerId: dto.email,
     });
     await account.save();
 
@@ -89,301 +115,267 @@ export class AuthService {
     ).toString();
 
     await this.emailVerificationModel.create({
-      email,
+      email: dto.email,
       verificationCode,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    await this.emailService.sendVerificationEmail(user.email, verificationCode);
-
-    this.logger.logAuth('User registered successfully', {
-      userId: user._id,
-      email,
+    await this.notificationService.sendEmailVerification({
+      email: dto.email,
+      name: dto.name,
+      code: verificationCode,
     });
 
     return {
-      message:
-        'User registered successfully, you will receive a verification email.',
+      message: 'User registered successfully, verification code sent',
     };
   }
 
-  async verifyEmailCode(email: string, otp_code: string) {
-    const user = await this.userModel.findOne({ email });
-    if (!user) throw new NotFoundException('User not found');
+  async verifyEmail(dto: VerifyEmailDto) {
+    const user = await this.userModel
+      .findOne({ email: dto.email.toLowerCase() })
+      .exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
 
-    const verificationRecord = await this.emailVerificationModel.findOne({
-      email,
-      verificationCode: otp_code,
+    const record = await this.emailVerificationModel.findOne({
+      email: dto.email,
+      verificationCode: dto.code,
       used: false,
       expiresAt: { $gt: new Date() },
     });
 
-    if (!verificationRecord) {
-      throw new BadRequestException('Invalid or expired verification code');
+    if (!record) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid or expired verification code',
+        error: 'Bad Request',
+      });
     }
 
-    verificationRecord.used = true;
-    await verificationRecord.save();
+    record.used = true;
+    await record.save();
 
     user.isVerified = true;
     await user.save();
 
-    return {
-      message: 'Email verified successfully',
-    };
+    return { message: 'Email verified successfully' };
   }
 
-  async welcomeUserEmail(body: {
-    email: string;
-    userAgent: string;
-    role: string;
-    answerOne: string;
-    answerTwo?: string;
-    answerThree?: string;
-    answerFour?: string;
-    answerFive?: string;
-    cvUrl?: string;
-  }) {
-    const {
-      email,
-      userAgent,
-      role,
-      answerOne,
-      answerTwo,
-      answerThree,
-      answerFour,
-      answerFive,
-      cvUrl,
-    } = body;
-
-    const account = await this.accountModel.findOne({
-      provider: ProviderEnum.EMAIL,
-      providerId: email,
-    });
+  async welcomeEmail(dto: WelcomeEmailDto) {
+    const account = await this.accountModel
+      .findOne({ provider: ProviderEnum.EMAIL, providerId: dto.email })
+      .exec();
     if (!account) {
-      throw new NotFoundException('Invalid email');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Invalid email',
+        error: 'Not Found',
+      });
     }
 
-    const user = await this.userModel.findById(account.userId);
+    const user = await this.userModel.findById(account.userId).exec();
     if (!user) {
-      throw new NotFoundException('User not found for the given account');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found for the given account',
+        error: 'Not Found',
+      });
     }
 
-    const isUserVerified = user.isVerified;
-    if (!isUserVerified) {
-      throw new BadRequestException('You should verify your email first!');
+    if (!user.isVerified) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'You should verify your email first',
+        error: 'Bad Request',
+      });
     }
 
-    if (![Roles.STUDENT_USER, Roles.INSTRUCTORS_USER].includes(role as any)) {
-      throw new BadRequestException('Invalid role');
+    if (user.role !== Role.PENDING) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Role already set',
+        error: 'Bad Request',
+      });
     }
 
-    if (!Object.values(Roles).includes(role as any)) {
-      throw new BadRequestException('Invalid role');
-    }
-
-    // If role is already set to the requested role, return success (idempotent)
-    // Compare as strings to handle any type mismatches
-    if (String(user.role) === String(role)) {
-      // Generate new tokens even if role is already set
-      user.lastLogin = new Date();
-      await user.save();
-
-      const jti = uuidv4();
-      const deviceHash = generateDeviceHash(userAgent);
-
-      const accessToken = signJwtToken({ userId: user._id, role: user.role });
-      const refreshToken = signJwtToken(
-        { userId: user._id, jti, role: user.role },
-        refreshTokenSignOptions,
-      );
-
-      await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
-
-      const tokenHash = await hashValue(refreshToken);
-      await this.refreshTokenModel.create({
-        userId: user._id,
-        tokenHash,
-        jti,
-        deviceHash,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    // Validate coupon code if provided
+    if (dto.couponCode) {
+      const validationResult = await this.waitlistService.checkCouponCode({
+        email: dto.email,
+        couponCode: dto.couponCode,
       });
 
-      return {
+      if (validationResult.valid) {
+        user.couponCode = dto.couponCode;
+        user.expireCouponCode = new Date(
+          Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
+        ); // 3 months
+
+        // Mark the promo code as used in waitlist
+        await this.waitlistService.markPromoCodeAsUsed(
+          dto.email,
+          dto.couponCode,
+        );
+      } else {
+        throw new RpcException({
+          statusCode: 400,
+          message: 'Invalid or expired coupon code',
+          error: 'Bad Request',
+        });
+      }
+    }
+
+    user.role = dto.role as Role;
+    user.knowAboutUs = dto.knowAboutUs;
+    user.profilePictureUrl = dto.profilePictureUrl;
+    user.lastLogin = new Date();
+    await user.save();
+
+    const userAgent = dto.userAgent ?? 'unknown';
+    const accessToken = this.signAccessToken(String(user._id), user.role);
+    const refreshToken = this.signRefreshToken(String(user._id), user.role);
+
+    await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
+    await this.refreshTokenModel.create({
+      userId: user._id,
+      tokenHash: refreshToken,
+      jti: `${user._id.toString()}-${Date.now()}`,
+      deviceHash: userAgent,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    await this.notificationService.sendWelcomeEmail({
+      email: dto.email,
+      name: user.name,
+    });
+
+    return {
+      message: 'Role set and user welcomed successfully',
+      data: {
         userId: user._id,
         userRole: user.role,
         accessToken,
         refreshToken,
-      };
-    }
-
-    // If role is set to a different role and user is not pending, throw error
-    if ((user.role as Roles) !== Roles.PENDING) {
-      throw new BadRequestException(
-        `Role already set to ${user.role}. Cannot change to ${role}.`,
-      );
-    }
-
-    // Store onboarding answers for both flows
-    user.onboardingAnswers = {
-      ...(user.onboardingAnswers || {}),
-      flow:
-        (role as Roles) === Roles.INSTRUCTORS_USER
-          ? 'instructor_email'
-          : 'student_email',
-      answerOne,
-      answerTwo,
-      answerThree,
-      answerFour,
-      answerFive,
-      cvUrl,
-    };
-
-    // For students: set role immediately.
-    // For instructors: keep role as PENDING but mark as pendingInstructor so owner can approve.
-    if ((role as Roles) === Roles.STUDENT_USER) {
-      user.role = Roles.STUDENT_USER;
-      user.pendingInstructor = false;
-    } else if ((role as Roles) === Roles.INSTRUCTORS_USER) {
-      user.pendingInstructor = true;
-    }
-
-    user.lastLogin = new Date();
-    await user.save();
-
-    // If instructor: do NOT issue tokens until owner approval
-    if ((role as Roles) === Roles.INSTRUCTORS_USER) {
-      return {
-        userId: user._id,
-        userRole: user.role,
-        pendingInstructor: true,
-        requiresApproval: true,
-      };
-    }
-
-    const jti = uuidv4();
-    const deviceHash = generateDeviceHash(userAgent);
-
-    const accessToken = signJwtToken({ userId: user._id, role: user.role });
-    const refreshToken = signJwtToken(
-      { userId: user._id, jti, role: user.role },
-      refreshTokenSignOptions,
-    );
-
-    await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
-
-    const tokenHash = await hashValue(refreshToken);
-    await this.refreshTokenModel.create({
-      userId: user._id,
-      tokenHash,
-      jti,
-      deviceHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    await this.emailService.sendWelcomeEmail(user.email, user.name);
-
-    return {
-      userId: user._id,
-      userRole: user.role,
-      accessToken,
-      refreshToken,
+      },
     };
   }
 
-  async loginUserEmail(body: {
-    email: string;
-    password: string;
-    userAgent: string;
-  }) {
-    const { email, password, userAgent } = body;
+  async uploadProfilePicture(
+    dto: UploadProfilePictureDto & { file: UploadedFile },
+  ) {
+    // Convert base64 back to buffer if needed
+    const fileBuffer =
+      typeof dto.file.buffer === 'string'
+        ? Buffer.from(dto.file.buffer, 'base64')
+        : dto.file.buffer;
 
-    const account = await this.accountModel.findOne({
-      provider: ProviderEnum.EMAIL,
-      providerId: email,
-    });
-    if (!account) {
-      throw new NotFoundException('User not found for the given account');
+    if (
+      !configuration().AWS_S3_REGION ||
+      !configuration().AWS_S3_ACCESS_KEY_ID ||
+      !configuration().AWS_S3_SECRET_ACCESS_KEY ||
+      !configuration().AWS_S3_BUCKET
+    ) {
+      throw new RpcException({
+        statusCode: 500,
+        message: 'AWS S3 is not properly configured',
+        error: 'Internal Server Error',
+      });
     }
 
-    const user = await this.userModel.findById(account.userId);
+    const user = await this.userModel.findById(dto.userId).exec();
     if (!user) {
-      throw new NotFoundException('User not found for the given account');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
     }
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isUserVerified = user.isVerified;
-    if (!isUserVerified) {
-      throw new BadRequestException('You should verify your email first!');
-    }
-
-    // Block login until onboarding / approval is complete
-    if ((user.role as Roles) === Roles.PENDING) {
-      if (user.pendingInstructor) {
-        throw new UnauthorizedException(
-          'Your instructor application is pending approval. You cannot log in until an owner approves your request.',
-        );
-      }
-      throw new UnauthorizedException(
-        'Your account is not fully onboarded. Please complete the welcome step to choose your role.',
-      );
-    }
-
-    user.lastLogin = new Date();
-    await user.save();
-
-    const jti = uuidv4();
-    const deviceHash = generateDeviceHash(userAgent);
-
-    const accessToken = signJwtToken({ userId: user._id, role: user.role });
-    const refreshToken = signJwtToken(
-      { userId: user._id, jti, role: user.role },
-      refreshTokenSignOptions,
-    );
-
-    await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
-
-    const tokenHash = await hashValue(refreshToken);
-    await this.refreshTokenModel.create({
-      userId: user._id,
-      tokenHash,
-      jti,
-      deviceHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    const s3 = new S3Client({
+      region: configuration().AWS_S3_REGION!,
+      credentials: {
+        accessKeyId: configuration().AWS_S3_ACCESS_KEY_ID!,
+        secretAccessKey: configuration().AWS_S3_SECRET_ACCESS_KEY!,
+      },
     });
 
+    const ext = (
+      dto.file.originalname?.split('.').pop() || 'jpg'
+    ).toLowerCase();
+    const key = `avatars/${dto.userId}/${uuidv4()}.${ext}`;
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: configuration().AWS_S3_BUCKET!,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: dto.file.mimetype || 'application/octet-stream',
+      }),
+    );
+
+    const url = `https://${configuration().AWS_S3_BUCKET}.s3.${configuration().AWS_S3_REGION}.amazonaws.com/${key}`;
+
+    user.profilePictureUrl = url;
+    await user.save();
+
     return {
-      user: user.omitPassword(),
-      accessToken,
-      refreshToken,
+      message: 'Profile picture uploaded successfully',
+      url,
     };
   }
 
-  async oAuthGoogleLogin(data: {
-    provider: string;
-    displayName: string;
-    providerId: string;
-    picture?: string;
-    email?: string;
-    userAgent: string;
-  }) {
-    const { providerId, provider, displayName, email, picture, userAgent } =
-      data;
+  async checkCouponCode(dto: CheckCouponDto) {
+    const existing = await this.userModel
+      .findOne({ couponCode: dto.couponCode })
+      .lean()
+      .exec();
+    if (existing) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Coupon code already used',
+        error: 'Bad Request',
+      });
+    }
 
+    const user = await this.userModel.findById(dto.userId).exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
+
+    return this.waitlistService.checkCouponCode({
+      email: dto.email,
+      couponCode: dto.couponCode,
+    });
+  }
+
+  // ========== OAuth Services ==========
+
+  async oAuthGoogleLogin(dto: OAuthGoogleLoginDto) {
+    const { providerId, provider, displayName, email, picture, userAgent } =
+      dto;
+
+    // First, check if user exists by email
     let user = await this.userModel.findOne({ email });
     let isNewUser = false;
 
     if (!user) {
+      // New user: create with PENDING role, no tokens yet
       user = new this.userModel({
         name: displayName,
         email,
-        profilePicture: picture || null,
-        role: Roles.PENDING,
-        isVerified: true,
+        profilePictureUrl: picture || null,
+        role: Role.PENDING,
+        isVerified: true, // Google users are always verified
       });
       await user.save();
 
@@ -394,585 +386,462 @@ export class AuthService {
       });
       await account.save();
 
-      await this.emailService.sendWelcomeEmail(user.email, user.name);
+      await this.notificationService.sendWelcomeEmail({
+        email: user.email,
+        name: user.name,
+      });
       isNewUser = true;
 
       return {
-        user: user.omitPassword(),
+        user: this.omitUserPassword(user),
         isNewUser,
-        providerId,
-      };
-    }
-
-    // Block login until onboarding / approval is complete
-    if ((user.role as Roles) === Roles.PENDING) {
-      if (user.pendingInstructor) {
-        throw new UnauthorizedException(
-          'Your instructor application is pending approval. You cannot log in until an owner approves your request.',
-        );
-      }
-      return {
-        user: user.omitPassword(),
-        isNewUser: true,
-        providerId,
+        providerId, // Always return providerId for the welcome step
       };
     }
 
     user.lastLogin = new Date();
     await user.save();
 
+    // Create access Token and refresh Token
     const jti = uuidv4();
-    const deviceHash = generateDeviceHash(userAgent);
+    const deviceHash = userAgent; // Simplified device hash
 
-    const accessToken = signJwtToken({ userId: user._id, role: user.role });
-    const refreshToken = signJwtToken(
-      { userId: user._id, jti, role: user.role },
-      refreshTokenSignOptions,
-    );
+    const accessToken = this.signAccessToken(String(user._id), user.role);
+    const refreshToken = this.signRefreshToken(String(user._id), user.role);
 
     await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
 
-    const tokenHash = await hashValue(refreshToken);
     await this.refreshTokenModel.create({
       userId: user._id,
-      tokenHash,
+      tokenHash: refreshToken,
       jti,
       deviceHash,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     return {
-      user: user.omitPassword(),
+      user: this.omitUserPassword(user),
       accessToken,
       refreshToken,
       isNewUser: false,
     };
   }
 
-  async welcomeUseroAuthGoogle(body: {
-    providerId: string;
-    userAgent: string;
-    role: string;
-    answerOne: string;
-    answerTwo?: string;
-    answerThree?: string;
-    answerFour?: string;
-    answerFive?: string;
-    cvUrl?: string;
-  }) {
+  async welcomeUserOAuthGoogle(dto: OAuthWelcomeDto) {
     const {
       providerId,
       userAgent,
       role,
-      answerOne,
-      answerTwo,
-      answerThree,
-      answerFour,
-      answerFive,
-      cvUrl,
-    } = body;
+      username,
+      knowAboutUs,
+      couponCode,
+      profilePictureUrl,
+    } = dto;
 
     const account = await this.accountModel.findOne({
       provider: ProviderEnum.GOOGLE,
       providerId,
     });
     if (!account) {
-      throw new NotFoundException('Invalid email');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Invalid provider',
+        error: 'Not Found',
+      });
     }
 
     const user = await this.userModel.findById(account.userId);
     if (!user) {
-      throw new NotFoundException('User not found for the given account');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found for the given account',
+        error: 'Not Found',
+      });
     }
 
-    if (![Roles.STUDENT_USER, Roles.INSTRUCTORS_USER].includes(role as any)) {
-      throw new BadRequestException('Invalid role');
+    // Add User Role & Update last login
+    if (user.role !== Role.PENDING) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Role already set',
+        error: 'Bad Request',
+      });
     }
 
-    if (!Object.values(Roles).includes(role as any)) {
-      throw new BadRequestException('Invalid role');
+    // Validate role
+    const validRoles = [Role.STUDENT_USER, Role.INSTRUCTOR_USER];
+    if (!validRoles.includes(role as any)) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid role',
+        error: 'Bad Request',
+      });
     }
 
-    // Store onboarding answers
-    user.onboardingAnswers = {
-      ...(user.onboardingAnswers || {}),
-      flow:
-        (role as Roles) === Roles.INSTRUCTORS_USER
-          ? 'instructor_google'
-          : 'student_google',
-      answerOne,
-      answerTwo,
-      answerThree,
-      answerFour,
-      answerFive,
-      cvUrl,
-    };
+    if (!Object.values(Role).includes(role as any)) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid role',
+        error: 'Bad Request',
+      });
+    }
 
-    // For students: set role immediately.
-    // For instructors: if still PENDING, mark as pendingInstructor and keep role as PENDING.
-    if ((role as Roles) === Roles.STUDENT_USER) {
-      user.role = Roles.STUDENT_USER;
-      user.pendingInstructor = false;
-    } else if ((role as Roles) === Roles.INSTRUCTORS_USER) {
-      if (
-        (user.role as Roles) !== Roles.PENDING &&
-        (user.role as Roles) !== Roles.INSTRUCTORS_USER
-      ) {
-        throw new BadRequestException('Role already set');
+    user.role = role as Role;
+    user.knowAboutUs = knowAboutUs;
+    if (username) user.name = username;
+    if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
+
+    // Validate coupon code if provided
+    if (couponCode) {
+      const validationResult = await this.waitlistService.checkCouponCode({
+        email: user.email,
+        couponCode: couponCode,
+      });
+
+      if (validationResult.valid) {
+        user.couponCode = couponCode;
+        user.expireCouponCode = new Date(
+          Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
+        ); // 3 months
+
+        // Mark the promo code as used in waitlist
+        await this.waitlistService.markPromoCodeAsUsed(user.email, couponCode);
+      } else {
+        throw new RpcException({
+          statusCode: 400,
+          message: 'Invalid or expired coupon code',
+          error: 'Bad Request',
+        });
       }
-      if ((user.role as Roles) === Roles.PENDING) {
-        user.pendingInstructor = true;
-      }
     }
 
+    await user.save();
     user.lastLogin = new Date();
     await user.save();
 
-    // If instructor: do NOT issue tokens until owner approval
-    if (
-      (role as Roles) === Roles.INSTRUCTORS_USER &&
-      (user.role as Roles) === Roles.PENDING
-    ) {
-      return {
-        userId: user._id,
-        userRole: user.role,
-        pendingInstructor: true,
-        requiresApproval: true,
-      };
-    }
-
+    // Create access Token and refresh Token
     const jti = uuidv4();
-    const deviceHash = generateDeviceHash(userAgent);
+    const deviceHash = userAgent; // Simplified device hash
 
-    const accessToken = signJwtToken({ userId: user._id, role: user.role });
-    const refreshToken = signJwtToken(
-      { userId: user._id, jti, role: user.role },
-      refreshTokenSignOptions,
-    );
+    const accessToken = this.signAccessToken(String(user._id), user.role);
+    const refreshToken = this.signRefreshToken(String(user._id), user.role);
 
     await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
 
-    const tokenHash = await hashValue(refreshToken);
     await this.refreshTokenModel.create({
       userId: user._id,
-      tokenHash,
+      tokenHash: refreshToken,
       jti,
       deviceHash,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    await this.emailService.sendWelcomeEmail(user.email, user.name);
+    await this.notificationService.sendWelcomeEmail({
+      email: user.email,
+      name: user.name,
+    });
 
     return {
       userId: user._id,
       userRole: user.role,
+      username: user.name,
       accessToken,
       refreshToken,
     };
   }
 
-  async refreshToken(refresh_token: string, userAgent: string) {
-    const { payload } = verifyJwtToken<RefreshTPayload>(refresh_token, {
-      secret: refreshTokenSignOptions.secret,
-    });
-    if (!payload) throw new UnauthorizedException('Invalid refresh token');
+  private omitUserPassword(user: UserDocument) {
+    const userObject = user.toObject();
+    delete userObject.password;
+    return userObject;
+  }
 
-    const deviceHash = generateDeviceHash(userAgent);
+  // ========== Login & Tokens ==========
 
-    const storedToken = await this.refreshTokenModel.findOne({
-      jti: payload.jti,
-    });
-
-    if (!storedToken) {
-      await this.revokeAllUserTokens(String(payload.userId));
-      throw new UnauthorizedException(
-        'Invalid or revoked token due to security reasons',
-      );
+  async login(dto: LoginDto) {
+    const account = await this.accountModel
+      .findOne({ provider: ProviderEnum.EMAIL, providerId: dto.email })
+      .exec();
+    if (!account) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found for the given account',
+        error: 'Not Found',
+      });
     }
 
-    if (storedToken.deviceHash !== deviceHash) {
-      await this.revokeAllUserTokens(String(payload.userId));
-      throw new UnauthorizedException('Device mismatch - possible attack');
+    const user = await this.userModel.findById(account.userId).exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found for the given account',
+        error: 'Not Found',
+      });
     }
 
-    await this.refreshTokenModel.deleteOne({ jti: payload.jti });
+    // Secure password comparison using bcrypt (see UserSchema.comparePassword)
+    const userWithPassword = await this.userModel
+      .findById(account.userId)
+      .select('+password')
+      .exec();
 
-    const user = await this.userModel.findById(payload.userId);
-    if (!user) throw new UnauthorizedException('User not found');
-    const newJti = uuidv4();
-    const newAccessToken = signJwtToken({
-      userId: payload.userId,
-      role: user.role,
-    });
-    const newRefreshToken = signJwtToken(
-      { userId: payload.userId, jti: newJti, role: user.role },
-      refreshTokenSignOptions,
+    if (!userWithPassword) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found for the given account',
+        error: 'Not Found',
+      });
+    }
+
+    const isMatch = await (userWithPassword as any).comparePassword(
+      dto.password,
+    );
+    if (!isMatch) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid credentials',
+        error: 'Bad Request',
+      });
+    }
+
+    if (!user.isVerified) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'You should verify your email first',
+        error: 'Bad Request',
+      });
+    }
+
+    userWithPassword.lastLogin = new Date();
+    await userWithPassword.save();
+
+    const accessToken = this.signAccessToken(
+      String(userWithPassword._id),
+      userWithPassword.role,
+    );
+    const refreshToken = this.signRefreshToken(
+      String(userWithPassword._id),
+      userWithPassword.role,
     );
 
-    const tokenHash = await hashValue(newRefreshToken);
+    await this.refreshTokenModel
+      .deleteMany({ userId: userWithPassword._id })
+      .exec();
     await this.refreshTokenModel.create({
-      userId: payload.userId,
-      tokenHash,
-      jti: newJti,
-      deviceHash,
+      userId: userWithPassword._id,
+      tokenHash: refreshToken,
+      jti: `${userWithPassword._id.toString()}-${Date.now()}`,
+      deviceHash: dto.userAgent,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      message: 'User logged in successfully',
+      data: {
+        user: {
+          _id: userWithPassword._id,
+          name: userWithPassword.name,
+          email: userWithPassword.email,
+          role: userWithPassword.role,
+          isActive: userWithPassword.isActive,
+          isVerified: userWithPassword.isVerified,
+        },
+        accessToken,
+        refreshToken,
+      },
     };
   }
 
-  private async revokeAllUserTokens(userId: string) {
-    await this.refreshTokenModel.deleteMany({ userId });
-    this.logger.logSecurity('Potential attack detected - all tokens revoked', {
-      userId,
-    });
+  async refreshToken(token: string) {
+    try {
+      const payload = this.jwtService.verify<{
+        userId: string;
+        role: string;
+      }>(token, {
+        secret:
+          configuration().JWT.JWT_REFRESH_SECRET ||
+          'fallback-refresh-secret-key',
+      });
+
+      const user = await this.userModel.findById(payload.userId).exec();
+      if (!user) {
+        throw new RpcException({
+          statusCode: 401,
+          message: 'User not found',
+          error: 'Unauthorized',
+        });
+      }
+
+      const accessToken = this.signAccessToken(String(user._id), user.role);
+      const refreshToken = this.signRefreshToken(String(user._id), user.role);
+
+      await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
+      await this.refreshTokenModel.create({
+        userId: user._id,
+        tokenHash: refreshToken,
+        jti: `${user._id.toString()}-${Date.now()}`,
+        deviceHash: 'unknown',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      return {
+        message: 'Refreshed token successfully',
+        accessToken,
+        refreshToken,
+      };
+    } catch (e) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid refresh token',
+        error: 'Unauthorized',
+      });
+    }
   }
 
-  async requestResetPassword(email: string) {
-    const user = await this.userModel.findOne({ email });
+  async logout(token: string) {
+    // Invalidate the given refresh token by deleting matching record
+    await this.refreshTokenModel.deleteOne({ tokenHash: token }).exec();
+    return { message: 'Logged out successfully' };
+  }
+
+  async logoutAll(payload: { accessToken: string }) {
+    try {
+      const decoded = this.jwtService.verify<{ userId: string }>(
+        payload.accessToken,
+      );
+      await this.refreshTokenModel
+        .deleteMany({ userId: decoded.userId })
+        .exec();
+      return { message: 'Logged out from all devices successfully' };
+    } catch (e) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid access token',
+        error: 'Unauthorized',
+      });
+    }
+  }
+
+  async getCurrentUser(accessToken: string) {
+    try {
+      const payload = this.jwtService.verify<{ userId: string; role: string }>(
+        accessToken,
+      );
+      const user = await this.userModel
+        .findById(payload.userId)
+        .select('-password -couponCode -expireCouponCode -knowAboutUs')
+        .exec();
+      if (!user) {
+        throw new RpcException({
+          statusCode: 404,
+          message: 'User not found',
+          error: 'Not Found',
+        });
+      }
+      return {
+        message: 'Current user fetched successfully',
+        user,
+      };
+    } catch (e) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid access token',
+        error: 'Unauthorized',
+      });
+    }
+  }
+
+  // ========== Password Reset ==========
+
+  async requestResetPassword(dto: RequestResetPasswordDto) {
+    const user = await this.userModel.findOne({ email: dto.email }).exec();
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
     }
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await this.passwordResetModel.deleteMany({ email });
-
+    await this.passwordResetModel.deleteMany({ email: dto.email }).exec();
     await this.passwordResetModel.create({
-      email,
+      email: dto.email,
       resetCode,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
-    await this.emailService.sendPasswordResetEmail(user.email, resetCode);
+    await this.notificationService.sendPasswordResetCode({
+      email: dto.email,
+      code: resetCode,
+    });
 
     return { message: 'A reset code has been sent successfully' };
   }
 
-  async verifyResetPasswordCode(email: string, code: string) {
-    const user = await this.userModel.findOne({ email });
-    if (!user) throw new NotFoundException('Invalid request');
-
-    const resetRecord = await this.passwordResetModel.findOne({
-      email,
-      resetCode: code,
+  async verifyResetCode(dto: VerifyResetCodeDto) {
+    const record = await this.passwordResetModel.findOne({
+      email: dto.email,
+      resetCode: dto.code,
       used: false,
       expiresAt: { $gt: new Date() },
     });
 
-    if (!resetRecord) {
-      throw new BadRequestException('Invalid or expired reset code');
+    if (!record) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid or expired reset code',
+        error: 'Bad Request',
+      });
     }
 
-    resetRecord.used = true;
-    await resetRecord.save();
+    record.used = true;
+    await record.save();
 
-    const resetToken = signJwtToken(
-      {
-        userId: user._id,
-        role: '',
-      },
-      {
-        expiresIn: '10m',
-        secret: refreshTokenSignOptions.secret,
-      },
+    const resetToken = this.jwtService.sign(
+      { email: dto.email, type: 'password-reset' },
+      { expiresIn: '10m' },
     );
 
     return {
-      resetToken,
       message: 'Reset code verified successfully',
+      resetToken,
     };
   }
 
-  async resetPassword(resetToken: string, email: string, newPassword: string) {
-    const { payload } = verifyJwtToken<AccessTPayload>(resetToken, {
-      secret: refreshTokenSignOptions.secret,
-    });
-
-    if (!payload)
-      throw new UnauthorizedException('Invalid or expired reset token');
-
-    const user = await this.userModel.findById(payload.userId);
-    if (!user) throw new NotFoundException('User not found');
-
-    // Verify that the email matches the user from the token
-    if (user.email.toLowerCase() !== email.toLowerCase()) {
-      throw new BadRequestException('Email does not match the reset token');
-    }
-
-    user.password = newPassword;
-    await user.save();
-
-    await this.revokeAllUserTokens(String(user._id));
-
-    await this.emailService.sendPasswordResetConfirmationEmail(user.email);
-
-    return { message: 'Password reset successfully' };
-  }
-
-  async logout(refreshToken: string, userAgent: string) {
-    const { payload } = verifyJwtToken<RefreshTPayload>(refreshToken, {
-      secret: refreshTokenSignOptions.secret,
-    });
-
-    if (!payload) {
-      return { message: 'Logged out successfully' };
-    }
-
-    const deviceHash = generateDeviceHash(userAgent);
-
-    await this.refreshTokenModel.deleteOne({
-      jti: payload.jti,
-      deviceHash,
-    });
-
-    return { message: 'Logged out successfully' };
-  }
-
-  async logoutAllDevices(refreshToken: string) {
-    const { payload } = verifyJwtToken<RefreshTPayload>(refreshToken, {
-      secret: refreshTokenSignOptions.secret,
-    });
-
-    if (!payload) throw new UnauthorizedException('Invalid refresh token');
-
-    await this.revokeAllUserTokens(String(payload.userId));
-
-    return { message: 'Logged out from all devices successfully' };
-  }
-
-  async getCurrentUser(accessToken: string) {
-    const { payload } = verifyJwtToken<AccessTPayload>(accessToken);
-
-    if (!payload) {
-      throw new UnauthorizedException('Invalid access token unauthorized');
-    }
-
-    const user = await this.userModel
-      .findById(payload.userId)
-      .select('-password');
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return {
-      user,
-    };
-  }
-
-  async validateRoleChange(params: {
-    userId: string;
-    newRole: string;
-    ownerUserId: string;
-  }) {
-    const { userId, newRole, ownerUserId } = params;
-
-    const ownerUser = await this.userModel.findById(ownerUserId);
-    if (!ownerUser) {
-      throw new NotFoundException('Owner user not found');
-    }
-
-    if ((ownerUser.role as Roles) !== Roles.OWNER) {
-      throw new UnauthorizedException('Only owners can change user roles');
-    }
-
-    const targetUser = await this.userModel.findById(userId);
-    if (!targetUser) {
-      throw new NotFoundException('Target user not found');
-    }
-
-    if (!Object.values(Roles).includes(newRole as any)) {
-      throw new BadRequestException('Invalid role specified');
-    }
-
-    if (userId === ownerUserId) {
-      throw new BadRequestException('Owners cannot change their own role');
-    }
-
-    if ((newRole as Roles) === Roles.OWNER) {
-      throw new BadRequestException(
-        'Cannot assign OWNER role through this endpoint',
+  async resetPassword(dto: ResetPasswordDto) {
+    try {
+      const payload = this.jwtService.verify<{ email: string; type: string }>(
+        dto.resetToken,
       );
+      if (payload.type !== 'password-reset') {
+        throw new Error('Invalid reset token type');
+      }
+
+      const user = await this.userModel
+        .findOne({ email: payload.email })
+        .exec();
+      if (!user) {
+        throw new RpcException({
+          statusCode: 404,
+          message: 'User not found',
+          error: 'Not Found',
+        });
+      }
+
+      user.password = dto.newPassword;
+      await user.save(); // triggers pre-save hook to hash password
+
+      await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
+
+      return { message: 'Password reset successfully' };
+    } catch (e) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid or expired reset token',
+        error: 'Unauthorized',
+      });
     }
-
-    if ((targetUser.role as string) === newRole) {
-      throw new BadRequestException('User already has the specified role');
-    }
-
-    if (
-      ![Roles.STUDENT_USER, Roles.INSTRUCTORS_USER].includes(newRole as any)
-    ) {
-      throw new BadRequestException('Invalid role');
-    }
-
-    if (!Object.values(Roles).includes(newRole as any)) {
-      throw new BadRequestException('Invalid role');
-    }
-    targetUser.role = newRole as (typeof Roles)[keyof typeof Roles];
-    await targetUser.save();
-
-    return {
-      valid: true,
-      message: 'Role change validation successful',
-      data: {
-        currentRole: targetUser.role,
-        newRole: newRole,
-        targetUser: {
-          id: targetUser._id,
-          name: targetUser.name,
-          email: targetUser.email,
-        },
-        ownerUser: {
-          id: ownerUser._id,
-          name: ownerUser.name,
-          email: ownerUser.email,
-        },
-      },
-    };
-  }
-
-  async verifyAndPermissions(token: string) {
-    const { payload, error } = verifyAccessToken(token);
-
-    if (error || !payload) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-
-    const user = await this.userModel.findById(payload.userId);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const permissions =
-      (RolePermissions as Record<string, string[]>)[user.role] || [];
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('User account is deactivated');
-    }
-
-    return {
-      valid: true,
-      user: {
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-        isVerified: user.isVerified,
-      },
-      permissions: permissions,
-    };
-  }
-
-  async getInstructors() {
-    const instructors = await this.userModel
-      .find({ role: Roles.INSTRUCTORS_USER })
-      .select('-password')
-      .exec();
-
-    return {
-      instructors,
-      count: instructors.length,
-    };
-  }
-
-  async getStudents() {
-    const students = await this.userModel
-      .find({ role: Roles.STUDENT_USER })
-      .select('-password')
-      .exec();
-
-    return {
-      students,
-      count: students.length,
-    };
-  }
-
-  async getInstructorRequests() {
-    const requests = await this.userModel
-      .find({ role: Roles.PENDING, pendingInstructor: true })
-      .select('-password')
-      .exec();
-
-    return {
-      requests,
-      count: requests.length,
-    };
-  }
-
-  async approveInstructor(params: { userId: string; ownerUserId: string }) {
-    const { userId, ownerUserId } = params;
-
-    const ownerUser = await this.userModel.findById(ownerUserId);
-    if (!ownerUser) {
-      throw new NotFoundException('Owner user not found');
-    }
-
-    if ((ownerUser.role as Roles) !== Roles.OWNER) {
-      throw new UnauthorizedException('Only owners can approve instructors');
-    }
-
-    const targetUser = await this.userModel.findById(userId);
-    if (!targetUser) {
-      throw new NotFoundException('Target user not found');
-    }
-
-    if (
-      !targetUser.pendingInstructor ||
-      (targetUser.role as Roles) !== Roles.PENDING
-    ) {
-      throw new BadRequestException('User has no pending instructor request');
-    }
-
-    targetUser.role = Roles.INSTRUCTORS_USER;
-    targetUser.pendingInstructor = false;
-    await targetUser.save();
-
-    return {
-      message: 'Instructor approved successfully',
-      user: targetUser,
-    };
-  }
-
-  async rejectInstructor(params: { userId: string; ownerUserId: string }) {
-    const { userId, ownerUserId } = params;
-
-    const ownerUser = await this.userModel.findById(ownerUserId);
-    if (!ownerUser) {
-      throw new NotFoundException('Owner user not found');
-    }
-
-    if ((ownerUser.role as Roles) !== Roles.OWNER) {
-      throw new UnauthorizedException('Only owners can reject instructors');
-    }
-
-    const targetUser = await this.userModel.findById(userId);
-    if (!targetUser) {
-      throw new NotFoundException('Target user not found');
-    }
-
-    if (
-      !targetUser.pendingInstructor ||
-      (targetUser.role as Roles) !== Roles.PENDING
-    ) {
-      throw new BadRequestException('User has no pending instructor request');
-    }
-
-    // Reject = delete the applicant account entirely (and related auth records)
-    const email = targetUser.email;
-    await this.refreshTokenModel.deleteMany({ userId: targetUser._id });
-    await this.accountModel.deleteMany({ userId: targetUser._id });
-    await this.emailVerificationModel.deleteMany({ email });
-    await this.passwordResetModel.deleteMany({ email });
-    await this.userModel.deleteOne({ _id: targetUser._id });
-
-    return {
-      message: 'Instructor request rejected successfully',
-      userId: targetUser._id,
-    };
   }
 }

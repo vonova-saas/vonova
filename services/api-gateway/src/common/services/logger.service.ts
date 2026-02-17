@@ -1,6 +1,11 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 import * as winston from 'winston';
-import DailyRotateFile = require('winston-daily-rotate-file');
+import DailyRotateFile from 'winston-daily-rotate-file';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -44,7 +49,10 @@ export class LoggerService implements NestLoggerService {
     ];
 
     // File transports for production
-    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_FILE_LOGGING === 'true') {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENABLE_FILE_LOGGING === 'true'
+    ) {
       // Combined log (all logs)
       transports.push(
         new DailyRotateFile({
@@ -158,7 +166,12 @@ export class LoggerService implements NestLoggerService {
   }
 
   // Custom method for response logging
-  logResponse(req: any, res: any, responseData?: any, responseTime?: number): void {
+  logResponse(
+    req: any,
+    res: any,
+    responseData?: any,
+    responseTime?: number,
+  ): void {
     const logData: Record<string, any> = {
       method: req.method,
       url: req.originalUrl || req.url,
@@ -181,7 +194,15 @@ export class LoggerService implements NestLoggerService {
   private sanitizeBody(body: any): any {
     if (!body || typeof body !== 'object') return body;
 
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'authorization', 'accessToken', 'refreshToken'];
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'apiKey',
+      'authorization',
+      'accessToken',
+      'refreshToken',
+    ];
     const sanitized = { ...body };
 
     for (const field of sensitiveFields) {
@@ -210,4 +231,3 @@ export class LoggerService implements NestLoggerService {
     return this.logger;
   }
 }
-

@@ -1,0 +1,40 @@
+export default () => ({
+  //? =========== Backend Configuration ===========
+  PORT: parseInt(process.env.PORT || ''),
+  NODE_ENV: process.env.NODE_ENV,
+  NATS_URL: process.env.NATS_URL,
+  // NATS_USER: process.env.NATS_USER,
+  // NATS_PASSWORD: process.env.NATS_PASSWORD,
+  FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
+  AI_ORIGIN: process.env.AI_ORIGIN,
+
+  //! =========== Security Layer===========
+  // Rate limiting
+  RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS,
+  GLOBAL_RATE_LIMIT_WINDOW_MS: process.env.GLOBAL_RATE_LIMIT_WINDOW_MS,
+  GLOBAL_RATE_LIMIT_MAX_REQUESTS: process.env.GLOBAL_RATE_LIMIT_MAX_REQUESTS,
+  STRICT_RATE_LIMIT_WINDOW_MS: process.env.STRICT_RATE_LIMIT_WINDOW_MS,
+  STRICT_RATE_LIMIT_MAX_REQUESTS: process.env.STRICT_RATE_LIMIT_MAX_REQUESTS,
+  TRUSTED_IPS: process.env.TRUSTED_IPS,
+
+  // DDoS Protection
+  DDOS_LIMIT: process.env.DDOS_LIMIT,
+  DDOS_BURST: process.env.DDOS_BURST,
+  DDOS_WINDOW_MS: process.env.DDOS_WINDOW_MS,
+  DDOS_BLACKLIST: process.env.DDOS_BLACKLIST,
+  DDOS_WHITELIST: process.env.DDOS_WHITELIST,
+  DDOS_AUTO_BAN_COUNT: process.env.DDOS_AUTO_BAN_COUNT,
+  DDOS_AUTO_BAN_TIME: process.env.DDOS_AUTO_BAN_TIME,
+
+  // CORS Protection
+  CORS_ORIGIN: process.env.CORS_ORIGIN,
+  CORS_METHODS: process.env.CORS_METHODS,
+  CORS_ALLOWED_HEADERS: process.env.CORS_ALLOWED_HEADERS,
+  CORS_EXPOSED_HEADERS: process.env.CORS_EXPOSED_HEADERS,
+  CORS_CREDENTIALS: process.env.CORS_CREDENTIALS,
+  CORS_MAX_AGE: process.env.CORS_MAX_AGE,
+  CORS_WHITELIST: process.env.CORS_WHITELIST,
+  CORS_BLACKLIST: process.env.CORS_BLACKLIST,
+  CORS_SECURITY_HEADERS: process.env.CORS_SECURITY_HEADERS,
+});

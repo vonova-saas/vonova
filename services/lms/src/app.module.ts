@@ -1,50 +1,35 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import configuration from './common/config/configuration';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { QuizModule } from './modules/quiz/quiz.module';
-import { AssignmentModule } from './modules/assignment/assignment.module';
-import { BookModule } from './modules/library/book/book.module';
-import { PresentationModule } from './modules/library/presentation/presentation.module';
-import { GuideModule } from './modules/library/guide/guide.module';
-import { FavoriteModule } from './modules/library/favorite/favorite.module';
-import { ReviewModule } from './modules/library/review/review.module';
-import { CourseModule } from './modules/course/course/course.module';
-import { ChapterModule } from './modules/course/chapter/chapter.module';
-import { LessonModule } from './modules/course/lesson/lesson.module';
-import { ReaderModule } from './modules/library/reader/reader.module';
-import { UploadModule } from './modules/library/upload/upload.module';
-import { EnrollModule } from './modules/course/enroll/enroll.module';
-import { ContentModule } from './modules/course/content/content.module';
-import { ReviewCourseModule } from './modules/course/review-course/review-course.module';
-import { ProgressModule } from './modules/course/progress/progress.module';
+import { QuizModule } from './quiz/quiz.module';
+import { AssignmentModule } from './assignment/assignment.module';
+import { BookModule } from './library/book/book.module';
+import { PresentationModule } from './library/presentation/presentation.module';
+import { GuideModule } from './library/guide/guide.module';
+import { FavoriteModule } from './library/favorite/favorite.module';
+import { ReviewModule } from './library/review/review.module';
+import { CourseModule } from './course/course/course.module';
+import { ChapterModule } from './course/chapter/chapter.module';
+import { LessonModule } from './course/lesson/lesson.module';
+import { ReaderModule } from './library/reader/reader.module';
+import { UploadModule } from './library/upload/upload.module';
+import { EnrollModule } from './course/enroll/enroll.module';
+import { ContentModule } from './course/content/content.module';
+import { ReviewCourseModule } from './course/review-course/review-course.module';
+import { ProgressModule } from './course/progress/progress.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: '.env',
+      load: [configuration],
     }),
+    MongooseModule.forRoot(configuration().MONGO_URI_LOCAL!),
     QuizModule,
     AssignmentModule,
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const mongoUri = configService.get<string>('MONGO_URI_RMOTE');
-
-        if (!mongoUri) {
-          throw new Error(
-            'MONGO_URI_RMOTE environment variable is required but not set',
-          );
-        }
-
-        return {
-          uri: mongoUri,
-        };
-      },
-      inject: [ConfigService],
-    }),
     QuizModule,
     AssignmentModule,
     BookModule,
@@ -63,6 +48,6 @@ import { ProgressModule } from './modules/course/progress/progress.module';
     ProgressModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule {}

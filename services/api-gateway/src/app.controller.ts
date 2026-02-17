@@ -1,23 +1,28 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { config } from './config/gateway.config';
+import { Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { Controller, Get } from '@nestjs/common';
 
 @ApiTags('Gateway')
-@Controller()
+@Controller('api/v1')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) {}
 
   @Get()
   @ApiOperation({ summary: 'Get gateway status' })
   @ApiResponse({ status: 200, description: 'Gateway is running' })
-  getStatus() {
+  getHealth(): object {
     return {
-      message: 'API Gateway is running',
+      status: 'Healthy!',
+      service: 'API Gateway Service',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
-      services: Object.keys(config.services),
     };
   }
-}
 
+  // Backend Services
+  @Get('app/health')
+  getAppHealth() {
+    return this.natsClient.send({ cmd: 'getAppHealth' }, {});
+  }
+}

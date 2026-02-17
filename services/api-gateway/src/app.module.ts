@@ -1,99 +1,54 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConfigService } from './config/config.service';
-import { DatabaseModule } from './database/database.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { GatewayModule } from './modules/gateway/gateway.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { HealthController } from './common/controllers/health.controller';
-import {
-  AppServiceProxyController,
-  AccountProxyController,
-  BillingProxyController,
-  FeedbackProxyController,
-  SettingsProxyController,
-  SupportProxyController,
-  LmsServiceProxyController,
-  AssignmentProxyController,
-  QuizProxyController,
-  CourseProxyController,
-  LibraryProxyController,
-  RoadmapAiProxyController,
-  PdfSummaryAiProxyController,
-} from './common/controllers/proxy-routes.controller';
-import { GatewayProxyMiddleware } from './common/middleware/gateway-proxy.middleware';
+import { ConfigModule } from '@nestjs/config';
+import configuration from './common/config/configuration';
+import { NatsClientModule } from './common/nats-client/nats-client.module';
+import { CorsMiddleware } from './common/middleware/cors.middleware';
+import { BotProtectionMiddleware } from './common/middleware/bot-protection.middleware';
+import { SwaggerService } from './common/services/swagger.service';
 import { LoggerService } from './common/services/logger.service';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { Env } from './config/env.config';
-import { NatsModule } from './common/services/nats.module';
+import { WaitlistGatewayModule } from './app/waitlist/waitlist.module';
+import { SettingsGatewayModule } from './app/settings/settings.module';
+import { AccountGatewayModule } from './app/account/account.module';
+import { BillingGatewayModule } from './app/billing/billing.module';
+import { SupportGatewayModule } from './app/support/support.module';
+import { FeedbackGatewayModule } from './app/feedback/feedback.module';
+import { AuthGatewayModule } from './app/auth/auth.module';
 
 @Module({
   imports: [
-    // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [() => Env],
+      envFilePath: '.env',
+      load: [configuration],
     }),
-
-    // Database
-    DatabaseModule,
-
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: parseInt(Env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes default
-        limit: parseInt(Env.RATE_LIMIT_MAX_REQUESTS || '100'),
-      },
-    ]),
-
-    // NATS messaging (global)
-    NatsModule,
-
-    // Feature modules
-    AuthModule,
-    GatewayModule, // GatewayModule exports GatewayService for middleware
+    // Nats Client
+    NatsClientModule,
+    //* App Services
+    WaitlistGatewayModule,
+    AuthGatewayModule,
+    SettingsGatewayModule,
+    AccountGatewayModule,
+    BillingGatewayModule,
+    SupportGatewayModule,
+    FeedbackGatewayModule,
+    //* LMS Services
+    //* LMS AI Services
+    //* Generative AI Services
   ],
-  controllers: [
-    AppController,
-    HealthController,
-    AppServiceProxyController,
-    AccountProxyController,
-    BillingProxyController,
-    FeedbackProxyController,
-    SettingsProxyController,
-    SupportProxyController,
-    LmsServiceProxyController,
-    AssignmentProxyController,
-    QuizProxyController,
-    CourseProxyController,
-    LibraryProxyController,
-    RoadmapAiProxyController,
-    PdfSummaryAiProxyController,
-  ],
-  providers: [
-    AppService,
-    ConfigService,
-    LoggerService,
-    {
-      provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: LoggingInterceptor,
-    },
-  ],
+  controllers: [AppController],
+  providers: [SwaggerService, LoggerService],
 })
-export class AppModule implements NestModule {
+export class AppModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorsMiddleware).forRoutes('*');
+
     consumer
-      .apply(GatewayProxyMiddleware)
+      .apply(BotProtectionMiddleware)
+      .exclude(
+        { path: 'health', method: RequestMethod.GET },
+        { path: 'app/health', method: RequestMethod.GET },
+      )
       .forRoutes('*');
   }
 }
-

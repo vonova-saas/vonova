@@ -1,33 +1,35 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { SettingsModule } from './settings/settings/settings.module';
-import { AccountModule } from './settings/account/account/account.module';
-import { BillingModule } from './settings/billing/billing.module';
-import { SupportModule } from './settings/supoort/supoort.module';
-import { FeedbackModule } from './settings/feedback/feedback.module';
 import { ConfigModule } from '@nestjs/config';
-import { envConfig } from './config/env.config';
-import { DatabaseModule } from './database/database.module';
+import configuration from './common/config/configuration';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
+import { SettingsModule } from './settings/settings.module';
+import { AccountModule } from './account/account.module';
+import { BillingModule } from './billing/billing.module';
+import { SupportModule } from './support/support.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { WaitlistModule } from './waitlist/waitlist.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [envConfig],
-      envFilePath: ['.env.local', '.env'],
-      expandVariables: true,
+      envFilePath: '.env',
+      load: [configuration],
     }),
-    DatabaseModule,
+    MongooseModule.forRoot(configuration().MONGO_URI_LOCAL!),
+    //? App Models
     AuthModule,
+    WaitlistModule,
     SettingsModule,
     AccountModule,
     BillingModule,
+    //? Customer Support Modules
     SupportModule,
     FeedbackModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule {}

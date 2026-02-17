@@ -1,12 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller } from '@nestjs/common';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
-  @Get()
+  @MessagePattern({ cmd: 'getAppHealth' })
   getHealth(): object {
-    return this.appService.getHealth();
+    return {
+      status: 'Healthy!',
+      service: 'APP Service',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    };
   }
 }

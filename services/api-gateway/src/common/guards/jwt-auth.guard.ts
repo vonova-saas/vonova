@@ -1,61 +1,65 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { verifyAccessToken } from '../../utils/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../../models/auth/user.model';
-import { RolePermissions } from '../../utils/role-permission';
+import { AuthGatewayService } from '../../app/auth/auth.service';
+import { firstValueFrom } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-  ) {}
+  private readonly logger = new Logger(JwtAuthGuard.name);
+
+  constructor(private readonly authService: AuthGatewayService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const accessToken = request.cookies?.accessToken;
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractTokenFromCookie(request);
 
-    if (!accessToken) {
-      throw new UnauthorizedException('Access token required');
+    if (!token) {
+      this.logger.warn('Access token is required');
+      throw new UnauthorizedException('Access token is required');
     }
 
-    const { payload, error } = verifyAccessToken(accessToken);
+    try {
+      // Use your existing auth service to validate the token
+      const userResponse = await firstValueFrom(
+        this.authService.currentUser(token).pipe(
+          catchError((error) => {
+            this.logger.error('Token validation failed:', error.message);
+            throw new UnauthorizedException('Invalid or expired access token');
+          }),
+        ),
+      );
 
-    if (error || !payload) {
+      // Check if the response contains user data
+      if (!userResponse?.user) {
+        this.logger.warn('No user data in auth response');
+        throw new UnauthorizedException('Invalid or expired access token');
+      }
+
+      // Attach user payload to request for use in controllers
+      request.user = userResponse.user;
+      this.logger.log(`User authenticated: ${request.user.email}`);
+      return true;
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error('Authentication error:', error.message);
       throw new UnauthorizedException('Invalid or expired access token');
     }
+  }
 
-    // Verify user still exists and is active
-    const user = await this.userModel.findById(payload.userId);
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account has been deactivated');
-    }
-
-    // Attach to request
-    (request as any).user = {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      isVerified: user.isVerified,
-      permissions: RolePermissions[user.role as keyof typeof RolePermissions] || [],
-    };
-    (request as any).userDoc = user;
-    (request as any).userId = user._id.toString();
-
-    return true;
+  private extractTokenFromCookie(request: any): string | undefined {
+    return request.cookies?.accessToken;
   }
 }
-
