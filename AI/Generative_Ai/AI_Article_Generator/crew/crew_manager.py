@@ -10,8 +10,8 @@ class CrewManager:
         
     def run_crew(self, topic):
         planner_agent = PlannerAgent(llm=self.llm).create_agent(topic=topic)
-        writer_agent = WriterAgent(llm=self.llm).create_agent(topic=topic)
-        editor_agent = EditorAgent(llm=self.llm).create_agent(topic=topic)
+        writer_agent   = WriterAgent(llm=self.llm).create_agent(topic=topic)
+        editor_agent   = EditorAgent(llm=self.llm).create_agent(topic=topic)
 
         task_plan   = PlanningTask(agent=planner_agent, topic=topic).create_task()
         task_write  = WritingTask(agent=writer_agent, topic=topic, context=[task_plan]).create_task()
@@ -20,9 +20,13 @@ class CrewManager:
         crew = Crew(
             agents=[planner_agent, writer_agent, editor_agent],
             tasks=[task_plan, task_write, task_edit],
-            memory=False, 
+        
+            llm=self.llm,                      
+            planning=False,                    
+            memory=False,
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+
         )
 
         result = crew.kickoff()

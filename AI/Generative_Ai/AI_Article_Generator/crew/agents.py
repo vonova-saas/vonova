@@ -29,7 +29,7 @@ class PlannerAgent(BaseAgent):
                 "and trustworthy sources. Your outlines must be structured and based on real data."
             ),
             llm=llm,
-            tools=[] 
+            tools=[]   
         )
 
 class WriterAgent(BaseAgent):
@@ -43,7 +43,7 @@ class WriterAgent(BaseAgent):
                 "You cite facts, balance opinions, and proofread carefully."
             ),
             llm=llm,
-            tools=[] 
+            tools=[]
         )
 
 class EditorAgent(BaseAgent):
@@ -56,5 +56,5 @@ class EditorAgent(BaseAgent):
                 "You rewrite weak sentences and maintain a balanced, neutral tone."
             ),
             llm=llm,
-            tools=[]
+            tools=[] 
         )
