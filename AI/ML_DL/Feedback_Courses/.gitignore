@@ -71,9 +71,6 @@ tmp/
 ehthumbs.db
 Thumbs.db
 
-# Docker
-.dockerignore
-
 # Test coverage
 .coverage
 .pytest_cache/
@@ -121,3 +118,6 @@ yarn-error.log*
 # Production build files
 build/
 dist/
+
+# save models
+models/
