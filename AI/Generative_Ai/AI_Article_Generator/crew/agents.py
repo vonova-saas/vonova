@@ -1,7 +1,4 @@
 from crewai import Agent as CrewAIAgent
-from crewai_tools import SerperDevTool
-
-search_tool = SerperDevTool()
 
 class BaseAgent:
     def __init__(self, role: str, goal: str, backstory: str, llm: object, tools: list = []):
@@ -32,7 +29,7 @@ class PlannerAgent(BaseAgent):
                 "and trustworthy sources. Your outlines must be structured and based on real data."
             ),
             llm=llm,
-            tools=[search_tool] 
+            tools=[] 
         )
 
 class WriterAgent(BaseAgent):
@@ -59,5 +56,5 @@ class EditorAgent(BaseAgent):
                 "You rewrite weak sentences and maintain a balanced, neutral tone."
             ),
             llm=llm,
-            tools=[search_tool]
+            tools=[]
         )
