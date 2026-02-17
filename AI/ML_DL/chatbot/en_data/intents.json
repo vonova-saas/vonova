@@ -1,0 +1,3538 @@
+{
+  "intents": [
+    {
+      "tag": "student_update_email",
+      "patterns": {
+        "en": [
+          "Change my email",
+          "Update email address",
+          "New email",
+          "Edit contact info",
+          "I want to change my email",
+          "Modify email address",
+          "Correct my email",
+          "Wrong email address",
+          "Update my contact details",
+          "Switch email address",
+          "Replace current email",
+          "Email change request",
+          "How do I change my email?",
+          "Update registered email",
+          "Set a new email",
+          "Email update settings",
+          "My email is incorrect",
+          "Change account email",
+          "Edit email",
+          "Input new email"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Update your email address securely here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1pPEJ0vYdYVxjqZzAunH-MB_Uu-Cu1MzE/preview"
+      ]
+    },
+    {
+      "tag": "student_refund",
+      "patterns": {
+        "en": [
+          "Request refund",
+          "Money back",
+          "Return course",
+          "Refund policy",
+          "Can I get a refund?",
+          "Cancel purchase",
+          "Get money back",
+          "Reimbursement request",
+          "Course refund",
+          "I bought this by mistake",
+          "Refund status",
+          "How to get a refund?",
+          "Money back guarantee",
+          "Return this class",
+          "Refund process",
+          "Apply for refund",
+          "Cancel and refund",
+          "Dispute charge",
+          "Refund help",
+          "I need a refund"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Submit a refund request for a course here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/10ZUA8QOZdQurNv3axSmfzBiu0C1U6kLe/preview"
+      ]
+    },
+    {
+      "tag": "student_font_size",
+      "patterns": {
+        "en": [
+          "Change font size",
+          "Increase text size",
+          "Make text bigger",
+          "Accessibility settings",
+          "Text is too small",
+          "Adjust font",
+          "Font settings",
+          "Can I make the text larger?",
+          "Zoom text",
+          "Increase font",
+          "Reading settings",
+          "Text size",
+          "Bigger letters",
+          "Change text size",
+          "Font is too small",
+          "Readability settings",
+          "Enlarge text",
+          "Scale font",
+          "Modify font size",
+          "Text scaling"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Adjust the font size for better readability here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1D3Niej3HQgjkx3YyslE2DWg_ADhqt4LI/preview?"
+      ]
+    },
+    {
+      "tag": "student_language_arabic",
+      "patterns": {
+        "en": [
+          "Switch to Arabic",
+          "Arabic language",
+          "Change site language",
+          "Translate to Arabic",
+          "I want Arabic",
+          "Language settings",
+          "Arabic interface",
+          "View in Arabic",
+          "Set language to Arabic",
+          "Arabic translation",
+          "Can I change language?",
+          "Language preference",
+          "Toggle language",
+          "Arabic mode",
+          "Switch site language",
+          "Display in Arabic",
+          "Change to Arabic",
+          "Arabic text",
+          "Language options"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Switch the interface language to Arabic here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1aGX72jEGeDnY5-QtDb1512qoydnzX6pi/preview?"
+      ]
+    },
+    {
+      "tag": "student_gift_course",
+      "patterns": {
+        "en": [
+          "Gift a course",
+          "Buy for friend",
+          "Send gift",
+          "Purchase as gift",
+          "Course gifting",
+          "Give a class",
+          "Buy course for someone else",
+          "Gift option",
+          "Send course to friend",
+          "Present a course",
+          "Can I gift this?",
+          "Purchase gift",
+          "Gifting feature",
+          "Buy as a present",
+          "Send as gift",
+          "Share course as gift",
+          "Gift purchase",
+          "How to gift a course?",
+          "Send learning gift",
+          "Buy for others"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Purchase a course as a gift for someone else here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1H04CPF-6v4qaqqwgU8XGsu7S85QTLa49/preview?"
+      ]
+    },
+    {
+      "tag": "student_verify_email",
+      "patterns": {
+        "en": [
+          "Verify email address",
+          "Resend verification link",
+          "Confirm email",
+          "Activate account",
+          "Email verification",
+          "I didn't get the link",
+          "Verify my account",
+          "Send confirmation email",
+          "Check email status",
+          "Validate email",
+          "Verification code",
+          "How to verify email?",
+          "Confirm my address",
+          "Resend email",
+          "Verification problem",
+          "Account activation",
+          "Verify login",
+          "Email confirmation link",
+          "Complete registration",
+          "Verify email now"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Resend your email verification link from here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1n8f-yl6wdG7pu_cCTBjLh5kCGttOI5Ms/preview"
+      ]
+    },
+    {
+      "tag": "student_newsletter",
+      "patterns": {
+        "en": [
+          "Unsubscribe newsletter",
+          "Stop marketing emails",
+          "Email preferences",
+          "Manage subscriptions",
+          "Stop spam",
+          "Opt out of emails",
+          "Newsletter settings",
+          "Too many emails",
+          "Subscription settings",
+          "Turn off newsletter",
+          "Email alerts",
+          "Marketing preferences",
+          "Unsubscribe from list",
+          "Stop sending emails",
+          "Change email frequency",
+          "Newsletter subscription",
+          "Manage email alerts",
+          "Remove from mailing list",
+          "Email notifications off",
+          "Cancel newsletter"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage your newsletter subscriptions here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/notifications"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "student_blocked_users",
+      "patterns": {
+        "en": [
+          "Block user",
+          "Unblock person",
+          "Manage blocked list",
+          "Stop harassment",
+          "Block someone",
+          "Blocked accounts",
+          "Unblock user",
+          "User blocking",
+          "Privacy settings block",
+          "Restrict user",
+          "Blocking list",
+          "Remove block",
+          "How to block?",
+          "Stop user from contacting",
+          "Block list",
+          "Ban a user",
+          "Manage blocks",
+          "Unlock user",
+          "Ignore user",
+          "Block contact"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage your blocked users list here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "student_skill_graph",
+      "patterns": {
+        "en": [
+          "My skill graph",
+          "Learning path progress",
+          "Skill visualization",
+          "What did I learn?",
+          "View skills",
+          "Skill chart",
+          "Progress graph",
+          "Learning stats",
+          "Skill tree",
+          "My growth",
+          "Skill tracking",
+          "Knowledge graph",
+          "Check my skills",
+          "Learning visualization",
+          "Skill report",
+          "My statistics",
+          "Competency graph",
+          "Visual progress",
+          "Skill map",
+          "Where is my skill graph?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "View your personal skill growth graph here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1h8FR_6Qw3VkCfaQl3-JVmwrljbbueNzy/preview"
+      ]
+    },
+    {
+      "tag": "student_lab_hours",
+      "patterns": {
+        "en": [
+          "Remaining lab time",
+          "Virtual machine quota",
+          "Buy more lab hours",
+          "Check usage",
+          "How many hours left?",
+          "Lab access time",
+          "Purchase lab time",
+          "Check lab balance",
+          "VM hours remaining",
+          "Cloud lab quota",
+          "My lab timer",
+          "Extend lab session",
+          "Lab subscription status",
+          "Time limit on labs",
+          "Add lab hours",
+          "Practice time left",
+          "Virtual lab credit",
+          "Lab usage report",
+          "Running low on lab time",
+          "Top up lab hours"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Check your remaining virtual lab hours here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1prHWxDWnX_BBZhdtAgGcjVeZ55XUds-B/preview"
+      ]
+    },
+    {
+      "tag": "student_contact_admin",
+      "patterns": {
+        "en": [
+          "Report serious issue",
+          "Contact administrator",
+          "Escalate ticket",
+          "Legal inquiry",
+          "Talk to manager",
+          "Admin support",
+          "Urgent help needed",
+          "Site administration",
+          "Report abuse",
+          "Complaint to admin",
+          "Contact owner",
+          "Official inquiry",
+          "Safety report",
+          "System administrator",
+          "Direct support line",
+          "Management contact",
+          "Report violation",
+          "Help desk admin",
+          "Emergency contact",
+          "Escalate my complaint"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Contact the platform administration directly here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/10ZUA8QOZdQurNv3axSmfzBiu0C1U6kLe/preview"
+      ]
+    },
+    {
+      "tag": "student_bookmarks",
+      "patterns": {
+        "en": [
+          "My bookmarks",
+          "Saved lessons",
+          "Favorite videos",
+          "Watch later",
+          "Where are my saved items?",
+          "Access bookmarks",
+          "My list",
+          "Bookmarked courses",
+          "View favorites",
+          "Show saved content",
+          "Manage bookmarks",
+          "Saved for later",
+          "Video wishlist",
+          "My reading list",
+          "Pinned lessons",
+          "Find my bookmarks",
+          "Open watch later",
+          "Favorites list",
+          "Saved tutorials",
+          "Go to bookmarks"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access all your bookmarked lessons here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_thumbnail",
+      "patterns": {
+        "en": [
+          "Upload course image",
+          "Change thumbnail",
+          "Cover photo",
+          "Course artwork",
+          "Set course picture",
+          "Update cover image",
+          "Thumbnail dimensions",
+          "Upload new photo",
+          "Course icon",
+          "Preview image",
+          "Edit course visual",
+          "Replace thumbnail",
+          "Course banner",
+          "Image upload",
+          "Media cover",
+          "Display picture",
+          "Course card image",
+          "Photo settings",
+          "Change course art",
+          "Upload graphics"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Upload or change your course thumbnail here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1LVMFPfGnCfgVYcaeu2QHLxW9ws8K0H5a/preview"
+      ]
+    },
+    {
+      "tag": "instructor_pricing",
+      "patterns": {
+        "en": [
+          "Set course price",
+          "Change pricing",
+          "Free vs Paid",
+          "Currency settings",
+          "Course cost",
+          "Price tier",
+          "Make course free",
+          "Update price",
+          "Pricing strategy",
+          "Set currency",
+          "Discount options",
+          "Course fee",
+          "Payment settings",
+          "Charge for course",
+          "Pricing plan",
+          "Edit cost",
+          "Monetization settings",
+          "Sale price",
+          "Global pricing",
+          "Manage fees"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Set or change your course pricing tiers here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1E8ewYVsYc7H5xNGk7sxalkPPMo2jtTEF/preview"
+      ]
+    },
+    {
+      "tag": "instructor_drip",
+      "patterns": {
+        "en": [
+          "Drip schedule",
+          "Release content later",
+          "Scheduled lessons",
+          "Timed access",
+          "Content locking",
+          "Schedule release",
+          "Drip feed content",
+          "Unlock over time",
+          "Set availability date",
+          "Lesson timer",
+          "Release schedule",
+          "Gradual access",
+          "Timed lessons",
+          "Delay content",
+          "Drip settings",
+          "Access control time",
+          "Sequential release",
+          "Weekly unlock",
+          "Schedule module",
+          "Content timer"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Configure content drip schedules here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_unpublished",
+      "patterns": {
+        "en": [
+          "Unpublish course",
+          "Draft courses",
+          "Take course offline",
+          "Hide course",
+          "Make course private",
+          "Remove from marketplace",
+          "Switch to draft",
+          "Stop selling course",
+          "Unlist course",
+          "Hidden courses",
+          "Temporarily disable course",
+          "Draft mode",
+          "Offline status",
+          "Retire course",
+          "Hide from students",
+          "Unpublishing options",
+          "Revert to draft",
+          "Course visibility",
+          "Disable access",
+          "Manage drafts"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage your published and draft courses here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_course_goals",
+      "patterns": {
+        "en": [
+          "Learning objectives",
+          "What will students learn",
+          "Target audience",
+          "Course outcomes",
+          "Edit goals",
+          "Course requirements",
+          "Prerequisites",
+          "Intended learners",
+          "Curriculum goals",
+          "What is this course for?",
+          "Student expectations",
+          "Key takeaways",
+          "Define objectives",
+          "Who should take this?",
+          "Course description details",
+          "Learning outcomes",
+          "Skill acquisition",
+          "Goal setting",
+          "Requirement list",
+          "Audience settings"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Edit your course goals and target audience here: https://instructor.vonova.tech/692718800687abe4f955c1bb/courses"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "student_dashboard",
+      "patterns": {
+        "en": [
+          "Go to my dashboard",
+          "Student home",
+          "My main page",
+          "Where do I start?",
+          "Open dashboard",
+          "Home screen",
+          "Overview page",
+          "My learning hub",
+          "Start page",
+          "Main menu",
+          "User dashboard",
+          "Access home",
+          "Back to dashboard",
+          "Learning center",
+          "Control panel",
+          "My activity",
+          "Personal dashboard",
+          "View dashboard",
+          "Student portal",
+          "Navigate to home"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access your main student dashboard here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "student_courses",
+      "patterns": {
+        "en": [
+          "My enrolled courses",
+          "Where are my classes?",
+          "Continue watching",
+          "My learning list",
+          "Go to my courses",
+          "Access purchased courses",
+          "My library",
+          "Resume learning",
+          "Show my classes",
+          "Course list",
+          "Enrolled classes",
+          "My studies",
+          "View all courses",
+          "Current courses",
+          "My subscriptions",
+          "Learning content",
+          "Find my course",
+          "Open class",
+          "Course progress",
+          "Where is the course I bought?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "View all your enrolled courses here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/18H49vqKvwkNhkGdWzLmQOIbKWU45MkyS/preview"
+      ]
+    },
+    {
+      "tag": "student_profile",
+      "patterns": {
+        "en": [
+          "Edit my profile",
+          "Change bio",
+          "Update avatar",
+          "My student profile",
+          "Change profile picture",
+          "Edit personal info",
+          "Update name",
+          "Profile settings",
+          "My account details",
+          "Change username",
+          "Bio settings",
+          "Upload photo",
+          "Edit user profile",
+          "Personal details",
+          "Account profile",
+          "View my profile",
+          "Customize profile",
+          "Social links",
+          "Update information",
+          "My public profile"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Update your personal profile details here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yU5cGqAD9TzuHGsiiSW3DeqIRBypnaKX/preview"
+      ]
+    },
+    {
+      "tag": "student_quizzes",
+      "patterns": {
+        "en": [
+          "My quiz results",
+          "Check grades",
+          "Quiz history",
+          "Where are my test scores?",
+          "assignment",
+          "View marks",
+          "Test results",
+          "Gradebook",
+          "My assignments",
+          "Quiz attempts",
+          "Check score",
+          "Did I pass?",
+          "Review quiz",
+          "Exam results",
+          "Submission history",
+          "Assessment grades",
+          "Passed quizzes",
+          "Failed tests",
+          "Score report",
+          "Quiz feedback"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Check your quiz results and history here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/quizzes"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1LG8VilTslCHF_7X01ACBXCo_9bPM2ku4/preview"
+      ]
+    },
+    {
+      "tag": "student_certificates",
+      "patterns": {
+        "en": [
+          "Download certificate",
+          "My diplomas",
+          "View achievements",
+          "Share my certificate",
+          "Where is my certificate?",
+          "Get proof of completion",
+          "Print certificate",
+          "Certification download",
+          "My awards",
+          "Course completion certificate",
+          "Earned certificates",
+          "Show my diplomas",
+          "Certificate of completion",
+          "Digital badge",
+          "Save certificate PDF",
+          "Verify certificate",
+          "Check my certifications",
+          "Completion reward",
+          "Download diploma",
+          "Access certificates"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "View and download your earned certificates here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1y2rU8ulxN_LuKkqlhP8zoXllLC8F-AnQ/preview"
+      ]
+    },
+    {
+      "tag": "student_wishlist",
+      "patterns": {
+        "en": [
+          "My saved courses",
+          "Wishlist",
+          "Courses I want to buy",
+          "Favorites",
+          "Add to wishlist",
+          "View wishlist",
+          "Saved for later",
+          "Shopping list",
+          "Courses to buy",
+          "My favorite classes",
+          "Check wishlist",
+          "Wishlisted items",
+          "Bookmark course",
+          "Future purchases",
+          "Manage wishlist",
+          "Remove from wishlist",
+          "Courses I like",
+          "My saved list",
+          "Access wishlist",
+          "Where are saved courses?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access your wishlist of saved courses here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1SVFj2RRCqOcpf-qNm87emkVU7hNCGVB-/preview"
+      ]
+    },
+    {
+      "tag": "student_payment_methods",
+      "patterns": {
+        "en": [
+          "Update credit card",
+          "Manage payment methods",
+          "Add new card",
+          "Remove card",
+          "Change payment details",
+          "Edit credit card",
+          "Banking info",
+          "Wallet settings",
+          "Delete card",
+          "Add debit card",
+          "Payment options",
+          "Saved cards",
+          "Update billing source",
+          "Manage cards",
+          "New payment method",
+          "Credit card settings",
+          "Modify payment",
+          "Card expiration",
+          "Store payment info",
+          "Payment gateway settings"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage your saved payment methods here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "student_security",
+      "patterns": {
+        "en": [
+          "Change password",
+          "Two factor authentication",
+          "Secure account",
+          "Login settings",
+          "Reset password",
+          "Update security",
+          "Enable 2FA",
+          "Account protection",
+          "Password management",
+          "Login history",
+          "Security check",
+          "Protect my account",
+          "Change login details",
+          "Strong password",
+          "Account safety",
+          "Privacy and security",
+          "Manage password",
+          "Authentication settings",
+          "Secure login",
+          "Update credentials"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Update your password and security settings here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1WUeEBEfvKj1XRw2T6Xrf-FQh_CcKnwK-/preview"
+      ]
+    },
+    {
+      "tag": "student_notifications",
+      "patterns": {
+        "en": [
+          "Turn off emails",
+          "Notification settings",
+          "Manage alerts",
+          "Stop spam",
+          "Push notifications",
+          "Email preferences",
+          "Alert settings",
+          "Disable notifications",
+          "Mute emails",
+          "Configure alerts",
+          "Message settings",
+          "Notification center",
+          "Stop updates",
+          "Email frequency",
+          "Manage pings",
+          "Turn on notifications",
+          "System alerts",
+          "Communication preferences",
+          "Unsubscribe alerts",
+          "Notification control"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Adjust your email and push notifications here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "student_support",
+      "patterns": {
+        "en": [
+          "Contact support",
+          "My tickets",
+          "Help desk",
+          "Report an issue",
+          "Need help",
+          "Customer service",
+          "Open a ticket",
+          "Support center",
+          "Talk to support",
+          "Issue tracker",
+          "Get assistance",
+          "Help request",
+          "Support inbox",
+          "Report problem",
+          "Customer care",
+          "Technical support",
+          "Submit query",
+          "View support tickets",
+          "Contact us",
+          "Help portal"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "View your support tickets or contact us here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1PSiB-BzqzJYNwdL3t1-Q2S7_6NjyrTEw/preview"
+      ]
+    },
+    {
+      "tag": "student_messages",
+      "patterns": {
+        "en": [
+          "My inbox",
+          "Check messages",
+          "Read notifications",
+          "Chat history",
+          "Direct messages",
+          "Private messages",
+          "View inbox",
+          "New messages",
+          "Conversations",
+          "Chat box",
+          "Message center",
+          "Read DMs",
+          "Communication hub",
+          "My chats",
+          "Inbox folder",
+          "Unread messages",
+          "Check chat",
+          "Message list",
+          "Student messages",
+          "Open inbox"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Check your inbox and messages here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "student_appearance",
+      "patterns": {
+        "en": [
+          "Dark mode",
+          "Change theme",
+          "Light mode",
+          "Display settings",
+          "Switch theme",
+          "Night mode",
+          "Interface color",
+          "Day mode",
+          "Site appearance",
+          "Toggle dark mode",
+          "Change background",
+          "Visual settings",
+          "Color scheme",
+          "Theme options",
+          "UI settings",
+          "Adjust brightness",
+          "Screen mode",
+          "Dark theme",
+          "Light theme",
+          "Look and feel"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Toggle Dark/Light mode here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1aFk-VrNLuoFBDrt5Y_XRJDukzMFPhXJs/preview"
+      ]
+    },
+    {
+      "tag": "instructor_courses",
+      "patterns": {
+        "en": [
+          "Manage my courses",
+          "Edit course",
+          "Course list",
+          "Update content",
+          "Instructor dashboard",
+          "My teaching list",
+          "Modify class",
+          "Course manager",
+          "Edit lessons",
+          "Update curriculum",
+          "My published courses",
+          "Change course content",
+          "Manage classes",
+          "Teaching material",
+          "Course editor",
+          "Review my courses",
+          "Class management",
+          "Edit syllabus",
+          "Content update",
+          "Instructor panel"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage all your courses here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1He1HWe7zi7CN269nF2wBHT9tHbxCI506/preview"
+      ]
+    },
+    {
+      "tag": "instructor_create_course",
+      "patterns": {
+        "en": [
+          "Create new course",
+          "Add new class",
+          "Upload course",
+          "Start teaching",
+          "New course wizard",
+          "Build a course",
+          "Add content",
+          "Make a new class",
+          "Course creation",
+          "Upload lessons",
+          "Launch course",
+          "Draft new course",
+          "Start a class",
+          "Teach a subject",
+          "Course builder",
+          "Add curriculum",
+          "New listing",
+          "Create tutorial",
+          "Upload material",
+          "Begin course creation"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Start creating a new course here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Rc3YPJPhHO0u04J5HU6PE1sEV0VKkS1E/preview"
+      ]
+    },
+    {
+      "tag": "instructor_profile_edit",
+      "patterns": {
+        "en": [
+          "Edit instructor bio",
+          "Public profile settings",
+          "Change teacher photo",
+          "Update resume",
+          "Instructor profile",
+          "My teacher page",
+          "Edit my info",
+          "Update biography",
+          "Profile visibility",
+          "Teacher details",
+          "Professional profile",
+          "Change avatar",
+          "Update credentials",
+          "Highlight expertise",
+          "Instructor bio",
+          "Profile management",
+          "Personal brand",
+          "Edit public view",
+          "Teacher intro",
+          "Update skills"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Edit your public instructor profile here: https://instructor.vonova.tech/555/settings/account"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/151uKvZoFWEC6mbbsG7G0wemIxeIZSEKg/preview"
+      ]
+    },
+    {
+      "tag": "instructor_settings",
+      "patterns": {
+        "en": [
+          "Instructor settings",
+          "Account preferences",
+          "Teacher options",
+          "Dashboard settings",
+          "Configure account",
+          "Instructor preferences",
+          "Manage account",
+          "System settings",
+          "Teacher config",
+          "Account setup",
+          "General settings",
+          "Personalization",
+          "Adjust preferences",
+          "Platform settings",
+          "Instructor tools",
+          "Account controls",
+          "Setup profile",
+          "User settings",
+          "Teacher controls",
+          "My configuration"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access your instructor account settings here: https://instructor.vonova.tech/555/settings"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1ApbBkJGoPd1_iovq4Dx2LneSsiHequtC/preview"
+      ]
+    },
+    {
+      "tag": "instructor_security",
+      "patterns": {
+        "en": [
+          "Secure teacher account",
+          "Change password instructor",
+          "Login security",
+          "Protect account",
+          "Instructor login",
+          "Security settings",
+          "Two factor teacher",
+          "Update password",
+          "Account safety",
+          "Login protection",
+          "Secure access",
+          "Privacy settings",
+          "Credential management",
+          "Safe login",
+          "Change access code",
+          "Teacher security",
+          "Auth settings",
+          "Protect data",
+          "Sign in security",
+          "Account lock"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": ["Update your security settings here: https://vonova.tech/"],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1WUeEBEfvKj1XRw2T6Xrf-FQh_CcKnwK-/preview"
+      ]
+    },
+    {
+      "tag": "instructor_notifications",
+      "patterns": {
+        "en": [
+          "Email alerts",
+          "Teacher notifications",
+          "Manage emails",
+          "Instructor alerts",
+          "Communication settings",
+          "Stop emails",
+          "Notification preferences",
+          "Alert management",
+          "Message settings",
+          "Email frequency",
+          "Push notifications",
+          "System updates",
+          "Stay informed",
+          "Manage pings",
+          "Turn off alerts",
+          "Email options",
+          "Subscribe/unsubscribe",
+          "Alert config",
+          "Update notifications",
+          "Message alerts"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Manage your notification preferences here: https://instructor.vonova.tech/555"
+        ],
+        "ar": []
+      },
+      "images": [
+        "ihttps://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "instructor_support",
+      "patterns": {
+        "en": [
+          "Teacher support",
+          "Contact admin",
+          "Report problem",
+          "Help for instructors",
+          "Instructor help desk",
+          "Assistance for teachers",
+          "Technical issue",
+          "Support ticket",
+          "Contact platform",
+          "Report bug",
+          "Admin help",
+          "Instructor guide",
+          "Problem reporting",
+          "Need assistance",
+          "Support center",
+          "Teacher queries",
+          "Resolve issue",
+          "Help contact",
+          "Service request",
+          "Instructor care"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Contact instructor support here: https://instructor.vonova.tech/555/supportt"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1PSiB-BzqzJYNwdL3t1-Q2S7_6NjyrTEw/preview"
+      ]
+    },
+    {
+      "tag": "access_material_library",
+      "patterns": {
+        "en": [
+          "Where is the material library?",
+          "Go to study resources",
+          "Open library",
+          "Access books and guides",
+          "Computer science materials",
+          "Find resources",
+          "Study materials",
+          "Library access",
+          "Browse books",
+          "Resource center",
+          "Learning materials",
+          "Open book collection",
+          "Digital library",
+          "Reference materials",
+          "Guides and docs",
+          "Search library",
+          "Educational resources",
+          "View documents",
+          "Library catalog",
+          "Course materials"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access the full Material Library to find books, guides, and presentations here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "online_books",
+      "patterns": {
+        "en": [
+          "Where can I read books?",
+          "Free computer science books",
+          "Explore online books",
+          "Read coding books",
+          "Library books",
+          "Access ebooks",
+          "Digital textbooks",
+          "Browse book collection",
+          "Read online",
+          "Find CS books",
+          "Open book section",
+          "View reading material",
+          "Programming books",
+          "Search for books",
+          "E-library access",
+          "Free textbooks",
+          "Read technical guides",
+          "Book repository",
+          "Available books",
+          "Go to books"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can browse and read free computer science books in the 'Online Books' section here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "instructor_presentations",
+      "patterns": {
+        "en": [
+          "Download slides",
+          "Instructor presentations",
+          "Course slides",
+          "View presentation material",
+          "Lecture powerpoints",
+          "Access slides",
+          "Get lecture notes",
+          "PPT downloads",
+          "Class presentations",
+          "Instructor slides",
+          "View deck",
+          "Course materials slides",
+          "Presentation files",
+          "Download PPT",
+          "Lecture slides",
+          "Slide deck",
+          "Teacher presentations",
+          "View powerpoints",
+          "Slide library",
+          "Get presentation"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Access presentations created by your instructors here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Rc3YPJPhHO0u04J5HU6PE1sEV0VKkS1E/preview"
+      ]
+    },
+    {
+      "tag": "library_stats",
+      "patterns": {
+        "en": [
+          "My library progress",
+          "How many materials available?",
+          "Library completion",
+          "Track my reading",
+          "Library sections",
+          "Reading stats",
+          "Check library status",
+          "Progress in library",
+          "Books read count",
+          "Material statistics",
+          "Library dashboard",
+          "Usage stats",
+          "Content tracking",
+          "My library activity",
+          "Resource count",
+          "Reading history",
+          "Library overview",
+          "Completion rate",
+          "Track downloads",
+          "Library metrics"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can track your progress across the 3 main sections (Books, Guides, Presentations) directly on the Material Library dashboard."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "access_pdf_summary",
+      "patterns": {
+        "en": [
+          "how to summarize pdf",
+          "Where is the PDF Summary tool?",
+          "Chat with PDF",
+          "Summarize my document",
+          "AI PDF reader",
+          "Open PDF tool",
+          "Upload PDF for summary",
+          "AI document chat",
+          "Interact with PDF",
+          "PDF analyzer",
+          "Go to PDF chat",
+          "Summarizer tool",
+          "Talk to my PDF",
+          "PDF AI feature",
+          "Document assistant",
+          "Launch PDF tool",
+          "File summarizer",
+          "Ask PDF questions",
+          "PDF intelligence",
+          "Access document tool",
+          "Smart PDF reader"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can upload your documents and chat with them using the PDF Summary tool here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/pdf-summary"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_tool_features",
+      "patterns": {
+        "en": [
+          "What can the PDF tool do?",
+          "Can I ask questions about the file?",
+          "Does it only summarize?",
+          "Explain the PDF feature",
+          "How does PDF chat work?",
+          "PDF tool capabilities",
+          "Function of PDF AI",
+          "Why use PDF tool?",
+          "Explain PDF analysis",
+          "What is PDF chat?",
+          "Can it explain concepts?",
+          "Tool description",
+          "How to use PDF summary?",
+          "Features of document chat",
+          "What does it analyze?",
+          "Is it just a summary?",
+          "PDF interaction details",
+          "Understand PDF tool",
+          "What is this feature?",
+          "Help with PDF tool"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "The tool analyzes your PDF using AI. You can ask specific questions, request summaries, or ask for explanations of complex topics found inside the document."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_upload_limits",
+      "patterns": {
+        "en": [
+          "What is the max file size for PDF?",
+          "Can I upload Word documents?",
+          "File format support",
+          "Upload limit",
+          "Maximum pages",
+          "PDF size limit",
+          "Supported files",
+          "Can I upload docx?",
+          "File restrictions",
+          "Max MB allowed",
+          "Page limit",
+          "Only PDF?",
+          "Upload constraints",
+          "File types",
+          "Large files",
+          "Upload requirements",
+          "Is there a size limit?",
+          "Acceptable formats",
+          "Document size",
+          "Upload error size"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": ["Maximum 1000 pages"],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_summary_language",
+      "patterns": {
+        "en": [
+          "Does it support Arabic PDFs?",
+          "Can it summarize in other languages?",
+          "Multi-language support",
+          "Chat in Arabic",
+          "Translate PDF",
+          "Is the AI multilingual?",
+          "Language options for PDF",
+          "Read French PDF",
+          "Summarize in Spanish",
+          "Cross-language chat",
+          "Supports different languages?",
+          "Can I ask in English about Arabic file?",
+          "Language compatibility",
+          "Translation feature",
+          "Works with Arabic?",
+          "Foreign language PDF",
+          "Chat in my language",
+          "Language limitation",
+          "Polyglot AI",
+          "PDF language support"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, our AI is multilingual! You can upload a PDF in one language and ask questions or get summaries in another language."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "access_roadmap",
+      "patterns": {
+        "en": [
+          "Where is the AI Roadmap Generator?",
+          "Create a study plan",
+          "Open roadmap tool",
+          "Generate learning path",
+          "Go to AI roadmap",
+          "Build a curriculum",
+          "Start roadmap",
+          "Plan my studies",
+          "AI study guide",
+          "Access roadmap creator",
+          "Make a learning plan",
+          "Roadmap feature",
+          "Find roadmap tool",
+          "Launch generator",
+          "Create path",
+          "Design study track",
+          "Get a roadmap",
+          "AI planner",
+          "Where to make roadmap?",
+          "Learning path tool"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can generate your personalized learning roadmap here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/ai-roadmap-generator"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Zd640oI4eKcsDWv1RZ_W343KeXCQDu_g/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_function",
+      "patterns": {
+        "en": [
+          "What does the roadmap generator do?",
+          "How does it help me?",
+          "Purpose of roadmap tool",
+          "Why use this feature?",
+          "Explain roadmap tool",
+          "Benefit of roadmap",
+          "How does it work?",
+          "What is roadmap generator?",
+          "Is roadmap useful?",
+          "Roadmap description",
+          "What can I create in roadmap?",
+          "Why make a roadmap?",
+          "Functionality of roadmap",
+          "Does roadmap make a schedule?",
+          "Understanding the tool",
+          "What is the output of roadmap?",
+          "Help with learning",
+          "Value of roadmap",
+          "Tool explanation"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "This tool uses AI to create a step-by-step study guide for any topic you want to learn, tailored to your schedule and goals."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Zd640oI4eKcsDWv1RZ_W343KeXCQDu_g/preview"
+      ]
+    },
+    {
+      "tag": "roadmap",
+      "patterns": {
+        "en": [
+          "What details do I need to provide?",
+          "How to create a roadmap?",
+          "Inputs for study plan",
+          "Do I need to type a topic?",
+          "Required information",
+          "What to enter?",
+          "Start roadmap process",
+          "Input fields",
+          "Do I need a title?",
+          "How to generate?",
+          "Setup roadmap",
+          "Enter learning topic",
+          "What does it ask for?",
+          "Fill out roadmap form",
+          "Roadmap requirements",
+          "Starting details",
+          "Topic selection",
+          "Time input",
+          "Skill level input",
+          "Configure roadmap"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You just need to enter the topic you want to learn, your current skill level, and how much time you can dedicate per week."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1txrYz-FIjcxO7YVHq4CDVRa9mDat9pC5/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_levels",
+      "patterns": {
+        "en": [
+          "Can I choose difficulty level?",
+          "Is it for beginners?",
+          "Advanced roadmap",
+          "Select skill level",
+          "Intermediate plan",
+          "Set difficulty",
+          "Beginner guide",
+          "Expert path",
+          "Level selection",
+          "Choose my level",
+          "Start from zero",
+          "Hard mode",
+          "Easy path",
+          "Skill setting",
+          "Adjust difficulty",
+          "For pros",
+          "For newbies",
+          "Knowledge level",
+          "Custom difficulty",
+          "Can I change level?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, you can specify if you are a Beginner, Intermediate, or Advanced learner to get the right content difficulty."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1txrYz-FIjcxO7YVHq4CDVRa9mDat9pC5/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_edit",
+      "patterns": {
+        "en": [
+          "Can I edit the roadmap?",
+          "Modify the plan",
+          "Add my own topics",
+          "Change timeline",
+          "Delete a step",
+          "Customize roadmap",
+          "Rearrange topics",
+          "Edit study path",
+          "Update roadmap",
+          "Change content",
+          "Manual edit",
+          "Adjust steps",
+          "Remove module",
+          "Add new section",
+          "Is it editable?",
+          "Tweak the plan",
+          "Refine roadmap",
+          "Modify topics",
+          "Personalize plan",
+          "Edit generated path"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Absolutely! After generation, you can manually add, remove, or rearrange topics to fit your needs."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1txrYz-FIjcxO7YVHq4CDVRa9mDat9pC5/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_save",
+      "patterns": {
+        "en": [
+          "Does it save automatically?",
+          "Where is my saved roadmap?",
+          "Can I come back later?",
+          "Save study plan",
+          "Is my plan stored?",
+          "Access saved roadmap",
+          "Roadmap history",
+          "Keep my roadmap",
+          "Don't lose progress",
+          "Save to dashboard",
+          "Retrieve roadmap",
+          "View saved plans",
+          "Autosave feature",
+          "Where did it go?",
+          "My roadmaps",
+          "Store learning path",
+          "Save for later",
+          "Permanent save",
+          "Find previous roadmap",
+          "Backup plan"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, your generated roadmaps are automatically saved to your dashboard so you can track your progress anytime."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "roadmap_resources",
+      "patterns": {
+        "en": [
+          "Does it suggest books?",
+          "Video recommendations",
+          "Does it give links?",
+          "Study resources included?",
+          "Learning materials",
+          "External links",
+          "Course suggestions",
+          "Where to learn?",
+          "Content sources",
+          "Does it provide urls?",
+          "Reading list",
+          "Watch videos",
+          "Resource finder",
+          "Topic references",
+          "Study aids",
+          "Material suggestions",
+          "YouTube links",
+          "Article recommendations",
+          "Curated resources",
+          "Get content"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "The AI suggests relevant topics and sometimes recommends external resources or courses available on Vonova."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "roadmap_export",
+      "patterns": {
+        "en": [
+          "Can I download the roadmap?",
+          "Export as PDF",
+          "Print my plan",
+          "Share roadmap",
+          "Save as image",
+          "Download study path",
+          "Export options",
+          "Printable version",
+          "Save to computer",
+          "Share with friends",
+          "Download file",
+          "PDF export",
+          "Get hard copy",
+          "Offline access",
+          "Save roadmap locally",
+          "Export tool",
+          "Can I print this?",
+          "Share link",
+          "Send roadmap",
+          "Download schedule"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "NO, you cannot export your roadmap structure as a PDF file or an image to keep it offline."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "roadmap_languages",
+      "patterns": {
+        "en": [
+          "Can I generate a roadmap in Arabic?",
+          "Other languages",
+          "Multilingual support",
+          "Study plan in Spanish",
+          "Create French roadmap",
+          "Language options",
+          "Roadmap in German",
+          "Supports Arabic?",
+          "Change roadmap language",
+          "Generate in my language",
+          "Different language plan",
+          "Translate roadmap",
+          "Polyglot roadmap",
+          "Write in Arabic",
+          "Local language support",
+          "Language selection",
+          "Can it write in Russian?",
+          "Non-English roadmap",
+          "Select language",
+          "Input language"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": ["English"],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "roadmap_regenerate",
+      "patterns": {
+        "en": [
+          "I don't like the result",
+          "Try again",
+          "Regenerate plan",
+          "Create a new one",
+          "Redo roadmap",
+          "Generate again",
+          "Bad result",
+          "Start over",
+          "Retry generation",
+          "Make another one",
+          "Refresh plan",
+          "Get different result",
+          "Re-run AI",
+          "Change output",
+          "Not what I wanted",
+          "Improve roadmap",
+          "New iteration",
+          "Reset and try",
+          "Another version",
+          "Update result"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "If you are not satisfied, you can click 'Regenerate' to get a different structure or adjust your inputs for better results."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "roadmap_timeline",
+      "patterns": {
+        "en": [
+          "Can I set a deadline?",
+          "3 month plan",
+          "Weekly schedule",
+          "Time estimation",
+          "How long will it take?",
+          "Set duration",
+          "4 week plan",
+          "Study timeline",
+          "Course duration",
+          "Estimated time",
+          "Schedule planner",
+          "Timeframe",
+          "Plan for 6 months",
+          "Daily schedule",
+          "Finish by date",
+          "Custom timeline",
+          "Learning pace",
+          "Time management",
+          "Deadline setting",
+          "Period of study"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, the AI estimates the time required for each section based on your input duration (e.g., 3 months or 4 weeks)."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "access_feedback_page",
+      "patterns": {
+        "en": [
+          "Where can I give feedback?",
+          "I want to report an issue",
+          "Share my thoughts",
+          "Go to feedback page",
+          "Submit a suggestion",
+          "Feedback form",
+          "Send comments",
+          "Report a problem",
+          "Contact for feedback",
+          "Where to complain?",
+          "Give opinion",
+          "Open feedback",
+          "Suggestion box",
+          "Site feedback",
+          "Tell us what you think",
+          "Submit review",
+          "Input feedback",
+          "Voice my opinion",
+          "Feedback link",
+          "Rate the site"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can share your feedback, report bugs, or request features here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/feedback"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1sW3EQkFkyvcz8ELi7Lq70L0FucxGNeq3/preview"
+      ]
+    },
+    {
+      "tag": "report_bug",
+      "patterns": {
+        "en": [
+          "I found a bug",
+          "Report a technical error",
+          "Something is broken",
+          "Submit bug report",
+          "Site glitch",
+          "Error on page",
+          "Not working",
+          "Technical issue",
+          "Report glitch",
+          "Bug tracker",
+          "Fix this",
+          "Broken link",
+          "System error",
+          "Site crash",
+          "Defect report",
+          "Feature not working",
+          "Found an issue",
+          "Report error",
+          "Technical problem",
+          "Submit defect"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Please select the 'Bug Report' option on the feedback form and describe the steps to reproduce the issue."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/13ZNZIM35AseVaBkczrsWDR3vyPAPhe3I/preview"
+      ]
+    },
+    {
+      "tag": "request_feature",
+      "patterns": {
+        "en": [
+          "I want to request a new feature",
+          "Can you add this tool?",
+          "I have an idea for the platform",
+          "Feature request",
+          "New functionality idea",
+          "Suggest an upgrade",
+          "Add new button",
+          "Improvement idea",
+          "Request a change",
+          "Wishlist feature",
+          "Can you build this?",
+          "Idea submission",
+          "New tool request",
+          "Enhancement suggestion",
+          "Please add this",
+          "Feature suggestion",
+          "Site improvement",
+          "My feature idea",
+          "Propose a feature",
+          "Functionality request"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We love new ideas! Select 'Feature Request' on the feedback page and tell us what you'd like to see."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1oHGexdq14wPDPgimOOqECDGzJ6Q6BANP/preview"
+      ]
+    },
+    {
+      "tag": "feedback_followup",
+      "patterns": {
+        "en": [
+          "Will you reply to my feedback?",
+          "Do I need to write my email?",
+          "How do you contact me after feedback?",
+          "Follow up on report",
+          "Will I get an answer?",
+          "Feedback response",
+          "Contact regarding feedback",
+          "Do you read feedback?",
+          "Reply status",
+          "Email requirement",
+          "Anonymous feedback?",
+          "Get back to me",
+          "Feedback tracking",
+          "Response time",
+          "Will admin contact me?",
+          "Communication after report",
+          "Follow-up email",
+          "Who replies?",
+          "Feedback confirmation",
+          "Need a reply"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We automatically use your account email for follow-up. You don't need to type it manually."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "general_suggestion",
+      "patterns": {
+        "en": [
+          "I have a suggestion",
+          "Improvement idea",
+          "My opinion",
+          "General comment",
+          "Feedback category",
+          "Just a thought",
+          "Constructive criticism",
+          "My view",
+          "Site comment",
+          "General feedback",
+          "Advice for site",
+          "Small suggestion",
+          "Recommendation",
+          "Thought on design",
+          "Commentary",
+          "User opinion",
+          "Suggest change",
+          "Feedback type",
+          "What I think",
+          "Share view"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "For general improvements that aren't bugs or new features, please select the 'Suggestion' option."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1g3pTgmIi9bsq_vd5bTsiUniKwgc-FZQt/preview"
+      ]
+    },
+    {
+      "tag": "platform_developer",
+      "patterns": {
+        "en": [
+          "Who developed this platform?",
+          "Who built Vonova?",
+          "Is this an open source project?",
+          "Who owns the code?",
+          "Development team",
+          "Who made this?",
+          "Creator of Vonova",
+          "Tech team",
+          "Who programmed this?",
+          "Site developer",
+          "Engineering team",
+          "Behind the scenes",
+          "Who created the site?",
+          "Platform architect",
+          "Coding team",
+          "Software developer",
+          "Built by whom?",
+          "Company behind this",
+          "Developer info",
+          "Credits"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova was architected and developed by the dedicated engineering team at Vonova Tech, built from scratch to serve modern education."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_mission",
+      "patterns": {
+        "en": [
+          "What is the goal of Vonova?",
+          "Why does this site exist?",
+          "Platform mission",
+          "Vision statement",
+          "What are you trying to achieve?",
+          "Company goal",
+          "Purpose of platform",
+          "Why use Vonova?",
+          "Mission statement",
+          "What do you do?",
+          "Our vision",
+          "Why are you here?",
+          "Educational goal",
+          "Platform objective",
+          "Aim of the site",
+          "Value proposition",
+          "Why was it built?",
+          "Core values",
+          "Target goal",
+          "What is the point?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Our mission is to democratize education by providing high-quality, AI-powered learning tools accessible to everyone, everywhere."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_meaning",
+      "patterns": {
+        "en": [
+          "What does Vonova mean?",
+          "Origin of the name",
+          "Why is it called Vonova?",
+          "Name meaning",
+          "Brand story",
+          "Definition of Vonova",
+          "Etymology",
+          "What is a Vonova?",
+          "Naming story",
+          "Where did the name come from?",
+          "Meaning of word",
+          "Why that name?",
+          "Brand name origin",
+          "Symbolism",
+          "Is it a real word?",
+          "Explain the name",
+          "Vonova definition",
+          "Name history",
+          "Company name",
+          "Title meaning"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "The name 'Vonova' is derived from 'Von', inspired by the scientist John von Neumann, and 'Nova', which signifies a new beginning or openness."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_security_general",
+      "patterns": {
+        "en": [
+          "Is this site safe?",
+          "Is Vonova secure?",
+          "Do you sell my data?",
+          "Platform security",
+          "Is it a scam?",
+          "Is my data safe?",
+          "Privacy policy",
+          "Data protection",
+          "Security measures",
+          "Trustworthiness",
+          "Is it legit?",
+          "Safe to use?",
+          "Encryption",
+          "Protect info",
+          "Is it dangerous?",
+          "Cyber safety",
+          "Site integrity",
+          "Security standard",
+          "Safety check",
+          "Reliability"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Security is our top priority. We use industry-standard encryption and never sell your personal data to third parties."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_hosting",
+      "patterns": {
+        "en": [
+          "Where is the site hosted?",
+          "Server location",
+          "Is it on the cloud?",
+          "Hosting provider",
+          "Infrastructure",
+          "Data center",
+          "Where are servers?",
+          "Cloud platform",
+          "Site uptime",
+          "Hosting service",
+          "Tech stack hosting",
+          "Server status",
+          "Where is data stored?",
+          "Cloud or local?",
+          "Hosting details",
+          "Server speed",
+          "Backend location",
+          "Infrastructure info",
+          "Web host",
+          "Site location"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova is hosted on secure, high-speed cloud servers to ensure 99.9% uptime and fast access globally."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_cost_model",
+      "patterns": {
+        "en": [
+          "Is Vonova free?",
+          "Do I have to pay to use the site?",
+          "Is it expensive?",
+          "Business model",
+          "Cost of usage",
+          "Pricing model",
+          "Free vs paid",
+          "Membership fee",
+          "Is registration free?",
+          "Hidden costs",
+          "How much is it?",
+          "Is it subscription based?",
+          "Pay to learn",
+          "Free access",
+          "Cost structure",
+          "Premium features",
+          "Do you charge money?",
+          "Payment required?",
+          "Free tier",
+          "Pricing info"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Registration and accessing free courses are completely free. You only pay for premium courses or specific subscription plans."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_ads",
+      "patterns": {
+        "en": [
+          "Are there ads?",
+          "Do you show advertisements?",
+          "Ad-free experience",
+          "Commercials",
+          "Pop-ups",
+          "Is there advertising?",
+          "Do I have to watch ads?",
+          "Remove ads",
+          "Ad policy",
+          "Is it cluttered with ads?",
+          "Sponsors",
+          "Marketing popups",
+          "No ads please",
+          "Advertising on site",
+          "Commercial interruptions",
+          "Ad blocker needed?",
+          "Is the site ad-supported?",
+          "Banner ads",
+          "Video ads",
+          "Distraction free"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova provides a distraction-free learning environment. We do not display third-party advertisements on our platform."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_device_support",
+      "patterns": {
+        "en": [
+          "Does it work on tablets?",
+          "Can I use it on iPad?",
+          "Is it responsive?",
+          "Mobile browser support",
+          "Device compatibility",
+          "Works on iPhone?",
+          "Android support",
+          "Mobile friendly",
+          "Can I use my phone?",
+          "Desktop only?",
+          "Supported devices",
+          "Tablet view",
+          "Screen size support",
+          "Cross platform",
+          "Use on laptop",
+          "Works on Mac?",
+          "Smartphone access",
+          "Device restrictions",
+          "Responsive design",
+          "Mobile optimization"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, Vonova is fully responsive and optimized to work smoothly on desktops, laptops, tablets, and smartphones."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_offline_capability",
+      "patterns": {
+        "en": [
+          "Does the website work offline?",
+          "No internet access",
+          "Can I use it without wifi?",
+          "Offline support",
+          "Internet requirement",
+          "Download for offline",
+          "Work without connection",
+          "Offline mode",
+          "Do I need data?",
+          "Access without net",
+          "No signal",
+          "Offline viewing",
+          "Save content offline",
+          "Airplane mode support",
+          "Internet needed?",
+          "Connectivity issues",
+          "Offline learning",
+          "Download courses",
+          "Net connection",
+          "Is online required?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": ["The website requires an internet connection"],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_ai_technology",
+      "patterns": {
+        "en": [
+          "Do you use real AI?",
+          "How does the AI work?",
+          "Is the AI smart?",
+          "Technology stack",
+          "Artificial Intelligence",
+          "AI features",
+          "Generative AI",
+          "Machine learning",
+          "Is it a bot?",
+          "AI capabilities",
+          "Smart algorithms",
+          "AI powered",
+          "Tech behind the site",
+          "AI tools",
+          "How is AI used?",
+          "Intelligence level",
+          "AI integration",
+          "Automated learning",
+          "Technology details",
+          "Smart features"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes, we integrate advanced Generative AI models to power features like the Roadmap Generator, PDF Summary, and AI Tutor."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_updates",
+      "patterns": {
+        "en": [
+          "How often do you update?",
+          "When is the next update?",
+          "Is the site maintained?",
+          "Platform changelog",
+          "New features",
+          "Update schedule",
+          "Release notes",
+          "System updates",
+          "Latest version",
+          "Maintenance mode",
+          "Upcoming changes",
+          "Feature updates",
+          "Software update",
+          "Is it active?",
+          "Recent changes",
+          "Upgrade history",
+          "Site version",
+          "What is new?",
+          "Development activity",
+          "Frequency of updates"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We release updates and new features weekly to ensure the platform remains cutting-edge and bug-free."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_target_audience",
+      "patterns": {
+        "en": [
+          "Who is this site for?",
+          "Is it for kids?",
+          "Target audience",
+          "Can schools use it?",
+          "Is it for professionals?",
+          "Who uses Vonova?",
+          "Intended users",
+          "Is it for beginners?",
+          "For students or teachers?",
+          "Corporate training",
+          "Age group",
+          "User demographic",
+          "Is it for universities?",
+          "Suitable for children?",
+          "For experts?",
+          "Who is the customer?",
+          "Education level",
+          "Target market",
+          "Is it for me?",
+          "User base"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova is designed for everyone: individual learners, professional instructors, and educational institutions looking for a modern LMS."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_competitors",
+      "patterns": {
+        "en": [
+          "Is it better than Udemy?",
+          "Why choose Vonova?",
+          "Difference from Coursera",
+          "Unique selling point",
+          "Competition",
+          "Vonova vs others",
+          "Why use this site?",
+          "Better than edX?",
+          "What makes it special?",
+          "Market advantage",
+          "Compare platforms",
+          "Competitor analysis",
+          "Why not Udemy?",
+          "Platform comparison",
+          "Unique features",
+          "Vs Pluralsight",
+          "Why switch?",
+          "Standout features",
+          "Alternative to Udemy",
+          "Best platform"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova stands out by combining standard learning with advanced AI tools, gamification, and social community features in one place."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_certificates_validity",
+      "patterns": {
+        "en": [
+          "Are the certificates accredited?",
+          "Do employers recognize Vonova?",
+          "Value of certificate",
+          "Is it a university degree?",
+          "Official certification",
+          "Certificate validity",
+          "Is it recognized?",
+          "Can I put it on CV?",
+          "Job ready certificate",
+          "Accreditation status",
+          "Is it a diploma?",
+          "Certificate worth",
+          "Employer acceptance",
+          "Valid for jobs?",
+          "Official degree?",
+          "Certification value",
+          "Is it legitimate?",
+          "Academic credit",
+          "Industry recognition",
+          "Verified certificate"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Our certificates verify your skills and are recognized by many industry partners, though they are not equivalent to a university degree."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_speed",
+      "patterns": {
+        "en": [
+          "Is the site fast?",
+          "Does it lag?",
+          "Performance",
+          "Loading speed",
+          "Is it slow?",
+          "Site optimization",
+          "Page load time",
+          "Fast loading",
+          "Server speed",
+          "Laggy interface",
+          "Speed test",
+          "Quick access",
+          "Performance issues",
+          "Is it heavy?",
+          "Smooth experience",
+          "Latency",
+          "Website speed",
+          "Optimized for speed",
+          "Slow connection",
+          "Fast response"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We optimize our code and use global CDNs to ensure the platform loads instantly, even on slower connections."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_storage",
+      "patterns": {
+        "en": [
+          "Do I have storage limits?",
+          "Cloud storage",
+          "Where do my files go?",
+          "Space limit",
+          "Hosting files",
+          "File capacity",
+          "Upload limit",
+          "Unlimited storage?",
+          "Data quota",
+          "Storage space",
+          "Save files online",
+          "Max storage",
+          "Disk space",
+          "File hosting",
+          "Cloud drive",
+          "Content storage",
+          "Media library size",
+          "Is storage free?",
+          "How many files?",
+          "Storage policy"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We provide unlimited cloud storage for course materials and assignments for all our users."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_gamification_logic",
+      "patterns": {
+        "en": [
+          "Why do you have points?",
+          "Is this a game?",
+          "Purpose of badges",
+          "Gamification logic",
+          "Learning motivation",
+          "XP system",
+          "Leaderboards",
+          "Earn rewards",
+          "Game elements",
+          "Why gamify?",
+          "Fun learning",
+          "Levels and ranks",
+          "Achievement system",
+          "Motivate me",
+          "Point system",
+          "Engagement tools",
+          "Is it serious learning?",
+          "Badges meaning",
+          "Reward logic",
+          "Play and learn"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We use gamification elements like points and badges to make learning fun and keep you motivated to reach your goals."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_ownership",
+      "patterns": {
+        "en": [
+          "Is this a big company?",
+          "Startup or corporation?",
+          "Who owns it?",
+          "Company size",
+          "Vonova headquarters",
+          "Business owner",
+          "Parent company",
+          "Organization details",
+          "Is it independent?",
+          "Company background",
+          "Who runs this?",
+          "Corporate info",
+          "Founder info",
+          "Business type",
+          "Enterprise or startup",
+          "Company structure",
+          "Ownership details",
+          "Where is HQ?",
+          "About the company",
+          "Legal entity"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova is a fast-growing EdTech startup focused on innovation and agility in the education sector."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "platform_future",
+      "patterns": {
+        "en": [
+          "What is coming next?",
+          "Future plans",
+          "Roadmap 2025",
+          "Next big feature",
+          "Evolution",
+          "What to expect?",
+          "Upcoming innovations",
+          "Future vision",
+          "Next update",
+          "Long term goals",
+          "Development roadmap",
+          "New tools coming",
+          "Future of Vonova",
+          "Expansion plans",
+          "Next steps",
+          "Vision for future",
+          "Upcoming technology",
+          "Growth plans",
+          "What's on the horizon?",
+          "Future release"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "We are working on bringing more immersive learning experiences, including VR classrooms and deeper AI integration."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "general_greeting",
+      "patterns": {
+        "en": [
+          "Hi",
+          "Hello",
+          "Hey there",
+          "Good morning",
+          "Good evening",
+          "Greetings",
+          "Hi Vonova",
+          "Hello bot",
+          "Hey",
+          "Start chat",
+          "Is anyone there?",
+          "Good afternoon",
+          "Yo",
+          "Hi assistant",
+          "Hello there",
+          "Heya",
+          "Hi hi",
+          "Good day",
+          "Greetings assistant",
+          "Hello help"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Hello! Welcome to Vonova. How can I assist you with your learning journey today?"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "auth_login",
+      "patterns": {
+        "en": [
+          "How to login",
+          "Sign in",
+          "Log me in",
+          "Where is the login page?",
+          "I want to sign in",
+          "Access my account",
+          "Login link",
+          "How do I enter?",
+          "Student login",
+          "Instructor login",
+          "Can't find login",
+          "Sign into account",
+          "Login url",
+          "Open login",
+          "Go to sign in",
+          "Account access",
+          "Login help",
+          "Where do I sign in?",
+          "Login button",
+          "Authentication page"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can log in to your account here: https://vonova.tech/auth/login"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1rYyrVJpQA3OF1rCekwIDd6nXzoK6EG_Z/preview"
+      ]
+    },
+    {
+      "tag": "auth_signup",
+      "patterns": {
+        "en": [
+          "How to sign up?",
+          "Create new account",
+          "Register",
+          "Join Vonova",
+          "Make an account",
+          "Sign up link",
+          "Registration page",
+          "I want to register",
+          "New user",
+          "Start new account",
+          "Sign up for free",
+          "Create student account",
+          "Become a member",
+          "Where to register?",
+          "Sign up process",
+          "Open account",
+          "Get started",
+          "Enroll now",
+          "Registration url",
+          "How to join?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Create a new account and start learning here: https://vonova.tech/auth/register"
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1rYyrVJpQA3OF1rCekwIDd6nXzoK6EG_Z/preview"
+      ]
+    },
+    {
+      "tag": "about_team",
+      "patterns": {
+        "en": [
+          "How are Vonova developers?",
+          "Who are the developers?",
+          "Tell me about the team",
+          "Who built this site?",
+          "Vonova engineering team",
+          "Meet the creators",
+          "Who is behind Vonova?",
+          "Developer info",
+          "Are the developers good?",
+          "About the staff",
+          "Who made this platform?",
+          "Tech team details",
+          "Vonova coders",
+          "Development squad",
+          "Who runs the tech?",
+          "Meet the devs",
+          "Engineering staff",
+          "Who programmed Vonova?",
+          "Team background",
+          "Creation team"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "The Vonova team is a group of passionate engineers and educators dedicated to building the future of learning. We are doing great, thanks for asking!"
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "bot_identity",
+      "patterns": {
+        "en": [
+          "Who are you?",
+          "Are you a human?",
+          "What is your name?",
+          "Bot info",
+          "Are you AI?",
+          "Identify yourself",
+          "What can you do?",
+          "Your name",
+          "Are you a person?",
+          "Chatbot name",
+          "Who am I talking to?",
+          "Virtual assistant",
+          "Are you real?",
+          "Robot or human?",
+          "Explain yourself",
+          "What are you?",
+          "Bot details",
+          "Helper name",
+          "AI assistant",
+          "Your identity"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "I am the Vonova AI Assistant, here to help you navigate the platform, find courses, and solve any issues you might have."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_chat_intro",
+      "patterns": {
+        "en": [
+          "How can I chat with a PDF?",
+          "Can I interact with a PDF?",
+          "Tell me how to use PDF chat",
+          "How do I ask questions from a PDF?",
+          "I want to chat with a PDF document",
+          "Is it possible to talk to a PDF?",
+          "Explain PDF chat feature",
+          "Guide me to chat with PDFs",
+          "How do I get information from a PDF?",
+          "How to use the PDF chat tool?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can upload a PDF to Vonova and start asking questions or get summaries directly from the document."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_summarization",
+      "patterns": {
+        "en": [
+          "how to summary pdf",
+          "How can I summarize a PDF?",
+          "Can I get a summary of a PDF?",
+          "Tell me how to summarize a document",
+          "I want to summarize my PDF",
+          "Guide me to PDF summarization",
+          "Is PDF summarization possible?",
+          "Explain how to summarize PDFs",
+          "Step by step PDF summarization",
+          "How do I get key points from a PDF?",
+          "How to generate summary from PDF?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova can summarize any PDF you upload. Just provide the document and ask for a summary or key points."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_upload",
+      "patterns": {
+        "en": [
+          "How do I upload a PDF?",
+          "Can I upload my PDF?",
+          "Guide me to upload PDF files",
+          "I want to upload a PDF document",
+          "Explain the PDF upload process",
+          "How to send a PDF to Vonova?",
+          "Step by step PDF upload",
+          "Can I add a PDF file?",
+          "Where do I upload a PDF?",
+          "How do I attach a PDF?",
+          "upload file"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can upload your PDF through Vonova's PDF Summary feature by clicking the upload button and selecting your file."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1qNcKcgOtg3mMF6ifZXvNntKUqig3BefK/preview"
+      ]
+    },
+    {
+      "tag": "pdf_questions",
+      "patterns": {
+        "en": [
+          "How do I ask questions about a PDF?",
+          "Can I query a PDF?",
+          "Tell me how to get answers from PDF",
+          "I want to ask questions from a PDF",
+          "Guide me to ask PDF questions",
+          "Is it possible to question a PDF?",
+          "Explain PDF question feature",
+          "How do I interact with PDF content?",
+          "Step by step PDF querying",
+          "How to ask info from a PDF?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "After uploading a PDF, simply type your questions in Vonova and get answers from the document's content."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_keypoints",
+      "patterns": {
+        "en": [
+          "How do I get key points from a PDF?",
+          "Can I extract main ideas from PDF?",
+          "Guide me to find key points in a PDF",
+          "I want the main points from a PDF",
+          "Explain how to get key points",
+          "Is it possible to extract key info from PDF?",
+          "How to summarize key ideas in PDF?",
+          "Step by step key points extraction",
+          "How do I find important points in a PDF?",
+          "Can Vonova highlight main points?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova can identify key points from your PDF. Just upload the file and ask for key points or main ideas."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_multiple_file",
+      "patterns": {
+        "en": [
+          "Can I upload multiple PDFs?",
+          "How do I handle several PDF files?",
+          "Tell me about multi PDF upload",
+          "I want to use multiple PDFs",
+          "Guide me for multiple PDF documents",
+          "Is multi-file PDF supported?",
+          "How to analyze several PDFs?",
+          "Can I chat with multiple PDFs?",
+          "Step by step multi PDF usage",
+          "How to summarize multiple PDFs?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes! You can upload multiple PDFs to Vonova and query each document or summarize them individually."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_search",
+      "patterns": {
+        "en": [
+          "Can I search inside a PDF?",
+          "How do I find info in a PDF?",
+          "Tell me how to search PDF content",
+          "I want to look for something in a PDF",
+          "Guide me to PDF searching",
+          "Is PDF search available?",
+          "How to locate info in PDF?",
+          "Step by step PDF search",
+          "Can I find terms inside PDF?",
+          "How to query PDF content?",
+          "how to search inside pdf"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova allows you to search and find information inside your PDF using natural language questions."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_text_extraction",
+      "patterns": {
+        "en": [
+          "How do I extract text from a PDF?",
+          "Can I get text from PDF?",
+          "Guide me to PDF text extraction",
+          "I want PDF content as text",
+          "Explain PDF text extraction feature",
+          "Is text extraction from PDF possible?",
+          "How to copy content from PDF?",
+          "Step by step text extraction",
+          "Can Vonova pull text from PDF?",
+          "How to retrieve PDF text?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can extract text from any PDF by uploading it to Vonova. Then you can read, summarize, or query the text."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_language_support",
+      "patterns": {
+        "en": [
+          "Does PDF chat work in other languages?",
+          "Can I summarize PDFs in multiple languages?",
+          "Guide me about PDF language support",
+          "I want to use PDF chat in another language",
+          "Is multilingual PDF supported?",
+          "How to translate PDFs?",
+          "Step by step PDF language usage",
+          "Can Vonova understand foreign PDFs?",
+          "How to summarize non-English PDFs?",
+          "Does PDF chat understand multiple languages?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova supports multiple languages in PDFs. Upload your document and ask questions or summaries in your preferred language."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_security",
+      "patterns": {
+        "en": [
+          "Is my PDF safe?",
+          "How secure is PDF chat?",
+          "Tell me about PDF data privacy",
+          "I want to know PDF security",
+          "Are PDFs uploaded privately?",
+          "Guide me to PDF safety",
+          "Does Vonova store my PDF?",
+          "Is PDF content encrypted?",
+          "Step by step PDF security",
+          "How does Vonova protect PDF files?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Your PDFs are handled securely. Vonova ensures privacy and does not share your documents with others."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_large_files",
+      "patterns": {
+        "en": [
+          "Can I upload large PDFs?",
+          "Is there a file size limit for PDF?",
+          "Guide me to upload big PDF files",
+          "I want to summarize a big PDF",
+          "Explain large PDF handling",
+          "Step by step large PDF upload",
+          "How to process big PDF files?",
+          "Can Vonova read huge PDFs?",
+          "Is PDF size restricted?",
+          "How to manage large PDFs?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": ["Maximam 1000 page "],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_tables_charts",
+      "patterns": {
+        "en": [
+          "Can Vonova read tables in PDFs?",
+          "How to extract charts from PDF?",
+          "Guide me to PDF table extraction",
+          "I want PDF data tables",
+          "Explain table reading in PDF",
+          "Can PDF charts be summarized?",
+          "Step by step table extraction",
+          "How to analyze graphs in PDF?",
+          "Does Vonova process charts?",
+          "How to get table data from PDF?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova can extract tables and understand charts in PDFs to provide summaries and answers."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_images",
+      "patterns": {
+        "en": [
+          "Can Vonova analyze images in PDFs?",
+          "How to extract images from PDF?",
+          "Guide me to image extraction",
+          "I want to summarize PDF with images",
+          "Explain image support in PDFs",
+          "Can I chat about PDF images?",
+          "Step by step image handling",
+          "How to interpret images in PDF?",
+          "Does Vonova read pictures in PDFs?",
+          "How to process visual content in PDFs?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova can detect and analyze images in PDFs, helping you summarize and understand visual content."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_sections",
+      "patterns": {
+        "en": [
+          "How do I get specific sections from a PDF?",
+          "Can I summarize only part of a PDF?",
+          "Guide me to extract PDF sections",
+          "I want a chapter summary",
+          "Explain section extraction in PDFs",
+          "Is partial PDF summary possible?",
+          "Step by step section summary",
+          "How to choose part of PDF for chat?",
+          "Can Vonova focus on PDF chapters?",
+          "How to get specific content from PDF?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can select specific sections or chapters in a PDF, and Vonova will summarize or answer questions about them."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_highlight",
+      "patterns": {
+        "en": [
+          "Can I highlight parts of a PDF?",
+          "How to mark important text in PDF?",
+          "Guide me to PDF highlighting",
+          "I want to emphasize sections",
+          "Explain PDF highlight feature",
+          "Step by step text highlighting",
+          "Can Vonova detect highlighted text?",
+          "How to annotate PDF content?",
+          "Is marking important text possible?",
+          "How to use PDF highlights for summary?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Vonova allows you to highlight and annotate important parts in your PDF for better summaries."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1qNcKcgOtg3mMF6ifZXvNntKUqig3BefK/preview"
+      ]
+    },
+    {
+      "tag": "pdf_export",
+      "patterns": {
+        "en": [
+          "Can I export summarized PDF?",
+          "How to save PDF summary?",
+          "Guide me to PDF export",
+          "I want to download summary",
+          "Explain PDF export feature",
+          "Step by step PDF summary save",
+          "Can Vonova generate a report from PDF?",
+          "How to get PDF summary file?",
+          "Is exporting summary possible?",
+          "How to download key points from PDF?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "After summarizing your PDF, you cannot export the summary as a file for offline use."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_ai_assistant",
+      "patterns": {
+        "en": [
+          "Does Vonova use AI for PDFs?",
+          "Is PDF chat AI powered?",
+          "Guide me about AI assistant",
+          "I want to use AI for PDF",
+          "Explain AI in PDF summarization",
+          "Step by step AI PDF interaction",
+          "How does AI help in PDF chat?",
+          "Can AI summarize PDFs?",
+          "How to use AI assistant on PDF?",
+          "Is Vonova AI capable for PDFs?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Yes! Vonova uses AI to understand your PDF content, answer questions, and provide summaries intelligently."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_limitations",
+      "patterns": {
+        "en": [
+          "Are there limitations for PDF chat?",
+          "What PDFs cannot be processed?",
+          "Guide me about PDF restrictions",
+          "I want to know PDF limits",
+          "Explain PDF feature limitations",
+          "Step by step PDF constraints",
+          "Can all PDFs be summarized?",
+          "Are scanned PDFs supported?",
+          "Limitations for PDF AI chat?",
+          "How to handle unsupported PDFs?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "Most PDFs work, but some scanned or encrypted files may not be fully readable. Vonova will notify you if there is an issue."
+        ],
+        "ar": []
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_help",
+      "patterns": {
+        "en": [
+          "Where can I get help with PDF chat?",
+          "Can I get instructions for PDF feature?",
+          "Guide me to PDF help",
+          "I want support for PDF summarization",
+          "Explain how to use help for PDFs",
+          "Step by step PDF guidance",
+          "How to ask for PDF support?",
+          "Can Vonova guide me on PDFs?",
+          "Where to find PDF tutorial?",
+          "How do I get assistance for PDF chat?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can access Vonova's help or tutorials for PDF chat and summarization directly within the platform."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1qNcKcgOtg3mMF6ifZXvNntKUqig3BefK/preview"
+      ]
+    },
+    {
+      "tag": "pdf_feedback",
+      "patterns": {
+        "en": [
+          "How do I give feedback on PDF chat?",
+          "Can I report issues with PDF feature?",
+          "Guide me to PDF feedback",
+          "I want to send feedback",
+          "Explain PDF feedback process",
+          "Step by step feedback submission",
+          "Can Vonova receive PDF suggestions?",
+          "How to report PDF errors?",
+          "Where to submit PDF feedback?",
+          "How do I share my PDF experience?"
+        ],
+        "ar": []
+      },
+      "responses": {
+        "en": [
+          "You can submit feedback on PDF chat and summarization within Vonova FeedBack to help improve the feature."
+        ],
+        "ar": []
+      },
+      "images": [
+        "https://drive.google.com/file/d/1sW3EQkFkyvcz8ELi7Lq70L0FucxGNeq3/preview"
+      ]
+    }
+  ]
+}

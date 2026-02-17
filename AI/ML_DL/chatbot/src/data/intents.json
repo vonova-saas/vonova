@@ -1,0 +1,2942 @@
+{
+  "intents": [
+    {
+      "tag": "student_update_email",
+      "patterns": {
+        "en": [
+          "Change my email",
+          "Update email address",
+          "New email",
+          "Edit contact info",
+          "I want to change my email",
+          "Modify email address",
+          "Correct my email",
+          "Wrong email address",
+          "Update my contact details",
+          "Switch email address",
+          "Replace current email",
+          "Email change request",
+          "How do I change my email?",
+          "Update registered email",
+          "Set a new email",
+          "Email update settings",
+          "My email is incorrect",
+          "Change account email",
+          "Edit email",
+          "Input new email"
+        ],
+        "ar": [
+          "تغيير بريدي الإلكتروني",
+          "تحديث عنوان البريد",
+          "بريد إلكتروني جديد",
+          "تعديل معلومات الاتصال",
+          "أريد تغيير إيميلي",
+          "تعديل البريد الإلكتروني",
+          "تصحيح بريدي الإلكتروني",
+          "عنوان البريد خاطئ",
+          "تحديث بيانات الاتصال الخاصة بي",
+          "تبديل عنوان البريد",
+          "استبدال البريد الحالي",
+          "طلب تغيير البريد",
+          "كيف أغير بريدي الإلكتروني؟",
+          "تحديث البريد المسجل",
+          "تعيين بريد جديد",
+          "إعدادات تحديث البريد",
+          "بريدي الإلكتروني غير صحيح",
+          "تغيير بريد الحساب",
+          "تعديل الإيميل",
+          "إدخال بريد جديد"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Update your email address securely here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": [
+          "قم بتحديث عنوان بريدك الإلكتروني بشكل آمن من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1pPEJ0vYdYVxjqZzAunH-MB_Uu-Cu1MzE/preview"
+      ]
+    },
+    {
+      "tag": "student_refund",
+      "patterns": {
+        "en": [
+          "Request refund",
+          "Money back",
+          "Return course",
+          "Refund policy",
+          "Can I get a refund?",
+          "Cancel purchase",
+          "Get money back",
+          "Reimbursement request",
+          "Course refund",
+          "I bought this by mistake",
+          "Refund status",
+          "How to get a refund?",
+          "Money back guarantee",
+          "Return this class",
+          "Refund process",
+          "Apply for refund",
+          "Cancel and refund",
+          "Dispute charge",
+          "Refund help",
+          "I need a refund"
+        ],
+        "ar": [
+          "طلب استرداد الأموال",
+          "استرجاع نقدي",
+          "إرجاع الكورس",
+          "سياسة الاسترداد",
+          "هل يمكنني استرداد أموالي؟",
+          "إلغاء الشراء",
+          "استعادة المال",
+          "طلب تعويض",
+          "استرداد قيمة الدورة",
+          "اشتريت هذا عن طريق الخطأ",
+          "حالة الاسترداد",
+          "كيف أحصل على استرداد؟",
+          "ضمان استعادة الأموال",
+          "إرجاع هذا الدرس",
+          "عملية الاسترداد",
+          "التقديم على طلب استرداد",
+          "إلغاء واسترداد",
+          "اعتراض على الدفع",
+          "مساعدة في الاسترداد",
+          "أحتاج لاسترداد أموالي"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Submit a refund request for a course here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": [
+          "قم بتقديم طلب استرداد أموال للدورة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/10ZUA8QOZdQurNv3axSmfzBiu0C1U6kLe/preview"
+      ]
+    },
+    {
+      "tag": "student_font_size",
+      "patterns": {
+        "en": [
+          "Change font size",
+          "Increase text size",
+          "Make text bigger",
+          "Accessibility settings",
+          "Text is too small",
+          "Adjust font",
+          "Font settings",
+          "Can I make the text larger?",
+          "Zoom text",
+          "Increase font",
+          "Reading settings",
+          "Text size",
+          "Bigger letters",
+          "Change text size",
+          "Font is too small",
+          "Readability settings",
+          "Enlarge text",
+          "Scale font",
+          "Modify font size",
+          "Text scaling"
+        ],
+        "ar": [
+          "تغيير حجم الخط",
+          "تكبير حجم النص",
+          "اجعل النص أكبر",
+          "إعدادات الوصول",
+          "النص صغير جداً",
+          "ضبط الخط",
+          "إعدادات الخط",
+          "هل يمكنني تكبير النص؟",
+          "تكبير النص (Zoom)",
+          "زيادة الخط",
+          "إعدادات القراءة",
+          "حجم النص",
+          "حروف أكبر",
+          "تغيير مقاس النص",
+          "الخط صغير للغاية",
+          "إعدادات وضوح القراءة",
+          "توسيع النص",
+          "تغيير قياس الخط",
+          "تعديل حجم الخط",
+          "تحجيم النص"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Adjust the font size for better readability here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "اضبط حجم الخط لتحسين وضوح القراءة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1D3Niej3HQgjkx3YyslE2DWg_ADhqt4LI/preview?"
+      ]
+    },
+    {
+      "tag": "student_language_arabic",
+      "patterns": {
+        "en": [
+          "Switch to Arabic",
+          "Arabic language",
+          "Change site language",
+          "Translate to Arabic",
+          "I want Arabic",
+          "Language settings",
+          "Arabic interface",
+          "View in Arabic",
+          "Set language to Arabic",
+          "Arabic translation",
+          "Can I change language?",
+          "Language preference",
+          "Toggle language",
+          "Arabic mode",
+          "Switch site language",
+          "Display in Arabic",
+          "Change to Arabic",
+          "Arabic text",
+          "Language options"
+        ],
+        "ar": [
+          "التحويل للعربية",
+          "اللغة العربية",
+          "تغيير لغة الموقع",
+          "الترجمة للعربية",
+          "أريد اللغة العربية",
+          "إعدادات اللغة",
+          "واجهة عربية",
+          "عرض بالعربية",
+          "ضبط اللغة للعربية",
+          "ترجمة عربية",
+          "هل يمكنني تغيير اللغة؟",
+          "تفضيلات اللغة",
+          "تبديل اللغة",
+          "الوضع العربي",
+          "تبديل لغة الموقع",
+          "العرض بالعربية",
+          "التغيير للعربية",
+          "نص عربي",
+          "خيارات اللغة"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Switch the interface language to Arabic here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "قم بتحويل لغة الواجهة إلى العربية من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1aGX72jEGeDnY5-QtDb1512qoydnzX6pi/preview?"
+      ]
+    },
+    {
+      "tag": "student_gift_course",
+      "patterns": {
+        "en": [
+          "Gift a course",
+          "Buy for friend",
+          "Send gift",
+          "Purchase as gift",
+          "Course gifting",
+          "Give a class",
+          "Buy course for someone else",
+          "Gift option",
+          "Send course to friend",
+          "Present a course",
+          "Can I gift this?",
+          "Purchase gift",
+          "Gifting feature",
+          "Buy as a present",
+          "Send as gift",
+          "Share course as gift",
+          "Gift purchase",
+          "How to gift a course?",
+          "Send learning gift",
+          "Buy for others"
+        ],
+        "ar": [
+          "إهداء دورة",
+          "شراء لصديق",
+          "إرسال هدية",
+          "الشراء كهدية",
+          "إهداء الكورسات",
+          "منح دورة",
+          "شراء دورة لشخص آخر",
+          "خيار الهدية",
+          "إرسال دورة لصديق",
+          "تقديم دورة",
+          "هل يمكنني إهداء هذا؟",
+          "شراء هدية",
+          "ميزة الإهداء",
+          "شراء كهدية",
+          "إرسال كهدية",
+          "مشاركة الكورس كهدية",
+          "عملية شراء هدية",
+          "كيف أهدي دورة؟",
+          "إرسال هدية تعليمية",
+          "الشراء للآخرين"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Purchase a course as a gift for someone else here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": [
+          "يمكنك شراء دورة كهدية لشخص آخر من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1H04CPF-6v4qaqqwgU8XGsu7S85QTLa49/preview?"
+      ]
+    },
+    {
+      "tag": "student_verify_email",
+      "patterns": {
+        "en": [
+          "Verify email address",
+          "Resend verification link",
+          "Confirm email",
+          "Activate account",
+          "Email verification",
+          "I didn't get the link",
+          "Verify my account",
+          "Send confirmation email",
+          "Check email status",
+          "Validate email",
+          "Verification code",
+          "How to verify email?",
+          "Confirm my address",
+          "Resend email",
+          "Verification problem",
+          "Account activation",
+          "Verify login",
+          "Email confirmation link",
+          "Complete registration",
+          "Verify email now"
+        ],
+        "ar": [
+          "تأكيد البريد الإلكتروني",
+          "إعادة إرسال رابط التأكيد",
+          "تأكيد الإيميل",
+          "تفعيل الحساب",
+          "التحقق من البريد",
+          "لم يصلني الرابط",
+          "تحقق من حسابي",
+          "إرسال بريد التأكيد",
+          "التحقق من حالة البريد",
+          "تصديق البريد الإلكتروني",
+          "كود التفعيل",
+          "كيف أؤكد بريدي الإلكتروني؟",
+          "تأكيد عنواني",
+          "إعادة إرسال البريد",
+          "مشكلة في التفعيل",
+          "تنشيط الحساب",
+          "تحقق من تسجيل الدخول",
+          "رابط تأكيد البريد",
+          "إكمال التسجيل",
+          "أكد بريدك الآن"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Resend your email verification link from here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": [
+          "أعد إرسال رابط تأكيد البريد الإلكتروني الخاص بك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1n8f-yl6wdG7pu_cCTBjLh5kCGttOI5Ms/preview"
+      ]
+    },
+    {
+      "tag": "student_newsletter",
+      "patterns": {
+        "en": [
+          "Unsubscribe newsletter",
+          "Stop marketing emails",
+          "Email preferences",
+          "Manage subscriptions",
+          "Stop spam",
+          "Opt out of emails",
+          "Newsletter settings",
+          "Too many emails",
+          "Subscription settings",
+          "Turn off newsletter",
+          "Email alerts",
+          "Marketing preferences",
+          "Unsubscribe from list",
+          "Stop sending emails",
+          "Change email frequency",
+          "Newsletter subscription",
+          "Manage email alerts",
+          "Remove from mailing list",
+          "Email notifications off",
+          "Cancel newsletter"
+        ],
+        "ar": [
+          "إلغاء الاشتراك في النشرة الإخبارية",
+          "إيقاف رسائل التسويق",
+          "تفضيلات البريد الإلكتروني",
+          "إدارة الاشتراكات",
+          "إيقاف البريد المزعج",
+          "إلغاء تلقي الإيميلات",
+          "إعدادات النشرة الإخبارية",
+          "رسائل كثيرة جداً",
+          "إعدادات الاشتراك",
+          "إيقاف النشرة الإخبارية",
+          "تنبيهات البريد",
+          "تفضيلات التسويق",
+          "إلغاء الاشتراك من القائمة",
+          "توقف عن إرسال الإيميلات",
+          "تغيير تكرار الرسائل",
+          "اشتراك النشرة الإخبارية",
+          "إدارة تنبيهات البريد",
+          "الإزالة من قائمة المراسلات",
+          "إيقاف إشعارات البريد",
+          "إلغاء النشرة"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage your newsletter subscriptions here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/notifications"
+        ],
+        "ar": [
+          "إدارة اشتراكات النشرة الإخبارية الخاصة بك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/notifications"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "student_blocked_users",
+      "patterns": {
+        "en": [
+          "Block user",
+          "Unblock person",
+          "Manage blocked list",
+          "Stop harassment",
+          "Block someone",
+          "Blocked accounts",
+          "Unblock user",
+          "User blocking",
+          "Privacy settings block",
+          "Restrict user",
+          "Blocking list",
+          "Remove block",
+          "How to block?",
+          "Stop user from contacting",
+          "Block list",
+          "Ban a user",
+          "Manage blocks",
+          "Unlock user",
+          "Ignore user",
+          "Block contact"
+        ],
+        "ar": [
+          "حظر مستخدم",
+          "إلغاء حظر شخص",
+          "إدارة قائمة الحظر",
+          "إيقاف المضايقات",
+          "حظر شخص ما",
+          "الحسابات المحظورة",
+          "إلغاء حظر المستخدم",
+          "حظر المستخدمين",
+          "حظر من إعدادات الخصوصية",
+          "تقييد مستخدم",
+          "قائمة الحظر",
+          "إزالة الحظر",
+          "كيف أقوم بالحظر؟",
+          "منع مستخدم من الاتصال",
+          "قائمة المحظورين",
+          "حظر حساب",
+          "إدارة عمليات الحظر",
+          "فتح الحظر عن مستخدم",
+          "تجاهل مستخدم",
+          "حظر جهة اتصال"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage your blocked users list here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "إدارة قائمة المستخدمين المحظورين من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "student_skill_graph",
+      "patterns": {
+        "en": [
+          "My skill graph",
+          "Learning path progress",
+          "Skill visualization",
+          "What did I learn?",
+          "View skills",
+          "Skill chart",
+          "Progress graph",
+          "Learning stats",
+          "Skill tree",
+          "My growth",
+          "Skill tracking",
+          "Knowledge graph",
+          "Check my skills",
+          "Learning visualization",
+          "Skill report",
+          "My statistics",
+          "Competency graph",
+          "Visual progress",
+          "Skill map",
+          "Where is my skill graph?"
+        ],
+        "ar": [
+          "رسم بياني لمهاراتي",
+          "تقدم مسار التعلم",
+          "تصوير المهارات",
+          "ماذا تعلمت؟",
+          "عرض المهارات",
+          "مخطط المهارات",
+          "رسم بياني للتقدم",
+          "إحصائيات التعلم",
+          "شجرة المهارات",
+          "نموي التعليمي",
+          "تتبع المهارات",
+          "مخطط المعرفة",
+          "التحقق من مهاراتي",
+          "تصوير مرئي للتعلم",
+          "تقرير المهارات",
+          "إحصائياتي",
+          "رسم بياني للكفاءة",
+          "تقدم مرئي",
+          "خريطة المهارات",
+          "أين أجد الرسم البياني لمهاراتي؟"
+        ]
+      },
+      "responses": {
+        "en": [
+          "View your personal skill growth graph here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "عرض الرسم البياني الشخصي لنمو مهاراتك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1h8FR_6Qw3VkCfaQl3-JVmwrljbbueNzy/preview"
+      ]
+    },
+    {
+      "tag": "student_lab_hours",
+      "patterns": {
+        "en": [
+          "Remaining lab time",
+          "Virtual machine quota",
+          "Buy more lab hours",
+          "Check usage",
+          "How many hours left?",
+          "Lab access time",
+          "Purchase lab time",
+          "Check lab balance",
+          "VM hours remaining",
+          "Cloud lab quota",
+          "My lab timer",
+          "Extend lab session",
+          "Lab subscription status",
+          "Time limit on labs",
+          "Add lab hours",
+          "Practice time left",
+          "Virtual lab credit",
+          "Lab usage report",
+          "Running low on lab time",
+          "Top up lab hours"
+        ],
+        "ar": [
+          "وقت المختبر المتبقي",
+          "حصة الجهاز الافتراضي",
+          "شراء المزيد من ساعات المختبر",
+          "التحقق من الاستخدام",
+          "كم عدد الساعات المتبقية؟",
+          "وقت الوصول للمختبر",
+          "شراء وقت مختبر",
+          "التحقق من رصيد المختبر",
+          "ساعات VM المتبقية",
+          "حصة المختبر السحابي",
+          "مؤقت المختبر الخاص بي",
+          "تمديد جلسة المختبر",
+          "حالة اشتراك المختبر",
+          "الحد الزمني للمختبرات",
+          "إضافة ساعات مختبر",
+          "وقت التدريب المتبقي",
+          "رصيد المختبر الافتراضي",
+          "تقرير استخدام المختبر",
+          "وقت المختبر يوشك على الانتهاء",
+          "شحن ساعات المختبر"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Check your remaining virtual lab hours here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "تحقق من ساعات المختبر الافتراضي المتبقية لديك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1prHWxDWnX_BBZhdtAgGcjVeZ55XUds-B/preview"
+      ]
+    },
+    {
+      "tag": "student_contact_admin",
+      "patterns": {
+        "en": [
+          "Report serious issue",
+          "Contact administrator",
+          "Escalate ticket",
+          "Legal inquiry",
+          "Talk to manager",
+          "Admin support",
+          "Urgent help needed",
+          "Site administration",
+          "Report abuse",
+          "Complaint to admin",
+          "Contact owner",
+          "Official inquiry",
+          "Safety report",
+          "System administrator",
+          "Direct support line",
+          "Management contact",
+          "Report violation",
+          "Help desk admin",
+          "Emergency contact",
+          "Escalate my complaint"
+        ],
+        "ar": [
+          "الإبلاغ عن مشكلة خطيرة",
+          "الاتصال بالمسؤول",
+          "تصعيد التذكرة",
+          "استفسار قانوني",
+          "التحدث إلى المدير",
+          "دعم الإدارة",
+          "بحاجة لمساعدة عاجلة",
+          "إدارة الموقع",
+          "الإبلاغ عن إساءة",
+          "شكوى للمسؤول",
+          "الاتصال بالمالك",
+          "استفسار رسمي",
+          "تقرير سلامة",
+          "مسؤول النظام",
+          "خط الدعم المباشر",
+          "الاتصال بالإدارة",
+          "الإبلاغ عن انتهاك",
+          "مسؤول مكتب المساعدة",
+          "جهة اتصال للطوارئ",
+          "تصعيد شكواي"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Contact the platform administration directly here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": [
+          "اتصل بإدارة المنصة مباشرة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/10ZUA8QOZdQurNv3axSmfzBiu0C1U6kLe/preview"
+      ]
+    },
+    {
+      "tag": "student_bookmarks",
+      "patterns": {
+        "en": [
+          "My bookmarks",
+          "Saved lessons",
+          "Favorite videos",
+          "Watch later",
+          "Where are my saved items?",
+          "Access bookmarks",
+          "My list",
+          "Bookmarked courses",
+          "View favorites",
+          "Show saved content",
+          "Manage bookmarks",
+          "Saved for later",
+          "Video wishlist",
+          "My reading list",
+          "Pinned lessons",
+          "Find my bookmarks",
+          "Open watch later",
+          "Favorites list",
+          "Saved tutorials",
+          "Go to bookmarks"
+        ],
+        "ar": [
+          "إشاراتي المرجعية",
+          "الدروس المحفوظة",
+          "الفيديوهات المفضلة",
+          "المشاهدة لاحقاً",
+          "أين هي العناصر المحفوظة؟",
+          "الوصول إلى الإشارات المرجعية",
+          "قائمتي",
+          "الكورسات المحفوظة",
+          "عرض المفضلة",
+          "إظهار المحتوى المحفوظ",
+          "إدارة الإشارات المرجعية",
+          "حفظ لوقت لاحق",
+          "قائمة رغبات الفيديو",
+          "قائمة القراءة الخاصة بي",
+          "الدروس المثبتة",
+          "البحث عن إشاراتي المرجعية",
+          "فتح المشاهدة لاحقاً",
+          "قائمة المفضلة",
+          "الشروحات المحفوظة",
+          "الانتقال إلى الإشارات المرجعية"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access all your bookmarked lessons here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "الوصول إلى جميع دروسك المحفوظة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_thumbnail",
+      "patterns": {
+        "en": [
+          "Upload course image",
+          "Change thumbnail",
+          "Cover photo",
+          "Course artwork",
+          "Set course picture",
+          "Update cover image",
+          "Thumbnail dimensions",
+          "Upload new photo",
+          "Course icon",
+          "Preview image",
+          "Edit course visual",
+          "Replace thumbnail",
+          "Course banner",
+          "Image upload",
+          "Media cover",
+          "Display picture",
+          "Course card image",
+          "Photo settings",
+          "Change course art",
+          "Upload graphics"
+        ],
+        "ar": [
+          "تحميل صورة الكورس",
+          "تغيير الصورة المصغرة",
+          "صورة الغلاف",
+          "عمل فني للكورس",
+          "تعيين صورة الدورة",
+          "تحديث صورة الغلاف",
+          "أبعاد الصورة المصغرة",
+          "تحميل صورة جديدة",
+          "أيقونة الكورس",
+          "صورة المعاينة",
+          "تعديل مرئيات الكورس",
+          "استبدال الصورة المصغرة",
+          "بنر الكورس",
+          "تحميل صورة",
+          "غلاف الميديا",
+          "صورة العرض",
+          "صورة بطاقة الكورس",
+          "إعدادات الصور",
+          "تغيير فن الكورس",
+          "تحميل الجرافيكس"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Upload or change your course thumbnail here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": [
+          "تحميل أو تغيير الصورة المصغرة لكورسك من هنا: https://instructor.vonova.tech/555/courses-management/create"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1LVMFPfGnCfgVYcaeu2QHLxW9ws8K0H5a/preview"
+      ]
+    },
+    {
+      "tag": "instructor_pricing",
+      "patterns": {
+        "en": [
+          "Set course price",
+          "Change pricing",
+          "Free vs Paid",
+          "Currency settings",
+          "Course cost",
+          "Price tier",
+          "Make course free",
+          "Update price",
+          "Pricing strategy",
+          "Set currency",
+          "Discount options",
+          "Course fee",
+          "Payment settings",
+          "Charge for course",
+          "Pricing plan",
+          "Edit cost",
+          "Monetization settings",
+          "Sale price",
+          "Global pricing",
+          "Manage fees"
+        ],
+        "ar": [
+          "تحديد سعر الكورس",
+          "تغيير التسعير",
+          "مجاني مقابل مدفوع",
+          "إعدادات العملة",
+          "تكلفة الكورس",
+          "فئة السعر",
+          "جعل الكورس مجانياً",
+          "تحديث السعر",
+          "استراتيجية التسعير",
+          "تعيين العملة",
+          "خيارات الخصم",
+          "رسوم الكورس",
+          "إعدادات الدفع",
+          "فرض رسوم على الكورس",
+          "خطة التسعير",
+          "تعديل التكلفة",
+          "إعدادات تحقيق الربح",
+          "سعر البيع",
+          "التسعير العالمي",
+          "إدارة الرسوم"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Set or change your course pricing tiers here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": [
+          "تحديد أو تغيير فئات تسعير كورسك من هنا: https://instructor.vonova.tech/555/courses-management"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1E8ewYVsYc7H5xNGk7sxalkPPMo2jtTEF/preview"
+      ]
+    },
+    {
+      "tag": "instructor_drip",
+      "patterns": {
+        "en": [
+          "Drip schedule",
+          "Release content later",
+          "Scheduled lessons",
+          "Timed access",
+          "Content locking",
+          "Schedule release",
+          "Drip feed content",
+          "Unlock over time",
+          "Set availability date",
+          "Lesson timer",
+          "Release schedule",
+          "Gradual access",
+          "Timed lessons",
+          "Delay content",
+          "Drip settings",
+          "Access control time",
+          "Sequential release",
+          "Weekly unlock",
+          "Schedule module",
+          "Content timer"
+        ],
+        "ar": [
+          "جدول التنقيط (Drip)",
+          "إصدار المحتوى لاحقاً",
+          "دروس مجدولة",
+          "وصول مؤقت",
+          "قفل المحتوى",
+          "جدولة الإصدار",
+          "تغذية المحتوى تدريجياً",
+          "فتح القفل بمرور الوقت",
+          "تحديد تاريخ التوفر",
+          "مؤقت الدرس",
+          "جدول الإصدار",
+          "وصول تدريجي",
+          "دروس مؤقتة",
+          "تأخير المحتوى",
+          "إعدادات Drip",
+          "وقت التحكم في الوصول",
+          "إصدار تسلسلي",
+          "فتح أسبوعي",
+          "جدولة الوحدة",
+          "مؤقت المحتوى"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Configure content drip schedules here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": [
+          "تكوين جداول إصدار المحتوى التدريجي من هنا: https://instructor.vonova.tech/555/courses-management"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_unpublished",
+      "patterns": {
+        "en": [
+          "Unpublish course",
+          "Draft courses",
+          "Take course offline",
+          "Hide course",
+          "Make course private",
+          "Remove from marketplace",
+          "Switch to draft",
+          "Stop selling course",
+          "Unlist course",
+          "Hidden courses",
+          "Temporarily disable course",
+          "Draft mode",
+          "Offline status",
+          "Retire course",
+          "Hide from students",
+          "Unpublishing options",
+          "Revert to draft",
+          "Course visibility",
+          "Disable access",
+          "Manage drafts"
+        ],
+        "ar": [
+          "إلغاء نشر الكورس",
+          "كورسات المسودة",
+          "جعل الكورس غير متاح",
+          "إخفاء الكورس",
+          "جعل الكورس خاصاً",
+          "الإزالة من المتجر",
+          "التحويل إلى مسودة",
+          "التوقف عن بيع الكورس",
+          "إلغاء إدراج الكورس",
+          "الكورسات المخفية",
+          "تعطيل الكورس مؤقتاً",
+          "وضع المسودة",
+          "الحالة غير متصل",
+          "إحالة الكورس للتقاعد",
+          "إخفاء عن الطلاب",
+          "خيارات إلغاء النشر",
+          "العودة للمسودة",
+          "ظهور الكورس",
+          "تعطيل الوصول",
+          "إدارة المسودات"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage your published and draft courses here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": [
+          "إدارة كورساتك المنشورة والمسودات من هنا: https://instructor.vonova.tech/555/courses-management/create"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "instructor_course_goals",
+      "patterns": {
+        "en": [
+          "Learning objectives",
+          "What will students learn",
+          "Target audience",
+          "Course outcomes",
+          "Edit goals",
+          "Course requirements",
+          "Prerequisites",
+          "Intended learners",
+          "Curriculum goals",
+          "What is this course for?",
+          "Student expectations",
+          "Key takeaways",
+          "Define objectives",
+          "Who should take this?",
+          "Course description details",
+          "Learning outcomes",
+          "Skill acquisition",
+          "Goal setting",
+          "Requirement list",
+          "Audience settings"
+        ],
+        "ar": [
+          "أهداف التعلم",
+          "ماذا سيتعلم الطلاب",
+          "الجمهور المستهدف",
+          "نتائج الكورس",
+          "تعديل الأهداف",
+          "متطلبات الكورس",
+          "المتطلبات المسبقة",
+          "المتعلمون المستهدفون",
+          "أهداف المنهج",
+          "لمن هذا الكورس؟",
+          "توقعات الطلاب",
+          "الوجبات المعرفية الرئيسية",
+          "تحديد الأهداف",
+          "من يجب أن يأخذ هذا الكورس؟",
+          "تفاصيل وصف الكورس",
+          "مخرجات التعلم",
+          "اكتساب المهارات",
+          "تحديد الأهداف",
+          "قائمة المتطلبات",
+          "إعدادات الجمهور"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Edit your course goals and target audience here: https://instructor.vonova.tech/692718800687abe4f955c1bb/courses"
+        ],
+        "ar": [
+          "تعديل أهداف كورسك والجمهور المستهدف من هنا: https://instructor.vonova.tech/692718800687abe4f955c1bb/courses"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "student_dashboard",
+      "patterns": {
+        "en": [
+          "Go to my dashboard",
+          "Student home",
+          "My main page",
+          "Where do I start?",
+          "Open dashboard",
+          "Home screen",
+          "Overview page",
+          "My learning hub",
+          "Start page",
+          "Main menu",
+          "User dashboard",
+          "Access home",
+          "Back to dashboard",
+          "Learning center",
+          "Control panel",
+          "My activity",
+          "Personal dashboard",
+          "View dashboard",
+          "Student portal",
+          "Navigate to home"
+        ],
+        "ar": [
+          "الذهاب إلى لوحة التحكم",
+          "الرئيسية للطالب",
+          "صفحتي الرئيسية",
+          "من أين أبدأ؟",
+          "فتح لوحة التحكم",
+          "شاشة البداية",
+          "صفحة نظرة عامة",
+          "مركز التعلم الخاص بي",
+          "صفحة البدء",
+          "القائمة الرئيسية",
+          "لوحة تحكم المستخدم",
+          "الوصول للرئيسية",
+          "العودة للوحة التحكم",
+          "مركز التعلم",
+          "لوحة التحكم",
+          "نشاطي",
+          "لوحة التحكم الشخصية",
+          "عرض لوحة التحكم",
+          "بوابة الطالب",
+          "التوجه للرئيسية"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access your main student dashboard here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "الوصول إلى لوحة تحكم الطالب الرئيسية من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "student_courses",
+      "patterns": {
+        "en": [
+          "My enrolled courses",
+          "Where are my classes?",
+          "Continue watching",
+          "My learning list",
+          "Go to my courses",
+          "Access purchased courses",
+          "My library",
+          "Resume learning",
+          "Show my classes",
+          "Course list",
+          "Enrolled classes",
+          "My studies",
+          "View all courses",
+          "Current courses",
+          "My subscriptions",
+          "Learning content",
+          "Find my course",
+          "Open class",
+          "Course progress",
+          "Where is the course I bought?"
+        ],
+        "ar": [
+          "كورساتي المسجل بها",
+          "أين هي دروسي؟",
+          "متابعة المشاهدة",
+          "قائمة التعلم الخاصة بي",
+          "الذهاب إلى كورساتي",
+          "الوصول للكورسات المشتراة",
+          "مكتبتي",
+          "استئناف التعلم",
+          "إظهار دروسي",
+          "قائمة الكورسات",
+          "الصفوف المسجل بها",
+          "دراساتي",
+          "عرض كل الكورسات",
+          "الكورسات الحالية",
+          "اشتراكاتي",
+          "محتوى التعلم",
+          "البحث عن كورسي",
+          "فتح الدرس",
+          "تقدم الكورس",
+          "أين الكورس الذي اشتريته؟"
+        ]
+      },
+      "responses": {
+        "en": [
+          "View all your enrolled courses here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": [
+          "عرض جميع كورساتك المسجل بها من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/18H49vqKvwkNhkGdWzLmQOIbKWU45MkyS/preview"
+      ]
+    },
+    {
+      "tag": "student_profile",
+      "patterns": {
+        "en": [
+          "Edit my profile",
+          "Change bio",
+          "Update avatar",
+          "My student profile",
+          "Change profile picture",
+          "Edit personal info",
+          "Update name",
+          "Profile settings",
+          "My account details",
+          "Change username",
+          "Bio settings",
+          "Upload photo",
+          "Edit user profile",
+          "Personal details",
+          "Account profile",
+          "View my profile",
+          "Customize profile",
+          "Social links",
+          "Update information",
+          "My public profile"
+        ],
+        "ar": [
+          "تعديل ملفي الشخصي",
+          "تغيير السيرة الذاتية",
+          "تحديث الأفاتار",
+          "ملف الطالب الخاص بي",
+          "تغيير صورة الملف الشخصي",
+          "تعديل المعلومات الشخصية",
+          "تحديث الاسم",
+          "إعدادات الملف الشخصي",
+          "تفاصيل حسابي",
+          "تغيير اسم المستخدم",
+          "إعدادات السيرة الذاتية",
+          "تحميل صورة",
+          "تعديل ملف المستخدم",
+          "التفاصيل الشخصية",
+          "ملف الحساب",
+          "عرض ملفي الشخصي",
+          "تخصيص الملف الشخصي",
+          "الروابط الاجتماعية",
+          "تحديث المعلومات",
+          "ملفي الشخصي العام"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Update your personal profile details here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "تحديث تفاصيل ملفك الشخصي من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yU5cGqAD9TzuHGsiiSW3DeqIRBypnaKX/preview"
+      ]
+    },
+    {
+      "tag": "student_quizzes",
+      "patterns": {
+        "en": [
+          "My quiz results",
+          "Check grades",
+          "Quiz history",
+          "Where are my test scores?",
+          "assignment",
+          "View marks",
+          "Test results",
+          "Gradebook",
+          "My assignments",
+          "Quiz attempts",
+          "Check score",
+          "Did I pass?",
+          "Review quiz",
+          "Exam results",
+          "Submission history",
+          "Assessment grades",
+          "Passed quizzes",
+          "Failed tests",
+          "Score report",
+          "Quiz feedback"
+        ],
+        "ar": [
+          "نتائج اختباراتي",
+          "التحقق من الدرجات",
+          "سجل الاختبارات",
+          "أين درجات الاختبارات؟",
+          "التكاليف / الواجبات",
+          "عرض العلامات",
+          "نتائج الاختبار",
+          "سجل الدرجات",
+          "تكاليفي",
+          "محاولات الاختبار",
+          "تحقق من النتيجة",
+          "هل نجحت؟",
+          "مراجعة الاختبار",
+          "نتائج الامتحان",
+          "سجل التسليمات",
+          "درجات التقييم",
+          "الاختبارات المجتازة",
+          "الاختبارات الراسبة",
+          "تقرير الدرجات",
+          "ملاحظات الاختبار"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Check your quiz results and history here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/quizzes"
+        ],
+        "ar": [
+          "التحقق من نتائج اختباراتك وسجلك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/quizzes"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1LG8VilTslCHF_7X01ACBXCo_9bPM2ku4/preview"
+      ]
+    },
+    {
+      "tag": "student_certificates",
+      "patterns": {
+        "en": [
+          "Download certificate",
+          "My diplomas",
+          "View achievements",
+          "Share my certificate",
+          "Where is my certificate?",
+          "Get proof of completion",
+          "Print certificate",
+          "Certification download",
+          "My awards",
+          "Course completion certificate",
+          "Earned certificates",
+          "Show my diplomas",
+          "Certificate of completion",
+          "Digital badge",
+          "Save certificate PDF",
+          "Verify certificate",
+          "Check my certifications",
+          "Completion reward",
+          "Download diploma",
+          "Access certificates"
+        ],
+        "ar": [
+          "تحميل الشهادة",
+          "دبلوماتي",
+          "عرض الإنجازات",
+          "مشاركة شهادتي",
+          "أين شهادتي؟",
+          "الحصول على إثبات الإكمال",
+          "طباعة الشهادة",
+          "تحميل شهادة الاعتماد",
+          "جوائزي",
+          "شهادة إتمام الكورس",
+          "الشهادات المكتسبة",
+          "إظهار دبلوماتي",
+          "شهادة إكمال",
+          "شارة رقمية",
+          "حفظ الشهادة بصيغة PDF",
+          "التحقق من الشهادة",
+          "التحقق من شهاداتي",
+          "مكافأة الإكمال",
+          "تحميل الدبلوم",
+          "الوصول للشهادات"
+        ]
+      },
+      "responses": {
+        "en": [
+          "View and download your earned certificates here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "عرض وتحميل شهاداتك المكتسبة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1y2rU8ulxN_LuKkqlhP8zoXllLC8F-AnQ/preview"
+      ]
+    },
+    {
+      "tag": "student_wishlist",
+      "patterns": {
+        "en": [
+          "My saved courses",
+          "Wishlist",
+          "Courses I want to buy",
+          "Favorites",
+          "Add to wishlist",
+          "View wishlist",
+          "Saved for later",
+          "Shopping list",
+          "Courses to buy",
+          "My favorite classes",
+          "Check wishlist",
+          "Wishlisted items",
+          "Bookmark course",
+          "Future purchases",
+          "Manage wishlist",
+          "Remove from wishlist",
+          "Courses I like",
+          "My saved list",
+          "Access wishlist",
+          "Where are saved courses?"
+        ],
+        "ar": [
+          "كورساتي المحفوظة",
+          "قائمة الرغبات",
+          "كورسات أريد شراءها",
+          "المفضلة",
+          "إضافة لقائمة الرغبات",
+          "عرض قائمة الرغبات",
+          "محفوظ لوقت لاحق",
+          "قائمة التسوق",
+          "كورسات للشراء",
+          "دروسي المفضلة",
+          "تحقق من قائمة الرغبات",
+          "العناصر في قائمة الرغبات",
+          "حفظ الكورس",
+          "مشتريات مستقبلية",
+          "إدارة قائمة الرغبات",
+          "إزالة من قائمة الرغبات",
+          "كورسات تعجبني",
+          "قائمتي المحفوظة",
+          "الوصول لقائمة الرغبات",
+          "أين الكورسات المحفوظة؟"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access your wishlist of saved courses here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "الوصول إلى قائمة رغباتك للكورسات المحفوظة من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1SVFj2RRCqOcpf-qNm87emkVU7hNCGVB-/preview"
+      ]
+    },
+    {
+      "tag": "student_payment_methods",
+      "patterns": {
+        "en": [
+          "Update credit card",
+          "Manage payment methods",
+          "Add new card",
+          "Remove card",
+          "Change payment details",
+          "Edit credit card",
+          "Banking info",
+          "Wallet settings",
+          "Delete card",
+          "Add debit card",
+          "Payment options",
+          "Saved cards",
+          "Update billing source",
+          "Manage cards",
+          "New payment method",
+          "Credit card settings",
+          "Modify payment",
+          "Card expiration",
+          "Store payment info",
+          "Payment gateway settings"
+        ],
+        "ar": [
+          "تحديث بطاقة الائتمان",
+          "إدارة طرق الدفع",
+          "إضافة بطاقة جديدة",
+          "إزالة البطاقة",
+          "تغيير تفاصيل الدفع",
+          "تعديل بطاقة الائتمان",
+          "المعلومات البنكية",
+          "إعدادات المحفظة",
+          "حذف البطاقة",
+          "إضافة بطاقة سحب آلي",
+          "خيارات الدفع",
+          "البطاقات المحفوظة",
+          "تحديث مصدر الفوترة",
+          "إدارة البطاقات",
+          "طريقة دفع جديدة",
+          "إعدادات بطاقة الائتمان",
+          "تعديل الدفع",
+          "انتهاء صلاحية البطاقة",
+          "تخزين معلومات الدفع",
+          "إعدادات بوابة الدفع"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage your saved payment methods here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ],
+        "ar": [
+          "إدارة طرق الدفع المحفوظة الخاصة بك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/courses"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "student_security",
+      "patterns": {
+        "en": [
+          "Change password",
+          "Two factor authentication",
+          "Secure account",
+          "Login settings",
+          "Reset password",
+          "Update security",
+          "Enable 2FA",
+          "Account protection",
+          "Password management",
+          "Login history",
+          "Security check",
+          "Protect my account",
+          "Change login details",
+          "Strong password",
+          "Account safety",
+          "Privacy and security",
+          "Manage password",
+          "Authentication settings",
+          "Secure login",
+          "Update credentials"
+        ],
+        "ar": [
+          "تغيير كلمة المرور",
+          "المصادقة الثنائية",
+          "تأمين الحساب",
+          "إعدادات تسجيل الدخول",
+          "إعادة تعيين كلمة المرور",
+          "تحديث الأمان",
+          "تفعيل 2FA",
+          "حماية الحساب",
+          "إدارة كلمات المرور",
+          "سجل تسجيل الدخول",
+          "فحص أمان",
+          "حماية حسابي",
+          "تغيير تفاصيل تسجيل الدخول",
+          "كلمة مرور قوية",
+          "سلامة الحساب",
+          "الخصوصية والأمان",
+          "إدارة كلمة المرور",
+          "إعدادات المصادقة",
+          "تسجيل دخول آمن",
+          "تحديث الاعتمادات"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Update your password and security settings here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ],
+        "ar": [
+          "تحديث كلمة المرور وإعدادات الأمان الخاصة بك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings/account"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1WUeEBEfvKj1XRw2T6Xrf-FQh_CcKnwK-/preview"
+      ]
+    },
+    {
+      "tag": "student_notifications",
+      "patterns": {
+        "en": [
+          "Turn off emails",
+          "Notification settings",
+          "Manage alerts",
+          "Stop spam",
+          "Push notifications",
+          "Email preferences",
+          "Alert settings",
+          "Disable notifications",
+          "Mute emails",
+          "Configure alerts",
+          "Message settings",
+          "Notification center",
+          "Stop updates",
+          "Email frequency",
+          "Manage pings",
+          "Turn on notifications",
+          "System alerts",
+          "Communication preferences",
+          "Unsubscribe alerts",
+          "Notification control"
+        ],
+        "ar": [
+          "إيقاف رسائل البريد",
+          "إعدادات الإشعارات",
+          "إدارة التنبيهات",
+          "إيقاف المزعج",
+          "إشعارات Push",
+          "تفضيلات البريد الإلكتروني",
+          "إعدادات التنبيه",
+          "تعطيل الإشعارات",
+          "كتم الإيميلات",
+          "تكوين التنبيهات",
+          "إعدادات الرسائل",
+          "مركز الإشعارات",
+          "إيقاف التحديثات",
+          "تكرار البريد",
+          "إدارة التنبيهات الصوتية",
+          "تشغيل الإشعارات",
+          "تنبيهات النظام",
+          "تفضيلات التواصل",
+          "إلغاء اشتراك التنبيهات",
+          "التحكم في الإشعارات"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Adjust your email and push notifications here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "ضبط إشعارات البريد وإشعارات الهاتف من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "student_support",
+      "patterns": {
+        "en": [
+          "Contact support",
+          "My tickets",
+          "Help desk",
+          "Report an issue",
+          "Need help",
+          "Customer service",
+          "Open a ticket",
+          "Support center",
+          "Talk to support",
+          "Issue tracker",
+          "Get assistance",
+          "Help request",
+          "Support inbox",
+          "Report problem",
+          "Customer care",
+          "Technical support",
+          "Submit query",
+          "View support tickets",
+          "Contact us",
+          "Help portal"
+        ],
+        "ar": [
+          "الاتصال بالدعم",
+          "تذاكري",
+          "مكتب المساعدة",
+          "الإبلاغ عن مشكلة",
+          "أحتاج للمساعدة",
+          "خدمة العملاء",
+          "فتح تذكرة",
+          "مركز الدعم",
+          "التحدث إلى الدعم",
+          "متتبع المشكلات",
+          "الحصول على مساعدة",
+          "طلب مساعدة",
+          "صندوق وارد الدعم",
+          "إبلاغ عن عطل",
+          "رعاية العملاء",
+          "الدعم الفني",
+          "إرسال استفسار",
+          "عرض تذاكر الدعم",
+          "اتصل بنا",
+          "بوابة المساعدة"
+        ]
+      },
+      "responses": {
+        "en": [
+          "View your support tickets or contact us here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ],
+        "ar": [
+          "عرض تذاكر الدعم الخاصة بك أو الاتصال بنا من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/support"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1PSiB-BzqzJYNwdL3t1-Q2S7_6NjyrTEw/preview"
+      ]
+    },
+    {
+      "tag": "student_messages",
+      "patterns": {
+        "en": [
+          "My inbox",
+          "Check messages",
+          "Read notifications",
+          "Chat history",
+          "Direct messages",
+          "Private messages",
+          "View inbox",
+          "New messages",
+          "Conversations",
+          "Chat box",
+          "Message center",
+          "Read DMs",
+          "Communication hub",
+          "My chats",
+          "Inbox folder",
+          "Unread messages",
+          "Check chat",
+          "Message list",
+          "Student messages",
+          "Open inbox"
+        ],
+        "ar": [
+          "صندوق الوارد",
+          "التحقق من الرسائل",
+          "قراءة الإشعارات",
+          "سجل الدردشة",
+          "رسائل مباشرة",
+          "رسائل خاصة",
+          "عرض البريد الوارد",
+          "رسائل جديدة",
+          "محادثات",
+          "صندوق الدردشة",
+          "مركز الرسائل",
+          "قراءة الرسائل الخاصة",
+          "مركز التواصل",
+          "دردشاتي",
+          "مجلد البريد الوارد",
+          "رسائل غير مقروءة",
+          "التحقق من الدردشة",
+          "قائمة الرسائل",
+          "رسائل الطالب",
+          "فتح صندوق الوارد"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Check your inbox and messages here: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ],
+        "ar": [
+          "التحقق من صندوق الوارد والرسائل الخاصة بك من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "student_appearance",
+      "patterns": {
+        "en": [
+          "Dark mode",
+          "Change theme",
+          "Light mode",
+          "Display settings",
+          "Switch theme",
+          "Night mode",
+          "Interface color",
+          "Day mode",
+          "Site appearance",
+          "Toggle dark mode",
+          "Change background",
+          "Visual settings",
+          "Color scheme",
+          "Theme options",
+          "UI settings",
+          "Adjust brightness",
+          "Screen mode",
+          "Dark theme",
+          "Light theme",
+          "Look and feel"
+        ],
+        "ar": [
+          "الوضع المظلم",
+          "تغيير الثيم",
+          "الوضع المضيء",
+          "إعدادات العرض",
+          "تبديل المظهر",
+          "الوضع الليلي",
+          "لون الواجهة",
+          "الوضع النهاري",
+          "مظهر الموقع",
+          "تفعيل الوضع المظلم",
+          "تغيير الخلفية",
+          "الإعدادات المرئية",
+          "مخطط الألوان",
+          "خيارات المظهر",
+          "إعدادات واجهة المستخدم",
+          "ضبط السطوع",
+          "وضع الشاشة",
+          "الثيم الغامق",
+          "الثيم الفاتح",
+          "الشكل العام"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Toggle Dark/Light mode here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ],
+        "ar": [
+          "تبديل الوضع المظلم/المضيء من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1aFk-VrNLuoFBDrt5Y_XRJDukzMFPhXJs/preview"
+      ]
+    },
+    {
+      "tag": "instructor_courses",
+      "patterns": {
+        "en": [
+          "Manage my courses",
+          "Edit course",
+          "Course list",
+          "Update content",
+          "Instructor dashboard",
+          "My teaching list",
+          "Modify class",
+          "Course manager",
+          "Edit lessons",
+          "Update curriculum",
+          "My published courses",
+          "Change course content",
+          "Manage classes",
+          "Teaching material",
+          "Course editor",
+          "Review my courses",
+          "Class management",
+          "Edit syllabus",
+          "Content update",
+          "Instructor panel"
+        ],
+        "ar": [
+          "إدارة كورساتي",
+          "تعديل الكورس",
+          "قائمة الكورسات",
+          "تحديث المحتوى",
+          "لوحة تحكم المحاضر",
+          "قائمة التدريس الخاصة بي",
+          "تعديل الدرس",
+          "مدير الكورس",
+          "تعديل الدروس",
+          "تحديث المنهج",
+          "كورساتي المنشورة",
+          "تغيير محتوى الكورس",
+          "إدارة الصفوف",
+          "المواد التعليمية",
+          "محرر الكورس",
+          "مراجعة كورساتي",
+          "إدارة الفصول",
+          "تعديل خطة الدراسة",
+          "تحديث المحتوى",
+          "لوحة المحاضر"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage all your courses here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": [
+          "إدارة جميع كورساتك من هنا: https://instructor.vonova.tech/555/courses-management"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1He1HWe7zi7CN269nF2wBHT9tHbxCI506/preview"
+      ]
+    },
+    {
+      "tag": "instructor_create_course",
+      "patterns": {
+        "en": [
+          "Create new course",
+          "Add new class",
+          "Upload course",
+          "Start teaching",
+          "New course wizard",
+          "Build a course",
+          "Add content",
+          "Make a new class",
+          "Course creation",
+          "Upload lessons",
+          "Launch course",
+          "Draft new course",
+          "Start a class",
+          "Teach a subject",
+          "Course builder",
+          "Add curriculum",
+          "New listing",
+          "Create tutorial",
+          "Upload material",
+          "Begin course creation"
+        ],
+        "ar": [
+          "إنشاء كورس جديد",
+          "إضافة درس جديد",
+          "تحميل كورس",
+          "ابدأ التدريس",
+          "معالج الكورس الجديد",
+          "بناء كورس",
+          "إضافة محتوى",
+          "عمل صف جديد",
+          "إنشاء كورس",
+          "تحميل الدروس",
+          "إطلاق الكورس",
+          "مسودة كورس جديد",
+          "بدء صف",
+          "تدريس مادة",
+          "باني الكورسات",
+          "إضافة المنهج",
+          "إدراج جديد",
+          "إنشاء شرح",
+          "تحميل المواد",
+          "بدء عملية إنشاء الكورس"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Start creating a new course here: https://instructor.vonova.tech/555/courses-management"
+        ],
+        "ar": [
+          "ابدأ بإنشاء كورس جديد من هنا: https://instructor.vonova.tech/555/courses-management"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Rc3YPJPhHO0u04J5HU6PE1sEV0VKkS1E/preview"
+      ]
+    },
+    {
+      "tag": "instructor_profile_edit",
+      "patterns": {
+        "en": [
+          "Edit instructor bio",
+          "Public profile settings",
+          "Change teacher photo",
+          "Update resume",
+          "Instructor profile",
+          "My teacher page",
+          "Edit my info",
+          "Update biography",
+          "Profile visibility",
+          "Teacher details",
+          "Professional profile",
+          "Change avatar",
+          "Update credentials",
+          "Highlight expertise",
+          "Instructor bio",
+          "Profile management",
+          "Personal brand",
+          "Edit public view",
+          "Teacher intro",
+          "Update skills"
+        ],
+        "ar": [
+          "تعديل نبذة المحاضر",
+          "إعدادات الملف الشخصي العام",
+          "تغيير صورة المعلم",
+          "تحديث السيرة الذاتية",
+          "ملف المحاضر",
+          "صفحة المعلم الخاصة بي",
+          "تعديل معلوماتي",
+          "تحديث النبذة الشخصية",
+          "ظهور الملف الشخصي",
+          "تفاصيل المعلم",
+          "ملف مهني",
+          "تغيير الأفاتار",
+          "تحديث المؤهلات",
+          "إبراز الخبرات",
+          "سيرة المحاضر",
+          "إدارة الملف الشخصي",
+          "العلامة التجارية الشخصية",
+          "تعديل العرض العام",
+          "مقدمة المعلم",
+          "تحديث المهارات"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Edit your public instructor profile here: https://instructor.vonova.tech/555/settings/account"
+        ],
+        "ar": [
+          "تعديل ملفك الشخصي العام كمحاضر من هنا: https://instructor.vonova.tech/555/settings/account"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/151uKvZoFWEC6mbbsG7G0wemIxeIZSEKg/preview"
+      ]
+    },
+    {
+      "tag": "instructor_settings",
+      "patterns": {
+        "en": [
+          "Instructor settings",
+          "Account preferences",
+          "Teacher options",
+          "Dashboard settings",
+          "Configure account",
+          "Instructor preferences",
+          "Manage account",
+          "System settings",
+          "Teacher config",
+          "Account setup",
+          "General settings",
+          "Personalization",
+          "Adjust preferences",
+          "Platform settings",
+          "Instructor tools",
+          "Account controls",
+          "Setup profile",
+          "User settings",
+          "Teacher controls",
+          "My configuration"
+        ],
+        "ar": [
+          "إعدادات المحاضر",
+          "تفضيلات الحساب",
+          "خيارات المعلم",
+          "إعدادات لوحة التحكم",
+          "تكوين الحساب",
+          "تفضيلات المحاضر",
+          "إدارة الحساب",
+          "إعدادات النظام",
+          "تكوين المعلم",
+          "إعداد الحساب",
+          "الإعدادات العامة",
+          "التخصيص",
+          "ضبط التفضيلات",
+          "إعدادات المنصة",
+          "أدوات المحاضر",
+          "عناصر التحكم في الحساب",
+          "إعداد الملف الشخصي",
+          "إعدادات المستخدم",
+          "عناصر تحكم المعلم",
+          "التكوين الخاص بي"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access your instructor account settings here: https://instructor.vonova.tech/555/settings"
+        ],
+        "ar": [
+          "الوصول إلى إعدادات حساب المحاضر الخاص بك من هنا: https://instructor.vonova.tech/555/settings"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1ApbBkJGoPd1_iovq4Dx2LneSsiHequtC/preview"
+      ]
+    },
+    {
+      "tag": "instructor_security",
+      "patterns": {
+        "en": [
+          "Secure teacher account",
+          "Change password instructor",
+          "Login security",
+          "Protect account",
+          "Instructor login",
+          "Security settings",
+          "Two factor teacher",
+          "Update password",
+          "Account safety",
+          "Login protection",
+          "Secure access",
+          "Privacy settings",
+          "Credential management",
+          "Safe login",
+          "Change access code",
+          "Teacher security",
+          "Auth settings",
+          "Protect data",
+          "Sign in security",
+          "Account lock"
+        ],
+        "ar": [
+          "تأمين حساب المعلم",
+          "تغيير كلمة مرور المحاضر",
+          "أمان تسجيل الدخول",
+          "حماية الحساب",
+          "دخول المحاضر",
+          "إعدادات الأمان",
+          "المصادقة الثنائية للمعلم",
+          "تحديث كلمة المرور",
+          "سلامة الحساب",
+          "حماية الدخول",
+          "وصول آمن",
+          "إعدادات الخصوصية",
+          "إدارة الاعتمادات",
+          "دخول آمن",
+          "تغيير رمز الوصول",
+          "أمن المعلم",
+          "إعدادات المصادقة",
+          "حماية البيانات",
+          "أمان تسجيل الدخول",
+          "قفل الحساب"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Update your security settings here: https://vonova.tech/"
+        ],
+        "ar": [
+          "تحديث إعدادات الأمان الخاصة بك من هنا: https://vonova.tech/"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1WUeEBEfvKj1XRw2T6Xrf-FQh_CcKnwK-/preview"
+      ]
+    },
+    {
+      "tag": "instructor_notifications",
+      "patterns": {
+        "en": [
+          "Email alerts",
+          "Teacher notifications",
+          "Manage emails",
+          "Instructor alerts",
+          "Communication settings",
+          "Stop emails",
+          "Notification preferences",
+          "Alert management",
+          "Message settings",
+          "Email frequency",
+          "Push notifications",
+          "System updates",
+          "Stay informed",
+          "Manage pings",
+          "Turn off alerts",
+          "Email options",
+          "Subscribe/unsubscribe",
+          "Alert config",
+          "Update notifications",
+          "Message alerts"
+        ],
+        "ar": [
+          "تنبيهات البريد",
+          "إشعارات المعلم",
+          "إدارة رسائل البريد",
+          "تنبيهات المحاضر",
+          "إعدادات التواصل",
+          "إيقاف الإيميلات",
+          "تفضيلات الإشعارات",
+          "إدارة التنبيهات",
+          "إعدادات الرسائل",
+          "تكرار البريد",
+          "إشعارات الهاتف",
+          "تحديثات النظام",
+          "ابق على اطلاع",
+          "إدارة التنبيهات الصوتية",
+          "إيقاف التنبيهات",
+          "خيارات البريد",
+          "اشتراك/إلغاء اشتراك",
+          "تكوين التنبيهات",
+          "تحديث الإشعارات",
+          "تنبيهات الرسائل"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Manage your notification preferences here: https://instructor.vonova.tech/555"
+        ],
+        "ar": [
+          "إدارة تفضيلات الإشعارات الخاصة بك من هنا: https://instructor.vonova.tech/555"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vHyAVEX-iu2jxKKASEKfbrmlsNoUBSJg/preview"
+      ]
+    },
+    {
+      "tag": "instructor_support",
+      "patterns": {
+        "en": [
+          "Teacher support",
+          "Contact admin",
+          "Report problem",
+          "Help for instructors",
+          "Instructor help desk",
+          "Assistance for teachers",
+          "Technical issue",
+          "Support ticket",
+          "Contact platform",
+          "Report bug",
+          "Admin help",
+          "Instructor guide",
+          "Problem reporting",
+          "Need assistance",
+          "Support center",
+          "Teacher queries",
+          "Resolve issue",
+          "Help contact",
+          "Service request",
+          "Instructor care"
+        ],
+        "ar": [
+          "دعم المعلم",
+          "اتصل بالمسؤول",
+          "إبلاغ عن مشكلة",
+          "مساعدة للمحاضرين",
+          "مكتب مساعدة المحاضر",
+          "مساعدة للمعلمين",
+          "مشكلة تقنية",
+          "تذكرة دعم",
+          "اتصل بالمنصة",
+          "إبلاغ عن خطأ برمجي",
+          "مساعدة الإدارة",
+          "دليل المحاضر",
+          "الإبلاغ عن المشكلات",
+          "بحاجة لمساعدة",
+          "مركز الدعم",
+          "استفسارات المعلم",
+          "حل المشكلة",
+          "جهة اتصال المساعدة",
+          "طلب خدمة",
+          "رعاية المحاضر"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Contact instructor support here: https://instructor.vonova.tech/555/supportt"
+        ],
+        "ar": [
+          "اتصل بدعم المحاضرين من هنا: https://instructor.vonova.tech/555/supportt"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1PSiB-BzqzJYNwdL3t1-Q2S7_6NjyrTEw/preview"
+      ]
+    },
+    {
+      "tag": "access_material_library",
+      "patterns": {
+        "en": [
+          "Where is the material library?",
+          "Go to study resources",
+          "Open library",
+          "Access books and guides",
+          "Computer science materials",
+          "Find resources",
+          "Study materials",
+          "Library access",
+          "Browse books",
+          "Resource center",
+          "Learning materials",
+          "Open book collection",
+          "Digital library",
+          "Reference materials",
+          "Guides and docs",
+          "Search library",
+          "Educational resources",
+          "View documents",
+          "Library catalog",
+          "Course materials"
+        ],
+        "ar": [
+          "أين هي مكتبة المواد؟",
+          "اذهب لمصادر الدراسة",
+          "فتح المكتبة",
+          "الوصول للكتب والأدلة",
+          "مواد علوم الحاسوب",
+          "البحث عن مصادر",
+          "مواد دراسية",
+          "الوصول للمكتبة",
+          "تصفح الكتب",
+          "مركز المصادر",
+          "مواد تعليمية",
+          "فتح مجموعة الكتب",
+          "مكتبة رقمية",
+          "مواد مرجعية",
+          "أدلة ومستندات",
+          "بحث في المكتبة",
+          "مصادر تعليمية",
+          "عرض المستندات",
+          "فهرس المكتبة",
+          "مواد الكورس"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access the full Material Library to find books, guides, and presentations here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ],
+        "ar": [
+          "الوصول إلى مكتبة المواد الكاملة للعثور على الكتب والأدلة والعروض التقديمية من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "online_books",
+      "patterns": {
+        "en": [
+          "Where can I read books?",
+          "Free computer science books",
+          "Explore online books",
+          "Read coding books",
+          "Library books",
+          "Access ebooks",
+          "Digital textbooks",
+          "Browse book collection",
+          "Read online",
+          "Find CS books",
+          "Open book section",
+          "View reading material",
+          "Programming books",
+          "Search for books",
+          "E-library access",
+          "Free textbooks",
+          "Read technical guides",
+          "Book repository",
+          "Available books",
+          "Go to books"
+        ],
+        "ar": [
+          "أين يمكنني قراءة الكتب؟",
+          "كتب علوم حاسوب مجانية",
+          "استكشاف الكتب عبر الإنترنت",
+          "قراءة كتب البرمجة",
+          "كتب المكتبة",
+          "الوصول للكتب الإلكترونية",
+          "كتب دراسية رقمية",
+          "تصفح مجموعة الكتب",
+          "قراءة مباشرة",
+          "البحث عن كتب CS",
+          "فتح قسم الكتب",
+          "عرض مواد القراءة",
+          "كتب برمجة",
+          "بحث عن كتب",
+          "الوصول للمكتبة الإلكترونية",
+          "كتب دراسية مجانية",
+          "قراءة الأدلة التقنية",
+          "مستودع الكتب",
+          "الكتب المتاحة",
+          "التوجه للكتب"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can browse and read free computer science books in the 'Online Books' section here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ],
+        "ar": [
+          "يمكنك تصفح وقراءة كتب علوم الحاسوب المجانية في قسم 'الكتب عبر الإنترنت' من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/material-library"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "instructor_presentations",
+      "patterns": {
+        "en": [
+          "Download slides",
+          "Instructor presentations",
+          "Course slides",
+          "View presentation material",
+          "Lecture powerpoints",
+          "Access slides",
+          "Get lecture notes",
+          "PPT downloads",
+          "Class presentations",
+          "Instructor slides",
+          "View deck",
+          "Course materials slides",
+          "Presentation files",
+          "Download PPT",
+          "Lecture slides",
+          "Slide deck",
+          "Teacher presentations",
+          "View powerpoints",
+          "Slide library",
+          "Get presentation"
+        ],
+        "ar": [
+          "تحميل السلايدات",
+          "عروض المحاضر",
+          "سلايدات الكورس",
+          "عرض مواد العرض التقديمي",
+          "بوربوينت المحاضرات",
+          "الوصول للسلايدات",
+          "الحصول على نوتس المحاضرة",
+          "تحميلات PPT",
+          "عروض الصف",
+          "سلايدات المحاضر",
+          "عرض المجموعة",
+          "سلايدات مواد الكورس",
+          "ملفات العرض",
+          "تحميل PPT",
+          "سلايدات المحاضرة",
+          "مجموعة الشرائح",
+          "عروض المعلم",
+          "عرض البوربوينت",
+          "مكتبة الشرائح",
+          "احصل على العرض"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Access presentations created by your instructors here: https://instructor.vonova.tech/555/courses-management/create"
+        ],
+        "ar": [
+          "الوصول إلى العروض التقديمية التي أنشأها محاضروك من هنا: https://instructor.vonova.tech/555/courses-management/create"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Rc3YPJPhHO0u04J5HU6PE1sEV0VKkS1E/preview"
+      ]
+    },
+    {
+      "tag": "library_stats",
+      "patterns": {
+        "en": [
+          "My library progress",
+          "How many materials available?",
+          "Library completion",
+          "Track my reading",
+          "Library sections",
+          "Reading stats",
+          "Check library status",
+          "Progress in library",
+          "Books read count",
+          "Material statistics",
+          "Library dashboard",
+          "Usage stats",
+          "Content tracking",
+          "My library activity",
+          "Resource count",
+          "Reading history",
+          "Library overview",
+          "Completion rate",
+          "Track downloads",
+          "Library metrics"
+        ],
+        "ar": [
+          "تقدمي في المكتبة",
+          "كم عدد المواد المتاحة؟",
+          "إكمال المكتبة",
+          "تتبع قراءتي",
+          "أقسام المكتبة",
+          "إحصائيات القراءة",
+          "تحقق من حالة المكتبة",
+          "التقدم في المكتبة",
+          "عدد الكتب المقروءة",
+          "إحصائيات المواد",
+          "لوحة تحكم المكتبة",
+          "إحصائيات الاستخدام",
+          "تتبع المحتوى",
+          "نشاطي في المكتبة",
+          "عدد المصادر",
+          "سجل القراءة",
+          "نظرة عامة على المكتبة",
+          "معدل الإكمال",
+          "تتبع التحميلات",
+          "مقاييس المكتبة"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can track your progress across the 3 main sections (Books, Guides, Presentations) directly on the Material Library dashboard."
+        ],
+        "ar": [
+          "يمكنك تتبع تقدمك عبر الأقسام الثلاثة الرئيسية (كتب، أدلة، عروض تقديمية) مباشرة من لوحة تحكم مكتبة المواد."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1yzBKG1IJVWKe8zA8Grln8Nwn3bUMNkSn/preview"
+      ]
+    },
+    {
+      "tag": "access_pdf_summary",
+      "patterns": {
+        "en": [
+          "how to summarize pdf",
+          "Where is the PDF Summary tool?",
+          "Chat with PDF",
+          "Summarize my document",
+          "AI PDF reader",
+          "Open PDF tool",
+          "Upload PDF for summary",
+          "AI document chat",
+          "Interact with PDF",
+          "PDF analyzer",
+          "Go to PDF chat",
+          "Summarizer tool",
+          "Talk to my PDF",
+          "PDF AI feature",
+          "Document assistant",
+          "Launch PDF tool",
+          "File summarizer",
+          "Ask PDF questions",
+          "PDF intelligence",
+          "Access document tool",
+          "Smart PDF reader"
+        ],
+        "ar": [
+          "كيف ألخص PDF",
+          "أين أداة تلخيص PDF؟",
+          "دردشة مع PDF",
+          "تلخيص مستندي",
+          "قارئ PDF بالذكاء الاصطناعي",
+          "فتح أداة PDF",
+          "تحميل PDF للتلخيص",
+          "دردشة المستند بالذكاء الاصطناعي",
+          "تفاعل مع PDF",
+          "محلل PDF",
+          "اذهب لدردشة PDF",
+          "أداة التلخيص",
+          "تحدث مع ملف PDF الخاص بي",
+          "ميزة PDF AI",
+          "مساعد المستندات",
+          "إطلاق أداة PDF",
+          "ملخص الملفات",
+          "اسأل أسئلة حول PDF",
+          "ذكاء PDF",
+          "الوصول لأداة المستندات",
+          "قارئ PDF ذكي"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can upload your documents and chat with them using the PDF Summary tool here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/pdf-summary"
+        ],
+        "ar": [
+          "يمكنك تحميل مستنداتك والدردشة معها باستخدام أداة تلخيص PDF من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/pdf-summary"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_tool_features",
+      "patterns": {
+        "en": [
+          "What can the PDF tool do?",
+          "Can I ask questions about the file?",
+          "Does it only summarize?",
+          "Explain the PDF feature",
+          "How does PDF chat work?",
+          "PDF tool capabilities",
+          "Function of PDF AI",
+          "Why use PDF tool?",
+          "Explain PDF analysis",
+          "What is PDF chat?",
+          "Can it explain concepts?",
+          "Tool description",
+          "How to use PDF summary?",
+          "Features of document chat",
+          "What does it analyze?",
+          "Is it just a summary?",
+          "PDF interaction details",
+          "Understand PDF tool",
+          "What is this feature?",
+          "Help with PDF tool"
+        ],
+        "ar": [
+          "ماذا يمكن لأداة PDF أن تفعل؟",
+          "هل يمكنني طرح أسئلة حول الملف؟",
+          "هل تقوم بالتلخيص فقط؟",
+          "شرح ميزة PDF",
+          "كيف تعمل دردشة PDF؟",
+          "قدرات أداة PDF",
+          "وظيفة PDF AI",
+          "لماذا أستخدم أداة PDF؟",
+          "شرح تحليل PDF",
+          "ما هي دردشة PDF؟",
+          "هل يمكنها شرح المفاهيم؟",
+          "وصف الأداة",
+          "كيفية استخدام تلخيص PDF؟",
+          "مميزات دردشة المستندات",
+          "ما الذي تقوم بتحليله؟",
+          "هل هو مجرد ملخص؟",
+          "تفاصيل التفاعل مع PDF",
+          "فهم أداة PDF",
+          "ما هذه الميزة؟",
+          "مساعدة في أداة PDF"
+        ]
+      },
+      "responses": {
+        "en": [
+          "The tool analyzes your PDF using AI. You can ask specific questions, request summaries, or ask for explanations of complex topics found inside the document."
+        ],
+        "ar": [
+          "تقوم الأداة بتحليل ملف PDF الخاص بك باستخدام الذكاء الاصطناعي. يمكنك طرح أسئلة محددة، طلب ملخصات، أو طلب شرح لمواضيع معقدة موجودة داخل المستند."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1vYbPUhfMlijQawK2Qgv9kHr1mNdd1iqs/preview"
+      ]
+    },
+    {
+      "tag": "pdf_upload_limits",
+      "patterns": {
+        "en": [
+          "What is the max file size for PDF?",
+          "Can I upload Word documents?",
+          "File format support",
+          "Upload limit",
+          "Maximum pages",
+          "PDF size limit",
+          "Supported files",
+          "Can I upload docx?",
+          "File restrictions",
+          "Max MB allowed",
+          "Page limit",
+          "Only PDF?",
+          "Upload constraints",
+          "File types",
+          "Large files",
+          "Upload requirements",
+          "Is there a size limit?",
+          "Acceptable formats",
+          "Document size",
+          "Upload error size"
+        ],
+        "ar": [
+          "ما هو أقصى حجم لملف PDF؟",
+          "هل يمكنني تحميل مستندات وورد؟",
+          "دعم صيغ الملفات",
+          "حد التحميل",
+          "أقصى عدد للصفحات",
+          "حد حجم PDF",
+          "الملفات المدعومة",
+          "هل يمكنني تحميل docx؟",
+          "قيود الملفات",
+          "أقصى عدد ميجابايت مسموح به",
+          "حد الصفحات",
+          "فقط PDF؟",
+          "قيود الرفع",
+          "أنواع الملفات",
+          "ملفات كبيرة",
+          "متطلبات الرفع",
+          "هل يوجد حد للحجم؟",
+          "الصيغ المقبولة",
+          "حجم المستند",
+          "خطأ حجم الرفع"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Maximum 1000 pages"
+        ],
+        "ar": [
+          "الحد الأقصى هو 1000 صفحة"
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "pdf_summary_language",
+      "patterns": {
+        "en": [
+          "Does it support Arabic PDFs?",
+          "Can it summarize in other languages?",
+          "Multi-language support",
+          "Chat in Arabic",
+          "Translate PDF",
+          "Is the AI multilingual?",
+          "Language options for PDF",
+          "Read French PDF",
+          "Summarize in Spanish",
+          "Cross-language chat",
+          "Supports different languages?",
+          "Can I ask in English about Arabic file?",
+          "Language compatibility",
+          "Translation feature",
+          "Works with Arabic?",
+          "Foreign language PDF",
+          "Chat in my language",
+          "Language limitation",
+          "Polyglot AI",
+          "PDF language support"
+        ],
+        "ar": [
+          "هل يدعم ملفات PDF العربية؟",
+          "هل يمكنه التلخيص بلغات أخرى؟",
+          "دعم لغات متعددة",
+          "دردشة بالعربي",
+          "ترجمة PDF",
+          "هل الذكاء الاصطناعي متعدد اللغات؟",
+          "خيارات اللغة لـ PDF",
+          "قراءة PDF بالفرنسية",
+          "التلخيص بالإسبانية",
+          "دردشة عبر اللغات",
+          "يدعم لغات مختلفة؟",
+          "هل يمكنني السؤال بالإنجليزية عن ملف عربي؟",
+          "توافق اللغات",
+          "ميزة الترجمة",
+          "يعمل مع العربية؟",
+          "PDF بلغة أجنبية",
+          "دردشة بلغتي",
+          "قيود اللغة",
+          "ذكاء اصطناعي متعدد اللغات",
+          "دعم لغة PDF"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Yes, our AI is multilingual! You can upload a PDF in one language and ask questions or get summaries in another language."
+        ],
+        "ar": [
+          "نعم، ذكاؤنا الاصطناعي متعدد اللغات! يمكنك تحميل ملف PDF بلغة ما وطرح أسئلة أو الحصول على ملخصات بلغة أخرى."
+        ]
+      },
+      "images": []
+    },
+    {
+      "tag": "access_roadmap",
+      "patterns": {
+        "en": [
+          "Where is the roadmap tool?",
+          "Create a study plan",
+          "Go to Roadmap section",
+          "Open AI roadmap",
+          "Generate learning path",
+          "Start my roadmap",
+          "Access study guide",
+          "Where can I find roadmap?",
+          "Personalized study plan",
+          "Launch roadmap tool",
+          "How to make a roadmap?",
+          "Roadmap feature location",
+          "Navigate to Roadmap",
+          "Study schedule tool",
+          "My learning roadmap",
+          "Open AI study plan",
+          "Go to path generator",
+          "Roadmap access",
+          "Learning journey tool",
+          "Find roadmap tool"
+        ],
+        "ar": [
+          "أين أداة خارطة الطريق؟",
+          "إنشاء خطة دراسية",
+          "الذهاب لقسم خارطة الطريق",
+          "فتح خارطة الطريق بالذكاء الاصطناعي",
+          "إنشاء مسار تعلم",
+          "بدء خارطة طريقي",
+          "الوصول لدليل الدراسة",
+          "أين يمكنني العثور على خارطة الطريق؟",
+          "خطة دراسة شخصية",
+          "إطلاق أداة خارطة الطريق",
+          "كيف أنشئ خارطة طريق؟",
+          "موقع ميزة خارطة الطريق",
+          "التوجه لخارطة الطريق",
+          "أداة جدول الدراسة",
+          "خارطة تعلمي",
+          "فتح خطة الدراسة بالذكاء الاصطناعي",
+          "الذهاب لمنشئ المسارات",
+          "الوصول لخارطة الطريق",
+          "أداة رحلة التعلم",
+          "البحث عن أداة خارطة الطريق"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can generate your personalized study path using the Roadmap tool here: https://student.vonova.tech/68dbd0b6b7043979aec8311e/roadmap"
+        ],
+        "ar": [
+          "يمكنك إنشاء مسار دراسي شخصي باستخدام أداة خارطة الطريق من هنا: https://student.vonova.tech/68dbd0b6b7043979aec8311e/roadmap"
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Xl_pQ6rPCO7mO_4i9Ea1h8P3uV9A_5oI/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_generation",
+      "patterns": {
+        "en": [
+          "How do I generate a roadmap?",
+          "Make me a plan for Python",
+          "Build a path for Web Development",
+          "Generate roadmap for AI",
+          "Create a study guide",
+          "How to start a roadmap?",
+          "Building a learning path",
+          "Request new roadmap",
+          "How to use roadmap tool?",
+          "Create roadmap process",
+          "Generate study path",
+          "Making a roadmap",
+          "How does generation work?",
+          "Build my plan",
+          "New roadmap request",
+          "Generate learning guide",
+          "Creating study plan",
+          "Roadmap wizard",
+          "How to build path?",
+          "Start generation"
+        ],
+        "ar": [
+          "كيف أنشئ خارطة طريق؟",
+          "اصنع لي خطة لبايثون",
+          "ابنِ مساراً لتطوير الويب",
+          "إنشاء خارطة طريق للذكاء الاصطناعي",
+          "إنشاء دليل دراسة",
+          "كيف أبدأ خارطة طريق؟",
+          "بناء مسار تعلم",
+          "طلب خارطة طريق جديدة",
+          "كيفية استخدام أداة خارطة الطريق؟",
+          "عملية إنشاء خارطة الطريق",
+          "إنشاء مسار دراسة",
+          "صناعة خارطة طريق",
+          "كيف يعمل الإنشاء؟",
+          "ابنِ خطتي",
+          "طلب خارطة طريق جديدة",
+          "إنشاء دليل تعلم",
+          "إنشاء خطة دراسة",
+          "معالج خارطة الطريق",
+          "كيف أبني مساراً؟",
+          "بدء الإنشاء"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Simply enter the topic you want to learn (e.g., 'React' or 'Data Science'), and our AI will build a step-by-step curriculum for you."
+        ],
+        "ar": [
+          "ببساطة أدخل الموضوع الذي تريد تعلمه (مثلاً 'React' أو 'Data Science')، وسيقوم ذكاؤنا الاصطناعي ببناء منهج دراسي خطوة بخطوة لك."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1Xl_pQ6rPCO7mO_4i9Ea1h8P3uV9A_5oI/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_edit",
+      "patterns": {
+        "en": [
+          "Can I edit the roadmap?",
+          "Modify the plan",
+          "Add my own topics",
+          "Change timeline",
+          "Delete a step",
+          "Customize roadmap",
+          "Rearrange topics",
+          "Edit study path",
+          "Update roadmap",
+          "Change content",
+          "Manual edit",
+          "Adjust steps",
+          "Remove module",
+          "Add new section",
+          "Is it editable?",
+          "Tweak the plan",
+          "Refine roadmap",
+          "Modify topics",
+          "Personalize plan",
+          "Edit generated path"
+        ],
+        "ar": [
+          "هل يمكنني تعديل خارطة الطريق؟",
+          "تعديل الخطة",
+          "إضافة مواضيعي الخاصة",
+          "تغيير الجدول الزمني",
+          "حذف خطوة",
+          "تخصيص خارطة الطريق",
+          "إعادة ترتيب المواضيع",
+          "تعديل مسار الدراسة",
+          "تحديث خارطة الطريق",
+          "تغيير المحتوى",
+          "تعديل يدوي",
+          "ضبط الخطوات",
+          "إزالة وحدة",
+          "إضافة قسم جديد",
+          "هل هي قابلة للتعديل؟",
+          "تحسين الخطة",
+          "تنقيح خارطة الطريق",
+          "تعديل المواضيع",
+          "تخصيص الخطة",
+          "تعديل المسار المنشأ"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Absolutely! After generation, you can manually add, remove, or rearrange topics to fit your needs."
+        ],
+        "ar": [
+          "بالتأكيد! بعد الإنشاء، يمكنك يدوياً إضافة أو إزالة أو إعادة ترتيب المواضيع لتناسب احتياجاتك."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1txrYz-FIjcxO7YVHq4CDVRa9mDat9pC5/preview"
+      ]
+    },
+    {
+      "tag": "roadmap_save",
+      "patterns": {
+        "en": [
+          "Does it save automatically?",
+          "Where is my saved roadmap?",
+          "Can I come back later?",
+          "Save study plan",
+          "Is my plan stored?",
+          "Access saved roadmap",
+          "Roadmap history",
+          "Keep my roadmap",
+          "Don't lose progress",
+          "Find saved paths",
+          "Auto-save feature",
+          "Is roadmap permanent?",
+          "Access my plans",
+          "Stored roadmaps",
+          "Return to roadmap",
+          "My roadmaps list",
+          "Retrieving roadmap",
+          "Storage of plans",
+          "How to save path?",
+          "Saved learning paths"
+        ],
+        "ar": [
+          "هل يتم الحفظ تلقائياً؟",
+          "أين أجد خارطة طريقي المحفوظة؟",
+          "هل يمكنني العودة لاحقاً؟",
+          "حفظ خطة الدراسة",
+          "هل خطتي مخزنة؟",
+          "الوصول لخارطة الطريق المحفوظة",
+          "سجل خارطة الطريق",
+          "الاحتفاظ بخارطة طريقي",
+          "عدم فقدان التقدم",
+          "البحث عن المسارات المحفوظة",
+          "ميزة الحفظ التلقائي",
+          "هل خارطة الطريق دائمة؟",
+          "الوصول لخططي",
+          "خرائط الطريق المخزنة",
+          "العودة لخارطة الطريق",
+          "قائمة خرائط طريقي",
+          "استرجاع خارطة الطريق",
+          "تخزين الخطط",
+          "كيف أحفظ المسار؟",
+          "مسارات التعلم المحفوظة"
+        ]
+      },
+      "responses": {
+        "en": [
+          "Yes, all your generated roadmaps are saved in your account. You can access them anytime from the Roadmap dashboard."
+        ],
+        "ar": [
+          "نعم، يتم حفظ جميع خرائط الطريق التي تم إنشاؤها في حسابك. يمكنك الوصول إليها في أي وقت من لوحة تحكم خارطة الطريق."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1txrYz-FIjcxO7YVHq4CDVRa9mDat9pC5/preview"
+      ]
+    },
+    {
+      "tag": "pdf_help",
+      "patterns": {
+        "en": [
+          "Where can I get help with PDF chat?",
+          "Can I get instructions for PDF feature?",
+          "Guide me to PDF help",
+          "I want support for PDF summarization",
+          "Explain how to use help for PDFs",
+          "Step by step PDF guidance",
+          "How to ask for PDF support?",
+          "Can Vonova guide me on PDFs?",
+          "Where to find PDF tutorial?",
+          "How do I get assistance for PDF chat?"
+        ],
+        "ar": [
+          "أين يمكنني الحصول على مساعدة في دردشة PDF؟",
+          "هل يمكنني الحصول على تعليمات لميزة PDF؟",
+          "وجهني لمساعدة PDF",
+          "أريد دعماً لتلخيص PDF",
+          "اشرح كيفية استخدام المساعدة لملفات PDF",
+          "إرشادات PDF خطوة بخطوة",
+          "كيف أطلب دعم PDF؟",
+          "هل يمكن لـ Vonova إرشادي بشأن ملفات PDF؟",
+          "أين أجد شرح PDF؟",
+          "كيف أحصل على مساعدة في دردشة PDF؟"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can access Vonova's help or tutorials for PDF chat and summarization directly within the platform."
+        ],
+        "ar": [
+          "يمكنك الوصول إلى مساعدة أو شروحات Vonova لدردشة وتلخيص PDF مباشرة داخل المنصة."
+        ]
+      },
+      "images": [
+        "https://drive.google.com/file/d/1qNcKcgOtg3mMF6ifZXvNntKUqig3BefK/preview"
+      ]
+    },
+    {
+      "tag": "pdf_feedback",
+      "patterns": {
+        "en": [
+          "How do I give feedback on PDF chat?",
+          "Can I report issues with PDF feature?",
+          "Guide me to PDF feedback",
+          "I want to send feedback",
+          "Explain PDF feedback process",
+          "Step by step feedback submission",
+          "Can Vonova receive PDF suggestions?",
+          "How to report PDF errors?",
+          "Where to submit PDF feedback?",
+          "How do I share my PDF experience?"
+        ],
+        "ar": [
+          "كيف أقدم ملاحظاتي على دردشة PDF؟",
+          "هل يمكنني الإبلاغ عن مشاكل في ميزة PDF؟",
+          "وجهني لملاحظات PDF",
+          "أريد إرسال ملاحظات",
+          "اشرح عملية إرسال ملاحظات PDF",
+          "تقديم الملاحظات خطوة بخطوة",
+          "هل يمكن لـ Vonova استقبال اقتراحات PDF؟",
+          "كيف أبلغ عن أخطاء PDF؟",
+          "أين أقدم ملاحظات PDF؟",
+          "كيف أشارك تجربتي مع PDF؟"
+        ]
+      },
+      "responses": {
+        "en": [
+          "You can submit feedback on PDF chat and summarization within Vonova FeedBack to help improve the feature."
+        ],
+        "ar": [
+          "يمكنك تقديم ملاحظاتك حول دردشة وتلخيص PDF داخل Vonova FeedBack للمساعدة في تحسين الميزة."
+        ]
+      },
+      "images": []
+    }
+  ]
+}
