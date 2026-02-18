@@ -1,24 +1,18 @@
 import os
-os.environ["OPENAI_API_KEY"] = "sk-no-need-this-is-fake-123456789abcdef"
-os.environ.setdefault("CREWAI_TELEMETRY_OPT_OUT", "true")
-os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+from contextlib import asynccontextmanager
+from typing import Optional
 
 from dotenv import load_dotenv
-load_dotenv()  
-
-from fastapi import FastAPI, HTTPException, status, UploadFile, File, Query, Form, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
-from contextlib import asynccontextmanager
-import asyncio
 import uvicorn
-from typing import Dict, Optional
 from pydantic import BaseModel
 
-from AI_Article_Generator.crew.crew_manager import CrewManager
+from AI_Article_Generator.orchestrator.multi_agent_pipeline import AgentManager
 from AI_Article_Generator.utils.translation_utils import translate, detect_language
-from AI_Article_Generator.models.article_schema import ArticleRequest
+from AI_Article_Generator.schemas.article_request import ArticleRequest
 
 from AI_Quiz_Generator.model.quiz_schema import QuizRequest, QuizResponse
 from AI_Quiz_Generator.llm.cohere_llm import generate_quiz
@@ -37,9 +31,23 @@ from AI_PDF_Summary_QA.services.pdf_service import (
 
 from Config.logging_utils import setup_ai_logger
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+# Environment setup
+load_dotenv()
+
 CO_API_KEY = os.getenv("CO_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+
+missing = []
+if not CO_API_KEY and not COHERE_API_KEY:
+    missing.append("COHERE_API_KEY or CO_API_KEY")
+
+if missing:
+    raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
+
+# Use whichever API key is available for services
+effective_api_key = CO_API_KEY or COHERE_API_KEY
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST", "0.0.0.0")
 AI_SERVICE_PORT = int(os.getenv("PORT", os.getenv("AI_SERVICE_PORT", "5010")))
 
@@ -50,10 +58,9 @@ logger.info(f"Log level: {LOG_LEVEL}")
 logger.info(f"AI Service Host: {AI_SERVICE_HOST}")
 logger.info(f"AI Service Port: {AI_SERVICE_PORT}")
 
-if not CO_API_KEY:
-    logger.error("CO_API_KEY not found in environment variables")
-    raise RuntimeError("CO_API_KEY environment variable is required")
-
+if not effective_api_key:
+    logger.error("No valid API key found (CO_API_KEY or COHERE_API_KEY)")
+    raise RuntimeError("Either CO_API_KEY or COHERE_API_KEY environment variable is required")
 logger.info("API key loaded successfully")
 
 @asynccontextmanager
@@ -82,9 +89,9 @@ app.add_middleware(
     allow_headers=os.getenv("CORS_ALLOW_HEADERS", "*").split(","),
 )
 
-crew_manager = CrewManager()
+agent_manager = AgentManager()
 
-generator = RoadmapGenerator(CO_API_KEY)
+generator = RoadmapGenerator(effective_api_key)
 class RoadmapRequest(BaseModel):
     topic: str
     skill_level: str
@@ -123,9 +130,9 @@ async def generate_article(request: ArticleRequest):
                 source_language='Arabic'
             )
         
-        result = await run_in_threadpool(crew_manager.run_crew, topic_for_crew)
+        result = await run_in_threadpool(agent_manager.generate_article, topic_for_crew)
         
-        english_article = result.raw
+        english_article = result
         
         unwanted_ending = "This comprehensive blog post is optimized for SEO"
         if english_article.strip().endswith(unwanted_ending):
