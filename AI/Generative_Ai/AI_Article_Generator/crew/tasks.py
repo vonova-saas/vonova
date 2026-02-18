@@ -23,57 +23,54 @@ class BaseTask(BaseModel):
 class PlanningTask(BaseTask):
     def __init__(self, **data):
         super().__init__(
-            expected_output="A structured content plan with outline, SEO keywords, audience analysis, and sources.",
+            expected_output="A structured content plan including outline, main sections, SEO keywords and target audience summary.",
             **data
         )
 
     def get_description(self):
         return (
-            f"Research {self.topic} and create a comprehensive content plan:\n"
-            "1. Identify latest trends, key players, and credible sources\n"
-            "2. Analyze target audience interests and challenges\n"
-            "3. Create structured outline with introduction, main points, and conclusion\n"
-            "4. Suggest relevant SEO keywords and trusted references"
+            f"Create a clear content plan for a blog post about {self.topic}:\n"
+            "1. Define target audience and their main interests\n"
+            "2. Suggest good structure: introduction, main sections, conclusion\n"
+            "3. List 5–8 important SEO keywords (primary + secondary)\n"
+            "4. Keep it realistic and well organized"
         )
 
 class WritingTask(BaseTask):
     def __init__(self, **data):
         super().__init__(
-            expected_output="A detailed blog post in markdown format (2-3 paragraphs per section), based on the provided plan.",
+            expected_output="A complete blog post draft in markdown format, following the plan.",
             **data
         )
 
     def get_description(self):
         return (
-            f"Write a comprehensive blog post about {self.topic} based on the plan provided in the context:\n"
-            "1. Expand the plan into detailed, engaging content\n"
-            "2. Naturally integrate all suggested SEO keywords\n"
-            "3. Use engaging section headings and follow the structured outline\n"
-            "4. Structure the output clearly with intro, body, and conclusion\n"
-            "5. Ensure factual accuracy and cite external sources/references where needed\n"
-            "6. Proofread for grammar and clarity before submitting the draft"
+            f"Write a full, engaging blog post about {self.topic} based on the plan in context.\n"
+            "Follow the outline structure.\n"
+            "Use natural language, include the suggested keywords naturally.\n"
+            "Write clear section headings.\n"
+            "End with a short conclusion.\n"
+            "Output the article in clean markdown format."
         )
 
 class EditingTask(BaseTask):
     def __init__(self, **data):
         super().__init__(
             expected_output=(
-                "The final, polished blog post in markdown format. "
-                "The output should ONLY contain the article content. "
-                "All sources in the 'References' section must be formatted as clickable Markdown links "
-                "(e.g., `[Title](https://example.com)`)."
+                "The final polished blog post in markdown format. "
+                "Output MUST contain ONLY the article — no extra text, no comments, no questions."
             ),
             **data
         )
 
     def get_description(self):     
         return (
-            f"Review and finalize the draft blog post about {self.topic} provided in the context:\n"
-            "1. **Fact-check** all claims and data points, using search tools if necessary.\n"
-            "2. Improve grammar, punctuation, and writing style.\n"
-            "3. Ensure the tone is consistent, balanced, and professional.\n"
-            "4. Verify the document's structure and flow (intro, body, conclusion, references section).\n"
-            "5. Check for overall clarity and readability for the target audience.\n"
-            "6. **Crucial:** Use the search tool to find the URLs for all sources listed in the 'References' section. "
-            "Format these sources as clickable Markdown links (`[Title](URL)`)."
+            f"Polish and finalize the blog post draft about {self.topic} provided in context.\n"
+            "Your tasks:\n"
+            "1. Fix grammar, spelling and punctuation\n"
+            "2. Improve sentence flow and readability\n"
+            "3. Make tone consistent, professional and engaging\n"
+            "4. Check structure: good intro → clear sections → strong conclusion\n"
+            "5. Return ONLY the final cleaned article in markdown format.\n"
+            "Do NOT add explanations, questions, notes or any text outside the article itself."
         )
