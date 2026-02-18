@@ -1,6 +1,8 @@
 from langchain_cohere import ChatCohere
 from dotenv import load_dotenv
 import os
+import time
+from typing import Optional
 
 class LLMConfig:
     def __init__(self):
@@ -14,7 +16,9 @@ class LLMConfig:
             model='command-r-08-2024',          
             temperature=0.35,                   
             max_tokens=4000,
-            api_key=api_key
+            api_key=api_key,
+            max_retries=3,
+            retry_delay=1
         )
 
     def get_llm(self):

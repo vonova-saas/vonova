@@ -49,6 +49,8 @@ class WritingTask(BaseTask):
             "Follow the outline structure.\n"
             "Use natural language, include the suggested keywords naturally.\n"
             "Write clear section headings.\n"
+            "Include 3-5 relevant reference links to credible sources (industry reports, academic papers, reputable websites).\n"
+            "Add these references at the end of the article in a 'References' section with proper formatting.\n"
             "End with a short conclusion.\n"
             "Output the article in clean markdown format."
         )
@@ -71,6 +73,8 @@ class EditingTask(BaseTask):
             "2. Improve sentence flow and readability\n"
             "3. Make tone consistent, professional and engaging\n"
             "4. Check structure: good intro → clear sections → strong conclusion\n"
-            "5. Return ONLY the final cleaned article in markdown format.\n"
+            "5. Ensure reference links are properly formatted and relevant\n"
+            "6. Add a 'References' section at the end if not already present\n"
+            "7. Return ONLY the final cleaned article in markdown format.\n"
             "Do NOT add explanations, questions, notes or any text outside the article itself."
         )

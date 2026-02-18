@@ -1,10 +1,31 @@
+import os
+os.environ["OPENAI_API_KEY"] = "sk-no-need-this-is-fake-123456789abcdef"
+os.environ.setdefault("CREWAI_TELEMETRY_OPT_OUT", "true")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
+from dotenv import load_dotenv
+load_dotenv()  
+
+from fastapi import FastAPI, HTTPException, status, UploadFile, File, Query, Form, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
+from contextlib import asynccontextmanager
+import asyncio
+import uvicorn
+from typing import Dict, Optional
+from pydantic import BaseModel
+
 from AI_Article_Generator.crew.crew_manager import CrewManager
 from AI_Article_Generator.utils.translation_utils import translate, detect_language
 from AI_Article_Generator.models.article_schema import ArticleRequest
-from AI_Quiz_Generator.model.quiz_schema import  QuizRequest, QuizResponse
+
+from AI_Quiz_Generator.model.quiz_schema import QuizRequest, QuizResponse
 from AI_Quiz_Generator.llm.cohere_llm import generate_quiz
 from AI_Quiz_Generator.utils.translation_utils import process_user_input
+
 from AI_Roadmap_Generator.services.roadmap_generator import RoadmapGenerator
+
 from AI_PDF_Summary_QA.models.pdf_schema import AskResponse, UploadResponse, SummaryResponse
 from AI_PDF_Summary_QA.services.pdf_service import (
     initialize_ai_wizard,
@@ -13,28 +34,15 @@ from AI_PDF_Summary_QA.services.pdf_service import (
     handle_ask,
     handle_delete_session
 )
-from fastapi import FastAPI, HTTPException
-from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
-import os
-import uvicorn
-from typing import Optional
-from pydantic import BaseModel
-from fastapi.concurrency import run_in_threadpool
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form, Request
-from contextlib import asynccontextmanager
 from Config.logging_utils import setup_ai_logger
-from dotenv import load_dotenv
-
-load_dotenv()
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 CO_API_KEY = os.getenv("CO_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST")
-AI_SERVICE_PORT = os.getenv("AI_SERVICE_PORT")
+AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST", "0.0.0.0")
+AI_SERVICE_PORT = int(os.getenv("PORT", os.getenv("AI_SERVICE_PORT", "5010")))
+
 logger = setup_ai_logger(__name__, "Agents.log", LOG_LEVEL)
 
 logger.info("Loading environment variables")
@@ -42,17 +50,27 @@ logger.info(f"Log level: {LOG_LEVEL}")
 logger.info(f"AI Service Host: {AI_SERVICE_HOST}")
 logger.info(f"AI Service Port: {AI_SERVICE_PORT}")
 
-if not COHERE_API_KEY or not CO_API_KEY or not GEMINI_API_KEY:
-    logger.error("LLM api not found in environment variables")
-    raise RuntimeError("LLM api (Cohere, Gemini) environment variable is required")
+if not CO_API_KEY:
+    logger.error("CO_API_KEY not found in environment variables")
+    raise RuntimeError("CO_API_KEY environment variable is required")
 
 logger.info("API key loaded successfully")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not initialize_ai_wizard():
-        raise RuntimeError("Failed to initialize AI wizard. Application startup failed.")
+    logger.info("Initializing AI services...")
+    try:
+        if not initialize_ai_wizard():
+            logger.warning("AI wizard initialization failed - PDF services will be unavailable")
+        else:
+            logger.info("AI wizard initialized successfully")
+    except Exception as e:
+        logger.error(f"Error during AI wizard initialization: {str(e)}")
+        logger.warning("PDF services will be unavailable")
+    
+    logger.info("Application startup complete")
     yield
+    logger.info("Application shutdown complete")
 
 app = FastAPI(title="Agents API", lifespan=lifespan)
 
@@ -66,7 +84,7 @@ app.add_middleware(
 
 crew_manager = CrewManager()
 
-generator = RoadmapGenerator(COHERE_API_KEY)
+generator = RoadmapGenerator(CO_API_KEY)
 class RoadmapRequest(BaseModel):
     topic: str
     skill_level: str
