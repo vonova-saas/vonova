@@ -35,7 +35,8 @@ class CrewManager:
             
         except Exception as e:
             logger.error(f"Crew execution failed: {str(e)}")
-
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Topic: {topic}")
             class FallbackResult:
                 def __init__(self, topic):
                     self.raw = f"# {topic}\n\nWe encountered an issue generating your article. Please try again later. This may be due to API limitations or temporary service issues."

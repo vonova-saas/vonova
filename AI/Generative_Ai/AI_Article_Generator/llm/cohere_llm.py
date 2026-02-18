@@ -13,12 +13,12 @@ class LLMConfig:
             raise ValueError("CO_API_KEY is not set properly in environment variables")
 
         self.llm = ChatCohere(
-            model='command-r-08-2024',          
+            model='command-r-plus',          
             temperature=0.35,                   
             max_tokens=4000,
             api_key=api_key,
             max_retries=3,
-            retry_delay=1
+            retry_delay=2
         )
 
     def get_llm(self):
