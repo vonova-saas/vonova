@@ -3,6 +3,7 @@ from AI_Article_Generator.llm.cohere_llm import LLMConfig
 from AI_Article_Generator.crew.agents import PlannerAgent, WriterAgent, EditorAgent
 from AI_Article_Generator.crew.tasks import PlanningTask, WritingTask, EditingTask
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,14 @@ class CrewManager:
             task_write  = WritingTask(agent=writer_agent, topic=topic, context=[task_plan]).create_task()
             task_edit   = EditingTask(agent=editor_agent, topic=topic, context=[task_write]).create_task()
 
+            cohere_embedder = {
+                "provider": "cohere",
+                "config": {
+                    "model": "embed-english-v3.0",
+                    "api_key": os.getenv("CO_API_KEY"),
+                }
+            }
+
             crew = Crew(
                 agents=[planner_agent, writer_agent, editor_agent],
                 tasks=[task_plan, task_write, task_edit],
@@ -27,7 +36,7 @@ class CrewManager:
                 process=Process.sequential,
                 verbose=True,
                 llm=self.llm,
-                embedder=None   
+                embedder=cohere_embedder
             )
 
             result = crew.kickoff()
