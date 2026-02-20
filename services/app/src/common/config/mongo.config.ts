@@ -2,15 +2,15 @@ import { MongooseModuleOptions } from '@nestjs/mongoose';
 import configuration from './configuration';
 
 export const getMongoConfig = (): MongooseModuleOptions => {
-  const backend_env = configuration().NODE_ENV;
-  const uri =
-    backend_env === 'development'
-      ? configuration().MONGO_URI_LOCAL
-      : configuration().MONGO_URI_REMOTE;
+  const config = configuration();
+  const backend_env = config.NODE_ENV;
 
   return {
-    uri,
-    dbName: configuration().MONGO_DB_NAME,
+    uri:
+      backend_env === 'development'
+        ? config.MONGO_URI_LOCAL
+        : config.MONGO_URI_REMOTE,
+    dbName: config.MONGO_DB_NAME,
     autoIndex: true,
   };
 };
