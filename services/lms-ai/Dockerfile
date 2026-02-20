@@ -1,5 +1,8 @@
-# Use optimized Node.js image with pnpm
-FROM pnpm/node:20-alpine
+# Use Node.js LTS and install pnpm
+FROM node:20-alpine
+
+# Install pnpm
+RUN npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
