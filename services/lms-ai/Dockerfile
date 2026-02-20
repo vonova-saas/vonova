@@ -1,45 +1,29 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Use optimized Node.js image with pnpm
+FROM pnpm/node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies (including dev dependencies for build)
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
+# Copy package files first for layer caching
+COPY package.json pnpm-lock.yaml ./
 
 # Install only production dependencies
-RUN npm ci --only=production
+RUN pnpm install --frozen-lockfile --prod
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+# Copy all source files
+COPY src/ ./src/
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Build the TypeScript project
+RUN pnpm run build
 
-# Expose port
-EXPOSE 4005
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+  adduser --system --uid 1001 nestjs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4005/api/v1/pdf-summary/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Set proper permissions
+RUN chown -R nestjs:nodejs /app
+USER nestjs
 
-# Start the application
-CMD ["npm", "run", "start:prod"]
+# Start the microservice (NATS only, no HTTP port)
+CMD ["pnpm", "run", "start:prod"]
