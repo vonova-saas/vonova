@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
@@ -22,8 +22,8 @@ import { getMongoConfig } from './common/config/mongo.config';
     // MongooseModule.forRoot(configuration().MONGO_URI_LOCAL!),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: getMongoConfig,
-      inject: [],
     }),
     //? App Models
     AuthModule,

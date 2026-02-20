@@ -1,16 +1,24 @@
 import { MongooseModuleOptions } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import configuration from './configuration';
 
-export const getMongoConfig = (): MongooseModuleOptions => {
-  const config = configuration();
-  const backend_env = config.NODE_ENV;
+export const getMongoConfig = (
+  configService: ConfigService,
+): MongooseModuleOptions => {
+  const backendEnv = configuration().NODE_ENV;
+
+  const uri =
+    backendEnv === 'development'
+      ? configuration().MONGO_URI_LOCAL
+      : configuration().MONGO_URI_LOCAL;
+
+  if (!uri) {
+    throw new Error('MongoDB URI is not defined in environment variables');
+  }
 
   return {
-    uri:
-      backend_env === 'development'
-        ? config.MONGO_URI_LOCAL
-        : config.MONGO_URI_REMOTE,
-    dbName: config.MONGO_DB_NAME,
+    uri,
+    dbName: configService.get<string>('MONGO_DB_NAME'),
     autoIndex: true,
   };
 };
