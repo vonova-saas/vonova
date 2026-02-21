@@ -3,10 +3,10 @@
 
 import { useAuth } from "@/hooks";
 import { currentUserResponseType } from "@/types/api/app/auth/auth.type";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect } from "react";
 
-// Define the context shape
+// Define context shape
 type AuthContextType = {
   user?: currentUserResponseType['user'];
   role?: string;
@@ -23,22 +23,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Compute the main site origin (strip known dashboard subdomains like admin.)
-  const getMainOrigin = () => {
+  // Get base origin (protocol + host + port)
+  const getBaseOrigin = () => {
     if (typeof window === 'undefined') return '';
     const { protocol, hostname, port } = window.location;
-    // If hostname ends with .localhost -> use localhost; else use last two labels (example.com)
-    const parts = hostname.split('.');
-    let baseHost = hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      baseHost = hostname;
-    } else if (hostname.endsWith('.localhost')) {
-      baseHost = 'localhost';
-    } else if (parts.length >= 2) {
-      baseHost = parts.slice(-2).join('.');
-    }
-    return `${protocol}//${baseHost}${port ? `:${port}` : ''}`;
+    return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
   };
 
   // Fetch current user (with silent refresh)
@@ -59,50 +50,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (authError) {
       const status = (authError as any)?.response?.status;
       if (status === 401) {
-        // Unauthorized - redirect to login on main origin
+        // Unauthorized - redirect to login
         if (typeof window !== 'undefined') {
-          const origin = getMainOrigin();
+          const origin = getBaseOrigin();
           window.location.replace(`${origin}/auth/login`);
         }
       } else if (status === 403) {
-        // Forbidden - redirect to home on main origin
+        // Forbidden - redirect to home
         if (typeof window !== 'undefined') {
-          const origin = getMainOrigin();
+          const origin = getBaseOrigin();
           window.location.replace(`${origin}/`);
         }
       }
     }
   }, [authError, router]);
 
-  // Determine which area this origin represents
-  const getArea = () => {
-    if (typeof window === 'undefined') return 'main';
-    const host = window.location.hostname;
-    if (host.startsWith('student.')) return 'student';
-    if (host.startsWith('instructor.')) return 'instructor';
+  // Determine which area this path represents
+  const getAreaFromPath = () => {
+    if (pathname?.startsWith('/student')) return 'student';
+    if (pathname?.startsWith('/instructor')) return 'instructor';
     return 'main';
   };
 
-  // Get target dashboard base by role
-  const getDashboardBaseByRole = (role?: string) => {
-    const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;
-    const instructorBase = process.env.NEXT_PUBLIC_APP_INSTRUCTOR_DOMAIN;
-    if (role === 'INSTRUCTORS_USER') return instructorBase;
-    return studentBase;
+  // Get target dashboard path by role
+  const getDashboardPathByRole = (role?: string) => {
+    if (role === 'INSTRUCTORS_USER') return '/instructor';
+    return '/student';
   };
 
-  // Enforce role-domain isolation: if role doesn't match current dashboard area, redirect
+  // Enforce role-path isolation: if role doesn't match current path area, redirect
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isAuthenticated || !role || !user?._id) return;
-    const area = getArea();
-    const targetBase = getDashboardBaseByRole(role);
 
-    // If user is on a dashboard area that doesn't match their role, move them
-    if ((area === 'student' && role !== 'STUDENT_USER') || (area === 'instructor' && role !== 'INSTRUCTORS_USER')) {
-      window.location.replace(`${targetBase}/${user._id}`);
+    const currentArea = getAreaFromPath();
+    const targetPath = getDashboardPathByRole(role);
+
+    // If user is on a path area that doesn't match their role, move them
+    if ((currentArea === 'student' && role !== 'STUDENT_USER') ||
+      (currentArea === 'instructor' && role !== 'INSTRUCTORS_USER')) {
+      router.replace(`${targetPath}/${user._id}`);
     }
-  }, [isAuthenticated, role, user?._id]);
+  }, [isAuthenticated, role, user?._id, pathname, router]);
 
   const isRole = (r: string | string[]) => {
     if (!role) return false;
@@ -115,9 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Call logout API to clear cookies
       const { logoutMutationFn } = await import("@/services");
       await logoutMutationFn();
-      // Redirect to login on main origin (strip dashboard subdomain)
+      // Redirect to login
       if (typeof window !== 'undefined') {
-        const origin = getMainOrigin();
+        const origin = getBaseOrigin();
         window.location.replace(`${origin}/auth/login`);
         return;
       }
@@ -125,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Logout failed:", error);
       // Force redirect even if API call fails
       if (typeof window !== 'undefined') {
-        const origin = getMainOrigin();
+        const origin = getBaseOrigin();
         window.location.replace(`${origin}/auth/login`);
         return;
       }

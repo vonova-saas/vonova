@@ -47,17 +47,11 @@ export function middleware(request: NextRequest) {
   }
 
   // ✅ Admin subdomain
-  const isAdminSubdomain =
-    hostname.startsWith("admin.") ||
-    (hostname === "localhost:3000" && url.pathname.startsWith("/admin"));
+  const isAdminSubdomain = url.pathname.startsWith("/admin");
 
-  const isStudentSubdomain =
-    hostname.startsWith("student.") ||
-    (hostname === "localhost:3000" && url.pathname.startsWith("/student"));
+  const isStudentSubdomain =  url.pathname.startsWith("/student");
 
-  const isInstructorSubdomain =
-    hostname.startsWith("instructor.") ||
-    (hostname === "localhost:3000" && url.pathname.startsWith("/instructor"));
+  const isInstructorSubdomain = url.pathname.startsWith("/instructor");
 
   if (isAdminSubdomain) {
     if (!url.pathname.startsWith("/admin")) {
@@ -84,10 +78,3 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-// export const config = {
-//   matcher: [
-//     // Run on all paths except static assets
-//     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
-//   ],
-// };
