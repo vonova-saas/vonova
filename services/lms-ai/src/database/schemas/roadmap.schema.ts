@@ -90,11 +90,10 @@ export class Roadmap {
   @Prop({ type: [String] })
   focus_areas: string[];
 
-  // User and tracking
+  // User and tracking (index defined via RoadmapSchema.index({ userId: 1 }) below)
   @Prop({
     type: String,
     required: true,
-    index: true
   })
   userId: string;
 

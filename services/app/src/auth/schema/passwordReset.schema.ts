@@ -36,6 +36,3 @@ export class PasswordReset {
 }
 
 export const PasswordResetSchema = SchemaFactory.createForClass(PasswordReset);
-
-// Add TTL index to automatically delete documents after expiresAt
-PasswordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
