@@ -1,15 +1,14 @@
 "use client";
-import { cn } from "@/lib/utils";
+import { Icons } from "@/components/global/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/global/icons";
-import { useState } from "react";
-import { Loader } from "lucide-react";
-import { Eye, EyeOff } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { loginMutationFn } from "@/services";
 import { baseURL } from "@/services/base-url";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff, Loader } from "lucide-react";
+import { useState } from "react";
 
 export function LoginForm({
   className,
@@ -53,11 +52,9 @@ export function LoginForm({
       const userId = me?.data?.user?._id;
       const role = me?.data?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
       if (userId) {
-        // Choose target base domain by role, with sensible localhost fallbacks
-        const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;
-        const instructorBase = process.env.NEXT_PUBLIC_APP_INSTRUCTOR_DOMAIN;
-        const targetBase = role === "INSTRUCTORS_USER" ? instructorBase : studentBase;
-        window.location.assign(`${targetBase}/${userId}`);
+        // Choose target path by role, with sensible localhost fallbacks
+        const targetPath = role === "INSTRUCTORS_USER" ? "/instructor" : "/student";
+        window.location.assign(`${targetPath}/${userId}`);
       } else {
         // Fallback if userId is not found
         window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}`);

@@ -18,14 +18,14 @@ export const addFeedbackMutationFn = async (
   userId: string,
   data: addFeedbackType
 ): Promise<addFeedbackResponseType> => {
-  const response = await API.post(`/api/v1/app/feedback/${userId}/add`, data);
+  const response = await API.post(`/app/feedback/${userId}/add`, data);
   return response.data;
 };
 
 export const getFeedbackMutationFn = async (
   userId: string
 ): Promise<getFeedbackResponseType> => {
-  const response = await API.get(`/api/v1/app/feedback/${userId}`);
+  const response = await API.get(`/app/feedback/${userId}`);
   return response.data;
 };
 
@@ -33,7 +33,7 @@ export const getFeedbackByIdMutationFn = async (
   userId: string,
   id: string
 ): Promise<getFeedbackByIdResponseType> => {
-  const response = await API.get(`/api/v1/app/feedback/${userId}/${id}`);
+  const response = await API.get(`/app/feedback/${userId}/${id}`);
   return response.data;
 };
 
@@ -42,7 +42,7 @@ export const updateFeedbackMutationFn = async (
   id: string,
   data: updateFeedbackType
 ): Promise<updateFeedbackResponseType> => {
-  const response = await API.put(`/api/v1/app/feedback/${userId}/${id}`, data);
+  const response = await API.put(`/app/feedback/${userId}/${id}`, data);
   return response.data;
 };
 
@@ -50,7 +50,7 @@ export const deleteFeedbackMutationFn = async (
   userId: string,
   id: string
 ): Promise<deleteFeedbackResponseType> => {
-  const response = await API.delete(`/api/v1/app/feedback/${userId}/${id}`);
+  const response = await API.delete(`/app/feedback/${userId}/${id}`);
   return response.data;
 };
 
@@ -60,7 +60,7 @@ export const addFeedbackMessageMutationFn = async (
   id: string,
   data: addFeedbackMessageRequestType
 ): Promise<addFeedbackMessageResponseType> => {
-  const response = await API.post(`/api/v1/app/feedback/${userId}/${id}/messages`, data);
+  const response = await API.post(`/app/feedback/${userId}/${id}/messages`, data);
   return response.data;
 };
 
@@ -68,7 +68,7 @@ export const getFeedbackMessagesQueryFn = async (
   userId: string,
   id: string
 ): Promise<getFeedbackMessagesResponseType> => {
-  const response = await API.get(`/api/v1/app/feedback/${userId}/${id}/messages`);
+  const response = await API.get(`/app/feedback/${userId}/${id}/messages`);
   return response.data;
 };
 
@@ -78,6 +78,6 @@ export const updateFeedbackStatusMutationFn = async (
   id: string,
   data: updateFeedbackStatusRequestType
 ): Promise<updateFeedbackStatusResponseType> => {
-  const response = await API.put(`/api/v1/app/feedback/${userId}/${id}/status`, data);
+  const response = await API.put(`/app/feedback/${userId}/${id}/status`, data);
   return response.data;
 };
