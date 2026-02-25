@@ -1,7 +1,6 @@
 import { generateMetadata } from "@/utils/functions";
 import "../style/globals.css";
 import { cn } from "@/lib/utils";
-import { lato, cairo } from "@/utils/constants";
 import { ThemeProvider } from "@/providers/theme-provider";
 import ChatbotWidget from "@/components/shared/chatbot/chatbot-widget";
 import Providers from "@/providers/providers";
@@ -19,8 +18,6 @@ export default function RootLayout({
       <body
         className={cn(
           "overflow-x-hidden antialiased",
-          lato.variable,
-          cairo.variable,
         )}
       >
         <Providers>
