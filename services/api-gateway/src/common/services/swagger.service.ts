@@ -28,12 +28,23 @@ export class SwaggerService {
         'https://vonova.tech',
         'vonovacompany@gmail.com',
       )
-      .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/')
-      .addServer(
-        `http://localhost:${this.configService.get('PORT')}`,
-        'Local Development Server',
-      )
-      .addServer('https://api.vonova.tech', 'Production Server')
+      .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/');
+
+    // Server URLs from .env; first added is the default for "Execute" in Swagger UI
+    const publicOrigin = this.configService.get<string>('API_GATEWAY_ORIGIN');
+    const localUrl =
+      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
+      `http://localhost:${this.configService.get('PORT')}`;
+    const productionUrl = this.configService.get<string>('SWAGGER_SERVER_PRODUCTION');
+
+    if (publicOrigin) {
+      swaggerConfig.addServer(publicOrigin, 'Current Server (Railway / Deployed)');
+    }
+    swaggerConfig.addServer(localUrl, 'Local Development Server');
+    if (productionUrl) {
+      swaggerConfig.addServer(productionUrl, 'Production');
+    }
+    swaggerConfig
       .addTag('Auth', 'Authentication and authorization endpoints')
       .addTag('Gateway', 'Gateway status and service management')
       .addTag('Health', 'Health check endpoints for gateway and services')
