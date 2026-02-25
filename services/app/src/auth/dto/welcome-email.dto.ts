@@ -10,18 +10,23 @@ export class WelcomeEmailDto {
   role: string;
 
   @IsString()
-  @IsNotEmpty()
-  profilePictureUrl: string;
+  @IsOptional()
+  profilePictureUrl?: string;
 
   @IsString()
   @IsOptional()
-  couponCode: string;
+  couponCode?: string;
 
   @IsString()
-  @IsNotEmpty()
-  knowAboutUs: string;
+  @IsOptional()
+  knowAboutUs?: string;
 
   @IsString()
   @IsOptional()
   userAgent?: string;
+
+  /** Allowed for client compatibility; not used by backend */
+  @IsString()
+  @IsOptional()
+  answerOne?: string;
 }

@@ -2,12 +2,12 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class OAuthWelcomeDto {
   @IsString()
-  @IsNotEmpty()
-  providerId: string;
+  @IsOptional()
+  providerId?: string;
 
   @IsString()
-  @IsNotEmpty()
-  userAgent: string;
+  @IsOptional()
+  userAgent?: string;
 
   @IsString()
   @IsNotEmpty()
