@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import {
   IsArray,
   IsNotEmpty,
@@ -10,7 +10,6 @@ import {
   Min,
 } from 'class-validator';
 
-// ===== Option DTO =====
 export class OptionDto {
   @IsString()
   @IsNotEmpty()
@@ -21,7 +20,6 @@ export class OptionDto {
   text: string;
 }
 
-// ===== Question DTO =====
 export class QuestionDto {
   @IsString()
   @IsNotEmpty()
@@ -41,8 +39,7 @@ export class QuestionDto {
   correctOptionId: string;
 }
 
-// ===== Create Quiz DTO =====
-export class CreateQuizDto {
+export class CreateAssignmentDto {
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -66,10 +63,8 @@ export class CreateQuizDto {
   questions: QuestionDto[];
 }
 
-// ===== Update Quiz DTO =====
-export class UpdateQuizDto extends PartialType(CreateQuizDto) {}
+export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {}
 
-// ===== Submit Answers DTO =====
 export class SubmitAnswerItemDto {
   @IsString()
   @IsNotEmpty()
@@ -80,7 +75,7 @@ export class SubmitAnswerItemDto {
   selectedOptionId: string;
 }
 
-export class SubmitQuizAnswersDto {
+export class SubmitAssignmentDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SubmitAnswerItemDto)

@@ -15,7 +15,7 @@ import { UpdateBillingDto } from './dto/update-billing.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@Controller('api/v1/billing')
+@Controller('api/v1/app/billing')
 @UseGuards(JwtAuthGuard)
 export class BillingGatewayController {
   constructor(private readonly billingService: BillingGatewayService) {}

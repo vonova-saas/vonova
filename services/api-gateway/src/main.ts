@@ -18,12 +18,7 @@ async function bootstrap() {
   });
 
   // Security
-  app.use(
-    helmet({
-      crossOriginOpenerPolicy: false,
-      crossOriginResourcePolicy: false,
-    }),
-  );
+  app.use(helmet());
 
   // CORS - will be configured in app.module.ts
   app.enableCors({

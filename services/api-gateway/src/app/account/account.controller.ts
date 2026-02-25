@@ -15,7 +15,7 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@Controller('api/v1/account')
+@Controller('api/v1/app/account')
 @UseGuards(JwtAuthGuard)
 export class AccountGatewayController {
   constructor(private readonly accountService: AccountGatewayService) {}
