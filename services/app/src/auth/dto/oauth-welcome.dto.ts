@@ -14,12 +14,12 @@ export class OAuthWelcomeDto {
   role: string;
 
   @IsString()
-  @IsNotEmpty()
-  username: string;
+  @IsOptional()
+  username?: string;
 
   @IsString()
-  @IsNotEmpty()
-  knowAboutUs: string;
+  @IsOptional()
+  knowAboutUs?: string;
 
   @IsString()
   @IsOptional()
@@ -28,4 +28,9 @@ export class OAuthWelcomeDto {
   @IsString()
   @IsOptional()
   profilePictureUrl?: string;
+
+  /** Allowed for client compatibility; not used by backend */
+  @IsString()
+  @IsOptional()
+  answerOne?: string;
 }

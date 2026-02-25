@@ -487,7 +487,7 @@ export class AuthService {
     }
 
     user.role = role as Role;
-    user.knowAboutUs = knowAboutUs;
+    user.knowAboutUs = knowAboutUs ?? 'Google';
     if (username) user.name = username;
     if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
 
