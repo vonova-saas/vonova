@@ -121,3 +121,8 @@ dist/
 
 # save models
 models/
+
+# Model training data files
+*.pth
+*.pkl
+*.zip

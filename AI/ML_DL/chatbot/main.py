@@ -1,204 +1,128 @@
 import json
-import logging
-import os
-import random
-import sys
+import pickle
+import torch
 from pathlib import Path
-from typing import Optional
+from sentence_transformers import SentenceTransformer, util
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
-import torch
-
-from src.model.model import NeuralNet
-from src.utils.nltk_utils import bag_of_words, tokenize
-
-
-load_dotenv()
-
-logger = logging.getLogger("vonova_chatbot")
-
-
-def _configure_logging() -> None:
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [vonova_chatbot] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    handler.setFormatter(formatter)
-
-    logger.setLevel(logging.INFO)
-    logger.handlers.clear()
-    logger.addHandler(handler)
-
-
-def _health_payload(service_name: str) -> dict:
-    return {
-        "service": service_name,
-        "message": "healthy",
-        "status": "success",
-        "version": "1.0.0",
-    }
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BASE_DIR = Path(__file__).resolve().parent
-SRC_DIR = BASE_DIR / "src"
-DATA_DIR = SRC_DIR / "data"
-INTENTS_PATH = DATA_DIR / "intents.json"
-MODEL_PATH = DATA_DIR / "data.pth"
-
-with open(INTENTS_PATH, "r", encoding="utf-8") as json_data:
-    intents = json.load(json_data)
-
-if not MODEL_PATH.exists():
-    logger.error("Model file not found at %s. Train the model first.", MODEL_PATH)
-    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}.")
-
-checkpoint = torch.load(MODEL_PATH, map_location=device)
-
-input_size = checkpoint["input_size"]
-hidden_size = checkpoint["hidden_size"]
-output_size = checkpoint["output_size"]
-all_words = checkpoint["all_words"]
-tags = checkpoint["tags"]
-model_state = checkpoint["model_state"]
-
-model = NeuralNet(input_size, hidden_size, output_size).to(device)
-model.load_state_dict(model_state)
-model.eval()
+DATA_DIR = BASE_DIR / "src" / "data"
 
 bot_name = "Vonova"
 
-SUPPORTED_LANGS = {"en", "ar"}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  global model_en, model_ar, intents_en, intents_ar, data_en, data_ar
+  print("Initializing Vonova AI Engine...")
 
 
-def detect_lang_from_text(text: str) -> str:
-    """Very simple heuristic: Arabic chars -> 'ar', otherwise 'en'."""
-    for ch in text:
-        if "\u0600" <= ch <= "\u06FF":
-            return "ar"
-    return "en"
+  model_en = SentenceTransformer('all-MiniLM-L6-v2')
+  model_ar = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
 
-def normalize_lang(lang: Optional[str], message: str) -> str:
-    if lang in SUPPORTED_LANGS:
-        return lang
-    return detect_lang_from_text(message)
+  with open(DATA_DIR / "en_intents.json", "r", encoding="utf-8") as f:
+    intents_en = json.load(f)
+  with open(DATA_DIR / "ar_intents.json", "r", encoding="utf-8") as f:
+    intents_ar = json.load(f)
 
 
-def infer(message: str, lang: Optional[str] = None) -> dict:
-    # Normalize/auto-detect language
-    lang = normalize_lang(lang, message)
+  def load_pkl(filename):
+    with open(DATA_DIR / filename, "rb") as f:
+      return pickle.load(f)
 
-    tokens = tokenize(message)
-    X = bag_of_words(tokens, all_words)
-    X = X.reshape(1, X.shape[0])
-    X = torch.from_numpy(X).to(device)
+  try:
+    data_en = load_pkl("en_data.pkl")
+    data_ar = load_pkl("ar_data.pkl")
+  except FileNotFoundError:
+    print("Error: .pkl files not found! Please run src/training/train.py first.")
+    exit()
 
-    with torch.no_grad():
-        output = model(X)
-        _, predicted = torch.max(output, dim=1)
-        probs = torch.softmax(output, dim=1)
-        confidence = probs[0][predicted.item()].item()
+  print("Vonova Chatbot API is Ready!")
+  yield
+  print("Shutting down Vonova API...")
 
-    tag = tags[predicted.item()]
 
-    response = "I do not understand..."
-    images: list[str] = []
 
-    if confidence > 0.75:
-        for intent in intents["intents"]:
-            if tag == intent["tag"]:
-                # responses is now a dict: { "en": [...], "ar": [...] }
-                responses_by_lang = intent.get("responses", {})
-                # Prefer requested lang, else fall back to English, then any available
-                resp_list = responses_by_lang.get(lang) or responses_by_lang.get("en")
-                if not resp_list:
-                    for _l, lst in responses_by_lang.items():
-                        if lst:
-                            resp_list = lst
-                            break
-                if resp_list:
-                    response = random.choice(resp_list)
-                images = intent.get("images", []) or []
-                break
+app = FastAPI(title="Vonova Chatbot API", lifespan=lifespan)
 
-    return {
-        "bot": bot_name,
-        "intent": tag,
-        "confidence": round(confidence, 4),
-        "reply": response,
-        "images": images,
-        "lang": lang,
-    }
 
 
 class ChatRequest(BaseModel):
-    message: str
-    lang: Optional[str] = None
+  message: str
 
 
-class ChatResponse(BaseModel):
-    bot: str
-    intent: str
-    confidence: float
-    reply: str
-    images: list[str]
-    lang: str
+def detect_language(text: str) -> str:
+
+  for ch in text:
+    if "\u0600" <= ch <= "\u06FF": return "ar"
+  return "en"
 
 
-class HealthResponse(BaseModel):
-    service: str
-    message: str
-    status: str
-    version: str
+def get_response(user_input: str) -> dict:
+  lang = detect_language(user_input)
 
 
-app = FastAPI(title="Vonova Chatbot API")
+  if lang == "ar":
+    curr_model, curr_data, curr_intents = model_ar, data_ar, intents_ar
+    fallback_msg = "مش قادر أفهمك أوي، ممكن توضح سؤالك؟"
+  else:
+    curr_model, curr_data, curr_intents = model_en, data_en, intents_en
+    fallback_msg = "I'm sorry, I don't quite understand. Could you rephrase?"
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    _configure_logging()
-    logger.info("Bootstrapping Vonova Chatbot service (FastAPI mode)...")
+  user_embedding = curr_model.encode(user_input, convert_to_tensor=True)
+  cos_scores = util.cos_sim(user_embedding, curr_data["embeddings"])[0]
+
+  top_score, top_idx = torch.max(cos_scores, dim=0)
+  tag = curr_data["tags"][top_idx.item()]
+  confidence = top_score.item()
 
 
-@app.get("/health", response_model=HealthResponse)
-def get_health() -> dict:
-    return _health_payload("Vonova Chatbot")
+  print(f"[DEBUG] Input: {user_input} | Tag: {tag} | Score: {confidence:.4f} | Lang: {lang}")
+
+  response_text = fallback_msg
+  image_link = None
+  predicted_intent = "unknown"
 
 
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> dict:
-    message = (request.message or "").strip()
-    lang = request.lang
+  if confidence > 0.60:
+    predicted_intent = tag
+    for intent in curr_intents:
+      if intent["tag"] == tag:
+        res_obj = intent["responses"][0]
+        response_text = res_obj["text"]
+        image_link = res_obj.get("image")
+        break
 
-    if not message:
-        raise HTTPException(status_code=400, detail="Missing 'message' in request body")
+  return {
+    "bot": bot_name,
+    "intent": predicted_intent,
+    "confidence": round(confidence, 4),
+    "reply": response_text,
+    "image": image_link,
+    "lang": lang
+  }
 
-    result = infer(message, lang)
-    return result
 
 
-@app.post("/chat/stream", response_model=ChatResponse)
-def chat_stream(request: ChatRequest) -> dict:
-    message = (request.message or "").strip()
-    lang = request.lang
+@app.post("/chat")
+def chat_endpoint(request: ChatRequest):
+  message = request.message.strip()
+  if not message:
+    raise HTTPException(status_code=400, detail="Empty message")
+  return get_response(message)
 
-    if not message:
-        raise HTTPException(status_code=400, detail="Missing 'message' in request body")
 
-    result = infer(message, lang)
-    result["stream"] = True
-    result["stream_type"] = "word_by_word"
-    return result
+@app.get("/health")
+def health_check():
+  return {"status": "success", "service": "Vonova Chatbot"}
 
 
 if __name__ == "__main__":
-    import uvicorn
+  import uvicorn
 
-    port = int(os.getenv("PORT", "7860"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+  uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)

@@ -30,11 +30,11 @@ Supported LLM providers: - Cohere - Google Gemini
 
 ## 1) AI Article Generator
 
-Multi-agent system that produces structured, SEO-ready articles.
+Multi-agent system that produces structured, technical articles.
 
 Capabilities: - Automatic language detection (Arabic / English) -
-Multi-agent workflow (Planner → Writer → Editor) - Community-ready
-formatting - Article enhancement support
+Multi-agent workflow (Planner → Writer → Editor) - Technical
+structure validation - Professional article formatting
 
 Endpoint: POST `/generate_article`
 
@@ -69,12 +69,12 @@ Endpoint: POST `/generate-quiz`
 
 ## 4) AI PDF Summary & Q&A System
 
-AI-powered document understanding engine.
+AI-powered document understanding engine with voice interaction support.
 
 Capabilities: - Upload PDF - Auto summarization - Ask questions about
-document - Session-based memory - Context-aware answers
+document - Session-based memory - Context-aware answers - Voice Q&A (speech-to-text & text-to-speech)
 
-Endpoints: - POST `/upload` - GET `/summarize` - POST `/ask` - DELETE
+Endpoints: - POST `/upload` - GET `/summarize` - POST `/ask` - POST `/voice/ask` - DELETE
 `/session/{session_id}`
 
 
@@ -153,6 +153,7 @@ The API will be available at `http://{AI_SERVICE_HOST}:{AI_SERVICE_PORT}`.
 - `POST /upload` — multipart form with `file` (PDF)
 - `GET /summarize` — `session_id` and optional `summary_type`
 - `POST /ask` — supports form data or JSON with `session_id` and `question`
+- `POST /voice/ask` — multipart form with `audio` file and `session_id` for voice Q&A
 - `DELETE /session/{session_id}` — remove a stored session
 - `GET /health` — simple health check
 - `GET /docs` — interactive Swagger UI
@@ -164,7 +165,7 @@ The API will be available at `http://{AI_SERVICE_HOST}:{AI_SERVICE_PORT}`.
 - AI Integration: - `Cohere API` - `Google Gemini API` - `CrewAI multi-agent`
 orchestration
 
-- Document Processing: - `PyMuPDF` - `Embedding-based retrieval`
+- Document Processing: - `PyMuPDF` - `Embedding-based retrieval` - `Speech-to-Text & Text-to-Speech`
 
 - Infrastructure: - `Docker support` - `Environment-based configuration` -
 `Centralized logging system`
@@ -245,53 +246,40 @@ Generative_Ai/
 ├── app.py                          # Unified FastAPI application
 ├── requirements.txt                # Consolidated pinned dependencies
 ├── README.md                       # This file
-├── Dockerfile                      # Docker container configuration
+├── dockerfile                      # Docker container configuration
 ├── .gitignore                      # Git ignore patterns
 ├── Config/                         # Configuration files
-│   └── logging_utils.py            # Logger helper
-├── Docs/                           # Documentation files
-│   ├── CHANGELOG.md                # Version changelog
-│   ├── CONTRIBUTING.md             # Contribution guidelines
-│   ├── Learning_Roadmap_Generator_Documentation.md
-│   ├── quiz_generator_guide.md
-│   └── Writer_Articles.md
+│   ├── config.py                  # Environment validation
+│   ├── logging_utils.py           # Logger helper
+│   └── middleware.py              # CORS and middleware setup
 ├── AI_Article_Generator/           # article service code
-│   ├── crew/                       # CrewAI agents and tasks
-│   │   ├── agents.py
-│   │   ├── crew_manager.py
-│   │   └── tasks.py
+│   ├── agents/                     # AI agents
+│   ├── manager/                    # Multi-agent orchestration
 │   ├── llm/                        # LLM integration
-│   │   └── cohere_llm.py
-│   ├── models/                     # Data models
-│   │   └── article_schema.py
+│   ├── schemas/                    # Data models
 │   └── utils/                      # Utility functions
-│       └── translation_utils.py
 ├── AI_PDF_Summary_QA/              # pdf summarization & q&a code
 │   ├── agents/                     # AI agents
-│   │   └── llm_agent.py
+│   ├── helpers/                    # Helper utilities
+│   │   ├── prompts.py              # Voice instruction prompts
+│   │   └── utils.py                # Audio format utilities
 │   ├── models/                     # Data models
-│   │   └── pdf_schema.py
-│   └── services/                   # Business logic
-│       ├── embedding_index.py
-│       ├── pdf_service.py
-│       ├── processing.py
-│       ├── query_history_storage.py
-│       └── session_storage.py
+│   ├── services/                   # Business logic
+│   │   ├── Stt_service.py          # Speech-to-Text service
+│   │   ├── Tts_service.py          # Text-to-Speech service
+│   │   ├── embedding_index.py
+│   │   ├── pdf_service.py
+│   │   ├── processing.py
+│   │   ├── query_history_storage.py
+│   │   └── session_storage.py
 ├── AI_Quiz_Generator/              # quiz service code
 │   ├── llm/                        # LLM integration
-│   │   └── cohere_llm.py
-│   ├── models/                     # Data models
-│   │   └── quiz_schema.py
+│   ├── model/                      # Data models (note: model, not models)
 │   └── utils/                      # Utility functions
-│       └── translation_utils.py
 └── AI_Roadmap_Generator/           # roadmap service code
     ├── llm/                        # LLM integration
-    │   └── cohere_llm.py
     ├── models/                     # Data models
-    │   └── roadmap_schema.py
     └── services/                   # Business logic
-        ├── roadmap_formatter.py
-        └── roadmap_generator.py
 ```
 
 ## Troubleshooting

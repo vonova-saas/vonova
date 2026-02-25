@@ -12,7 +12,7 @@ class LLMConfig:
 
         self.llm = ChatCohere(
             model='command-a-03-2025',
-            temperature=0.35,
+            temperature=0.0,
             max_tokens=4000,
             api_key=api_key,
             max_retries=3,

@@ -149,3 +149,8 @@ dist/
 
 # testing
 /coverage
+
+# Model training data files
+*.pth
+*.pkl
+*.zip

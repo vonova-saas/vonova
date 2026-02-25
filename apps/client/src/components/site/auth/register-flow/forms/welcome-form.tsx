@@ -3,12 +3,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { welcomeUserMutationFn, welcomeUserOAuthGoogleMutationFn } from "@/services";
+import { welcomeUserResponseType } from "@/types/api/app/auth/auth.type";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCurrentUserQueryFn, welcomeUserMutationFn, welcomeUserOAuthGoogleMutationFn } from "@/services";
-import { welcomeUserResponseType } from "@/types/api/app/auth/auth.type";
 
 type ServiceType = 'student' | 'instructor' | null;
 
@@ -161,11 +161,9 @@ export function WelcomeForm({
       const userId = me?.data?.userId;
       const userRole = me?.data?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTORS_USER'
       if (userId) {
-        // Choose target base domain by role, with sensible localhost fallbacks
-        const studentBase = process.env.NEXT_PUBLIC_APP_STUDENT_DOMAIN;
-        const instructorBase = process.env.NEXT_PUBLIC_APP_INSTRUCTOR_DOMAIN;
-        const targetBase = userRole === "INSTRUCTORS_USER" ? instructorBase : studentBase;
-        window.location.assign(`${targetBase}/${userId}`);
+        // Choose target path by role, with sensible localhost fallbacks
+        const targetPath = userRole === "INSTRUCTORS_USER" ? "/instructor" : "/student";
+        window.location.assign(`${targetPath}/${userId}`);
       } else {
         // Fallback if userId is not found
         window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}`);

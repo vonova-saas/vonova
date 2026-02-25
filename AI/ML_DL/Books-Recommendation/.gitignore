@@ -127,3 +127,8 @@ model_files/
 data/
 kindle_data-v2.csv
 *.zip
+
+# Model training data files
+*.pth
+*.pkl
+*.zip

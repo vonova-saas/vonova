@@ -142,5 +142,10 @@ cython_debug/
 src/data/data.pth
 /models
 
+# Model training data files
+*.pth
+*.pkl
+*.zip
+
 # Images of vonova
 /images
