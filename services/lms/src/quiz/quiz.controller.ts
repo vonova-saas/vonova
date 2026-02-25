@@ -1,12 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { QuizService } from './quiz.service';
 import {
   CreateQuizDto,
@@ -18,48 +11,48 @@ import {
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
-  @Post('addQuiz')
-  createQuiz(@Body() dto: CreateQuizDto) {
+  @MessagePattern({ cmd: 'quiz.create' })
+  createQuiz(@Payload() dto: CreateQuizDto) {
     return this.quizService.createQuiz(dto);
   }
 
-  @Patch('updateQuiz/:id')
-  updateQuiz(@Param('id') id: string, @Body() dto: UpdateQuizDto) {
+  @MessagePattern({ cmd: 'quiz.update' })
+  updateQuiz(@Payload('id') id: string, @Payload('dto') dto: UpdateQuizDto) {
     return this.quizService.updateQuiz(id, dto);
   }
 
-  @Get('getAllQuizzes')
+  @MessagePattern({ cmd: 'quiz.getAll' })
   getAllQuizzes() {
     return this.quizService.getAllQuizzes();
   }
 
-  @Get('getQuiz/:id')
-  getQuiz(@Param('id') id: string) {
+  @MessagePattern({ cmd: 'quiz.getById' })
+  getQuiz(@Payload('id') id: string) {
     return this.quizService.getQuizById(id);
   }
 
-  @Delete('deleteQuiz/:id')
-  deleteQuiz(@Param('id') id: string) {
+  @MessagePattern({ cmd: 'quiz.delete' })
+  deleteQuiz(@Payload('id') id: string) {
     return this.quizService.deleteQuiz(id);
   }
 
   // ===== Attempts =====
 
-  @Post(':quizId/submit')
+  @MessagePattern({ cmd: 'quiz.submit' })
   submitQuiz(
-    @Param('quizId') quizId: string,
-    @Body() dto: SubmitQuizAnswersDto,
+    @Payload('quizId') quizId: string,
+    @Payload('answers') dto: SubmitQuizAnswersDto['answers'],
   ) {
-    return this.quizService.submitQuizAnswers(quizId, dto.answers);
+    return this.quizService.submitQuizAnswers(quizId, dto);
   }
 
-  @Get('attempts/:attemptId')
-  getMyAttempt(@Param('attemptId') attemptId: string) {
+  @MessagePattern({ cmd: 'quiz.getAttempt' })
+  getMyAttempt(@Payload('attemptId') attemptId: string) {
     return this.quizService.getMyAttempt(attemptId);
   }
 
-  @Get(':quizId/my-attempts')
-  getMyAttempts(@Param('quizId') quizId: string) {
+  @MessagePattern({ cmd: 'quiz.getAttemptsForQuiz' })
+  getMyAttempts(@Payload('quizId') quizId: string) {
     return this.quizService.getMyAttemptsForQuiz(quizId);
   }
 }

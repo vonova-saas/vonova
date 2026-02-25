@@ -1,13 +1,13 @@
 
 import { Model, Types } from 'mongoose';
-import { Guide, GuideDocument} from 'src/schemas/library/guide.schema';
-import { S3Service } from '../../../utils/storage/s3.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Guide, GuideDocument } from '../schema/guide.schema';
+import { S3Service } from '../../common/utils/storage/s3.service';
+import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { LibraryAsset, LibraryAssetDocument } from 'src/schemas/library/library-asset.schema';
+import { LibraryAsset, LibraryAssetDocument } from '../schema/library-asset.schema';
 import { UpdateGuideDto } from './dto/guide.dto';
 
-
+@Injectable()
 export class GuideService {
 constructor(
     private readonly s3Service: S3Service,

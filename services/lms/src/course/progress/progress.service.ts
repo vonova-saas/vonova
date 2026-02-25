@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { LessonProgress, LessonProgressDocument } from 'src/schemas/course/lesson-progress.schema';
-import { Lesson } from 'src/schemas/course/lesson.schema';
+import { LessonProgress, LessonProgressDocument } from './schema/lesson-progress.schema';
+import { Lesson } from '../lesson/schema/lesson.schema';
 import { EnrollService } from '../enroll/enroll.service';
 
 

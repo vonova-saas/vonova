@@ -1,6 +1,6 @@
 import { Controller, Post, Delete, Param, Get, Query, Body } from '@nestjs/common';
 import { FavoriteService } from './favorite.service';
-import { ItemType } from 'src/schemas/library/favorite.schema';
+import type { ItemType } from '../schema/favorite.schema';
 
 
 @Controller('/library/favorite')

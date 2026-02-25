@@ -1,47 +1,68 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Catch,
   ArgumentsHost,
   ExceptionFilter,
   HttpStatus,
+  HttpException,
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import type { Request } from 'express';
 
 @Catch()
 export class RpcExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(RpcExceptionFilter.name);
 
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
-    this.logger.error('RPC Exception caught', {
-      exception,
-      details: exception?.details || exception,
-      code: exception?.code,
-      statusCode: exception?.statusCode,
-      message: exception?.message,
-    });
-
-    // Handle different error structures from microservice
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = 'Error';
 
-    if (exception?.statusCode) {
-      statusCode = exception.statusCode;
-      message = exception.message || 'Internal server error';
-      error = exception.error || 'Error';
-    } else if (exception?.details) {
-      statusCode =
-        exception.details.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;
-      message = exception.details.message || 'Internal server error';
-      error = exception.details.error || 'Error';
-    } else if (exception?.message) {
-      message = exception.message;
-      error = exception.error || 'Error';
+    if (exception instanceof HttpException) {
+      statusCode = exception.getStatus();
+      const res = exception.getResponse();
+      if (typeof res === 'object' && res !== null && 'message' in res) {
+        const r = res as { message?: string | string[]; error?: string };
+        message = Array.isArray(r.message)
+          ? (r.message[0] ?? message)
+          : (r.message ?? message);
+        error = r.error ?? 'Error';
+      } else {
+        message = typeof res === 'string' ? res : message;
+      }
+    } else {
+      const ex = exception as Record<string, unknown>;
+      if (ex?.statusCode != null) {
+        statusCode = ex.statusCode as number;
+        message =
+          typeof ex.message === 'string' ? ex.message : (ex.message as string) ?? message;
+        error = (ex.error as string) ?? error;
+      } else if (ex?.details && typeof ex.details === 'object') {
+        const d = ex.details as Record<string, unknown>;
+        statusCode =
+          (d.statusCode as number) ?? HttpStatus.INTERNAL_SERVER_ERROR;
+        message = (d.message as string) ?? message;
+        error = (d.error as string) ?? error;
+      } else if (ex?.message !== undefined && ex?.message !== null) {
+        message =
+          typeof ex.message === 'string' ? ex.message : String(ex.message);
+        error = (ex.error as string) ?? error;
+      }
+    }
+
+    const isFavicon404 =
+      statusCode === HttpStatus.NOT_FOUND &&
+      request.url?.endsWith('/favicon.ico');
+    if (!isFavicon404) {
+      this.logger.error('Exception caught', {
+        statusCode,
+        message,
+        path: request.url,
+      });
     }
 
     response.status(statusCode).json({

@@ -3,7 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Quiz } from './schema/quiz.schema';
 import { QuizAnswer } from './schema/quiz-answer.schema';
-import { CreateQuizDto, QuestionDto, UpdateQuizDto } from './dto/quiz.dto';
+import {
+  CreateQuizDto,
+  QuestionDto,
+  SubmitAnswerItemDto,
+  UpdateQuizDto,
+} from './dto/quiz.dto';
 
 @Injectable()
 export class QuizService {
@@ -60,10 +65,7 @@ export class QuizService {
   }
 
   // ===== Attempts =====
-  async submitQuizAnswers(
-    quizId: string,
-    answers: Array<{ questionId: string; selectedOptionId: string }>,
-  ) {
+  async submitQuizAnswers(quizId: string, answers: SubmitAnswerItemDto[]) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 

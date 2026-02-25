@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Book, BookDocument } from '../../../schemas/library/book/book.schema';
-import { BookProgress, BookProgressDocument } from '../../../schemas/library/book/book-progress.schema';
+import { Book, BookDocument } from '../schema/book/book.schema';
+import { BookProgress, BookProgressDocument } from '../schema/book/book-progress.schema';
 import { CreateBookDto, UpdateBookDto, PublishBookDto, UpdateProgressDto } from './dto/book.dto';
 
 @Injectable()

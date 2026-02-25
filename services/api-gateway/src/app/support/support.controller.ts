@@ -18,7 +18,7 @@ import { SupportDto, AddMessageDto, UpdateStatusDto } from './dto/support.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@Controller('api/v1/support')
+@Controller('api/v1/app/support')
 @UseGuards(JwtAuthGuard)
 export class SupportGatewayController {
   constructor(private readonly supportService: SupportGatewayService) {}

@@ -1,39 +1,38 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-  Catch,
-  RpcExceptionFilter,
-  ArgumentsHost,
-  Logger,
-} from '@nestjs/common';
+import { Catch, RpcExceptionFilter, ArgumentsHost, Logger } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 
+interface GatewayErrorPayload {
+  statusCode: number;
+  message: string;
+  error: string;
+}
+
 @Catch()
-export class AllExceptionsFilter implements RpcExceptionFilter<any> {
+export class AllExceptionsFilter implements RpcExceptionFilter<unknown> {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: any, host: ArgumentsHost): Observable<any> {
-    const error = exception?.response || exception?.message || exception;
+  catch(exception: unknown, _host: ArgumentsHost): Observable<GatewayErrorPayload> {
+    const ex = exception as Record<string, unknown> | undefined;
+    const statusCode = (ex?.status as number) ?? 500;
+    const errorName = (ex?.name as string) ?? 'Error';
+    const rawError = ex?.response ?? ex?.message ?? exception;
+    const message =
+      typeof rawError === 'string'
+        ? rawError
+        : (rawError as { message?: string })?.message ?? 'Internal server error';
 
     this.logger.error('Microservice exception caught', {
-      exception,
-      statusCode: exception?.status,
-      message:
-        typeof error === 'string'
-          ? error
-          : error?.message || 'Internal server error',
-      errorName: exception?.name || 'Error',
+      statusCode,
+      message,
+      errorName,
     });
 
-    // Throw the actual error structure that the gateway expects
-    return throwError(() => ({
-      statusCode: exception?.status || 500,
-      message:
-        typeof error === 'string'
-          ? error
-          : error?.message || 'Internal server error',
-      error: exception?.name || 'Error',
-    }));
+    return throwError(
+      (): GatewayErrorPayload => ({
+        statusCode,
+        message,
+        error: errorName,
+      }),
+    );
   }
 }

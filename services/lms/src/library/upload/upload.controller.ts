@@ -1,5 +1,5 @@
 import { Controller, Post, Param, Body, Headers, Req } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { CompleteDto, PresignDto } from './dto/upload.dto';
 import { UploadService } from './upload.service';
 

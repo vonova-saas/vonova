@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ChapterService } from './chapter.service';
 import { ChapterController } from './chapter.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Chapter, ChapterSchema } from 'src/schemas/course/chapter.schema';
-import { Course, CourseSchema } from 'src/schemas/course/course.schema';
+import { Chapter, ChapterSchema } from './schema/chapter.schema';
+import { Course, CourseSchema } from '../course/schema/course.schema';
 
 @Module({
   imports: [MongooseModule.forFeature([

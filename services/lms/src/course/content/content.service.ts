@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Asset } from 'src/schemas/course/asset.schema';
-import { Chapter } from 'src/schemas/course/chapter.schema';
-import { Course } from 'src/schemas/course/course.schema';
-import { Lesson } from 'src/schemas/course/lesson.schema';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { Asset } from './schema/asset.schema';
+import { Chapter } from '../chapter/schema/chapter.schema';
+import { Course } from '../course/schema/course.schema';
+import { Lesson } from '../lesson/schema/lesson.schema';
+import { S3Service } from '../../common/utils/storage/s3.service';
 
 
 @Injectable()

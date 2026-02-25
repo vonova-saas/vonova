@@ -15,8 +15,7 @@ import { AssignmentController } from './assignment.controller';
       { name: AssignmentAnswer.name, schema: AssignmentAnswerSchema },
     ]),
   ],
-  providers: [AssignmentService],
   controllers: [AssignmentController],
-  exports: [AssignmentService],
+  providers: [AssignmentService],
 })
 export class AssignmentModule {}

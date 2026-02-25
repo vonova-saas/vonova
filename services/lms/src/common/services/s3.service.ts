@@ -1,0 +1,110 @@
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+
+/**
+ * S3 service for direct upload/delete (e.g. LMS-AI PDF summary).
+ * For presigned URLs (library/course), use common/utils/storage/s3.service.
+ */
+@Injectable()
+export class S3Service {
+  private readonly logger = new Logger(S3Service.name);
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
+  private readonly region: string;
+
+  constructor(private readonly configService: ConfigService) {
+    const accessKeyId =
+      this.configService.get<string>('env.awsAccessKeyId') ||
+      this.configService.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey =
+      this.configService.get<string>('env.awsSecretAccessKey') ||
+      this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+    this.region =
+      this.configService.get<string>('env.awsRegion') ||
+      this.configService.get<string>('AWS_REGION') ||
+      'eu-north-1';
+    this.bucketName =
+      this.configService.get<string>('AWS_S3_BUCKET_LMS_AI') ||
+      this.configService.get<string>('env.awsS3Bucket') ||
+      this.configService.get<string>('AWS_S3_BUCKET') ||
+      'cv-pdf-1234567890';
+
+    if (!accessKeyId || !secretAccessKey) {
+      this.logger.warn('AWS credentials not configured. S3 uploads will fail.');
+    }
+
+    this.s3Client = new S3Client({
+      region: this.region,
+      credentials: {
+        accessKeyId: accessKeyId || '',
+        secretAccessKey: secretAccessKey || '',
+      },
+    });
+
+    this.logger.log(`S3 Service initialized with bucket: ${this.bucketName}, region: ${this.region}`);
+  }
+
+  async uploadFile(
+    fileBuffer: Buffer,
+    fileName: string,
+    contentType: string = 'application/pdf',
+    folder?: string,
+  ): Promise<string> {
+    try {
+      const timestamp = Date.now();
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const uniqueFileName = `${timestamp}-${sanitizedFileName}`;
+      const s3Key = folder ? `${folder}/${uniqueFileName}` : `pdfs/${uniqueFileName}`;
+
+      this.logger.log(`Uploading file to S3: ${s3Key} (${fileBuffer.length} bytes)`);
+
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: s3Key,
+          Body: fileBuffer,
+          ContentType: contentType,
+          Metadata: {
+            originalFileName: fileName,
+            uploadedAt: new Date().toISOString(),
+          },
+        }),
+      );
+
+      this.logger.log(`File uploaded successfully to S3: ${s3Key}`);
+      return s3Key;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error uploading file to S3: ${msg}`);
+      throw new InternalServerErrorException(`Failed to upload file to S3: ${msg}`);
+    }
+  }
+
+  getFileUrl(s3Key: string): string {
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+  }
+
+  async deleteFile(s3Key: string): Promise<boolean> {
+    try {
+      if (!s3Key) {
+        this.logger.warn('No S3 key provided for deletion');
+        return false;
+      }
+      this.logger.log(`Deleting file from S3: ${s3Key}`);
+      await this.s3Client.send(
+        new DeleteObjectCommand({ Bucket: this.bucketName, Key: s3Key }),
+      );
+      this.logger.log(`File deleted successfully from S3: ${s3Key}`);
+      return true;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error deleting file from S3: ${msg}`);
+      return false;
+    }
+  }
+
+  getBucketName(): string {
+    return this.bucketName;
+  }
+}

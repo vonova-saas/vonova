@@ -16,7 +16,7 @@ import { UpdateSettingDto } from './dto/update-setting.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@Controller('api/v1/settings')
+@Controller('api/v1/app/settings')
 @UseGuards(JwtAuthGuard)
 export class SettingsGatewayController {
   constructor(private readonly settingsService: SettingsGatewayService) {}

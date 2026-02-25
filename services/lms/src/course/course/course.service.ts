@@ -2,9 +2,9 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateCourseDto, UpdateCourseDto, PublishCourseDto } from './dto/course.dto';
-import { Course, CourseDocument } from 'src/schemas/course/course.schema';
-import { Chapter, ChapterDocument } from 'src/schemas/course/chapter.schema';
-import { Lesson, LessonDocument } from 'src/schemas/course/lesson.schema';
+import { Course, CourseDocument } from './schema/course.schema';
+import { Chapter, ChapterDocument } from '../chapter/schema/chapter.schema';
+import { Lesson, LessonDocument } from '../lesson/schema/lesson.schema';
 
 
 @Injectable()

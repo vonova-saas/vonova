@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Injectable,
@@ -11,6 +12,7 @@ import { AssignmentAnswer } from './schema/assignment-answer.schema';
 import {
   CreateAssignmentDto,
   QuestionDto,
+  SubmitAnswerItemDto,
   UpdateAssignmentDto,
 } from './dto/assignment.dto';
 
@@ -92,7 +94,7 @@ export class AssignmentService {
 
   async submitAssignmentAnswers(
     assignmentId: string,
-    answers: Array<{ questionId: string; selectedOptionId: string }>,
+    answers: SubmitAnswerItemDto[],
     userId?: string,
   ) {
     const assignment = await this.assignmentModel.findById(assignmentId);

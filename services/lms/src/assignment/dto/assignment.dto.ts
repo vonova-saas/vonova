@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 import {
   IsArray,
   IsNotEmpty,
@@ -62,31 +63,7 @@ export class CreateAssignmentDto {
   questions: QuestionDto[];
 }
 
-export class UpdateAssignmentDto {
-  @IsString()
-  @IsOptional()
-  title?: string;
-
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @IsString()
-  @IsOptional()
-  topic?: string;
-
-  @IsNumber()
-  @Min(1)
-  @Type(() => Number)
-  @IsOptional()
-  noOfQuestions?: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => QuestionDto)
-  @IsOptional()
-  questions?: QuestionDto[];
-}
+export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {}
 
 export class SubmitAnswerItemDto {
   @IsString()

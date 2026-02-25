@@ -12,4 +12,23 @@ export class AppController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @MessagePattern({ cmd: 'getLmsAiHealth' })
+  getLmsAiHealth(): object {
+    return {
+      status: 'ok',
+      service: 'LMS-AI (embedded in LMS)',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @MessagePattern({ cmd: 'getLmsAiInfo' })
+  getLmsAiInfo(): object {
+    return {
+      name: 'LMS-AI',
+      description: 'Roadmap & PDF Summary AI (embedded in Vonova LMS)',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

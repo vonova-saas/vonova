@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ContentController } from './content.controller';
 import { ContentService } from './content.service';
-import { Course, CourseSchema } from 'src/schemas/course/course.schema';
-import { Chapter, ChapterSchema } from 'src/schemas/course/chapter.schema';
-import { Lesson, LessonSchema } from 'src/schemas/course/lesson.schema';
-import { Asset, AssetSchema } from 'src/schemas/course/asset.schema';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { Course, CourseSchema } from '../course/schema/course.schema';
+import { Chapter, ChapterSchema } from '../chapter/schema/chapter.schema';
+import { Lesson, LessonSchema } from '../lesson/schema/lesson.schema';
+import { Asset, AssetSchema } from './schema/asset.schema';
+import { S3Service } from '../../common/utils/storage/s3.service';
 
 
 @Module({

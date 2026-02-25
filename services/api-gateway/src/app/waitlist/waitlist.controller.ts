@@ -2,9 +2,9 @@ import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { WaitlistGatewayService } from './waitlist.service';
 import { AddWaitUserDto } from './dto/add-wait-user.dto';
 
-@Controller('api/v1/waitlist')
+@Controller('api/v1/app/waitlist')
 export class WaitlistGatewayController {
-  constructor(private readonly waitlistService: WaitlistGatewayService) {}
+  constructor(private readonly waitlistService: WaitlistGatewayService) { }
 
   @Post('add-user')
   addWaitUser(@Body() dto: AddWaitUserDto) {

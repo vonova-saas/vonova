@@ -2,10 +2,8 @@ import { Module } from '@nestjs/common';
 import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { QuizSchema } from './schema/quiz.schema';
-import { QuizAnswerSchema } from './schema/quiz-answer.schema';
-import { Quiz } from './schema/quiz.schema';
-import { QuizAnswer } from './schema/quiz-answer.schema';
+import { Quiz, QuizSchema } from './schema/quiz.schema';
+import { QuizAnswer, QuizAnswerSchema } from './schema/quiz-answer.schema';
 
 @Module({
   imports: [

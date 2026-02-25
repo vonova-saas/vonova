@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Chapter, ChapterDocument } from 'src/schemas/course/chapter.schema';
-import { Course, CourseDocument } from 'src/schemas/course/course.schema';
+import { Chapter, ChapterDocument } from './schema/chapter.schema';
+import { Course, CourseDocument } from '../course/schema/course.schema';
 
 @Injectable()
 export class ChapterService {

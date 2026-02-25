@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { GuideController } from './guide.controller';
 import { GuideService } from './guide.service';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { S3Service } from '../../common/utils/storage/s3.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Guide, GuideSchema } from 'src/schemas/library/guide.schema';
-import { LibraryAsset, LibraryAssetSchema } from 'src/schemas/library/library-asset.schema';
+import { Guide, GuideSchema } from '../schema/guide.schema';
+import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
 
 @Module({
   imports: [
