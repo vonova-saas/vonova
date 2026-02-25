@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from AI_PDF_Summary_QA.agents.llm_agent import GeminiAnswerAgent, load_gemini_model
 from AI_PDF_Summary_QA.services.proccesing import extract_text_from_pdf, clean_text
 from AI_PDF_Summary_QA.services.embedding_index import smart_chunk_text
-from AI_PDF_Summary_QA.services.session_storage import store_session, get_session, delete_session, session_exists
-from AI_PDF_Summary_QA.services.query_history_storage import store_query_history, delete_query_history
+from AI_PDF_Summary_QA.services.session_storage import store_session, get_session, session_exists
+from AI_PDF_Summary_QA.services.query_history_storage import store_query_history
 
 model = None
 bot = None
@@ -131,19 +131,3 @@ def handle_ask(session_id: str, question: str) -> dict:
         "chunks_used": len(chunks_used),
         "response_time": response_time
     }
-
-def handle_delete_session(session_id: str) -> bool:
-    try:
-        if not session_exists(session_id):
-            return False
-        
-        deleted = delete_session(session_id)
-        
-        try:
-            delete_query_history(session_id)
-        except Exception:
-            pass
-        
-        return deleted
-    except Exception:
-        return False

@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 from typing import List
 
+class RoadmapRequest(BaseModel):
+    topic: str
+    skill_level: str
+    duration_weeks: int
+
 class Week(BaseModel):
     week: int
     title: str

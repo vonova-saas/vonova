@@ -1,13 +1,13 @@
 # AI Article Generator
 
-A sophisticated multi-agent system for generating high-quality, SEO-optimized blog articles using Cohere's language models. This system implements a custom pipeline architecture without CrewAI, featuring specialized agents for planning, writing, and editing.
+A sophisticated multi-agent system for generating high-quality, technical articles using Cohere's language models. This system implements a custom pipeline architecture without CrewAI, featuring specialized agents for planning, writing, and editing with strict structure validation.
 
 ## 🚀 Features
 
 - **Multi-Agent Pipeline**: Custom agent system with Planner, Writer, and Editor agents
-- **SEO Optimization**: Built-in keyword generation and content structuring
+- **Structure Validation**: Strict 7-section technical article format
 - **Multilingual Support**: Automatic Arabic/English detection and translation
-- **Error Handling**: Comprehensive fallback mechanisms
+- **Error Handling**: Comprehensive error handling
 - **FastAPI Integration**: RESTful API endpoints
 - **Cohere Powered**: Uses state-of-the-art language models
 
@@ -21,7 +21,7 @@ AI_Article_Generator/
 │   ├── planner_agent.py   # Content planning agent
 │   ├── writer_agent.py    # Article writing agent
 │   └── editor_agent.py    # Content editing agent
-├── orchestrator/           # Pipeline coordination
+├── manager/           # Pipeline coordination
 │   ├── __init__.py
 │   └── multi_agent_pipeline.py  # AgentManager class
 ├── llm/                    # Language model integration
@@ -33,9 +33,6 @@ AI_Article_Generator/
 ├── utils/                  # Utility functions
 │   ├── __init__.py
 │   └── translation_utils.py # Language translation support
-├── fallback/               # Fallback mechanisms
-│   ├── __init__.py
-│   └── single_call_generator.py  # Single-agent fallback
 ├── Docs/                   # Documentation
 │   └── Article_Generator_Documentation.md
 └── README.md
@@ -151,7 +148,7 @@ Topic Input → PlannerAgent → WriterAgent → EditorAgent → Final Article
 ### Model Settings
 
 - **Model**: `command-a-03-2025`
-- **Temperature**: 0.35 (balanced creativity)
+- **Temperature**: 0.1 (focused consistency)
 - **Max Tokens**: 4000
 - **Retries**: 3 with 2-second delay
 
@@ -160,7 +157,7 @@ Topic Input → PlannerAgent → WriterAgent → EditorAgent → Final Article
 You can customize agent behavior by modifying:
 - Agent prompts in `agents/` directory
 - Model parameters in `llm/cohere_client.py`
-- Pipeline logic in `orchestrator/multi_agent_pipeline.py`
+- Pipeline logic in `manager/multi_agent_pipeline.py`
 
 ## 🌍 Language Support
 
