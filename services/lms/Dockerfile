@@ -1,35 +1,35 @@
-# Use Node.js LTS and install pnpm
-FROM node:20-alpine
+# Vonova LMS (LMS + LMS-AI) – NATS microservice
+# Multi-stage build for smaller production image
 
-# Install pnpm
-RUN npm install -g pnpm
+# ---- Builder ----
+FROM node:20-alpine AS builder
 
-# Set working directory
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
-# Copy package files first for layer caching
 COPY package.json pnpm-lock.yaml ./
-
-# Install all dependencies (including dev for build)
 RUN pnpm install --frozen-lockfile
 
-# Copy all source files
 COPY src/ ./src/
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
-
-# Build the TypeScript project
 RUN pnpm run build
-
-# Remove dev dependencies to reduce image size
 RUN pnpm prune --prod
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-  adduser --system --uid 1001 nestjs
+# ---- Production ----
+FROM node:20-alpine AS production
 
-# Set proper permissions
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
+
+WORKDIR /app
+
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+
 RUN chown -R nestjs:nodejs /app
 USER nestjs
 
-# Start the microservice (NATS only, no HTTP port)
-CMD ["pnpm", "run", "start:prod"]
+# NATS microservice only (no HTTP port)
+CMD ["node", "dist/main.js"]

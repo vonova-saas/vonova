@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { LibraryAsset } from 'src/schemas/library/library-asset.schema';
-import { Presentation } from 'src/schemas/library/presentation.schema';
+import { LibraryAsset } from '../schema/library-asset.schema';
+import { Presentation } from '../schema/presentation.schema';
 import { CreatePresentationDto, UpdatePresentationDto, PublishPresentationDto } from './dto/presentition.dto';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { S3Service } from '../../common/utils/storage/s3.service';
 
 
 @Injectable()

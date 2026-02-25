@@ -30,6 +30,7 @@ vonova/
 │   ├── chat/                # Rust (real-time messaging)
 │   ├── community/           # Go Fiber (forum)
 │   ├── courses/             # Go Fiber (course mgmt)
+│   ├── lms/                 # NestJS LMS (courses, quizzes, library, etc.); src/lms-ai/ = AI (roadmap, PDF summary)
 │   ├── library/             # Go Fiber (book recs)
 │   ├── notification/        # Node.js email + in-app notifications
 │   ├── payment/             # Node.js/Go (Stripe integration)
@@ -105,6 +106,7 @@ vonova/
 - `chat/` – Rust (real-time messaging)
 - `community/` – Go Fiber (forum / Q&A)
 - `courses/` – Go Fiber (course management)
+- `lms/` – NestJS LMS (courses, quizzes, library, assignments, enrollment); AI features (roadmap, PDF summary) live in `lms/src/lms-ai/`
 - `library/` – Go Fiber (book recommendations)
 - `notification/` – Node.js (email + in-app notifications)
 - `payment/` – Node.js/Go (Stripe integration)

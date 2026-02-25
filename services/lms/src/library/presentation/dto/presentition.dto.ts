@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/mapped-types';
 import { IsArray, IsEnum, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class AuthorDto {

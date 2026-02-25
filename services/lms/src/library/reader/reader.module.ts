@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ReaderController } from './reader.controller';
 import { ReaderService } from './reader.service';
-import { Book, BookSchema } from 'src/schemas/library/book/book.schema';
-import { LibraryAsset, LibraryAssetSchema } from 'src/schemas/library/library-asset.schema';
-import { BookProgress, BookProgressSchema } from 'src/schemas/library/book/book-progress.schema';
-import { Guide, GuideSchema } from 'src/schemas/library/guide.schema';
-import { Presentation, PresentationSchema } from 'src/schemas/library/presentation.schema';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { Book, BookSchema } from '../schema/book/book.schema';
+import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
+import { BookProgress, BookProgressSchema } from '../schema/book/book-progress.schema';
+import { Guide, GuideSchema } from '../schema/guide.schema';
+import { Presentation, PresentationSchema } from '../schema/presentation.schema';
+import { S3Service } from '../../common/utils/storage/s3.service';
 
 
 @Module({

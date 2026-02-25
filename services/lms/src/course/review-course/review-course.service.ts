@@ -1,9 +1,9 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Course, CourseDocument } from 'src/schemas/course/course.schema';
-import { Enrollment, EnrollmentDocument } from 'src/schemas/course/enrollment.schema';
-import { ReviewCourse, ReviewCourseDocument } from 'src/schemas/course/review-course.schema';
+import { Course, CourseDocument } from '../course/schema/course.schema';
+import { Enrollment, EnrollmentDocument } from '../enroll/schema/enrollment.schema';
+import { ReviewCourse, ReviewCourseDocument } from './schema/review-course.schema';
 
 
 @Injectable()

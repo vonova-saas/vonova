@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import { Book } from 'src/schemas/library/book/book.schema';
-import { Favorite, FavoriteDocument, ItemType } from 'src/schemas/library/favorite.schema';
-import { Guide } from 'src/schemas/library/guide.schema';
-import { Presentation } from 'src/schemas/library/presentation.schema';
+import { Book } from '../schema/book/book.schema';
+import { Favorite, FavoriteDocument, ItemType } from '../schema/favorite.schema';
+import { Guide } from '../schema/guide.schema';
+import { Presentation } from '../schema/presentation.schema';
 
 
 @Injectable()

@@ -60,7 +60,17 @@ async function bootstrap() {
   const swaggerService = app.get(SwaggerService);
   swaggerService.setupSwagger(app);
 
-  await app.listen(configuration().PORT);
+  const port = configuration().PORT ?? 4000;
+  await app.listen(port);
 }
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-bootstrap();
+
+bootstrap().catch((err: NodeJS.ErrnoException) => {
+  if (err?.code === 'EADDRINUSE') {
+    console.error(
+      `\nPort ${configuration().PORT ?? 4000} is already in use. Stop the other API Gateway process (or close its terminal) and try again.\n`,
+    );
+  } else {
+    console.error('Bootstrap failed:', err);
+  }
+  process.exit(1);
+});

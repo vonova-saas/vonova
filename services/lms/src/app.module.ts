@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './common/config/configuration';
 import { AppController } from './app.controller';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -19,6 +19,9 @@ import { EnrollModule } from './course/enroll/enroll.module';
 import { ContentModule } from './course/content/content.module';
 import { ReviewCourseModule } from './course/review-course/review-course.module';
 import { ProgressModule } from './course/progress/progress.module';
+import { DatabaseModule } from './lms-ai/database/database.module';
+import { RoadmapModule } from './lms-ai/roadmap/roadmap.module';
+import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
 
 @Module({
   imports: [
@@ -27,9 +30,21 @@ import { ProgressModule } from './course/progress/progress.module';
       envFilePath: '.env',
       load: [configuration],
     }),
-    MongooseModule.forRoot(configuration().MONGO_URI_LOCAL!),
-    QuizModule,
-    AssignmentModule,
+    MongooseModule.forRootAsync({
+      useFactory: (configService: ConfigService) => {
+        const local = configService.get<string>('MONGO_URI_LOCAL');
+        const remote = configService.get<string>('MONGO_URI_REMOTE');
+        // Use LOCAL only if it's not the Docker hostname (reachable when running outside Docker)
+        const uri =
+          local &&
+            !local.includes('mongodb://database:') &&
+            !local.includes('mongodb://database/')
+            ? local
+            : remote || local || 'mongodb://localhost:27017/';
+        return { uri };
+      },
+      inject: [ConfigService],
+    }),
     QuizModule,
     AssignmentModule,
     BookModule,
@@ -46,8 +61,12 @@ import { ProgressModule } from './course/progress/progress.module';
     ContentModule,
     ReviewCourseModule,
     ProgressModule,
+    // LMS-AI (roadmap, PDF summary) – same service
+    DatabaseModule,
+    RoadmapModule,
+    PdfSummaryModule,
   ],
   controllers: [AppController],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

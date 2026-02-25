@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LibraryAsset, LibraryAssetSchema } from 'src/schemas/library/library-asset.schema';
-import { Presentation, PresentationSchema } from 'src/schemas/library/presentation.schema';
+import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
+import { Presentation, PresentationSchema } from '../schema/presentation.schema';
 import { PresentationController } from './presentation.controller';
 import { PresentationService } from './presentation.service';
-import { S3Service } from 'src/utils/storage/s3.service';
+import { S3Service } from '../../common/utils/storage/s3.service';
 
 
 @Module({
