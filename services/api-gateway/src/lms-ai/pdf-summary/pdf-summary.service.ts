@@ -63,5 +63,14 @@ export class PdfSummaryGatewayService {
   testAiConnection() {
     return this.client.send({ cmd: 'lms.ai.pdf.testAiConnection' }, {});
   }
+
+  voiceAsk(data: {
+    session_id: string;
+    audioBase64: string;
+    mimeType?: string;
+    filename?: string;
+  }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
+  }
 }
 

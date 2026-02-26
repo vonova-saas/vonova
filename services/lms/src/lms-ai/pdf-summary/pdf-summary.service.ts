@@ -754,6 +754,55 @@ export class PdfSummaryService {
     }
   }
 
+  /**
+   * Voice ask: send user voice to AI, get voice response (STT -> PDF QA -> TTS).
+   * Calls Python POST /voice/ask with multipart (session_id + audio file).
+   */
+  async voiceAsk(
+    sessionId: string,
+    audioBuffer: Buffer,
+    mimeType: string,
+    filename?: string
+  ): Promise<{ audioBase64: string; contentType: string; detectedLanguage?: string }> {
+    const endpoint = `${this.PYTHON_SERVICE_URL}/voice/ask`;
+    const formData = new FormData();
+    formData.append('session_id', sessionId.trim());
+    const ext = filename?.split('.').pop() || (mimeType.includes('wav') ? 'wav' : 'webm');
+    const safeName = filename?.trim() || `audio.${ext}`;
+    formData.append('audio', new Blob([new Uint8Array(audioBuffer)], { type: mimeType }), safeName);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let detail = errorText;
+      try {
+        const errJson = JSON.parse(errorText);
+        if (errJson.detail) detail = errJson.detail;
+      } catch {
+        // use errorText as-is
+      }
+      if (response.status === 404 && detail.includes('Session not found')) {
+        throw new BadRequestException('Session not found. Re-upload the PDF to create a new session.');
+      }
+      if (response.status === 422) {
+        throw new BadRequestException(detail || 'Could not transcribe audio. Speak clearly.');
+      }
+      throw new InternalServerErrorException(`Voice ask failed: ${response.status} ${detail}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+    const contentType = response.headers.get('content-type') || 'audio/mpeg';
+    const detectedLanguage = response.headers.get('X-Detected-Language') || undefined;
+
+    return { audioBase64, contentType, detectedLanguage };
+  }
+
   private async extractPageCount(fileContent: Buffer): Promise<number> {
     // Simple PDF page count extraction (basic implementation)
     // In production, you might want to use a proper PDF library

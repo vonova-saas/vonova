@@ -15,13 +15,17 @@ import {
   Request,
   Ip,
   Headers,
+  Res,
+  BadRequestException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiConsumes,
+  ApiBody,
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
@@ -40,7 +44,7 @@ import { Public } from '../../common/decorators/public.decorator';
 @Controller('api/v1/pdf-summary')
 @UseGuards(JwtAuthGuard)
 export class PdfSummaryGatewayController {
-  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) { }
+  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -92,6 +96,85 @@ export class PdfSummaryGatewayController {
         userAgent,
       }),
     );
+  }
+
+  @Post('voice/ask')
+  @UseInterceptors(FileInterceptor('audio'))
+  @ApiOperation({
+    summary: 'Voice ask – send voice, get AI voice reply',
+    description:
+      'User uploads a voice recording; the AI transcribes it, answers in the context of the PDF session, and returns the answer as audio (e.g. MP3). Send the PDF session_id from a previous upload and an audio file (mp3, wav, ogg, webm, m4a).',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['audio', 'session_id'],
+      properties: {
+        audio: {
+          type: 'string',
+          format: 'binary',
+          description: 'Voice recording file (mp3, wav, ogg, webm, m4a)',
+        },
+        session_id: {
+          type: 'string',
+          description: 'PDF session ID from a previous PDF upload',
+          example: 'session-uuid-from-upload',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'AI voice response (audio/mpeg). Play the returned audio to hear the AI reply.',
+    content: { 'audio/mpeg': {} },
+    headers: {
+      'X-Detected-Language': {
+        description: 'Detected language of the user voice (e.g. en, ar)',
+        schema: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing audio file or session_id',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Session not found; re-upload the PDF.',
+  })
+  async voiceAsk(
+    @UploadedFile()
+    audio:
+      | { buffer: Buffer; mimetype: string; originalname: string }
+      | undefined,
+    @Body('session_id') sessionId: string,
+    @Res() res: Response,
+  ) {
+    if (!audio?.buffer) {
+      throw new BadRequestException('audio file is required');
+    }
+    if (!sessionId?.trim()) {
+      throw new BadRequestException('session_id is required');
+    }
+    const result = (await firstValueFrom(
+      this.pdfSummaryService.voiceAsk({
+        session_id: sessionId.trim(),
+        audioBase64: audio.buffer.toString('base64'),
+        mimeType: audio.mimetype,
+        filename: audio.originalname,
+      }),
+    )) as {
+      audioBase64: string;
+      contentType: string;
+      detectedLanguage?: string;
+    };
+    res.setHeader('Content-Type', result.contentType);
+    if (result.detectedLanguage) {
+      res.setHeader('X-Detected-Language', result.detectedLanguage);
+    }
+    res.send(Buffer.from(result.audioBase64, 'base64'));
   }
 
   @Get('summarize')

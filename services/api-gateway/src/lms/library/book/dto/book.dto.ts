@@ -110,7 +110,7 @@ export class GetBooksQueryDto {
   status?: string;
 }
 
-export class UpdateProgressDto {
+export class UpdateBookProgressDto {
   @IsNumber()
   @Type(() => Number)
   lastPage: number;

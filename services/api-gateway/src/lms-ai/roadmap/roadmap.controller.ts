@@ -25,7 +25,7 @@ import {
 import { RoadmapGatewayService } from './roadmap.service';
 import {
   GenerateRoadmapDto,
-  UpdateProgressDto,
+  UpdateRoadmapProgressDto,
   BulkDeleteRoadmapsDto,
 } from './dto/roadmap.dto';
 import { firstValueFrom } from 'rxjs';
@@ -181,7 +181,7 @@ export class RoadmapGatewayController {
   @ApiResponse({ status: 200, description: 'Progress updated successfully' })
   async updateProgress(
     @Param('roadmapId') roadmapId: string,
-    @Body() updateProgressDto: UpdateProgressDto,
+    @Body() updateProgressDto: UpdateRoadmapProgressDto,
     @Request() req: any,
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string,

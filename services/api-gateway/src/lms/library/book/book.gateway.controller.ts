@@ -21,7 +21,7 @@ import {
   UpdateBookDto,
   PublishBookDto,
   GetBooksQueryDto,
-  UpdateProgressDto,
+  UpdateBookProgressDto,
 } from './dto/book.dto';
 
 @Controller('api/v1/lms/library/books')
@@ -76,7 +76,7 @@ export class BookGatewayController {
   @Patch(':id/progress')
   async updateBookProgress(
     @Param('id') bookId: string,
-    @Body() body: UpdateProgressDto,
+    @Body() body: UpdateBookProgressDto,
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;

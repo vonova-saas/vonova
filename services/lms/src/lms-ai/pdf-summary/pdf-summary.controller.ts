@@ -158,4 +158,19 @@ export class PdfSummaryController {
       data: analytics
     };
   }
+
+  @MessagePattern({ cmd: 'lms.ai.pdf.voiceAsk' })
+  async voiceAsk(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const { session_id, audioBase64, mimeType, filename } = data;
+    if (!session_id || !audioBase64) {
+      throw new BadRequestException('session_id and audioBase64 are required');
+    }
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    return this.pdfSummaryService.voiceAsk(
+      session_id,
+      audioBuffer,
+      mimeType || 'audio/webm',
+      filename
+    );
+  }
 }

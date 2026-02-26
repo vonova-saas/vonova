@@ -43,7 +43,7 @@ export class GenerateRoadmapDto {
   focus_areas?: string[];
 }
 
-export class UpdateProgressDto {
+export class UpdateRoadmapProgressDto {
   @ApiProperty({
     description: 'Week number completed',
     example: 5,

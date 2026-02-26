@@ -5,7 +5,7 @@ import {
   UpdateBookDto,
   PublishBookDto,
   GetBooksQueryDto,
-  UpdateProgressDto,
+  UpdateBookProgressDto,
 } from './dto/book.dto';
 
 @Injectable()
@@ -40,7 +40,7 @@ export class BookGatewayService {
     return this.client.send({ cmd: 'book.update' }, { id, dto, userId });
   }
 
-  updateBookProgress(bookId: string, userId: string, body: UpdateProgressDto) {
+  updateBookProgress(bookId: string, userId: string, body: UpdateBookProgressDto) {
     return this.client.send({ cmd: 'book.updateProgress' }, { bookId, userId, ...body });
   }
 
