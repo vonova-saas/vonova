@@ -18,7 +18,7 @@ export const addFeedbackMutationFn = async (
   userId: string,
   data: addFeedbackType
 ): Promise<addFeedbackResponseType> => {
-  const response = await API.post(`/app/feedback/${userId}/add`, data);
+  const response = await API.post(`/app/feedback/user/${userId}/add`, data);
   return response.data;
 };
 

@@ -4,37 +4,36 @@ import * as React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
+import { Bot } from "lucide-react";
 type Props = React.ComponentProps<typeof Button> & {
   sizePx?: number; // button size in px (height = width)
 };
 
 const ChatbotLauncher = React.forwardRef<HTMLButtonElement, Props>(
-  ({ className, sizePx = 70, ...props }, ref) => {
+  ({ className, sizePx = 40, ...props }, ref) => {   
     return (
-      <Button
+      <button
         ref={ref}
         {...props}
         className={cn(
-          "p-0 bg-transparent hover:bg-transparent shadow-none border-0",
-          "active:scale-95 transition-transform",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-full",
-          className,
+          "fixed bottom-6 right-6 z-[60]",           
+          "flex items-center justify-center",
+          "text-primary hover:text-primary/80",
+          "transition-all duration-300 hover:scale-110 active:scale-95",
+          "drop-shadow-xl hover:drop-shadow-2xl", 
+          className
         )}
-        style={{ width: sizePx, height: sizePx }}
+        aria-label="Open AI Assistant"
       >
-        <Image
-          src="/images/chatbot/ai_chatbot.svg"
-          alt="AI Chatbot"
-          width={Math.round(sizePx * 0.65)}
-          height={Math.round(sizePx * 0.65)}
-          priority={false}
-          className="transition-transform duration-200 hover:scale-105 drop-shadow-md"
+        <Bot 
+          className="stroke-[1.8]" 
+          style={{ width: sizePx, height: sizePx }} 
         />
-      </Button>
+      </button>
     );
-  },
+  }
 );
+
 ChatbotLauncher.displayName = "ChatbotLauncher";
 
 export default ChatbotLauncher;

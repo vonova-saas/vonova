@@ -19,13 +19,6 @@ export type FaqItem = {
   tags?: string[];
 };
 
-export type TaskItem = {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  due?: string;
-};
 
 export const conversations: Conversation[] = [
   {
@@ -66,7 +59,35 @@ export const conversations: Conversation[] = [
       },
     ],
   },
-];
+
+{
+  id: "conv-3",
+  title: "How to generate a quiz using AI?",
+  lastMessageAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), 
+  messages: [
+    { id: "m5", sender: "user", content: "Can AI create quizzes for me?", timestamp: "..." },
+    { id: "m6", sender: "bot", content: "Yes! Go to Course → Quizzes → Generate with AI. Describe your topic and difficulty.", timestamp: "..." },
+  ],
+},
+{
+  id: "conv-4",
+  title: "Best practices for coding assignments",
+  lastMessageAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  messages: [
+    { id: "m7", sender: "user", content: "Tips for clean code?", timestamp: "..." },
+    { id: "m8", sender: "bot", content: "Use meaningful variable names, add comments, follow DRY principle, and write tests.", timestamp: "..." },
+  ],
+},
+{
+  id: "conv-5",
+  title: "Issue with course enrollment",
+  lastMessageAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  messages: [
+    { id: "m9", sender: "user", content: "Can't enroll in CS101", timestamp: "..." },
+    { id: "m10", sender: "bot", content: "Check if the course is open or if you have the invite link. Contact support if needed.", timestamp: "..." },
+  ],
+},
+]
 
 export const faqs: FaqItem[] = [
   {
@@ -89,25 +110,19 @@ export const faqs: FaqItem[] = [
     answer: "Yes. Use Forgot Password on the login page or update it in Settings → Security.",
     tags: ["account"],
   },
-];
+  {
+    id: "faq-4",
+    question: "How can I create a new course as an instructor?",
+    answer:
+  "Go to the trainer's control panel → Courses → New Course. Add the title, description, upload videos or files, then publish the course.",
+    tags: ["instructor", "courses", "arabic"],
+  },
+  {
+    id: "faq-5",
+    question: "What is the difference between the free and paid plans?",
+    answer:
+    "The free plan allows only 3 courses and limited storage space. The paid plan unlocks unlimited courses + advanced AI features + detailed performance analytics.",
+    tags: ["pricing", "plans"],
+  },
 
-export const tasks: TaskItem[] = [
-  {
-    id: "task-1",
-    title: "Complete your profile",
-    description: "Add your name, avatar, and bio to help instructors recognize you.",
-    completed: false,
-  },
-  {
-    id: "task-2",
-    title: "Join your first course",
-    description: "Use a course invite link or search the catalogue.",
-    completed: true,
-  },
-  {
-    id: "task-3",
-    title: "Enable notifications",
-    description: "Choose email or in-app alerts for due dates and announcements.",
-    completed: false,
-  },
 ];

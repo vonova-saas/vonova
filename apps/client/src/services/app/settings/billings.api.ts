@@ -4,7 +4,7 @@ import { getBillingResponseType, updateBillingResponseType, updateBillingType } 
 export const getBillingMutationFn = async (
   userId: string
 ): Promise<getBillingResponseType> => {
-  const response = await API.get(`/app/billing/${userId}`);
+  const response = await API.get(`/app/billing/user/${userId}`);
   return response.data;
 };
 
@@ -12,6 +12,6 @@ export const updateBillingMutationFn = async (
   userId: string,
   data: updateBillingType
 ): Promise<updateBillingResponseType> => {
-  const response = await API.put(`/app/billing/${userId}`, data);
+  const response = await API.put(`/app/billing/user/${userId}`, data);
   return response.data;
 };

@@ -4,7 +4,7 @@ import { getSettingsResponseType, resetSettingsResponseType, updateSettingsRespo
 export const getSettingsMutationFn = async (
   userId: string
 ): Promise<getSettingsResponseType> => {
-  const response = await API.get(`/app/settings/${userId}`);
+  const response = await API.get(`/app/settings/user/${userId}`);
   return response.data;
 };
 
@@ -12,13 +12,13 @@ export const updateSettingsMutationFn = async (
   userId: string,
   data: updateSettingsType
 ): Promise<updateSettingsResponseType> => {
-  const response = await API.put(`/app/settings/${userId}`, data);
+  const response = await API.put(`/app/settings/user/${userId}`, data);
   return response.data;
 };
 
 export const resetSettingsMutationFn = async (
   userId: string
 ): Promise<resetSettingsResponseType> => {
-  const response = await API.get(`/app/settings/${userId}/reset`);
+  const response = await API.get(`/app/settings/user/${userId}/reset`);
   return response.data;
 };

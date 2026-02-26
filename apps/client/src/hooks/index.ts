@@ -11,7 +11,6 @@ import useAuth from "./app/auth/use-auth";
 //? =========== Support hooks imports ===========
 //? =========== Feedback hooks imports ===========
 
-//! Dev hooks imports
 //! User hooks imports
 //! Site hooks imports
 
@@ -31,7 +30,6 @@ export {
   // Support Hooks
   // Feedback Hooks
 
-  // Dev Hooks
   // User Hooks
   // Site Hooks
   useUserId,

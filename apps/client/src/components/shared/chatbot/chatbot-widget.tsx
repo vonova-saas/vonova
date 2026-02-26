@@ -5,16 +5,21 @@ import { Bot } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useMemo, useState } from "react";
 import BottomNav, { type ChatTab } from "./bottom-nav";
-import { faqs, conversations as seedConversations, tasks, type Conversation } from "./mock-data";
+import { faqs, conversations as seedConversations, type Conversation } from "./mock-data";
 import HelpTab from "./tabs/help-tab";
 import HomeTab from "./tabs/home-tab";
 import MessagesTab from "./tabs/messages-tab";
-import TasksTab from "./tabs/tasks-tab";
 import ChatbotLauncher from "./launcher-button";
-
+ import * as React from "react"; 
+ import { Home, MessageSquare, HelpCircle } from "lucide-react";
 export default function ChatbotWidget() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<ChatTab>("home");
+  const tabInfo = {
+  home: { icon: Home, title: "Home" },
+  messages: { icon: MessageSquare, title: "Messages" },
+  help: { icon: HelpCircle, title: "Help" },
+};
   const [conversations, setConversations] = useState<Conversation[]>(seedConversations);
 
   const latest = useMemo(() => {
@@ -47,23 +52,24 @@ export default function ChatbotWidget() {
         </DialogTrigger>
 
         <DialogContent
+        
+        className="p-0 w-[380px] sm:w-[420px] max-w-[90vw] border-none shadow-2xl rounded-2xl overflow-hidden bottom-24 animate-dialog-open duration-300"
+
           showCloseButton
           position="bottom-right"
           overlayClassName="bg-transparent"
-          className="p-0 w-[380px] sm:w-[420px] max-w-[90vw] border-none shadow-2xl rounded-2xl overflow-hidden bottom-24"
         >
-          <DialogHeader className="px-4 pt-4 pb-2 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              Messages
-            </DialogTitle>
-          </DialogHeader>
+        <DialogHeader className="px-2 pt-2 pb-2 border-b">
+          <DialogTitle className="flex items-center gap-2">
+            {React.createElement(tabInfo[tab].icon, { className: "h-5 w-5 text-primary" })}
+            {tabInfo[tab].title}
+          </DialogTitle>
+        </DialogHeader>
           <div className="h-[520px] flex flex-col bg-background">
             <div className="flex-1 overflow-hidden">
               {tab === "home" && <HomeTab latest={latest} onStart={(q) => startConversation(q)} />}
               {tab === "messages" && <MessagesTab conversations={conversations} />}
               {tab === "help" && <HelpTab faqs={faqs} />}
-              {tab === "tasks" && <TasksTab tasks={tasks} />}
             </div>
             <BottomNav value={tab} onChange={setTab} />
           </div>
