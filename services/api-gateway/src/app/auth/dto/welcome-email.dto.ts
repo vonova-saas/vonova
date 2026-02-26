@@ -18,14 +18,10 @@ export class WelcomeEmailDto {
   couponCode?: string;
 
   @IsString()
-  @IsOptional()
-  knowAboutUs?: string;
+  @IsNotEmpty()
+  knowAboutUs: string;
 
   @IsString()
   @IsOptional()
   userAgent?: string;
-
-  @IsString()
-  @IsOptional()
-  answerOne?: string;
 }

@@ -1,16 +1,19 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
-import { AuthModule } from './auth/auth.module';
-import { BillingModule } from './billing/billing.module';
+import { ConfigModule } from '@nestjs/config';
 import configuration from './common/config/configuration';
-import { FeedbackModule } from './feedback/feedback.module';
-import { SettingsModule } from './settings/settings.module';
-import { SupportModule } from './support/support.module';
-import { WaitlistModule } from './waitlist/waitlist.module';
+import { MongooseModule } from '@nestjs/mongoose';
 import { getMongoConfig } from './common/config/mongo.config';
+import { AuthModule } from './auth/auth.module';
+import { SettingsModule } from './settings/settings.module';
+import { AccountModule } from './account/account.module';
+import { BillingModule } from './billing/billing.module';
+import { SupportModule } from './support/support.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { WaitlistModule } from './waitlist/waitlist.module';
+import { PostsModule } from './Community/posts/posts.module';
+import { ArticlesModule } from './Community/articles/articles.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -19,11 +22,8 @@ import { getMongoConfig } from './common/config/mongo.config';
       envFilePath: '.env',
       load: [configuration],
     }),
-    // MongooseModule.forRoot(configuration().MONGO_URI_LOCAL!),
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: getMongoConfig,
+      useFactory: () => getMongoConfig(),
     }),
     //? App Models
     AuthModule,
@@ -34,8 +34,11 @@ import { getMongoConfig } from './common/config/mongo.config';
     //? Customer Support Modules
     SupportModule,
     FeedbackModule,
+    PostsModule,
+    ArticlesModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

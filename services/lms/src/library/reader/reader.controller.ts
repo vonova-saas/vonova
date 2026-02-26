@@ -1,51 +1,54 @@
-import { Controller, Get, Post, Param, Body, Req, HttpCode } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ReaderService } from './reader.service';
 import { UpdateBookProgressDto } from './dto/reader.dto';
 
-
-
-@Controller('library')
+@Controller()
 export class ReaderController {
-constructor(private readonly readerService: ReaderService) {}
+  constructor(private readonly readerService: ReaderService) {}
 
+  @MessagePattern({ cmd: 'library.reader.getBookContent' })
+  async getBookContent(@Payload() data: { bookId: string; userId: string }) {
+    const { bookId, userId } = data;
+    if (!bookId || !userId) throw new Error('bookId and userId are required');
 
-// GET /library/books/:bookId/content
-@Get('books/:bookId/content')
-async getBookContent(@Param('bookId') bookId: string, @Req() req: any) {
-const userId = req.user?.id || req.headers['x-user-id'];
-const data = await this.readerService.getBookContent(bookId, userId);
-return { message: 'Book content', data };
-}
+    const result = await this.readerService.getBookContent(bookId, userId);
+    return { message: 'Book content', data: result };
+  }
 
-@Get('guides/:guideId/content')
-async getGuideContent(@Param('guideId') guideId: string) {
-const data = await this.readerService.getGuideContent(guideId);
-return { message: 'Guide content', data };
-}
+  @MessagePattern({ cmd: 'library.reader.getGuideContent' })
+  async getGuideContent(@Payload() data: { guideId: string }) {
+    const { guideId } = data;
+    if (!guideId) throw new Error('guideId is required');
 
+    const result = await this.readerService.getGuideContent(guideId);
+    return { message: 'Guide content', data: result };
+  }
 
+  @MessagePattern({ cmd: 'library.reader.getPresentationContent' })
+  async getPresentationContent(@Payload() data: { presentationId: string }) {
+    const { presentationId } = data;
+    if (!presentationId) throw new Error('presentationId is required');
 
-@Get('presentations/:presentationId/content')
-async getPresentationContent(@Param('presentationId') presentationId: string) {
-const data = await this.readerService.getPresentationContent(presentationId);
-return { message: 'Presentation content', data };
-}
+    const result = await this.readerService.getPresentationContent(presentationId);
+    return { message: 'Presentation content', data: result };
+  }
 
+  @MessagePattern({ cmd: 'library.reader.updateBookProgress' })
+  async updateBookProgress(@Payload() data: { bookId: string; userId: string; dto: UpdateBookProgressDto }) {
+    const { bookId, userId, dto } = data;
+    if (!bookId || !userId || !dto) throw new Error('bookId, userId and dto are required');
 
-@Post('books/:bookId/progress')
-@HttpCode(200)
-async updateBookProgress(@Param('bookId') bookId: string, @Body() dto: UpdateBookProgressDto, @Req() req: any) {
-const userId = req.user?.id || req.headers['x-user-id'];
-const doc = await this.readerService.updateBookProgress(bookId, userId, dto as any);
-return { message: 'Progress updated', data: doc };
-}
+    const result = await this.readerService.updateBookProgress(bookId, userId, dto as any);
+    return { message: 'Progress updated', data: result };
+  }
 
+  @MessagePattern({ cmd: 'library.reader.getMyBookProgress' })
+  async getMyBookProgress(@Payload() data: { bookId: string; userId: string }) {
+    const { bookId, userId } = data;
+    if (!bookId || !userId) throw new Error('bookId and userId are required');
 
-
-@Get('books/:bookId/progress/me')
-async getMyBookProgress(@Param('bookId') bookId: string, @Req() req: any) {
-const userId = req.user?.id || req.headers['x-user-id'];
-const data = await this.readerService.getMyBookProgress(bookId, userId);
-return { message: 'My progress', data };
-}
+    const result = await this.readerService.getMyBookProgress(bookId, userId);
+    return { message: 'My progress', data: result };
+  }
 }

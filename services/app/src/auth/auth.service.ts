@@ -232,8 +232,8 @@ export class AuthService {
     }
 
     user.role = dto.role as Role;
-    user.knowAboutUs = dto.knowAboutUs ?? 'Email';
-    user.profilePictureUrl = dto.profilePictureUrl ?? null;
+    user.knowAboutUs = dto.knowAboutUs;
+    user.profilePictureUrl = dto.profilePictureUrl;
     user.lastLogin = new Date();
     await user.save();
 
@@ -487,7 +487,7 @@ export class AuthService {
     }
 
     user.role = role as Role;
-    user.knowAboutUs = knowAboutUs ?? 'Google';
+    user.knowAboutUs = knowAboutUs;
     if (username) user.name = username;
     if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
 

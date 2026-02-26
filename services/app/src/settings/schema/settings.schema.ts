@@ -9,7 +9,7 @@ export interface IUserSettingsModel extends Model<UserSettingsDocument> {
 
 @Schema({ timestamps: true, minimize: false })
 export class UserSettings {
-  @Prop({ ref: 'User', required: true })
+  @Prop({ ref: 'User', required: true, index: true })
   userId: mongoose.Types.ObjectId;
 
   // General Settings

@@ -26,6 +26,11 @@ export class AppController {
     return this.natsClient.send({ cmd: 'getAppHealth' }, {});
   }
 
+  @Get('lms/health')
+  getLmsHealth() {
+    return this.natsClient.send({ cmd: 'getLmsHealth' }, {});
+  }
+
   @Get('lms-ai/health')
   getLmsAiHealth() {
     return this.natsClient.send({ cmd: 'getLmsAiHealth' }, {});

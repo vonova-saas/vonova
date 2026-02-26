@@ -31,7 +31,7 @@ import configuration from '../../common/config/configuration';
 import { firstValueFrom } from 'rxjs';
 import type { UploadedFile as CustomUploadedFile } from '../../common/interfaces/file.interface';
 
-@Controller('api/v1/app/auth')
+@Controller('api/v1/auth')
 export class AuthGatewayController {
   constructor(private readonly authService: AuthGatewayService) {}
 

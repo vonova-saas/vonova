@@ -2,24 +2,24 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class OAuthWelcomeDto {
   @IsString()
-  @IsOptional()
-  providerId?: string;
+  @IsNotEmpty()
+  providerId: string;
 
   @IsString()
-  @IsOptional()
-  userAgent?: string;
+  @IsNotEmpty()
+  userAgent: string;
 
   @IsString()
   @IsNotEmpty()
   role: string;
 
   @IsString()
-  @IsOptional()
-  username?: string;
+  @IsNotEmpty()
+  username: string;
 
   @IsString()
-  @IsOptional()
-  knowAboutUs?: string;
+  @IsNotEmpty()
+  knowAboutUs: string;
 
   @IsString()
   @IsOptional()
@@ -28,9 +28,4 @@ export class OAuthWelcomeDto {
   @IsString()
   @IsOptional()
   profilePictureUrl?: string;
-
-  /** Allowed for client compatibility; not used by backend */
-  @IsString()
-  @IsOptional()
-  answerOne?: string;
 }
