@@ -40,7 +40,7 @@ import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-@ApiTags('PDF Summary')
+@ApiTags('PDF Summarization AI')
 @Controller('api/v1/pdf-summary')
 @UseGuards(JwtAuthGuard)
 export class PdfSummaryGatewayController {

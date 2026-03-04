@@ -13,6 +13,14 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { BookGatewayService } from './book.gateway.service';
@@ -24,11 +32,60 @@ import {
   UpdateBookProgressDto,
 } from './dto/book.dto';
 
+@ApiTags('LMS Library Books')
+@ApiBearerAuth()
 @Controller('api/v1/lms/library/books')
 @UseGuards(JwtAuthGuard)
 export class BookGatewayController {
-  constructor(private readonly bookService: BookGatewayService) {}
+  constructor(private readonly bookService: BookGatewayService) { }
 
+  @ApiOperation({
+    summary: 'Create new book',
+    description: 'Creates a new book with title, authors, topics, and optional metadata.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Book created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+        slug: { type: 'string', example: 'javascript-complete-guide' },
+        summary: { type: 'string', example: 'A comprehensive guide to JavaScript programming.' },
+        description: { type: 'string', example: 'This book covers everything from basic JavaScript concepts to advanced topics.' },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: { type: 'string', example: 'https://example.com/author-avatar.jpg' },
+            },
+          },
+        },
+        topics: { type: 'array', items: { type: 'string' }, example: ['javascript', 'programming'] },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: { type: 'string', example: 'https://example.com/book-cover.jpg' },
+        language: { type: 'string', example: 'en' },
+        badges: { type: 'array', items: { type: 'string' }, example: ['bestseller'] },
+        pageCount: { type: 'number', example: 450 },
+        readingTimeMin: { type: 'number', example: 180 },
+        status: { type: 'string', example: 'DRAFT' },
+        ownerId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid book data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
   @Post('createBook')
   async createBook(
     @Body() dto: CreateBookDto,

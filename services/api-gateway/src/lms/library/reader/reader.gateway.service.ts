@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { UpdateBookProgressDto } from './dto/reader.dto';
+import { UpdateReaderBookProgressDto } from './dto/reader.dto';
 
 @Injectable()
 export class ReaderGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   getBookContent(bookId: string, userId: string) {
     return this.client.send({ cmd: 'library.reader.getBookContent' }, { bookId, userId });
@@ -21,7 +21,7 @@ export class ReaderGatewayService {
     return this.client.send({ cmd: 'library.reader.getPresentationContent' }, { presentationId });
   }
 
-  updateBookProgress(bookId: string, userId: string, dto: UpdateBookProgressDto) {
+  updateBookProgress(bookId: string, userId: string, dto: UpdateReaderBookProgressDto) {
     return this.client.send({ cmd: 'library.reader.updateBookProgress' }, { bookId, userId, dto });
   }
 

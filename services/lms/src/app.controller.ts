@@ -7,7 +7,7 @@ export class AppController {
   getHealth(): object {
     return {
       status: 'Healthy!',
-      service: 'LMS Service',
+      service: 'API Gateway Service',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
     };

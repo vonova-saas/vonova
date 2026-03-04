@@ -32,7 +32,7 @@ import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-@ApiTags('Roadmap AI')
+@ApiTags('Roadmap Generation AI')
 @Controller('api/v1/roadmap')
 @UseGuards(JwtAuthGuard)
 export class RoadmapGatewayController {

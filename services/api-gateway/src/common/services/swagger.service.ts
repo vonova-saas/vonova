@@ -11,7 +11,7 @@ export class SwaggerService {
   constructor(
     private readonly configService: ConfigService,
     private readonly loggerService: LoggerService,
-  ) {}
+  ) { }
 
   createSwaggerDocument(app: INestApplication) {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
@@ -26,9 +26,9 @@ export class SwaggerService {
       .setTitle('Vonova API Gateway')
       .setDescription(
         'API Gateway for Vonova microservices platform. ' +
-          'This gateway provides a single entry point for all microservices, handling authentication, ' +
-          'routing, and request proxying. The platform includes authentication, app services, LMS services, ' +
-          'and AI-powered features like roadmap generation and PDF summarization.',
+        'This gateway provides a single entry point for all microservices, handling authentication, ' +
+        'routing, and request proxying. The platform includes authentication, app services, LMS services, ' +
+        'and AI-powered features like roadmap generation and PDF summarization.',
       )
       .setVersion('1.0.0')
       .setContact(
@@ -37,13 +37,33 @@ export class SwaggerService {
         'vonovacompany@gmail.com',
       )
       .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/')
-      .addTag('Auth', 'Authentication and authorization endpoints')
-      .addTag('Gateway', 'Gateway status and service management')
-      .addTag('Health', 'Health check endpoints for gateway and services')
-      .addTag('App Service', 'App service endpoints (proxied)')
-      .addTag('LMS Service', 'LMS service endpoints (proxied)')
-      .addTag('Roadmap AI', 'AI-powered learning roadmap generation')
-      .addTag('PDF Summary', 'AI-powered PDF summarization and chat')
+      .addTag('Gateway', 'API Gateway')
+      .addTag('Authentication', 'Authentication')
+      .addTag('Account Management', 'Account management')
+      .addTag('Settings Management', 'Settings management')
+      .addTag('Billing Management', 'Billing management')
+      .addTag('Support Management', 'Support management')
+      .addTag('Feedback Management', 'Feedback management')
+      .addTag('Waitlist Management', 'Waitlist management')
+      .addTag('Roadmap Generation AI', 'AI-powered learning roadmap generation')
+      .addTag('PDF Summarization AI', 'AI-powered PDF summarization and chat')
+      .addTag('LMS Quizzes', 'LMS Quizzes')
+      .addTag('LMS Assignments', 'LMS Assignments')
+      .addTag('LMS Courses', 'LMS Courses')
+      .addTag('LMS Course Chapters', 'LMS Course Chapters')
+      .addTag('LMS Course Lessons', 'LMS Course Lessons')
+      .addTag('LMS Course Content', 'LMS Course Content')
+      .addTag('LMS Course Progress', 'LMS Course Progress')
+      .addTag('LMS Course Enrollment', 'LMS Course Enrollment')
+      .addTag('LMS Course Reviews', 'LMS Course Reviews')
+      .addTag('LMS Library Books', 'LMS Library Books')
+      .addTag('LMS Library Presentations', 'LMS Library Presentations')
+      .addTag('LMS Library Guides', 'LMS Library Guides')
+      .addTag('LMS Library Favorites', 'LMS Library Favorites')
+      .addTag('LMS Library Reviews', 'LMS Library Reviews')
+      .addTag('LMS Library Reader', 'LMS Library Reader')
+      .addTag('LMS Library Upload', 'LMS Library Upload')
+      .addTag('Favicon', 'Favicon')
       // Cookie-based authentication (primary method)
       .addApiKey(
         {
