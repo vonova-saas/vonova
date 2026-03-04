@@ -139,6 +139,14 @@ export class SwaggerService {
 
     SwaggerModule.setup('api-docs', app, document, swaggerOptions);
 
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const localServer =
+      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
+      `http://localhost:${this.configService.get('PORT')}`;
+    const productionServer =
+      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
+      'https://vonova-api-gateway.up.railway.app';
+
     const swaggerBaseUrl = isProduction
       ? `${productionServer}/api-docs`
       : `${localServer}/api-docs`;
