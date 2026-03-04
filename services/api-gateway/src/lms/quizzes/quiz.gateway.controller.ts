@@ -34,6 +34,12 @@ import {
 export class QuizGatewayController {
   constructor(private readonly quizService: QuizGatewayService) { }
 
+  /**
+   * Create a new quiz
+   * @param userId - The ID of the user creating the quiz
+   * @param dto - Quiz creation data containing title, description, topic, and questions
+   * @returns Promise<Quiz> - The newly created quiz object
+   */
   @ApiOperation({
     summary: 'Create new quiz',
     description: 'Creates a new quiz with questions and options for students to complete.',
@@ -66,36 +72,95 @@ export class QuizGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Post()
-  async createQuiz(@Body() dto: CreateQuizDto, @Request() _req: any) {
-    return firstValueFrom(this.quizService.createQuiz(dto));
-  }
-
-  @Patch(':id')
-  async updateQuiz(
-    @Param('id') id: string,
-    @Body() dto: UpdateQuizDto,
-    @Request() _req: any,
+  @Post('/:userId')
+  async createQuiz(
+    @Param('userId') userId: string,
+    @Body() dto: CreateQuizDto,
   ) {
-    return firstValueFrom(this.quizService.updateQuiz(id, dto));
+    return firstValueFrom(this.quizService.createQuiz(dto, userId));
   }
 
-  @Get()
-  async getAllQuizzes() {
-    return firstValueFrom(this.quizService.getAllQuizzes());
+  /**
+   * Update an existing quiz
+   * @param userId - The ID of the user updating the quiz
+   * @param quizId - The ID of the quiz to update
+   * @param dto - Partial quiz data to update
+   * @returns Promise<Quiz> - The updated quiz object
+   */
+  @ApiOperation({
+    summary: 'Update quiz',
+    description: 'Updates an existing quiz with new information.',
+  })
+  @Patch('/:userId/:quizId')
+  async updateQuiz(
+    @Param('userId') userId: string,
+    @Param('quizId') quizId: string,
+    @Body() dto: UpdateQuizDto,
+  ) {
+    return firstValueFrom(this.quizService.updateQuiz(quizId, dto, userId));
   }
 
-  @Get(':id')
-  async getQuizById(@Param('id') id: string) {
-    return firstValueFrom(this.quizService.getQuizById(id));
+  /**
+   * Get all quizzes for a user
+   * @param userId - The ID of the user whose quizzes to retrieve
+   * @returns Promise<Quiz[]> - Array of user's quizzes
+   */
+  @ApiOperation({
+    summary: 'Get all user quizzes',
+    description: 'Retrieves all quizzes created by a specific user.',
+  })
+  @Get('/:userId')
+  async getAllQuizzes(@Param('userId') userId: string) {
+    return firstValueFrom(this.quizService.getAllQuizzes(userId));
   }
 
-  @Delete(':id')
-  async deleteQuiz(@Param('id') id: string, @Request() _req: any) {
-    return firstValueFrom(this.quizService.deleteQuiz(id));
+  /**
+   * Get a specific quiz by ID
+   * @param userId - The ID of the user requesting the quiz
+   * @param quizId - The ID of the quiz to retrieve
+   * @returns Promise<Quiz> - The requested quiz object
+   */
+  @ApiOperation({
+    summary: 'Get quiz by ID',
+    description: 'Retrieves a specific quiz by its ID.',
+  })
+  @Get('/:quizId')
+  async getQuizById(
+    @Param('quizId') quizId: string,
+  ) {
+    return firstValueFrom(this.quizService.getQuizById(quizId));
   }
 
-  @Post(':quizId/submit')
+  /**
+   * Delete a quiz
+   * @param userId - The ID of the user deleting the quiz
+   * @param quizId - The ID of the quiz to delete
+   * @returns Promise<{message: string}> - Confirmation message
+   */
+  @ApiOperation({
+    summary: 'Delete quiz',
+    description: 'Permanently deletes a quiz and all associated data.',
+  })
+  @Delete('/:userId/:quizId')
+  async deleteQuiz(
+    @Param('userId') userId: string,
+    @Param('quizId') quizId: string,
+  ) {
+    return firstValueFrom(this.quizService.deleteQuiz(quizId, userId));
+  }
+
+  /**
+   * Submit quiz answers
+   * @param userId - The ID of the user submitting the quiz
+   * @param quizId - The ID of the quiz being submitted
+   * @param dto - Array of selected answers for each question
+   * @returns Promise<QuizAttempt> - The attempt results with score
+   */
+  @ApiOperation({
+    summary: 'Submit quiz answers',
+    description: 'Submits answers for a completed quiz and calculates score.',
+  })
+  @Post('/:quizId/submit')
   async submitQuiz(
     @Param('quizId') quizId: string,
     @Body() dto: SubmitQuizAnswersDto,
@@ -103,13 +168,38 @@ export class QuizGatewayController {
     return firstValueFrom(this.quizService.submitQuiz(quizId, dto));
   }
 
-  @Get('attempts/:attemptId')
-  async getAttempt(@Param('attemptId') attemptId: string) {
+  /**
+   * Get a specific quiz attempt
+   * @param userId - The ID of the user requesting the attempt
+   * @param attemptId - The ID of the attempt to retrieve
+   * @returns Promise<QuizAttempt> - The attempt details
+   */
+  @ApiOperation({
+    summary: 'Get quiz attempt',
+    description: 'Retrieves detailed information about a specific quiz attempt.',
+  })
+  @Get('/attempts/:attemptId')
+  async getAttempt(
+    @Param('attemptId') attemptId: string,
+  ) {
     return firstValueFrom(this.quizService.getAttempt(attemptId));
   }
 
-  @Get(':quizId/my-attempts')
-  async getAttemptsForQuiz(@Param('quizId') quizId: string) {
-    return firstValueFrom(this.quizService.getAttemptsForQuiz(quizId));
+  /**
+   * Get all attempts for a specific quiz
+   * @param userId - The ID of the user whose attempts to retrieve
+   * @param quizId - The ID of the quiz to get attempts for
+   * @returns Promise<QuizAttempt[]> - Array of quiz attempts
+   */
+  @ApiOperation({
+    summary: 'Get quiz attempts',
+    description: 'Retrieves all attempts a user has made for a particular quiz.',
+  })
+  @Get('/:userId/:quizId/my-attempts')
+  async getAttemptsForQuiz(
+    @Param('userId') userId: string,
+    @Param('quizId') quizId: string,
+  ) {
+    return firstValueFrom(this.quizService.getAttemptsForQuiz(quizId, userId));
   }
 }

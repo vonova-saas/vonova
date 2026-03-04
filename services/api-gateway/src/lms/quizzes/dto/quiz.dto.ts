@@ -11,7 +11,11 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// ===== Option DTO =====
+// ===== OPTION DTO =====
+/**
+ * Data Transfer Object for Quiz Options
+ * Represents a single option that can be selected for a quiz question
+ */
 export class OptionDto {
   @ApiProperty({
     description: 'Unique identifier for the option',
@@ -32,7 +36,11 @@ export class OptionDto {
   text: string;
 }
 
-// ===== Question DTO =====
+// ===== QUESTION DTO =====
+/**
+ * Data Transfer Object for Quiz Questions
+ * Represents a single quiz question with multiple choice options
+ */
 export class QuestionDto {
   @ApiProperty({
     description: 'Unique identifier for the question',
@@ -71,7 +79,11 @@ export class QuestionDto {
   correctOptionId: string;
 }
 
-// ===== Create Quiz DTO =====
+// ===== CREATE QUIZ DTO =====
+/**
+ * Data Transfer Object for Creating New Quizzes
+ * Contains all required fields to create a new quiz with questions
+ */
 export class CreateQuizDto {
   @ApiProperty({
     description: 'Title of the quiz',
@@ -121,10 +133,18 @@ export class CreateQuizDto {
   questions: QuestionDto[];
 }
 
-// ===== Update Quiz DTO =====
+// ===== UPDATE QUIZ DTO =====
+/**
+ * Data Transfer Object for Updating Existing Quizzes
+ * Allows partial updates to quiz fields
+ */
 export class UpdateQuizDto extends PartialType(CreateQuizDto) { }
 
-// ===== Submit Answers DTO =====
+// ===== SUBMIT ANSWER ITEM DTO =====
+/**
+ * Data Transfer Object for Individual Quiz Answers
+ * Represents a single answer submitted for a specific question
+ */
 export class SubmitAnswerItemDto {
   @ApiProperty({
     description: 'ID of the question being answered',
@@ -145,6 +165,11 @@ export class SubmitAnswerItemDto {
   selectedOptionId: string;
 }
 
+// ===== SUBMIT QUIZ ANSWERS DTO =====
+/**
+ * Data Transfer Object for Submitting Complete Quiz Answers
+ * Contains an array of all answers submitted for a quiz
+ */
 export class SubmitQuizAnswersDto {
   @ApiProperty({
     description: 'Array of submitted answers for the quiz',
