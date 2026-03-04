@@ -31,13 +31,13 @@ export class WaitlistController {
   }
 
   @MessagePattern({ cmd: 'getWaitUserById' })
-  async getWaitUserById(@Payload() userId: string) {
-    return this.waitlistService.getWaitUserById(userId);
+  async getWaitUserById(@Payload('id') id: string) {
+    return this.waitlistService.getWaitUserById(id);
   }
 
   @MessagePattern({ cmd: 'deleteWaitUser' })
-  async deleteWaitUser(@Payload() userId: string) {
-    return this.waitlistService.deleteWaitUser(userId);
+  async deleteWaitUser(@Payload('id') id: string) {
+    return this.waitlistService.deleteWaitUser(id);
   }
 
   @MessagePattern({ cmd: 'markPromoCodeAsUsed' })

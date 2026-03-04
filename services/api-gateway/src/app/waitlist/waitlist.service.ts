@@ -22,11 +22,11 @@ export class WaitlistGatewayService {
   }
 
   getWaitUserById(userId: string) {
-    return this.client.send({ cmd: 'getWaitUserById' }, userId);
+    return this.client.send({ cmd: 'getWaitUserById' }, { id: userId });
   }
 
   deleteWaitUser(userId: string) {
-    return this.client.send({ cmd: 'deleteWaitUser' }, userId);
+    return this.client.send({ cmd: 'deleteWaitUser' }, { id: userId });
   }
 
   getWaitlistStats() {

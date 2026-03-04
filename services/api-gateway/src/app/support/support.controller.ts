@@ -21,7 +21,11 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SupportGatewayService } from './support.service';
-import { SupportDto, AddMessageDto, UpdateStatusDto } from './dto/support.dto';
+import {
+  SupportDto,
+  SupportAddMessageDto,
+  SupportUpdateStatusDto,
+} from './dto/support.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -30,7 +34,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('api/v1/support')
 @UseGuards(JwtAuthGuard)
 export class SupportGatewayController {
-  constructor(private readonly supportService: SupportGatewayService) { }
+  constructor(private readonly supportService: SupportGatewayService) {}
 
   @ApiOperation({
     summary: 'Create support ticket',
@@ -119,9 +123,17 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Get()
-  async findAll(@Request() req: any) {
-    return firstValueFrom(this.supportService.findAll(req.user._id));
+  @Get('user/:userId')
+  async findAll(
+    @Param('userId') userId: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
+    return firstValueFrom(this.supportService.findAll(userId));
   }
 
   @ApiOperation({
@@ -163,9 +175,18 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req: any) {
-    return firstValueFrom(this.supportService.findOne(req.user._id, id));
+  @Get('user/:userId/:id')
+  async findOne(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
+    return firstValueFrom(this.supportService.findOne(userId, id));
   }
 
   @ApiOperation({
@@ -173,7 +194,7 @@ export class SupportGatewayController {
     description: 'Updates an existing support ticket with new information.',
   })
   @ApiParam({
-    name: 'id',
+    name: 'userId',
     description: 'The unique identifier of the support ticket',
     example: '507f1f77bcf86cd799439011',
   })
@@ -207,14 +228,20 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Patch(':id')
+  @Patch('user/:userId/:id')
   async update(
+    @Param('userId') userId: string,
     @Param('id') id: string,
     @Body() updateSupportDto: SupportDto,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
     return firstValueFrom(
-      this.supportService.update(req.user._id, id, updateSupportDto),
+      this.supportService.update(userId, id, updateSupportDto),
     );
   }
 
@@ -253,9 +280,18 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req: any) {
-    return firstValueFrom(this.supportService.remove(req.user._id, id));
+  @Delete('user/:userId/:id')
+  async remove(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
+    return firstValueFrom(this.supportService.remove(userId, id));
   }
 
   @ApiOperation({
@@ -263,7 +299,7 @@ export class SupportGatewayController {
     description: 'Adds a new message to the support ticket conversation thread.',
   })
   @ApiParam({
-    name: 'id',
+    name: 'userId',
     description: 'The unique identifier of the support ticket',
     example: '507f1f77bcf86cd799439011',
   })
@@ -293,14 +329,20 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Post(':id/messages')
+  @Post('user/:userId/:id/messages')
   async createMessage(
+    @Param('userId') userId: string,
     @Param('id') id: string,
-    @Body() message: AddMessageDto,
+    @Body() body: SupportAddMessageDto,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
     return firstValueFrom(
-      this.supportService.createMessage(req.user._id, id, message),
+      this.supportService.createMessage(req.user._id, id, body.message),
     );
   }
 
@@ -309,7 +351,7 @@ export class SupportGatewayController {
     description: 'Retrieves all messages in the support ticket conversation thread.',
   })
   @ApiParam({
-    name: 'id',
+    name: 'userId',
     description: 'The unique identifier of the support ticket',
     example: '507f1f77bcf86cd799439011',
   })
@@ -342,8 +384,17 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Get(':id/messages')
-  async findOneMessages(@Param('id') id: string, @Request() req: any) {
+  @Get('user/:userId/:id/messages')
+  async findOneMessages(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
     return firstValueFrom(
       this.supportService.findOneMessages(req.user._id, id),
     );
@@ -379,14 +430,20 @@ export class SupportGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Patch(':id/status')
+  @Patch('user/:userId/:id/status')
   async updateStatus(
+    @Param('userId') userId: string,
     @Param('id') id: string,
-    @Body() status: UpdateStatusDto,
+    @Body() body: SupportUpdateStatusDto,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own support tickets',
+      );
+    }
     return firstValueFrom(
-      this.supportService.updateStatus(req.user._id, id, status),
+      this.supportService.updateStatus(req.user._id, id, body.status),
     );
   }
 }

@@ -11,6 +11,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,8 +23,8 @@ import {
 import { FeedbackGatewayService } from './feedback.service';
 import {
   FeedbackDto,
-  AddMessageDto,
-  UpdateStatusDto,
+  FeedbackAddMessageDto,
+  FeedbackUpdateStatusDto,
 } from './dto/feedback.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -67,8 +68,17 @@ export class FeedbackGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Post()
-  async create(@Body() createFeedbackDto: FeedbackDto, @Request() req: any) {
+  @Post('user/:userId')
+  async create(
+    @Param('userId') userId: string,
+    @Body() createFeedbackDto: FeedbackDto,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(
       this.feedbackService.create(createFeedbackDto, req.user._id),
     );
@@ -101,8 +111,13 @@ export class FeedbackGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Get()
-  async findAll(@Request() req: any) {
+  @Get('user/:userId')
+  async findAll(@Param('userId') userId: string, @Request() req: any) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(this.feedbackService.findAll(req.user._id));
   }
 
@@ -143,53 +158,98 @@ export class FeedbackGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req: any) {
+  @Get('user/:userId/:id')
+  async findOne(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(this.feedbackService.findOne(req.user._id, id));
   }
 
-  @Patch(':id')
+  @Patch('user/:userId/:id')
   async update(
+    @Param('userId') userId: string,
     @Param('id') id: string,
     @Body() updateFeedbackDto: FeedbackDto,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(
-      this.feedbackService.update(req.user._id, id, updateFeedbackDto),
+      this.feedbackService.update(userId, id, updateFeedbackDto),
     );
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req: any) {
-    return firstValueFrom(this.feedbackService.remove(req.user._id, id));
-  }
-
-  @Post(':id/messages')
-  async createMessage(
-    @Param('id') id: string,
-    @Body('message') message: AddMessageDto,
+  @Delete('user/:userId')
+  async remove(
+    @Param('userId') userId: string,
+    @Body('id') id: string,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
+    return firstValueFrom(this.feedbackService.remove(userId, id));
+  }
+
+  @Post('user/:userId/:id/messages')
+  async createMessage(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Body() body: FeedbackAddMessageDto,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(
-      this.feedbackService.createMessage(req.user._id, id, message),
+      this.feedbackService.createMessage(req.user._id, id, body.message),
     );
   }
 
-  @Get(':id/messages')
-  async findOneMessages(@Param('id') id: string, @Request() req: any) {
+  @Get('user/:userId/:id/messages')
+  async findOneMessages(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(
       this.feedbackService.findOneMessages(req.user._id, id),
     );
   }
 
-  @Patch(':id/status')
+  @Patch('user/:userId/:id/status')
   async updateStatus(
+    @Param('userId') userId: string,
     @Param('id') id: string,
-    @Body('status') status: UpdateStatusDto,
+    @Body() body: FeedbackUpdateStatusDto,
     @Request() req: any,
   ) {
+    if (req.user._id !== userId) {
+      throw new ForbiddenException(
+        'Access denied: You can only access your own feedback',
+      );
+    }
     return firstValueFrom(
-      this.feedbackService.updateStatus(req.user._id, id, status),
+      this.feedbackService.updateStatus(req.user._id, id, body.status),
     );
   }
 }

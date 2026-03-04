@@ -60,7 +60,7 @@ export class SupportDto {
   message?: string;
 }
 
-export class AddMessageDto {
+export class SupportAddMessageDto {
   @ApiProperty({
     description: 'Message to add to the support ticket thread',
     example: 'Thank you for your assistance. The issue has been resolved on my end.',
@@ -72,7 +72,7 @@ export class AddMessageDto {
   message: string;
 }
 
-export class UpdateStatusDto {
+export class SupportUpdateStatusDto {
   @ApiProperty({
     description: 'New status for the support ticket',
     enum: ['open', 'pending', 'resolved', 'closed'],

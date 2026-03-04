@@ -84,7 +84,7 @@ export class FeedbackDto {
   message?: string;
 }
 
-export class AddMessageDto {
+export class FeedbackAddMessageDto {
   @ApiProperty({
     description: 'Message to add to feedback thread',
     example: 'Thank you for addressing my previous concern. The issue has been resolved.',
@@ -96,7 +96,7 @@ export class AddMessageDto {
   message: string;
 }
 
-export class UpdateStatusDto {
+export class FeedbackUpdateStatusDto {
   @ApiProperty({
     description: 'New status for the feedback',
     enum: ['open', 'pending', 'resolved', 'closed'],
