@@ -14,7 +14,15 @@ export class SwaggerService {
   ) {}
 
   createSwaggerDocument(app: INestApplication) {
-    const swaggerConfig = new DocumentBuilder()
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const localServer =
+      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
+      `http://localhost:${this.configService.get('PORT')}`;
+    const productionServer =
+      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
+      'https://vonova-api-gateway.up.railway.app';
+
+    let swaggerConfig = new DocumentBuilder()
       .setTitle('Vonova API Gateway')
       .setDescription(
         'API Gateway for Vonova microservices platform. ' +
@@ -29,11 +37,6 @@ export class SwaggerService {
         'vonovacompany@gmail.com',
       )
       .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/')
-      .addServer(
-        `http://localhost:${this.configService.get('PORT')}`,
-        'Local Development Server',
-      )
-      .addServer('https://api.vonova.tech', 'Production Server')
       .addTag('Auth', 'Authentication and authorization endpoints')
       .addTag('Gateway', 'Gateway status and service management')
       .addTag('Health', 'Health check endpoints for gateway and services')
@@ -63,6 +66,17 @@ export class SwaggerService {
         },
         'bearer',
       );
+
+    // Register servers: in production, put production server first so it becomes default in Swagger UI
+    if (isProduction) {
+      swaggerConfig = swaggerConfig
+        .addServer(productionServer, 'Production Server')
+        .addServer(localServer, 'Local Development Server');
+    } else {
+      swaggerConfig = swaggerConfig
+        .addServer(localServer, 'Local Development Server')
+        .addServer(productionServer, 'Production Server');
+    }
 
     // Add basic auth for production Swagger UI protection
     if (
@@ -125,9 +139,11 @@ export class SwaggerService {
 
     SwaggerModule.setup('api-docs', app, document, swaggerOptions);
 
-    this.loggerService.log(
-      `📚 Swagger docs available at http://localhost:${this.configService.get('PORT')}/api-docs`,
-    );
+    const swaggerBaseUrl = isProduction
+      ? `${productionServer}/api-docs`
+      : `${localServer}/api-docs`;
+
+    this.loggerService.log(`📚 Swagger docs available at ${swaggerBaseUrl}`);
     if (
       this.configService.get('NODE_ENV') === 'production' &&
       this.configService.get('SWAGGER_USER') &&
