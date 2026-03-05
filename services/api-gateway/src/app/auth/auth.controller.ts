@@ -20,7 +20,6 @@ import {
   ApiResponse,
   ApiConsumes,
   ApiBody,
-  ApiHeader,
   ApiCookieAuth,
 } from '@nestjs/swagger';
 import type { Response, Request } from 'express';
@@ -148,6 +147,11 @@ export class AuthGatewayController {
   @ApiResponse({
     status: 404,
     description: 'User not found',
+  })
+  @ApiBody({
+    type: WelcomeEmailDto,
+    description:
+      'Email, role, knowAboutUs (required). Optional: profilePictureUrl, couponCode. userAgent is read from headers.',
   })
   @Post('welcome-email-user')
   async welcomeEmail(
