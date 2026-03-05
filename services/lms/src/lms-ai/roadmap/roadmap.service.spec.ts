@@ -20,14 +20,19 @@ describe('RoadmapService', () => {
     create: jest.fn(),
     updateStatus: jest.fn(),
     deleteById: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helpers
+    getTotalCount: jest.fn(),
+    getActiveRoadmapsCount: jest.fn(),
+    getAverageGenerationTime: jest.fn(),
+    getRoadmapsByStatus: jest.fn(),
+  } as unknown as jest.Mocked<RoadmapRepository>;
 
   const mockRoadmapHistoryRepository = {
     create: jest.fn(),
     findByRoadmapId: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helper
+    getTotalCount: jest.fn(),
+  } as unknown as jest.Mocked<RoadmapHistoryRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -235,13 +240,23 @@ describe('RoadmapService', () => {
 
   describe('getServiceStats', () => {
     it('should return service statistics', async () => {
-      (roadmapRepository as any).count = jest.fn().mockResolvedValue(10);
-      (roadmapHistoryRepository as any).count = jest.fn().mockResolvedValue(50);
+      roadmapRepository.getTotalCount.mockResolvedValue(10);
+      roadmapHistoryRepository.getTotalCount.mockResolvedValue(50);
+      roadmapRepository.getActiveRoadmapsCount.mockResolvedValue(3);
+      roadmapRepository.getAverageGenerationTime.mockResolvedValue(1200);
+      roadmapRepository.getRoadmapsByStatus.mockResolvedValue({
+        generated: 5,
+        in_progress: 3,
+        completed: 2,
+      });
 
       const result = await service.getServiceStats();
 
       expect(result).toBeDefined();
-      expect(result.total_roadmaps).toBeDefined();
+      expect(result.total_roadmaps).toBe(10);
+      expect(result.total_generations).toBe(50);
+      expect(result.active_roadmaps).toBe(3);
+      expect(result.roadmaps_by_status.generated).toBe(5);
     });
   });
 });

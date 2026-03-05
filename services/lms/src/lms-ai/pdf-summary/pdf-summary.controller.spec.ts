@@ -55,7 +55,10 @@ describe('PdfSummaryController', () => {
         message: 'Session deleted successfully',
       });
 
-      await controller.deleteSession('test-session-id');
+      await controller.deleteSession(
+        { sessionId: 'test-session-id', userId: undefined } as any,
+        {} as any,
+      );
 
       expect(service.deleteSession).toHaveBeenCalledWith(
         'test-session-id',
@@ -64,9 +67,9 @@ describe('PdfSummaryController', () => {
     });
 
     it('should throw BadRequestException when session ID is empty', async () => {
-      await expect(controller.deleteSession('   ')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.deleteSession({ sessionId: '   ' } as any, {} as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -80,16 +83,23 @@ describe('PdfSummaryController', () => {
 
       mockPdfSummaryService.getFullSummary.mockResolvedValue(mockSummary);
 
-      const req = {};
       const result = await controller.getFullSummary(
-        'test-session',
-        req,
-        '127.0.0.1',
-        'test-agent',
+        {
+          session_id: 'test-session',
+          user_id: 'test-user',
+          ip: '127.0.0.1',
+          userAgent: 'test-agent',
+        } as any,
+        {} as any,
       );
 
       expect(result).toBeDefined();
-      expect(service.getFullSummary).toHaveBeenCalled();
+      expect(service.getFullSummary).toHaveBeenCalledWith(
+        'test-session',
+        'test-user',
+        '127.0.0.1',
+        'test-agent',
+      );
     });
   });
 
@@ -107,10 +117,12 @@ describe('PdfSummaryController', () => {
       );
 
       const result = await controller.getSessionChatHistory(
-        'test-session',
-        'test-session',
-        '1',
-        '20',
+        {
+          sessionId: 'test-session',
+          page: '1',
+          limit: '20',
+        } as any,
+        {} as any,
       );
 
       expect(result.success).toBe(true);
@@ -119,7 +131,10 @@ describe('PdfSummaryController', () => {
 
     it('should throw BadRequestException when sessionId is missing', async () => {
       await expect(
-        controller.getSessionChatHistory('', undefined, '1', '20'),
+        controller.getSessionChatHistory(
+          { sessionId: '', page: '1', limit: '20' } as any,
+          {} as any,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });

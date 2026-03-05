@@ -50,6 +50,19 @@ export class PdfSummaryGatewayController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload PDF file' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'The PDF file to upload',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'PDF uploaded successfully' })
   async uploadPDF(
     @UploadedFile() file: any,

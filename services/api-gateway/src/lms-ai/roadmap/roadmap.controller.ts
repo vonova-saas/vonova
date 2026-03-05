@@ -141,6 +141,25 @@ export class RoadmapGatewayController {
     );
   }
 
+  @Get('user-roadmaps')
+  @ApiOperation({ summary: 'Get all roadmaps for a user' })
+  @ApiQuery({
+    name: 'userId',
+    description: 'User ID',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User roadmaps retrieved successfully',
+  })
+  async getUserRoadmaps(@Query('userId') userId: string) {
+    return firstValueFrom(
+      this.roadmapService.getUserRoadmaps({
+        userId,
+      }),
+    );
+  }
+
   @Get(':roadmapId')
   @ApiOperation({ summary: 'Get roadmap by ID' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID' })
@@ -240,25 +259,6 @@ export class RoadmapGatewayController {
         roadmapId,
         page,
         limit,
-      }),
-    );
-  }
-
-  @Get('user-roadmaps')
-  @ApiOperation({ summary: 'Get all roadmaps for a user' })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: true,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User roadmaps retrieved successfully',
-  })
-  async getUserRoadmaps(@Query('userId') userId: string) {
-    return firstValueFrom(
-      this.roadmapService.getUserRoadmaps({
-        userId,
       }),
     );
   }

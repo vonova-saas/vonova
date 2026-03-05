@@ -20,7 +20,10 @@ export class SwaggerService {
       `http://localhost:${this.configService.get('PORT')}`;
     const productionServer =
       this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
-      'https://vonova-api-gateway.up.railway.app';
+      'http://localhost:4000';
+    if (!productionServer) {
+      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
+    }
 
     let swaggerConfig = new DocumentBuilder()
       .setTitle('Vonova API Gateway')
@@ -165,7 +168,10 @@ export class SwaggerService {
       `http://localhost:${this.configService.get('PORT')}`;
     const productionServer =
       this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
-      'https://vonova-api-gateway.up.railway.app';
+      'http://localhost:4000';
+    if (!productionServer) {
+      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
+    }
 
     const swaggerBaseUrl = isProduction
       ? `${productionServer}/api-docs`

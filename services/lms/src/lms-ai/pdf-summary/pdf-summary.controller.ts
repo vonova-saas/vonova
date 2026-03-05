@@ -146,7 +146,11 @@ export class PdfSummaryController {
       throw new BadRequestException('Session ID is required');
     }
 
-    await this.pdfSummaryService.deleteSession(sessionId.trim(), userId);
+    const result = await this.pdfSummaryService.deleteSession(
+      sessionId.trim(),
+      userId,
+    );
+    return result;
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.stats' })

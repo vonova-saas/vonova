@@ -23,20 +23,12 @@ const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
     MongooseModule.forRootAsync({
       connectionName: LMS_AI_CONNECTION,
       useFactory: (configService: ConfigService) => {
-        const roadmap = configService.get<string>('MONGO_URI_ROADMAP_AI');
-        const pdfSummary = configService.get<string>(
-          'MONGO_URI_PDF_SUMMARY_AI',
-        );
-        const remote = configService.get<string>('MONGO_URI_REMOTE');
         const lmsAi = configService.get<string>('MONGO_URI_LMS_AI');
-        const raw = roadmap || pdfSummary;
-        const isDockerHost =
-          raw &&
-          (raw.includes('mongodb://database:') ||
-            raw.includes('mongodb://database/'));
-        const uri = isDockerHost
-          ? remote || lmsAi || 'mongodb://localhost:27017/'
-          : raw || remote || lmsAi || 'mongodb://localhost:27017/';
+
+        const uri = lmsAi || 'mongodb://localhost:27017/LMS_AI';
+        if (!uri) {
+          throw new Error('MONGO_URI_LMS_AI is not set');
+        }
         return { uri };
       },
       inject: [ConfigService],
@@ -67,4 +59,4 @@ const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
     PdfChatHistoryRepository,
   ],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

@@ -7,7 +7,7 @@ import {
 import { PdfSummaryService } from './pdf-summary.service';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
-import { S3Service } from '../common/services/s3.service';
+import { S3Service } from '../../common/services/s3.service';
 
 describe('PdfSummaryService', () => {
   let service: PdfSummaryService;
@@ -20,15 +20,24 @@ describe('PdfSummaryService', () => {
     findBySessionId: jest.fn(),
     create: jest.fn(),
     deleteBySessionId: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helpers
+    getTotalCount: jest.fn(),
+    getActiveSessionsCount: jest.fn(),
+    getAverageProcessingTime: jest.fn(),
+    getLanguageDistribution: jest.fn(),
+  } as unknown as jest.Mocked<PdfSummaryRepository>;
 
   const mockPdfChatHistoryRepository = {
     create: jest.fn(),
     findBySessionId: jest.fn(),
     deleteBySessionId: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helpers
+    getTotalCount: jest.fn(),
+    getAverageResponseTime: jest.fn(),
+    getMostCommonQueries: jest.fn(),
+    getQueriesByHour: jest.fn(),
+    getAverageRating: jest.fn(),
+  } as unknown as jest.Mocked<PdfChatHistoryRepository>;
 
   const mockS3Service = {
     uploadFile: jest.fn(),
@@ -183,13 +192,17 @@ describe('PdfSummaryService', () => {
 
   describe('getServiceStats', () => {
     it('should return service statistics', async () => {
-      (pdfSummaryRepository as any).count = jest.fn().mockResolvedValue(10);
-      (pdfChatHistoryRepository as any).count = jest.fn().mockResolvedValue(50);
+      pdfSummaryRepository.getTotalCount.mockResolvedValue(10);
+      pdfChatHistoryRepository.getTotalCount.mockResolvedValue(50);
+      pdfSummaryRepository.getActiveSessionsCount.mockResolvedValue(4);
+      pdfSummaryRepository.getAverageProcessingTime.mockResolvedValue(800);
 
       const result = await service.getServiceStats();
 
       expect(result).toBeDefined();
-      expect(result.total_summaries).toBeDefined();
+      expect(result.total_summaries).toBe(10);
+      expect(result.total_chats).toBe(50);
+      expect(result.active_sessions).toBe(4);
     });
   });
 });
