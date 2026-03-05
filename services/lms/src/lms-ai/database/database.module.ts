@@ -49,7 +49,7 @@ const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
 
         return {
           uri:
-            audioUri || lmsAiUri || 'mongodb://localhost:27017/LMS_AI',
+           audioUri || lmsAiUri || 'mongodb://localhost:27017/LMS_AI',
         };
       },
       inject: [ConfigService],
