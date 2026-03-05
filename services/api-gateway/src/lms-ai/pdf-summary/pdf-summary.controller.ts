@@ -19,6 +19,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { randomUUID } from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -172,6 +173,7 @@ export class PdfSummaryGatewayController {
     if (!sessionId?.trim()) {
       throw new BadRequestException('session_id is required');
     }
+    const idempotency_key = randomUUID();
     const result = (await firstValueFrom(
       this.pdfSummaryService.voiceAsk({
         session_id: sessionId.trim(),
@@ -179,6 +181,7 @@ export class PdfSummaryGatewayController {
         mimeType: audio.mimetype,
         filename: audio.originalname,
         user_id: req?.user?._id,
+        idempotency_key,
       }),
     )) as {
       contentType: string;
@@ -228,17 +231,6 @@ export class PdfSummaryGatewayController {
       ...(result.audioRecord ?? {}),
       contentType: result.contentType,
     });
-  }
-
-  @Get('voice/ask')
-  @ApiOperation({
-    summary: 'Voice ask (GET not supported)',
-    description:
-      'This endpoint is POST-only. This GET handler exists to avoid client prefetch/preview 404s and returns no content.',
-  })
-  @ApiResponse({ status: 204, description: 'No content' })
-  voiceAskGet(@Res() res: Response) {
-    res.status(204).send();
   }
 
   @Get('summarize')
@@ -341,6 +333,38 @@ export class PdfSummaryGatewayController {
         userId: req.user._id,
       }),
     );
+  }
+
+  @Get('sessions')
+  @ApiOperation({
+    summary: 'Get all sessions, PDFs, and audio recordings for the current user',
+    description:
+      'Returns all PDF summary sessions with PDF metadata. Each session includes a nested audio_recordings array (voice/ask recordings for that session). Session ID appears once per session, not repeated per recording.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Sessions with nested audio_recordings per session',
+  })
+  async getSessionsByUserId(@Request() req: any) {
+    const rawUserId = req?.user?._id ?? req?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    if (!userId) {
+      throw new BadRequestException('User not authenticated');
+    }
+    const result = await firstValueFrom(
+      this.pdfSummaryService.getSessionsByUserId({ user_id: userId }),
+    );
+    if (result?.data && Array.isArray(result.data)) {
+      result.data = result.data.map((session: Record<string, unknown>) => ({
+        ...session,
+        audio_recordings: session.audio_recordings ?? [],
+      }));
+    }
+    return result;
   }
 
   @Get('stats')

@@ -48,6 +48,10 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.deleteSession' }, data);
   }
 
+  getSessionsByUserId(data: { user_id: string }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.getSessionsByUserId' }, data);
+  }
+
   getServiceStats(data: { user_id?: string }) {
     return this.client.send({ cmd: 'lms.ai.pdf.stats' }, data);
   }
@@ -78,6 +82,7 @@ export class PdfSummaryGatewayService {
     mimeType?: string;
     filename?: string;
     user_id?: string;
+    idempotency_key?: string;
   }) {
     return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
   }

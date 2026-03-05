@@ -5,12 +5,12 @@ import {
   PdfSummaryAudio,
   PdfSummaryAudioDocument,
 } from '../schemas/pdf-summary-audio.schema';
-import { PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME } from '../constants';
+import { LMS_AI_CONNECTION_NAME } from '../constants';
 
 @Injectable()
 export class PdfSummaryAudioRepository {
   constructor(
-    @InjectModel(PdfSummaryAudio.name, PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME)
+    @InjectModel(PdfSummaryAudio.name, LMS_AI_CONNECTION_NAME)
     private pdfSummaryAudioModel: Model<PdfSummaryAudioDocument>,
   ) {}
 
@@ -24,6 +24,26 @@ export class PdfSummaryAudioRepository {
   async findBySessionId(sessionId: string): Promise<PdfSummaryAudioDocument[]> {
     return this.pdfSummaryAudioModel
       .find({ session_id: sessionId })
+      .sort({ created_at: -1 })
+      .exec();
+  }
+
+  async findByUserId(userId: string): Promise<PdfSummaryAudioDocument[]> {
+    return this.pdfSummaryAudioModel
+      .find({ user_id: userId })
+      .sort({ created_at: -1 })
+      .exec();
+  }
+
+  /** Find all audio recordings for the given session IDs (e.g. user's sessions). */
+  async findBySessionIds(
+    sessionIds: string[],
+  ): Promise<PdfSummaryAudioDocument[]> {
+    if (!sessionIds?.length) {
+      return [];
+    }
+    return this.pdfSummaryAudioModel
+      .find({ session_id: { $in: sessionIds } })
       .sort({ created_at: -1 })
       .exec();
   }

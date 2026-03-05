@@ -7,6 +7,7 @@ import { RoadmapHistorySchema } from './schemas/roadmap-history.schema';
 import { PdfSummarySchema } from './schemas/pdf-summary.schema';
 import { PdfChatHistorySchema } from './schemas/pdf-chat-history.schema';
 import { PdfSummaryAudioSchema } from './schemas/pdf-summary-audio.schema';
+import { VoiceAskIdempotencySchema } from './schemas/voice-ask-idempotency.schema';
 import { AiAssistantSchema } from './schemas/ai-assistant.schema';
 import { VideoGenSchema } from './schemas/video-gen.schema';
 import { ProblemSolverSchema } from './schemas/problem-solver.schema';
@@ -16,13 +17,10 @@ import { RoadmapHistoryRepository } from './repositories/roadmap-history.reposit
 import { PdfSummaryRepository } from './repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from './repositories/pdf-chat-history.repository';
 import { PdfSummaryAudioRepository } from './repositories/pdf-summary-audio.repository';
-import {
-  LMS_AI_CONNECTION_NAME,
-  PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME,
-} from './constants';
+import { VoiceAskIdempotencyRepository } from './repositories/voice-ask-idempotency.repository';
+import { LMS_AI_CONNECTION_NAME } from './constants';
 
 const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
-const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
 
 @Module({
   imports: [
@@ -39,36 +37,19 @@ const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
       },
       inject: [ConfigService],
     }),
-    MongooseModule.forRootAsync({
-      connectionName: PDF_SUMMARY_AI_AUDIO_CONNECTION,
-      useFactory: (configService: ConfigService) => {
-        const audioUri = configService.get<string>(
-          'MONGO_URI_PDF_SUMMARY_AI_AUDIO',
-        );
-        const lmsAiUri = configService.get<string>('MONGO_URI_LMS_AI');
-
-        return {
-          uri:
-           audioUri || lmsAiUri || 'mongodb://localhost:27017/LMS_AI',
-        };
-      },
-      inject: [ConfigService],
-    }),
     MongooseModule.forFeature(
       [
         { name: 'Roadmap', schema: RoadmapSchema },
         { name: 'RoadmapHistory', schema: RoadmapHistorySchema },
         { name: 'PdfSummary', schema: PdfSummarySchema },
         { name: 'PdfChatHistory', schema: PdfChatHistorySchema },
+        { name: 'PdfSummaryAudio', schema: PdfSummaryAudioSchema },
+        { name: 'VoiceAskIdempotency', schema: VoiceAskIdempotencySchema },
         { name: 'AiAssistant', schema: AiAssistantSchema },
         { name: 'VideoGen', schema: VideoGenSchema },
         { name: 'ProblemSolver', schema: ProblemSolverSchema },
       ],
       LMS_AI_CONNECTION,
-    ),
-    MongooseModule.forFeature(
-      [{ name: 'PdfSummaryAudio', schema: PdfSummaryAudioSchema }],
-      PDF_SUMMARY_AI_AUDIO_CONNECTION,
     ),
   ],
   providers: [
@@ -77,6 +58,7 @@ const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
     PdfSummaryRepository,
     PdfChatHistoryRepository,
     PdfSummaryAudioRepository,
+    VoiceAskIdempotencyRepository,
   ],
   exports: [
     RoadmapRepository,
@@ -84,6 +66,7 @@ const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
     PdfSummaryRepository,
     PdfChatHistoryRepository,
     PdfSummaryAudioRepository,
+    VoiceAskIdempotencyRepository,
   ],
 })
 export class DatabaseModule { }

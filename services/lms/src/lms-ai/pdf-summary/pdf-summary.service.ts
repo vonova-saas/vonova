@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
 import { PdfSummaryAudioRepository } from '../database/repositories/pdf-summary-audio.repository';
+import { VoiceAskIdempotencyRepository } from '../database/repositories/voice-ask-idempotency.repository';
 import { S3Service } from '../../common/services/s3.service';
 import {
   IPDFSummaryRequest,
@@ -32,6 +33,7 @@ export class PdfSummaryService {
     private readonly pdfSummaryRepository: PdfSummaryRepository,
     private readonly pdfChatHistoryRepository: PdfChatHistoryRepository,
     private readonly pdfSummaryAudioRepository: PdfSummaryAudioRepository,
+    private readonly voiceAskIdempotencyRepository: VoiceAskIdempotencyRepository,
     private readonly configService: ConfigService,
     private readonly s3Service: S3Service,
   ) {
@@ -942,6 +944,7 @@ export class PdfSummaryService {
   /**
    * Voice ask: send user voice to AI, get voice response (STT -> PDF QA -> TTS).
    * Calls Python POST /voice/ask with multipart (session_id + audio file).
+   * When idempotencyKey is set, duplicate requests (same key) only create one DB record.
    */
   async voiceAsk(
     sessionId: string,
@@ -949,6 +952,7 @@ export class PdfSummaryService {
     mimeType: string,
     filename?: string,
     userId?: string,
+    idempotencyKey?: string,
   ): Promise<{
     contentType: string;
     detectedLanguage?: string;
@@ -971,12 +975,32 @@ export class PdfSummaryService {
       updated_at?: Date;
     };
   }> {
+    if (idempotencyKey?.trim()) {
+      const claimed = await this.voiceAskIdempotencyRepository.claim(
+        idempotencyKey.trim(),
+      );
+      if (!claimed) {
+        const cached = await this.waitForVoiceAskCompleted(idempotencyKey.trim());
+        if (cached?.response) {
+          return cached.response as Awaited<
+            ReturnType<PdfSummaryService['voiceAsk']>
+          >;
+        }
+      }
+    }
+
     const endpoint = `${this.PYTHON_SERVICE_URL}/voice/ask`;
     const formData = new FormData();
     formData.append('session_id', sessionId.trim());
     const ext =
       filename?.split('.').pop() || (mimeType.includes('wav') ? 'wav' : 'webm');
     const safeName = filename?.trim() || `audio.${ext}`;
+
+    const userIdSegment =
+      userId && String(userId).trim()
+        ? String(userId).trim()
+        : 'anonymous';
+    const voicePrefix = `voice/pdf-summary/${userIdSegment}/${sessionId.trim()}`;
 
     let userAudioS3Key: string | undefined;
     let userAudioS3Url: string | undefined;
@@ -985,7 +1009,7 @@ export class PdfSummaryService {
         audioBuffer,
         safeName,
         mimeType,
-        `voice/pdf-summary/${sessionId.trim()}/user`,
+        `${voicePrefix}/user`,
       );
       try {
         userAudioS3Url = await this.s3Service.getPresignedGetUrl(userAudioS3Key);
@@ -1054,7 +1078,7 @@ export class PdfSummaryService {
         aiAudioBuffer,
         aiFilename,
         contentType,
-        `voice/pdf-summary/${sessionId.trim()}/ai`,
+        `${voicePrefix}/ai`,
       );
       try {
         aiAudioS3Url = await this.s3Service.getPresignedGetUrl(aiAudioS3Key);
@@ -1115,7 +1139,7 @@ export class PdfSummaryService {
       this.logger.warn(`Failed to persist voice exchange in DB: ${msg}`);
     }
 
-    return {
+    const result = {
       contentType,
       detectedLanguage,
       userAudioS3Key,
@@ -1124,6 +1148,30 @@ export class PdfSummaryService {
       aiAudioS3Url,
       audioRecord,
     };
+    if (idempotencyKey?.trim()) {
+      await this.voiceAskIdempotencyRepository
+        .setCompleted(idempotencyKey.trim(), result as unknown as Record<string, unknown>)
+        .catch((err) => {
+          this.logger.warn(`Failed to set voice-ask idempotency completed: ${err instanceof Error ? err.message : String(err)}`);
+        });
+    }
+    return result;
+  }
+
+  private async waitForVoiceAskCompleted(
+    key: string,
+    maxWaitMs = 60000,
+    pollMs = 500,
+  ): Promise<{ response?: Record<string, unknown> } | null> {
+    const deadline = Date.now() + maxWaitMs;
+    while (Date.now() < deadline) {
+      const doc = await this.voiceAskIdempotencyRepository.get(key);
+      if (doc?.status === 'completed' && doc.response) {
+        return { response: doc.response as Record<string, unknown> };
+      }
+      await new Promise((r) => setTimeout(r, pollMs));
+    }
+    return null;
   }
 
   private async extractPageCount(fileContent: Buffer): Promise<number> {
@@ -1271,6 +1319,141 @@ export class PdfSummaryService {
       );
       // Don't throw - allow the chat response to succeed even if history save fails
     }
+  }
+
+  /**
+   * Get all sessions and PDFs for a user by user ID.
+   * Returns session list with PDF metadata and nested audio_recordings per session
+   * (session_id appears once per session, not repeated per recording).
+   */
+  async getSessionsByUserId(userId: string): Promise<{
+    success: boolean;
+    data: Array<{
+      session_id: string;
+      summaryId: string;
+      filename: string;
+      original_filename: string;
+      brief_summary: string;
+      file_size_bytes: number;
+      total_pages: number;
+      status: string;
+      s3_key?: string;
+      s3_url?: string;
+      language?: string;
+      created_at: Date;
+      updated_at: Date;
+      audio_recordings: Array<{
+        audioId: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at: Date;
+        updated_at: Date;
+      }>;
+    }>;
+  }> {
+    if (!userId || userId.trim() === '') {
+      throw new BadRequestException('user_id is required');
+    }
+    const trimmedUserId = userId.trim();
+    const docs = await this.pdfSummaryRepository.findByUserId(trimmedUserId);
+    const sessionIds = docs.map((d) => d.session_id);
+    let audioDocs: Awaited<ReturnType<PdfSummaryAudioRepository['findBySessionIds']>> = [];
+    try {
+      const [audioByUser, audioBySessions] = await Promise.all([
+        this.pdfSummaryAudioRepository.findByUserId(trimmedUserId),
+        this.pdfSummaryAudioRepository.findBySessionIds(sessionIds),
+      ]);
+      this.logger.debug(
+        `getSessionsByUserId: ${sessionIds.length} session(s), audioByUser=${audioByUser.length}, audioBySessions=${audioBySessions.length}`,
+      );
+      const seenIds = new Set<string>();
+      audioDocs = [...audioByUser];
+      for (const a of audioDocs) seenIds.add(a.audioId);
+      for (const a of audioBySessions) {
+        if (!seenIds.has(a.audioId)) {
+          seenIds.add(a.audioId);
+          audioDocs.push(a);
+        }
+      }
+      audioDocs.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to load audio recordings for user ${trimmedUserId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    const recordingsBySession = new Map<
+      string,
+      Array<{
+        audioId: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at: Date;
+        updated_at: Date;
+      }>
+    >();
+    const seenAudioIdsBySession = new Map<string, Set<string>>();
+    for (const a of audioDocs) {
+      const sid = a.session_id;
+      const aid = String(a.audioId ?? '');
+      const seen = seenAudioIdsBySession.get(sid) ?? new Set<string>();
+      if (aid && seen.has(aid)) continue;
+      if (aid) seen.add(aid);
+      seenAudioIdsBySession.set(sid, seen);
+      const list = recordingsBySession.get(sid) ?? [];
+      list.push({
+        audioId: aid || a.audioId,
+        ...(a.user_audio_s3_key && { user_audio_s3_key: a.user_audio_s3_key }),
+        ...(a.user_audio_s3_url && { user_audio_s3_url: a.user_audio_s3_url }),
+        ...(a.user_audio_mime_type && {
+          user_audio_mime_type: a.user_audio_mime_type,
+        }),
+        ...(a.ai_audio_s3_key && { ai_audio_s3_key: a.ai_audio_s3_key }),
+        ...(a.ai_audio_s3_url && { ai_audio_s3_url: a.ai_audio_s3_url }),
+        ...(a.ai_audio_content_type && {
+          ai_audio_content_type: a.ai_audio_content_type,
+        }),
+        ...(a.detected_language && {
+          detected_language: a.detected_language,
+        }),
+        created_at: a.created_at,
+        updated_at: a.updated_at,
+      });
+      recordingsBySession.set(sid, list);
+    }
+    const data = docs.map((d) => {
+      const sessionId = d.session_id;
+      const audio_recordings = recordingsBySession.get(sessionId) ?? [];
+      return {
+        session_id: sessionId,
+        summaryId: d.summaryId,
+        filename: d.filename,
+        original_filename: d.original_filename,
+        brief_summary: d.summary_content || '',
+        file_size_bytes: d.file_size_bytes,
+        total_pages: d.total_pages,
+        status: d.status,
+        ...(d.s3_key && { s3_key: d.s3_key }),
+        ...(d.s3_url && { s3_url: d.s3_url }),
+        ...(d.language && { language: d.language }),
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+        audio_recordings,
+      };
+    });
+    return { success: true, data };
   }
 
   async getServiceStats(userId?: string): Promise<{

@@ -153,6 +153,19 @@ export class PdfSummaryController {
     return result;
   }
 
+  @MessagePattern({ cmd: 'lms.ai.pdf.getSessionsByUserId' })
+  async getSessionsByUserId(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    if (!userId) {
+      throw new BadRequestException('user_id is required');
+    }
+    return this.pdfSummaryService.getSessionsByUserId(userId);
+  }
+
   @MessagePattern({ cmd: 'lms.ai.pdf.stats' })
   async getServiceStats(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
@@ -203,7 +216,7 @@ export class PdfSummaryController {
 
   @MessagePattern({ cmd: 'lms.ai.pdf.voiceAsk' })
   async voiceAsk(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { session_id, audioBase64, mimeType, filename, user_id } = data;
+    const { session_id, audioBase64, mimeType, filename, user_id, idempotency_key } = data;
     if (!session_id || !audioBase64) {
       throw new BadRequestException('session_id and audioBase64 are required');
     }
@@ -214,6 +227,7 @@ export class PdfSummaryController {
       mimeType || 'audio/webm',
       filename,
       user_id,
+      idempotency_key,
     );
   }
 }
