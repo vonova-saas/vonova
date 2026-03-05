@@ -5,7 +5,7 @@ import { RoadmapService } from './roadmap.service';
 
 @Controller()
 export class RoadmapController {
-  constructor(private readonly roadmapService: RoadmapService) {}
+  constructor(private readonly roadmapService: RoadmapService) { }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -144,6 +144,22 @@ export class RoadmapController {
       success: true,
       message: 'Roadmap history retrieved successfully',
       data: result
+    };
+  }
+
+  @MessagePattern({ cmd: 'lms.ai.roadmap.getUserRoadmaps' })
+  async getUserRoadmaps(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const { userId } = data;
+    if (!userId || userId.trim() === '') {
+      throw new BadRequestException('User ID is required');
+    }
+
+    const roadmaps = await this.roadmapService.getUserRoadmaps(userId.trim());
+
+    return {
+      success: true,
+      message: 'User roadmaps retrieved successfully',
+      data: roadmaps
     };
   }
 }

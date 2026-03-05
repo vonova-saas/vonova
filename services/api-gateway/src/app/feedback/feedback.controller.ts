@@ -34,7 +34,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('api/v1/feedback')
 @UseGuards(JwtAuthGuard)
 export class FeedbackGatewayController {
-  constructor(private readonly feedbackService: FeedbackGatewayService) { }
+  constructor(private readonly feedbackService: FeedbackGatewayService) {}
 
   @ApiOperation({
     summary: 'Create new feedback',

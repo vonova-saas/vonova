@@ -585,4 +585,25 @@ export class RoadmapService {
       throw new InternalServerErrorException('Failed to retrieve query analytics');
     }
   }
+
+  async getUserRoadmaps(userId: string): Promise<IRoadmapData[]> {
+    try {
+      if (!userId) {
+        throw new BadRequestException('User ID is required');
+      }
+
+      const roadmaps = await this.roadmapRepository.findByUserId(userId);
+      
+      return roadmaps.map(roadmap => ({
+        ...roadmap.toObject(),
+        userId: roadmap.userId.toString(),
+        roadmapId: roadmap.roadmapId,
+        created_at: roadmap.created_at,
+        updated_at: roadmap.updated_at
+      }));
+    } catch (error) {
+      this.logger.error(`Error getting user roadmaps for userId ${userId}:`, error);
+      throw new InternalServerErrorException('Failed to retrieve user roadmaps');
+    }
+  }
 }

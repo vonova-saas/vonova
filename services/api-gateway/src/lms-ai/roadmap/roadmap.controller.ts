@@ -243,4 +243,18 @@ export class RoadmapGatewayController {
       }),
     );
   }
+
+  @Get('user-roadmaps')
+  @ApiOperation({ summary: 'Get all roadmaps for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User roadmaps retrieved successfully',
+  })
+  async getUserRoadmaps(@Request() req: any) {
+    return firstValueFrom(
+      this.roadmapService.getUserRoadmaps({
+        userId: req.user._id,
+      }),
+    );
+  }
 }
