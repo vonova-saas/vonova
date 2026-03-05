@@ -45,10 +45,12 @@ const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
         const audioUri = configService.get<string>(
           'MONGO_URI_PDF_SUMMARY_AI_AUDIO',
         );
-        if (!audioUri) {
-          throw new Error('MONGO_URI_PDF_SUMMARY_AI_AUDIO is not set');
-        }
-        return { uri: audioUri };
+        const lmsAiUri = configService.get<string>('MONGO_URI_LMS_AI');
+
+        return {
+          uri:
+            audioUri || lmsAiUri || 'mongodb://localhost:27017/LMS_AI',
+        };
       },
       inject: [ConfigService],
     }),
