@@ -44,7 +44,7 @@ import { Public } from '../../common/decorators/public.decorator';
 @Controller('api/v1/pdf-summary')
 @UseGuards(JwtAuthGuard)
 export class PdfSummaryGatewayController {
-  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) {}
+  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) { }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -140,8 +140,8 @@ export class PdfSummaryGatewayController {
   @ApiResponse({
     status: 200,
     description:
-      'AI voice response (audio/mpeg). Play the returned audio to hear the AI reply.',
-    content: { 'audio/mpeg': {} },
+      'AI voice response as JSON (includes metadata, S3 URLs, and audioBase64).',
+    content: { 'application/json': {} },
     headers: {
       'X-Detected-Language': {
         description: 'Detected language of the user voice (e.g. en, ar)',
@@ -163,6 +163,7 @@ export class PdfSummaryGatewayController {
       | { buffer: Buffer; mimetype: string; originalname: string }
       | undefined,
     @Body('session_id') sessionId: string,
+    @Request() req: any,
     @Res() res: Response,
   ) {
     if (!audio?.buffer) {
@@ -177,17 +178,67 @@ export class PdfSummaryGatewayController {
         audioBase64: audio.buffer.toString('base64'),
         mimeType: audio.mimetype,
         filename: audio.originalname,
+        user_id: req?.user?._id,
       }),
     )) as {
-      audioBase64: string;
       contentType: string;
       detectedLanguage?: string;
+      userAudioS3Key?: string;
+      userAudioS3Url?: string;
+      aiAudioS3Key?: string;
+      aiAudioS3Url?: string;
+      audioRecord?: Record<string, unknown>;
     };
-    res.setHeader('Content-Type', result.contentType);
+
+    res.setHeader('Content-Type', 'application/json');
     if (result.detectedLanguage) {
       res.setHeader('X-Detected-Language', result.detectedLanguage);
     }
-    res.send(Buffer.from(result.audioBase64, 'base64'));
+    if (result.userAudioS3Key) {
+      res.setHeader('X-User-Audio-S3-Key', result.userAudioS3Key);
+    }
+    if (result.userAudioS3Url) {
+      res.setHeader('X-User-Audio-S3-Url', result.userAudioS3Url);
+    }
+    if (result.aiAudioS3Key) {
+      res.setHeader('X-AI-Audio-S3-Key', result.aiAudioS3Key);
+    }
+    if (result.aiAudioS3Url) {
+      res.setHeader('X-AI-Audio-S3-Url', result.aiAudioS3Url);
+    }
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      'X-Detected-Language, X-User-Audio-S3-Key, X-User-Audio-S3-Url, X-AI-Audio-S3-Key, X-AI-Audio-S3-Url',
+    );
+
+    const fallbackRecord = {
+      session_id: sessionId.trim(),
+      user_id: req?.user?._id,
+      user_audio_s3_key: result.userAudioS3Key,
+      user_audio_s3_url: result.userAudioS3Url,
+      user_audio_mime_type: audio.mimetype,
+      ai_audio_s3_key: result.aiAudioS3Key,
+      ai_audio_s3_url: result.aiAudioS3Url,
+      ai_audio_content_type: result.contentType,
+      detected_language: result.detectedLanguage,
+    };
+
+    res.status(200).json({
+      ...fallbackRecord,
+      ...(result.audioRecord ?? {}),
+      contentType: result.contentType,
+    });
+  }
+
+  @Get('voice/ask')
+  @ApiOperation({
+    summary: 'Voice ask (GET not supported)',
+    description:
+      'This endpoint is POST-only. This GET handler exists to avoid client prefetch/preview 404s and returns no content.',
+  })
+  @ApiResponse({ status: 204, description: 'No content' })
+  voiceAskGet(@Res() res: Response) {
+    res.status(204).send();
   }
 
   @Get('summarize')

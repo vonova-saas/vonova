@@ -7,8 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /**
  * S3 service for direct upload/delete (e.g. LMS-AI PDF summary).
@@ -99,6 +101,29 @@ export class S3Service {
 
   getFileUrl(s3Key: string): string {
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+  }
+
+  async getPresignedGetUrl(
+    s3Key: string,
+    expiresInSeconds?: number,
+  ): Promise<string> {
+    const defaultExpires = (() => {
+      const raw = this.configService.get<string>('AWS_S3_PRESIGN_EXPIRES');
+      const parsed = raw ? Number(raw) : NaN;
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 3600;
+    })();
+    const expires =
+      typeof expiresInSeconds === 'number' && expiresInSeconds > 0
+        ? expiresInSeconds
+        : defaultExpires;
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+    });
+    return getSignedUrl(this.s3Client, command, {
+      expiresIn: expires,
+    });
   }
 
   async deleteFile(s3Key: string): Promise<boolean> {

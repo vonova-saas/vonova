@@ -6,6 +6,7 @@ import { RoadmapSchema } from './schemas/roadmap.schema';
 import { RoadmapHistorySchema } from './schemas/roadmap-history.schema';
 import { PdfSummarySchema } from './schemas/pdf-summary.schema';
 import { PdfChatHistorySchema } from './schemas/pdf-chat-history.schema';
+import { PdfSummaryAudioSchema } from './schemas/pdf-summary-audio.schema';
 import { AiAssistantSchema } from './schemas/ai-assistant.schema';
 import { VideoGenSchema } from './schemas/video-gen.schema';
 import { ProblemSolverSchema } from './schemas/problem-solver.schema';
@@ -14,9 +15,14 @@ import { RoadmapRepository } from './repositories/roadmap.repository';
 import { RoadmapHistoryRepository } from './repositories/roadmap-history.repository';
 import { PdfSummaryRepository } from './repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from './repositories/pdf-chat-history.repository';
-import { LMS_AI_CONNECTION_NAME } from './constants';
+import { PdfSummaryAudioRepository } from './repositories/pdf-summary-audio.repository';
+import {
+  LMS_AI_CONNECTION_NAME,
+  PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME,
+} from './constants';
 
 const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
+const PDF_SUMMARY_AI_AUDIO_CONNECTION = PDF_SUMMARY_AI_AUDIO_CONNECTION_NAME;
 
 @Module({
   imports: [
@@ -33,6 +39,19 @@ const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
       },
       inject: [ConfigService],
     }),
+    MongooseModule.forRootAsync({
+      connectionName: PDF_SUMMARY_AI_AUDIO_CONNECTION,
+      useFactory: (configService: ConfigService) => {
+        const audioUri = configService.get<string>(
+          'MONGO_URI_PDF_SUMMARY_AI_AUDIO',
+        );
+        if (!audioUri) {
+          throw new Error('MONGO_URI_PDF_SUMMARY_AI_AUDIO is not set');
+        }
+        return { uri: audioUri };
+      },
+      inject: [ConfigService],
+    }),
     MongooseModule.forFeature(
       [
         { name: 'Roadmap', schema: RoadmapSchema },
@@ -45,18 +64,24 @@ const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
       ],
       LMS_AI_CONNECTION,
     ),
+    MongooseModule.forFeature(
+      [{ name: 'PdfSummaryAudio', schema: PdfSummaryAudioSchema }],
+      PDF_SUMMARY_AI_AUDIO_CONNECTION,
+    ),
   ],
   providers: [
     RoadmapRepository,
     RoadmapHistoryRepository,
     PdfSummaryRepository,
     PdfChatHistoryRepository,
+    PdfSummaryAudioRepository,
   ],
   exports: [
     RoadmapRepository,
     RoadmapHistoryRepository,
     PdfSummaryRepository,
     PdfChatHistoryRepository,
+    PdfSummaryAudioRepository,
   ],
 })
 export class DatabaseModule { }

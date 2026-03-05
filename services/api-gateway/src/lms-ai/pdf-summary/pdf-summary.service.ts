@@ -6,7 +6,7 @@ export class PdfSummaryGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   uploadPDF(data: any) {
     return this.client.send({ cmd: 'lms.ai.pdf.upload' }, data);
@@ -77,6 +77,7 @@ export class PdfSummaryGatewayService {
     audioBase64: string;
     mimeType?: string;
     filename?: string;
+    user_id?: string;
   }) {
     return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
   }

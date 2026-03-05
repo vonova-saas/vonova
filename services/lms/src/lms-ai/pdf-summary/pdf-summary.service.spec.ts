@@ -7,12 +7,14 @@ import {
 import { PdfSummaryService } from './pdf-summary.service';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
+import { PdfSummaryAudioRepository } from '../database/repositories/pdf-summary-audio.repository';
 import { S3Service } from '../../common/services/s3.service';
 
 describe('PdfSummaryService', () => {
   let service: PdfSummaryService;
   let pdfSummaryRepository: jest.Mocked<PdfSummaryRepository>;
   let pdfChatHistoryRepository: jest.Mocked<PdfChatHistoryRepository>;
+  let pdfSummaryAudioRepository: jest.Mocked<PdfSummaryAudioRepository>;
   let s3Service: jest.Mocked<S3Service>;
   let configService: jest.Mocked<ConfigService>;
 
@@ -43,7 +45,13 @@ describe('PdfSummaryService', () => {
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
     getFileUrl: jest.fn(),
+    getPresignedGetUrl: jest.fn(),
   };
+
+  const mockPdfSummaryAudioRepository = {
+    create: jest.fn(),
+    findBySessionId: jest.fn(),
+  } as unknown as jest.Mocked<PdfSummaryAudioRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -56,6 +64,10 @@ describe('PdfSummaryService', () => {
         {
           provide: PdfChatHistoryRepository,
           useValue: mockPdfChatHistoryRepository,
+        },
+        {
+          provide: PdfSummaryAudioRepository,
+          useValue: mockPdfSummaryAudioRepository,
         },
         {
           provide: S3Service,
@@ -78,6 +90,7 @@ describe('PdfSummaryService', () => {
     service = module.get<PdfSummaryService>(PdfSummaryService);
     pdfSummaryRepository = module.get(PdfSummaryRepository);
     pdfChatHistoryRepository = module.get(PdfChatHistoryRepository);
+    pdfSummaryAudioRepository = module.get(PdfSummaryAudioRepository);
     s3Service = module.get(S3Service);
     configService = module.get(ConfigService);
 
@@ -187,6 +200,59 @@ describe('PdfSummaryService', () => {
       expect(result).toBeDefined();
       expect(result.chats).toBeDefined();
       expect(result.total).toBe(1);
+    });
+  });
+
+  describe('voiceAsk', () => {
+    it('should upload user and ai audio to S3 (best effort) and return S3 metadata', async () => {
+      const sessionId = 'test-session';
+      const userAudio = Buffer.from('user-audio-bytes');
+
+      mockS3Service.uploadFile
+        .mockResolvedValueOnce('voice/pdf-summary/test-session/user/1-user.webm')
+        .mockResolvedValueOnce('voice/pdf-summary/test-session/ai/2-ai.mp3');
+      mockS3Service.getPresignedGetUrl
+        .mockResolvedValueOnce('https://signed.example.com/user')
+        .mockResolvedValueOnce('https://signed.example.com/ai');
+      mockS3Service.getFileUrl.mockImplementation(
+        (key: string) => `https://bucket.s3.region.amazonaws.com/${key}`,
+      );
+
+      const mockHeaders = {
+        get: (name: string) => {
+          if (name.toLowerCase() === 'content-type') return 'audio/mpeg';
+          if (name.toLowerCase() === 'x-detected-language') return 'en';
+          return null;
+        },
+      };
+
+      (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+        ok: true,
+        headers: mockHeaders,
+        arrayBuffer: jest
+          .fn()
+          .mockResolvedValue(Uint8Array.from([1, 2, 3, 4]).buffer),
+      });
+
+      const result = await service.voiceAsk(
+        sessionId,
+        userAudio,
+        'audio/webm',
+        'user.webm',
+      );
+
+      expect(result.contentType).toBe('audio/mpeg');
+      expect(result.detectedLanguage).toBe('en');
+
+      expect(mockS3Service.uploadFile).toHaveBeenCalledTimes(2);
+      expect(result.userAudioS3Key).toContain(
+        'voice/pdf-summary/test-session/user',
+      );
+      expect(result.userAudioS3Url).toContain('https://');
+      expect(result.aiAudioS3Key).toContain('voice/pdf-summary/test-session/ai');
+      expect(result.aiAudioS3Url).toContain('https://');
+
+      expect(mockPdfSummaryAudioRepository.create).toHaveBeenCalledTimes(1);
     });
   });
 

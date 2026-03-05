@@ -203,7 +203,7 @@ export class PdfSummaryController {
 
   @MessagePattern({ cmd: 'lms.ai.pdf.voiceAsk' })
   async voiceAsk(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { session_id, audioBase64, mimeType, filename } = data;
+    const { session_id, audioBase64, mimeType, filename, user_id } = data;
     if (!session_id || !audioBase64) {
       throw new BadRequestException('session_id and audioBase64 are required');
     }
@@ -213,6 +213,7 @@ export class PdfSummaryController {
       audioBuffer,
       mimeType || 'audio/webm',
       filename,
+      user_id,
     );
   }
 }

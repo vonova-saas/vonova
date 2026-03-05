@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
+import { PdfSummaryAudioRepository } from '../database/repositories/pdf-summary-audio.repository';
 import { S3Service } from '../../common/services/s3.service';
 import {
   IPDFSummaryRequest,
@@ -30,6 +31,7 @@ export class PdfSummaryService {
   constructor(
     private readonly pdfSummaryRepository: PdfSummaryRepository,
     private readonly pdfChatHistoryRepository: PdfChatHistoryRepository,
+    private readonly pdfSummaryAudioRepository: PdfSummaryAudioRepository,
     private readonly configService: ConfigService,
     private readonly s3Service: S3Service,
   ) {
@@ -531,9 +533,7 @@ export class PdfSummaryService {
           // Session expired in AI service (7-day TTL) but no cached summary
           if (dbSummary) {
             throw new BadRequestException(
-              `Session expired in AI service. Sessions expire after 7 days in the AI service for performance reasons, ` +
-              `but your session data is stored in the database. Please re-upload the PDF to recreate the session. ` +
-              `Session ID: ${sessionId}`,
+              `Session expired in AI service. Sessions expire after 7 days in the AI service for performance reasons, but your session data is stored in the database. Please re-upload the PDF to recreate the session. Session ID: ${sessionId}`,
             );
           }
 
@@ -948,10 +948,28 @@ export class PdfSummaryService {
     audioBuffer: Buffer,
     mimeType: string,
     filename?: string,
+    userId?: string,
   ): Promise<{
-    audioBase64: string;
     contentType: string;
     detectedLanguage?: string;
+    userAudioS3Key?: string;
+    userAudioS3Url?: string;
+    aiAudioS3Key?: string;
+    aiAudioS3Url?: string;
+    audioRecord?: {
+      audioId: string;
+      session_id: string;
+      user_id?: string;
+      user_audio_s3_key?: string;
+      user_audio_s3_url?: string;
+      user_audio_mime_type?: string;
+      ai_audio_s3_key?: string;
+      ai_audio_s3_url?: string;
+      ai_audio_content_type?: string;
+      detected_language?: string;
+      created_at?: Date;
+      updated_at?: Date;
+    };
   }> {
     const endpoint = `${this.PYTHON_SERVICE_URL}/voice/ask`;
     const formData = new FormData();
@@ -959,6 +977,26 @@ export class PdfSummaryService {
     const ext =
       filename?.split('.').pop() || (mimeType.includes('wav') ? 'wav' : 'webm');
     const safeName = filename?.trim() || `audio.${ext}`;
+
+    let userAudioS3Key: string | undefined;
+    let userAudioS3Url: string | undefined;
+    try {
+      userAudioS3Key = await this.s3Service.uploadFile(
+        audioBuffer,
+        safeName,
+        mimeType,
+        `voice/pdf-summary/${sessionId.trim()}/user`,
+      );
+      try {
+        userAudioS3Url = await this.s3Service.getPresignedGetUrl(userAudioS3Key);
+      } catch {
+        userAudioS3Url = this.s3Service.getFileUrl(userAudioS3Key);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to upload user voice to S3: ${msg}`);
+    }
+
     formData.append(
       'audio',
       new Blob([new Uint8Array(audioBuffer)], { type: mimeType }),
@@ -996,12 +1034,96 @@ export class PdfSummaryService {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+    const aiAudioBuffer = Buffer.from(arrayBuffer);
     const contentType = response.headers.get('content-type') || 'audio/mpeg';
     const detectedLanguage =
       response.headers.get('X-Detected-Language') || undefined;
 
-    return { audioBase64, contentType, detectedLanguage };
+    let aiAudioS3Key: string | undefined;
+    let aiAudioS3Url: string | undefined;
+    try {
+      const aiExt = contentType.includes('wav')
+        ? 'wav'
+        : contentType.includes('ogg')
+          ? 'ogg'
+          : contentType.includes('webm')
+            ? 'webm'
+            : 'mp3';
+      const aiFilename = `ai.${aiExt}`;
+      aiAudioS3Key = await this.s3Service.uploadFile(
+        aiAudioBuffer,
+        aiFilename,
+        contentType,
+        `voice/pdf-summary/${sessionId.trim()}/ai`,
+      );
+      try {
+        aiAudioS3Url = await this.s3Service.getPresignedGetUrl(aiAudioS3Key);
+      } catch {
+        aiAudioS3Url = this.s3Service.getFileUrl(aiAudioS3Key);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to upload AI voice to S3: ${msg}`);
+    }
+
+    let audioRecord:
+      | {
+        audioId: string;
+        session_id: string;
+        user_id?: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at?: Date;
+        updated_at?: Date;
+      }
+      | undefined;
+    try {
+      const created = await this.pdfSummaryAudioRepository.create({
+        audioId: uuidv4(),
+        session_id: sessionId.trim(),
+        ...(userId ? { user_id: userId } : {}),
+        user_audio_s3_key: userAudioS3Key,
+        user_audio_s3_url: userAudioS3Url,
+        user_audio_mime_type: mimeType,
+        ai_audio_s3_key: aiAudioS3Key,
+        ai_audio_s3_url: aiAudioS3Url,
+        ai_audio_content_type: contentType,
+        detected_language: detectedLanguage,
+      });
+
+      audioRecord = {
+        audioId: created.audioId,
+        session_id: created.session_id,
+        user_id: created.user_id,
+        user_audio_s3_key: created.user_audio_s3_key,
+        user_audio_s3_url: created.user_audio_s3_url,
+        user_audio_mime_type: created.user_audio_mime_type,
+        ai_audio_s3_key: created.ai_audio_s3_key,
+        ai_audio_s3_url: created.ai_audio_s3_url,
+        ai_audio_content_type: created.ai_audio_content_type,
+        detected_language: created.detected_language,
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to persist voice exchange in DB: ${msg}`);
+    }
+
+    return {
+      contentType,
+      detectedLanguage,
+      userAudioS3Key,
+      userAudioS3Url,
+      aiAudioS3Key,
+      aiAudioS3Url,
+      audioRecord,
+    };
   }
 
   private async extractPageCount(fileContent: Buffer): Promise<number> {
