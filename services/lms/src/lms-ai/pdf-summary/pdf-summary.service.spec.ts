@@ -8,6 +8,7 @@ import { PdfSummaryService } from './pdf-summary.service';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
 import { PdfSummaryAudioRepository } from '../database/repositories/pdf-summary-audio.repository';
+import { VoiceAskIdempotencyRepository } from '../database/repositories/voice-ask-idempotency.repository';
 import { S3Service } from '../../common/services/s3.service';
 
 describe('PdfSummaryService', () => {
@@ -53,6 +54,12 @@ describe('PdfSummaryService', () => {
     findBySessionId: jest.fn(),
   } as unknown as jest.Mocked<PdfSummaryAudioRepository>;
 
+  const mockVoiceAskIdempotencyRepository = {
+    claim: jest.fn().mockResolvedValue(true),
+    get: jest.fn().mockResolvedValue(null),
+    setCompleted: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<VoiceAskIdempotencyRepository>;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -68,6 +75,10 @@ describe('PdfSummaryService', () => {
         {
           provide: PdfSummaryAudioRepository,
           useValue: mockPdfSummaryAudioRepository,
+        },
+        {
+          provide: VoiceAskIdempotencyRepository,
+          useValue: mockVoiceAskIdempotencyRepository,
         },
         {
           provide: S3Service,
