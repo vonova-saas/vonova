@@ -50,7 +50,8 @@ export class SupportDto {
 
   @ApiPropertyOptional({
     description: 'Detailed message describing the support issue',
-    example: 'I am unable to log in to my account using my email and password. I have tried resetting my password but the issue persists.',
+    example:
+      'I am unable to log in to my account using my email and password. I have tried resetting my password but the issue persists.',
     maxLength: 2000,
     type: String,
   })
@@ -63,7 +64,8 @@ export class SupportDto {
 export class SupportAddMessageDto {
   @ApiProperty({
     description: 'Message to add to the support ticket thread',
-    example: 'Thank you for your assistance. The issue has been resolved on my end.',
+    example:
+      'Thank you for your assistance. The issue has been resolved on my end.',
     maxLength: 2000,
     type: String,
   })

@@ -1,5 +1,17 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUrl, Min, MinLength, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -14,7 +26,7 @@ export class AuthorDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: 'URL for the author\' profile picture',
+    description: "URL for the author' profile picture",
     example: 'https://example.com/author-avatar.jpg',
     type: String,
   })
@@ -53,7 +65,8 @@ export class CreateBookDto {
 
   @ApiPropertyOptional({
     description: 'Detailed description of the book',
-    example: 'This book covers everything from basic JavaScript concepts to advanced topics including ES6+, async programming, and modern frameworks.',
+    example:
+      'This book covers everything from basic JavaScript concepts to advanced topics including ES6+, async programming, and modern frameworks.',
     type: String,
   })
   @IsOptional()
@@ -139,7 +152,7 @@ export class CreateBookDto {
   readingTimeMin?: number = 0;
 }
 
-export class UpdateBookDto extends PartialType(CreateBookDto) { }
+export class UpdateBookDto extends PartialType(CreateBookDto) {}
 
 export class PublishBookDto {
   @ApiPropertyOptional({

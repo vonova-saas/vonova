@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
@@ -27,11 +27,12 @@ import { MarkLessonCompleteDto } from './dto/progress.dto';
 @Controller('api/v1/lms/courses/:courseId')
 @UseGuards(JwtAuthGuard)
 export class ProgressGatewayController {
-  constructor(private readonly progressService: ProgressGatewayService) { }
+  constructor(private readonly progressService: ProgressGatewayService) {}
 
   @ApiOperation({
     summary: 'Mark lesson as complete',
-    description: 'Marks a specific lesson as completed for the authenticated user and tracks time spent.',
+    description:
+      'Marks a specific lesson as completed for the authenticated user and tracks time spent.',
   })
   @ApiParam({
     name: 'courseId',
@@ -79,7 +80,9 @@ export class ProgressGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.progressService.markLessonComplete(courseId, lessonId, userId, dto));
+    return firstValueFrom(
+      this.progressService.markLessonComplete(courseId, lessonId, userId, dto),
+    );
   }
 
   @Get('progress/me')
@@ -88,6 +91,8 @@ export class ProgressGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.progressService.getMyCourseProgress(courseId, userId));
+    return firstValueFrom(
+      this.progressService.getMyCourseProgress(courseId, userId),
+    );
   }
 }

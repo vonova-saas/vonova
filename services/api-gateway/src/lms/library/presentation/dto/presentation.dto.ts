@@ -8,14 +8,17 @@ export class AuthorDto {
     example: 'John Doe',
     type: String,
   })
-  @IsString() name: string;
+  @IsString()
+  name: string;
 
   @ApiPropertyOptional({
-    description: 'URL for the author\' profile picture',
+    description: "URL for the author' profile picture",
     example: 'https://example.com/author-avatar.jpg',
     type: String,
   })
-  @IsOptional() @IsUrl() avatarUrl?: string;
+  @IsOptional()
+  @IsUrl()
+  avatarUrl?: string;
 }
 
 export class CreatePresentationDto {
@@ -24,41 +27,52 @@ export class CreatePresentationDto {
     example: 'JavaScript Fundamentals Presentation',
     type: String,
   })
-  @IsString() title: string;
+  @IsString()
+  title: string;
 
   @ApiProperty({
     description: 'URL-friendly slug for the presentation',
     example: 'javascript-fundamentals-presentation',
     type: String,
   })
-  @IsString() slug: string;
+  @IsString()
+  slug: string;
 
   @ApiPropertyOptional({
     description: 'Brief summary of the presentation',
     example: 'An introduction to JavaScript fundamentals for beginners.',
     type: String,
   })
-  @IsOptional() @IsString() summary?: string;
+  @IsOptional()
+  @IsString()
+  summary?: string;
 
   @ApiPropertyOptional({
     description: 'Detailed description of the presentation',
-    example: 'This presentation covers the fundamental concepts of JavaScript including variables, functions, and basic programming patterns.',
+    example:
+      'This presentation covers the fundamental concepts of JavaScript including variables, functions, and basic programming patterns.',
     type: String,
   })
-  @IsOptional() @IsString() description?: string;
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @ApiPropertyOptional({
     description: 'Array of presentation authors',
     type: [AuthorDto],
   })
-  @IsOptional() @IsArray() authors?: AuthorDto[];
+  @IsOptional()
+  @IsArray()
+  authors?: AuthorDto[];
 
   @ApiPropertyOptional({
     description: 'Array of topics covered in the presentation',
     example: ['javascript', 'programming', 'web-development'],
     type: [String],
   })
-  @IsOptional() @IsArray() topics?: string[];
+  @IsOptional()
+  @IsArray()
+  topics?: string[];
 
   @ApiPropertyOptional({
     description: 'Difficulty level of the presentation',
@@ -75,24 +89,30 @@ export class CreatePresentationDto {
     example: 'https://example.com/presentation-cover.jpg',
     type: String,
   })
-  @IsOptional() @IsUrl() coverUrl?: string;
+  @IsOptional()
+  @IsUrl()
+  coverUrl?: string;
 
   @ApiPropertyOptional({
     description: 'Language of the presentation content',
     example: 'en',
     type: String,
   })
-  @IsOptional() @IsString() language?: string;
+  @IsOptional()
+  @IsString()
+  language?: string;
 
   @ApiPropertyOptional({
     description: 'Array of badges or achievements',
     example: ['featured', 'interactive'],
     type: [String],
   })
-  @IsOptional() @IsArray() badges?: string[];
+  @IsOptional()
+  @IsArray()
+  badges?: string[];
 }
 
-export class UpdatePresentationDto extends PartialType(CreatePresentationDto) { }
+export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}
 
 export class PublishPresentationDto {
   @ApiProperty({

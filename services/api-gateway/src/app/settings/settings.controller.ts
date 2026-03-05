@@ -28,7 +28,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('api/v1/settings')
 @UseGuards(JwtAuthGuard)
 export class SettingsGatewayController {
-  constructor(private readonly settingsService: SettingsGatewayService) { }
+  constructor(private readonly settingsService: SettingsGatewayService) {}
 
   @ApiOperation({
     summary: 'Get user settings',

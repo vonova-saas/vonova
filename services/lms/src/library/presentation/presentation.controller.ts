@@ -1,7 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PresentationService } from './presentation.service';
-import { CreatePresentationDto, UpdatePresentationDto, PublishPresentationDto } from './dto/presentition.dto';
+import {
+  CreatePresentationDto,
+  UpdatePresentationDto,
+  PublishPresentationDto,
+} from './dto/presentition.dto';
 
 @Controller()
 export class PresentationController {
@@ -16,17 +20,28 @@ export class PresentationController {
   }
 
   @MessagePattern({ cmd: 'library.presentation.update' })
-  update(@Payload() data: { id: string; dto: UpdatePresentationDto; userId: string }) {
+  update(
+    @Payload() data: { id: string; dto: UpdatePresentationDto; userId: string },
+  ) {
     const { id, dto, userId } = data;
-    if (!id || !dto || !userId) throw new Error('id, dto and userId are required');
+    if (!id || !dto || !userId)
+      throw new Error('id, dto and userId are required');
 
     return this.service.update(id, dto, userId);
   }
 
   @MessagePattern({ cmd: 'library.presentation.publish' })
-  publish(@Payload() data: { id: string; dto: PublishPresentationDto; userId: string }) {
+  publish(
+    @Payload()
+    data: {
+      id: string;
+      dto: PublishPresentationDto;
+      userId: string;
+    },
+  ) {
     const { id, dto, userId } = data;
-    if (!id || !dto || !userId) throw new Error('id, dto and userId are required');
+    if (!id || !dto || !userId)
+      throw new Error('id, dto and userId are required');
 
     return this.service.publish(id, dto, userId);
   }
@@ -34,7 +49,8 @@ export class PresentationController {
   @MessagePattern({ cmd: 'library.presentation.delete' })
   delete(@Payload() data: { presentationId: string; userId: string }) {
     const { presentationId, userId } = data;
-    if (!presentationId || !userId) throw new Error('presentationId and userId are required');
+    if (!presentationId || !userId)
+      throw new Error('presentationId and userId are required');
 
     return this.service.delete(presentationId, userId);
   }

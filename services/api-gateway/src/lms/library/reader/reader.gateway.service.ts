@@ -7,25 +7,44 @@ export class ReaderGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) { }
+  ) {}
 
   getBookContent(bookId: string, userId: string) {
-    return this.client.send({ cmd: 'library.reader.getBookContent' }, { bookId, userId });
+    return this.client.send(
+      { cmd: 'library.reader.getBookContent' },
+      { bookId, userId },
+    );
   }
 
   getGuideContent(guideId: string) {
-    return this.client.send({ cmd: 'library.reader.getGuideContent' }, { guideId });
+    return this.client.send(
+      { cmd: 'library.reader.getGuideContent' },
+      { guideId },
+    );
   }
 
   getPresentationContent(presentationId: string) {
-    return this.client.send({ cmd: 'library.reader.getPresentationContent' }, { presentationId });
+    return this.client.send(
+      { cmd: 'library.reader.getPresentationContent' },
+      { presentationId },
+    );
   }
 
-  updateBookProgress(bookId: string, userId: string, dto: UpdateReaderBookProgressDto) {
-    return this.client.send({ cmd: 'library.reader.updateBookProgress' }, { bookId, userId, dto });
+  updateBookProgress(
+    bookId: string,
+    userId: string,
+    dto: UpdateReaderBookProgressDto,
+  ) {
+    return this.client.send(
+      { cmd: 'library.reader.updateBookProgress' },
+      { bookId, userId, dto },
+    );
   }
 
   getMyBookProgress(bookId: string, userId: string) {
-    return this.client.send({ cmd: 'library.reader.getMyBookProgress' }, { bookId, userId });
+    return this.client.send(
+      { cmd: 'library.reader.getMyBookProgress' },
+      { bookId, userId },
+    );
   }
 }

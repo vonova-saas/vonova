@@ -69,7 +69,8 @@ export class SupportGatewayController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Access denied - User can only create their own support tickets',
+    description:
+      'Access denied - User can only create their own support tickets',
   })
   @ApiResponse({
     status: 401,
@@ -124,10 +125,7 @@ export class SupportGatewayController {
     description: 'Unauthorized - JWT token is required',
   })
   @Get('user/:userId')
-  async findAll(
-    @Param('userId') userId: string,
-    @Request() req: any,
-  ) {
+  async findAll(@Param('userId') userId: string, @Request() req: any) {
     if (req.user._id !== userId) {
       throw new ForbiddenException(
         'Access denied: You can only access your own support tickets',
@@ -138,7 +136,8 @@ export class SupportGatewayController {
 
   @ApiOperation({
     summary: 'Get support ticket by ID',
-    description: 'Retrieves a specific support ticket by its unique identifier.',
+    description:
+      'Retrieves a specific support ticket by its unique identifier.',
   })
   @ApiParam({
     name: 'id',
@@ -209,7 +208,10 @@ export class SupportGatewayController {
         fullName: { type: 'string', example: 'John Doe' },
         email: { type: 'string', example: 'john.doe@example.com' },
         category: { type: 'string', example: 'technical' },
-        subject: { type: 'string', example: 'Updated: Login issue with my account' },
+        subject: {
+          type: 'string',
+          example: 'Updated: Login issue with my account',
+        },
         message: {
           type: 'string',
           example: 'Updated message with additional details.',
@@ -260,7 +262,10 @@ export class SupportGatewayController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Support ticket deleted successfully' },
+        message: {
+          type: 'string',
+          example: 'Support ticket deleted successfully',
+        },
         deletedTicket: {
           type: 'object',
           properties: {
@@ -296,7 +301,8 @@ export class SupportGatewayController {
 
   @ApiOperation({
     summary: 'Add message to support ticket',
-    description: 'Adds a new message to the support ticket conversation thread.',
+    description:
+      'Adds a new message to the support ticket conversation thread.',
   })
   @ApiParam({
     name: 'userId',
@@ -314,7 +320,8 @@ export class SupportGatewayController {
         userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
         message: {
           type: 'string',
-          example: 'Thank you for your assistance. The issue has been resolved on my end.',
+          example:
+            'Thank you for your assistance. The issue has been resolved on my end.',
         },
         isFromSupport: { type: 'boolean', example: false },
         createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
@@ -348,7 +355,8 @@ export class SupportGatewayController {
 
   @ApiOperation({
     summary: 'Get support ticket messages',
-    description: 'Retrieves all messages in the support ticket conversation thread.',
+    description:
+      'Retrieves all messages in the support ticket conversation thread.',
   })
   @ApiParam({
     name: 'userId',
@@ -368,7 +376,8 @@ export class SupportGatewayController {
           userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
           message: {
             type: 'string',
-            example: 'Thank you for your assistance. The issue has been resolved on my end.',
+            example:
+              'Thank you for your assistance. The issue has been resolved on my end.',
           },
           isFromSupport: { type: 'boolean', example: false },
           createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
@@ -402,7 +411,8 @@ export class SupportGatewayController {
 
   @ApiOperation({
     summary: 'Update support ticket status',
-    description: 'Updates the status of a support ticket (open, pending, resolved, closed).',
+    description:
+      'Updates the status of a support ticket (open, pending, resolved, closed).',
   })
   @ApiParam({
     name: 'id',

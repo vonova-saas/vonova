@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
@@ -33,7 +32,7 @@ import {
 @Controller('api/v1/lms/courses/:courseId/chapters')
 @UseGuards(JwtAuthGuard)
 export class ChapterGatewayController {
-  constructor(private readonly chapterService: ChapterGatewayService) { }
+  constructor(private readonly chapterService: ChapterGatewayService) {}
 
   @ApiOperation({
     summary: 'Create new chapter',
@@ -83,7 +82,9 @@ export class ChapterGatewayController {
     @Body() dto: UpdateChapterDto,
     @Request() _req: any,
   ) {
-    return firstValueFrom(this.chapterService.updateChapter(courseId, chapterId, dto));
+    return firstValueFrom(
+      this.chapterService.updateChapter(courseId, chapterId, dto),
+    );
   }
 
   @Delete(':chapterId')
@@ -92,7 +93,9 @@ export class ChapterGatewayController {
     @Param('chapterId') chapterId: string,
     @Request() _req: any,
   ) {
-    return firstValueFrom(this.chapterService.deleteChapter(courseId, chapterId));
+    return firstValueFrom(
+      this.chapterService.deleteChapter(courseId, chapterId),
+    );
   }
 
   @Patch('reorder')

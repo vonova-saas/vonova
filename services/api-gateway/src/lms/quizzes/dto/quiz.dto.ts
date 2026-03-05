@@ -53,7 +53,8 @@ export class QuestionDto {
 
   @ApiProperty({
     description: 'Question text',
-    example: 'What is the most popular programming language for web development?',
+    example:
+      'What is the most popular programming language for web development?',
     type: String,
   })
   @IsString()
@@ -138,7 +139,7 @@ export class CreateQuizDto {
  * Data Transfer Object for Updating Existing Quizzes
  * Allows partial updates to quiz fields
  */
-export class UpdateQuizDto extends PartialType(CreateQuizDto) { }
+export class UpdateQuizDto extends PartialType(CreateQuizDto) {}
 
 // ===== SUBMIT ANSWER ITEM DTO =====
 /**

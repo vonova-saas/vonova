@@ -28,11 +28,12 @@ import { CreateOrUpdateReviewDto, ListReviewsQuery } from './dto/review.dto';
 @Controller('api/v1/lms/library/items')
 @UseGuards(JwtAuthGuard)
 export class ReviewGatewayController {
-  constructor(private readonly reviewService: ReviewGatewayService) { }
+  constructor(private readonly reviewService: ReviewGatewayService) {}
 
   @ApiOperation({
     summary: 'Create or update review',
-    description: 'Creates a new review or updates an existing review for a library item (book, guide, or presentation).',
+    description:
+      'Creates a new review or updates an existing review for a library item (book, guide, or presentation).',
   })
   @ApiParam({
     name: 'itemType',
@@ -50,7 +51,10 @@ export class ReviewGatewayController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Review created or updated successfully' },
+        message: {
+          type: 'string',
+          example: 'Review created or updated successfully',
+        },
         data: {
           type: 'object',
           properties: {
@@ -60,7 +64,10 @@ export class ReviewGatewayController {
             userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
             rating: { type: 'number', example: 5 },
             title: { type: 'string', example: 'Excellent JavaScript Guide!' },
-            body: { type: 'string', example: 'This guide provided comprehensive coverage...' },
+            body: {
+              type: 'string',
+              example: 'This guide provided comprehensive coverage...',
+            },
             createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
             updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
           },
@@ -88,12 +95,9 @@ export class ReviewGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    const review = await firstValueFrom(this.reviewService.createOrUpdateReview(
-      itemType,
-      itemId,
-      userId,
-      dto,
-    ));
+    const review = await firstValueFrom(
+      this.reviewService.createOrUpdateReview(itemType, itemId, userId, dto),
+    );
 
     return { message: 'Review created or updated successfully', data: review };
   }
@@ -105,7 +109,9 @@ export class ReviewGatewayController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    const data = await firstValueFrom(this.reviewService.listReviews(itemType, itemId, { page, limit }));
+    const data = await firstValueFrom(
+      this.reviewService.listReviews(itemType, itemId, { page, limit }),
+    );
     return { message: 'Reviews list fetched successfully', data };
   }
 
@@ -116,7 +122,9 @@ export class ReviewGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    const review = await firstValueFrom(this.reviewService.getMyReview(itemType, itemId, userId));
+    const review = await firstValueFrom(
+      this.reviewService.getMyReview(itemType, itemId, userId),
+    );
     return { message: 'User review fetched successfully', data: review };
   }
 }

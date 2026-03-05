@@ -11,7 +11,7 @@ export class SwaggerService {
   constructor(
     private readonly configService: ConfigService,
     private readonly loggerService: LoggerService,
-  ) { }
+  ) {}
 
   createSwaggerDocument(app: INestApplication) {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
@@ -26,9 +26,9 @@ export class SwaggerService {
       .setTitle('Vonova API Gateway')
       .setDescription(
         'API Gateway for Vonova microservices platform. ' +
-        'This gateway provides a single entry point for all microservices, handling authentication, ' +
-        'routing, and request proxying. The platform includes authentication, app services, LMS services, ' +
-        'and AI-powered features like roadmap generation and PDF summarization.',
+          'This gateway provides a single entry point for all microservices, handling authentication, ' +
+          'routing, and request proxying. The platform includes authentication, app services, LMS services, ' +
+          'and AI-powered features like roadmap generation and PDF summarization.',
       )
       .setVersion('1.0.0')
       .setContact(

@@ -26,11 +26,7 @@ export class CreatePresentationDto {
   @IsOptional() @IsArray() badges?: string[];
 }
 
-
 export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}
-
-
-
 
 export class PublishPresentationDto {
   @IsEnum(['PUBLISHED', 'ARCHIVED'])

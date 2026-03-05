@@ -19,7 +19,10 @@ export class GuideGatewayService {
 
   listGuides(query: any) {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
-    return this.client.send({ cmd: 'library.guides.getAll' }, { ...query, topics: topicsArray });
+    return this.client.send(
+      { cmd: 'library.guides.getAll' },
+      { ...query, topics: topicsArray },
+    );
   }
 
   getGuideById(id: string) {

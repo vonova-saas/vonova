@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsInt, Min, ArrayMinSize, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  Min,
+  ArrayMinSize,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateChapterDto {

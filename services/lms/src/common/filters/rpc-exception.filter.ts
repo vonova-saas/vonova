@@ -1,4 +1,9 @@
-import { Catch, RpcExceptionFilter, ArgumentsHost, Logger } from '@nestjs/common';
+import {
+  Catch,
+  RpcExceptionFilter,
+  ArgumentsHost,
+  Logger,
+} from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 
 interface GatewayErrorPayload {
@@ -11,7 +16,10 @@ interface GatewayErrorPayload {
 export class AllExceptionsFilter implements RpcExceptionFilter<unknown> {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: unknown, _host: ArgumentsHost): Observable<GatewayErrorPayload> {
+  catch(
+    exception: unknown,
+    _host: ArgumentsHost,
+  ): Observable<GatewayErrorPayload> {
     const ex = exception as Record<string, unknown> | undefined;
     const statusCode = (ex?.status as number) ?? 500;
     const errorName = (ex?.name as string) ?? 'Error';
@@ -19,7 +27,8 @@ export class AllExceptionsFilter implements RpcExceptionFilter<unknown> {
     const message =
       typeof rawError === 'string'
         ? rawError
-        : (rawError as { message?: string })?.message ?? 'Internal server error';
+        : ((rawError as { message?: string })?.message ??
+          'Internal server error');
 
     this.logger.error('Microservice exception caught', {
       statusCode,

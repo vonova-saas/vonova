@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PdfSummaryService } from './pdf-summary.service';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
@@ -119,7 +122,7 @@ describe('PdfSummaryService', () => {
       pdfSummaryRepository.findBySessionId.mockResolvedValue(session as any);
 
       await expect(
-        service.deleteSession('test-session', 'different-user')
+        service.deleteSession('test-session', 'different-user'),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -136,7 +139,7 @@ describe('PdfSummaryService', () => {
       // The service will throw InternalServerErrorException when Python service returns 404
       // This is expected behavior - the service tries to get summary from Python service
       await expect(
-        service.getFullSummary('non-existent-session')
+        service.getFullSummary('non-existent-session'),
       ).rejects.toThrow(InternalServerErrorException);
     });
 
@@ -190,4 +193,3 @@ describe('PdfSummaryService', () => {
     });
   });
 });
-

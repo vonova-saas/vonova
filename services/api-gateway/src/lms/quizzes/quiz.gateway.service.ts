@@ -11,7 +11,7 @@ export class QuizGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) { }
+  ) {}
 
   createQuiz(dto: CreateQuizDto, userId: string) {
     return this.client.send({ cmd: 'quiz.create' }, { dto, userId });
@@ -48,6 +48,9 @@ export class QuizGatewayService {
   }
 
   getAttemptsForQuiz(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getAttemptsForQuiz' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getAttemptsForQuiz' },
+      { quizId, userId },
+    );
   }
 }

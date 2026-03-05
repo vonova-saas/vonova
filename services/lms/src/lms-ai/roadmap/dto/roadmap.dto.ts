@@ -1,4 +1,13 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsArray, Min, Max, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  Min,
+  Max,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class GenerateRoadmapDto {
   @IsString()

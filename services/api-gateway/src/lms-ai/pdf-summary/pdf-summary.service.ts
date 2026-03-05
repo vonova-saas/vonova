@@ -32,7 +32,11 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.summarize' }, data);
   }
 
-  getSessionChatHistory(data: { sessionId: string; page?: string; limit?: string }) {
+  getSessionChatHistory(data: {
+    sessionId: string;
+    page?: string;
+    limit?: string;
+  }) {
     return this.client.send({ cmd: 'lms.ai.pdf.getChatHistory' }, data);
   }
 
@@ -52,7 +56,11 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.batchDelete' }, data);
   }
 
-  getQueryAnalytics(data: { start_date?: string; end_date?: string; user_id?: string }) {
+  getQueryAnalytics(data: {
+    start_date?: string;
+    end_date?: string;
+    user_id?: string;
+  }) {
     return this.client.send({ cmd: 'lms.ai.pdf.getQueryAnalytics' }, data);
   }
 
@@ -73,4 +81,3 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
   }
 }
-

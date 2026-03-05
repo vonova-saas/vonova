@@ -33,7 +33,11 @@ export class LibraryAsset {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   ownerId: Types.ObjectId;
 
-  @Prop({ enum: ['BOOK', 'GUIDE', 'PRESENTATION'], required: true, index: true })
+  @Prop({
+    enum: ['BOOK', 'GUIDE', 'PRESENTATION'],
+    required: true,
+    index: true,
+  })
   itemType: LibraryAssetType;
 
   @Prop({ type: Types.ObjectId, required: true, index: true })

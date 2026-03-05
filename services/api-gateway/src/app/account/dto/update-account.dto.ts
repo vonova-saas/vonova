@@ -31,7 +31,8 @@ export class UpdateAccountDto {
 
   @ApiPropertyOptional({
     description: 'User biography or personal description',
-    example: 'Software developer passionate about creating innovative solutions.',
+    example:
+      'Software developer passionate about creating innovative solutions.',
     maxLength: 500,
     type: String,
   })

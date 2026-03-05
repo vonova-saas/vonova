@@ -15,7 +15,7 @@ export class QuizService {
   constructor(
     @InjectModel(Quiz.name) private quizModel: Model<Quiz>,
     @InjectModel(QuizAnswer.name) private answerModel: Model<QuizAnswer>,
-  ) { }
+  ) {}
 
   async createQuiz(dto: CreateQuizDto, userId: string) {
     const quiz = await this.quizModel.create({ ...dto, createdBy: userId });
@@ -62,7 +62,10 @@ export class QuizService {
   }
 
   async deleteQuiz(quizId: string, userId: string) {
-    const quiz = await this.quizModel.findOne({ _id: quizId, createdBy: userId });
+    const quiz = await this.quizModel.findOne({
+      _id: quizId,
+      createdBy: userId,
+    });
     if (!quiz) throw new NotFoundException('Quiz not found');
 
     await quiz.deleteOne();
@@ -117,6 +120,8 @@ export class QuizService {
   }
 
   async getMyAttemptsForQuiz(quizId: string, userId: string) {
-    return this.answerModel.find({ quiz: quizId, userId }).sort({ createdAt: -1 });
+    return this.answerModel
+      .find({ quiz: quizId, userId })
+      .sort({ createdAt: -1 });
   }
 }

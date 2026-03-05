@@ -57,11 +57,16 @@ describe('PdfSummaryController', () => {
 
       await controller.deleteSession('test-session-id');
 
-      expect(service.deleteSession).toHaveBeenCalledWith('test-session-id', undefined);
+      expect(service.deleteSession).toHaveBeenCalledWith(
+        'test-session-id',
+        undefined,
+      );
     });
 
     it('should throw BadRequestException when session ID is empty', async () => {
-      await expect(controller.deleteSession('   ')).rejects.toThrow(BadRequestException);
+      await expect(controller.deleteSession('   ')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -76,7 +81,12 @@ describe('PdfSummaryController', () => {
       mockPdfSummaryService.getFullSummary.mockResolvedValue(mockSummary);
 
       const req = {};
-      const result = await controller.getFullSummary('test-session', req, '127.0.0.1', 'test-agent');
+      const result = await controller.getFullSummary(
+        'test-session',
+        req,
+        '127.0.0.1',
+        'test-agent',
+      );
 
       expect(result).toBeDefined();
       expect(service.getFullSummary).toHaveBeenCalled();
@@ -92,9 +102,16 @@ describe('PdfSummaryController', () => {
         totalPages: 1,
       };
 
-      mockPdfSummaryService.getSessionChatHistory.mockResolvedValue(mockHistory);
+      mockPdfSummaryService.getSessionChatHistory.mockResolvedValue(
+        mockHistory,
+      );
 
-      const result = await controller.getSessionChatHistory('test-session', 'test-session', '1', '20');
+      const result = await controller.getSessionChatHistory(
+        'test-session',
+        'test-session',
+        '1',
+        '20',
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
@@ -102,7 +119,7 @@ describe('PdfSummaryController', () => {
 
     it('should throw BadRequestException when sessionId is missing', async () => {
       await expect(
-        controller.getSessionChatHistory('', undefined, '1', '20')
+        controller.getSessionChatHistory('', undefined, '1', '20'),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -143,4 +160,3 @@ describe('PdfSummaryController', () => {
     });
   });
 });
-

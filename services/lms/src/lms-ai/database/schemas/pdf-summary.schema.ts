@@ -5,7 +5,7 @@ export type PdfSummaryDocument = PdfSummary & Document;
 
 @Schema({
   collection: 'PDF_SUMMARY',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class PdfSummary {
   @Prop({ required: true, unique: true, index: true })
@@ -23,7 +23,7 @@ export class PdfSummary {
   @Prop({
     required: true,
     enum: ['brief', 'detailed', 'comprehensive'],
-    index: true
+    index: true,
   })
   summary_type: 'brief' | 'detailed' | 'comprehensive';
 
@@ -54,7 +54,7 @@ export class PdfSummary {
   @Prop({
     enum: ['processing', 'completed', 'failed'],
     default: 'completed',
-    index: true
+    index: true,
   })
   status: 'processing' | 'completed' | 'failed';
 

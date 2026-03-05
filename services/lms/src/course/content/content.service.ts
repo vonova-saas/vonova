@@ -7,7 +7,6 @@ import { Course } from '../course/schema/course.schema';
 import { Lesson } from '../lesson/schema/lesson.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 
-
 @Injectable()
 export class ContentService {
   constructor(
@@ -80,7 +79,8 @@ export class ContentService {
 
     const access = { access: true, reason: 'TEMP' };
 
-    let video: { streamUrl?: string; posterUrl?: string } | undefined = undefined;
+    let video: { streamUrl?: string; posterUrl?: string } | undefined =
+      undefined;
 
     if (lesson.type === 'VIDEO' && lesson.videoAssetId) {
       const asset = await this.assetModel.findById(lesson.videoAssetId);

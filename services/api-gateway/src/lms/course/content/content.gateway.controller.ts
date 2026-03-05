@@ -1,13 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import {
-  Controller,
-  Get,
-  Param,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -24,11 +18,12 @@ import { ContentGatewayService } from './content.gateway.service';
 @Controller('api/v1/lms/courses/:courseId/content')
 @UseGuards(JwtAuthGuard)
 export class ContentGatewayController {
-  constructor(private readonly contentService: ContentGatewayService) { }
+  constructor(private readonly contentService: ContentGatewayService) {}
 
   @ApiOperation({
     summary: 'Get course content tree',
-    description: 'Retrieves the complete content structure of a course including chapters and lessons.',
+    description:
+      'Retrieves the complete content structure of a course including chapters and lessons.',
   })
   @ApiParam({
     name: 'courseId',
@@ -55,10 +50,19 @@ export class ContentGatewayController {
                 items: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    title: { type: 'string', example: 'Variables and Data Types' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439011',
+                    },
+                    title: {
+                      type: 'string',
+                      example: 'Variables and Data Types',
+                    },
                     index: { type: 'number', example: 0 },
-                    content: { type: 'string', example: 'Lesson content here...' },
+                    content: {
+                      type: 'string',
+                      example: 'Lesson content here...',
+                    },
                     duration: { type: 'number', example: 1800 },
                   },
                 },
@@ -83,7 +87,9 @@ export class ContentGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.contentService.getCourseContentTree(courseId, userId));
+    return firstValueFrom(
+      this.contentService.getCourseContentTree(courseId, userId),
+    );
   }
 
   @Get('lessons/:lessonId/content')
@@ -93,6 +99,8 @@ export class ContentGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.contentService.getLessonContent(courseId, lessonId, userId));
+    return firstValueFrom(
+      this.contentService.getLessonContent(courseId, lessonId, userId),
+    );
   }
 }

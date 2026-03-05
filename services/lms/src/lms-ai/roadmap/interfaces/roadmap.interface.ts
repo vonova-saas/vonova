@@ -63,3 +63,26 @@ export interface IRoadmapResponse {
   };
   roadmap_data: IRoadmapData;
 }
+
+export interface IRoadmapHistory {
+  _id?: string;
+  roadmapId: string;
+  userId: string;
+  action:
+    | 'generated'
+    | 'viewed'
+    | 'started'
+    | 'week_completed'
+    | 'milestone_reached'
+    | 'completed'
+    | 'archived';
+  timestamp: Date;
+  ip_address?: string;
+  user_agent?: string;
+  metadata?: Record<string, unknown>;
+  week_number?: number;
+  milestone_week?: number;
+  progress_percentage?: number;
+  time_spent_minutes?: number;
+  notes?: string;
+}

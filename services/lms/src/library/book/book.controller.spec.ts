@@ -109,7 +109,13 @@ describe('BookController', () => {
         limit: 10,
         status: 'PUBLISHED',
       };
-      const expected = { items: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      const expected = {
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+      };
       bookServiceMock.getBooksService.mockResolvedValue(expected);
 
       const result = await controller.getBooks(query);

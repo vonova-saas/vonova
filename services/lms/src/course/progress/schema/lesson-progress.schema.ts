@@ -24,5 +24,9 @@ export class LessonProgress {
   timeSpentSec?: number;
 }
 
-export const LessonProgressSchema = SchemaFactory.createForClass(LessonProgress);
-LessonProgressSchema.index({ userId: 1, courseId: 1, lessonId: 1 }, { unique: true });
+export const LessonProgressSchema =
+  SchemaFactory.createForClass(LessonProgress);
+LessonProgressSchema.index(
+  { userId: 1, courseId: 1, lessonId: 1 },
+  { unique: true },
+);

@@ -29,11 +29,12 @@ import { CreateReviewCourseDto } from './dto/review.dto';
 @Controller('api/v1/lms/courses/:courseId/reviews')
 @UseGuards(JwtAuthGuard)
 export class ReviewCourseGatewayController {
-  constructor(private readonly reviewService: ReviewCourseGatewayService) { }
+  constructor(private readonly reviewService: ReviewCourseGatewayService) {}
 
   @ApiOperation({
     summary: 'Create course review',
-    description: 'Creates a new review for a course with rating and optional title and content.',
+    description:
+      'Creates a new review for a course with rating and optional title and content.',
   })
   @ApiParam({
     name: 'courseId',
@@ -51,7 +52,11 @@ export class ReviewCourseGatewayController {
         userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
         rating: { type: 'number', example: 5 },
         title: { type: 'string', example: 'Excellent JavaScript Course!' },
-        body: { type: 'string', example: 'This course provided comprehensive coverage of JavaScript concepts.' },
+        body: {
+          type: 'string',
+          example:
+            'This course provided comprehensive coverage of JavaScript concepts.',
+        },
         createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
         updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
       },
@@ -80,7 +85,9 @@ export class ReviewCourseGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.reviewService.createReview(courseId, userId, dto));
+    return firstValueFrom(
+      this.reviewService.createReview(courseId, userId, dto),
+    );
   }
 
   @Get()
@@ -93,10 +100,7 @@ export class ReviewCourseGatewayController {
   }
 
   @Get('my')
-  async getMyReview(
-    @Param('courseId') courseId: string,
-    @Request() req: any,
-  ) {
+  async getMyReview(@Param('courseId') courseId: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub;
     return firstValueFrom(this.reviewService.getMyReview(courseId, userId));
   }

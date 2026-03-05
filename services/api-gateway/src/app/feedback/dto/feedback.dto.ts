@@ -21,7 +21,8 @@ export class FeedbackDto {
 
   @ApiPropertyOptional({
     description: 'Detailed bug report description',
-    example: 'The application crashes when I try to upload a file larger than 10MB.',
+    example:
+      'The application crashes when I try to upload a file larger than 10MB.',
     maxLength: 2000,
     type: String,
   })
@@ -87,7 +88,8 @@ export class FeedbackDto {
 export class FeedbackAddMessageDto {
   @ApiProperty({
     description: 'Message to add to feedback thread',
-    example: 'Thank you for addressing my previous concern. The issue has been resolved.',
+    example:
+      'Thank you for addressing my previous concern. The issue has been resolved.',
     maxLength: 2000,
     type: String,
   })

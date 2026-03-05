@@ -3,9 +3,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ProgressController } from './progress.controller';
 import { ProgressService } from './progress.service';
 import { EnrollModule } from '../enroll/enroll.module';
-import { LessonProgress, LessonProgressSchema } from './schema/lesson-progress.schema';
+import {
+  LessonProgress,
+  LessonProgressSchema,
+} from './schema/lesson-progress.schema';
 import { Lesson, LessonSchema } from '../lesson/schema/lesson.schema';
-
 
 @Module({
   imports: [

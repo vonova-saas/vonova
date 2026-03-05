@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsArray, ArrayNotEmpty, ValidateNested, IsEnum, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  ArrayNotEmpty,
+  ValidateNested,
+  IsEnum,
+  IsUrl,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -12,7 +20,7 @@ export class AuthorDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: 'URL for the author\' profile picture',
+    description: "URL for the author' profile picture",
     example: 'https://example.com/author-avatar.jpg',
     type: String,
   })
@@ -51,7 +59,8 @@ export class CreateGuideDto {
 
   @ApiPropertyOptional({
     description: 'Brief summary of the guide',
-    example: 'A comprehensive guide to learning JavaScript from basics to advanced.',
+    example:
+      'A comprehensive guide to learning JavaScript from basics to advanced.',
     type: String,
   })
   @IsOptional()
@@ -60,7 +69,8 @@ export class CreateGuideDto {
 
   @ApiPropertyOptional({
     description: 'Detailed description of the guide',
-    example: 'This guide covers everything from basic JavaScript concepts to advanced topics including ES6+, async programming, and modern frameworks.',
+    example:
+      'This guide covers everything from basic JavaScript concepts to advanced topics including ES6+, async programming, and modern frameworks.',
     type: String,
   })
   @IsOptional()
@@ -126,7 +136,7 @@ export class CreateGuideDto {
   badges?: string[];
 }
 
-export class UpdateGuideDto extends CreateGuideDto { }
+export class UpdateGuideDto extends CreateGuideDto {}
 
 export class PublishGuideDto {
   @ApiProperty({

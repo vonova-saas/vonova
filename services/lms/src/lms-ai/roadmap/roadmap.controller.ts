@@ -5,7 +5,7 @@ import { RoadmapService } from './roadmap.service';
 
 @Controller()
 export class RoadmapController {
-  constructor(private readonly roadmapService: RoadmapService) { }
+  constructor(private readonly roadmapService: RoadmapService) {}
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -21,7 +21,7 @@ export class RoadmapController {
       message: 'Roadmap service healthy',
       timestamp: new Date().toISOString(),
       service: 'roadmap',
-      version: '1.0.0'
+      version: '1.0.0',
     };
   }
 
@@ -31,7 +31,7 @@ export class RoadmapController {
     return {
       success: true,
       message: 'Service statistics retrieved successfully',
-      data: stats
+      data: stats,
     };
   }
 
@@ -40,7 +40,7 @@ export class RoadmapController {
     const { roadmap_ids, user_id } = data;
     const result = await this.roadmapService.bulkDeleteRoadmaps(
       roadmap_ids,
-      user_id
+      user_id,
     );
 
     return {
@@ -48,19 +48,23 @@ export class RoadmapController {
       message: 'Bulk delete operation completed',
       data: {
         deleted_count: result.deleted,
-        failed: result.failed_roadmap_ids
-      }
+        failed: result.failed_roadmap_ids,
+      },
     };
   }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.getQueryAnalytics' })
   async getQueryAnalytics(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { start_date, end_date, user_id } = data;
-    const analytics = await this.roadmapService.getQueryAnalytics(start_date, end_date, user_id);
+    const analytics = await this.roadmapService.getQueryAnalytics(
+      start_date,
+      end_date,
+      user_id,
+    );
     return {
       success: true,
       message: 'Query analytics retrieved successfully',
-      data: analytics
+      data: analytics,
     };
   }
 
@@ -71,7 +75,7 @@ export class RoadmapController {
       success: status.ok,
       message: status.message,
       endpoint: status.endpoint,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -91,7 +95,17 @@ export class RoadmapController {
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.updateProgress' })
   async updateProgress(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { roadmapId, userId, week_number, milestone_week, progress_percentage, time_spent_minutes, notes, ip = '', userAgent = '' } = data;
+    const {
+      roadmapId,
+      userId,
+      week_number,
+      milestone_week,
+      progress_percentage,
+      time_spent_minutes,
+      notes,
+      ip = '',
+      userAgent = '',
+    } = data;
     if (!userId) {
       throw new BadRequestException('User ID is required');
     }
@@ -104,12 +118,12 @@ export class RoadmapController {
       time_spent_minutes,
       notes,
       ip,
-      userAgent
+      userAgent,
     );
 
     return {
       success: true,
-      message: 'Progress updated successfully'
+      message: 'Progress updated successfully',
     };
   }
 
@@ -120,7 +134,10 @@ export class RoadmapController {
       throw new BadRequestException('Roadmap ID is required');
     }
 
-    const result = await this.roadmapService.deleteRoadmap(roadmapId.trim(), userId);
+    const result = await this.roadmapService.deleteRoadmap(
+      roadmapId.trim(),
+      userId,
+    );
     return result;
   }
 
@@ -138,12 +155,16 @@ export class RoadmapController {
       throw new BadRequestException('Invalid page or limit parameter');
     }
 
-    const result = await this.roadmapService.getRoadmapHistory(roadmapId.trim(), pageNum, limitNum);
+    const result = await this.roadmapService.getRoadmapHistory(
+      roadmapId.trim(),
+      pageNum,
+      limitNum,
+    );
 
     return {
       success: true,
       message: 'Roadmap history retrieved successfully',
-      data: result
+      data: result,
     };
   }
 
@@ -159,7 +180,7 @@ export class RoadmapController {
     return {
       success: true,
       message: 'User roadmaps retrieved successfully',
-      data: roadmaps
+      data: roadmaps,
     };
   }
 }

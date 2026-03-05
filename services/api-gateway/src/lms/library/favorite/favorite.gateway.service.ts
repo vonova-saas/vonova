@@ -10,7 +10,10 @@ export class FavoriteGatewayService {
   ) {}
 
   toggleFavorite(itemType: ItemType, itemId: string, userId: string) {
-    return this.client.send({ cmd: 'library.favorite.toggle' }, { itemType, itemId, userId });
+    return this.client.send(
+      { cmd: 'library.favorite.toggle' },
+      { itemType, itemId, userId },
+    );
   }
 
   getMyFavorites(userId: string) {

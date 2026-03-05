@@ -1,4 +1,3 @@
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -64,4 +63,8 @@ export class Presentation extends Document {
 }
 
 export const PresentationSchema = SchemaFactory.createForClass(Presentation);
-PresentationSchema.index({ title: 'text', summary: 'text', description: 'text' });
+PresentationSchema.index({
+  title: 'text',
+  summary: 'text',
+  description: 'text',
+});

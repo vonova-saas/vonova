@@ -7,10 +7,20 @@ export type ItemType = 'BOOK' | 'GUIDE' | 'PRESENTATION';
 
 @Schema({ timestamps: true })
 export class Favorite {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   userId: mongoose.Schema.Types.ObjectId;
 
-  @Prop({ type: String, enum: ['BOOK', 'GUIDE', 'PRESENTATION'], required: true, index: true })
+  @Prop({
+    type: String,
+    enum: ['BOOK', 'GUIDE', 'PRESENTATION'],
+    required: true,
+    index: true,
+  })
   itemType: ItemType;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })

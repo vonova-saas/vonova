@@ -27,7 +27,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('api/v1/account')
 @UseGuards(JwtAuthGuard)
 export class AccountGatewayController {
-  constructor(private readonly accountService: AccountGatewayService) { }
+  constructor(private readonly accountService: AccountGatewayService) {}
 
   @ApiOperation({
     summary: 'Get user account information',

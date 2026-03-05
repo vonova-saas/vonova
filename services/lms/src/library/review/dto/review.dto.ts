@@ -1,10 +1,15 @@
-import { IsInt, Min, Max, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateOrUpdateReviewDto {
-
-@IsString()
-userId: string;
-
+  @IsString()
+  userId: string;
 
   @IsInt()
   @Min(1)

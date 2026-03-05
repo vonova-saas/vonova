@@ -41,7 +41,9 @@ async function bootstrap() {
   console.log('\n--- Vonova LMS (LMS + LMS-AI) ---');
   console.log(`NATS: ${natsUrl}`);
   console.log(`Env:  ${config.NODE_ENV ?? 'development'}`);
-  console.log('Handlers: courses, quizzes, library, assignments, enroll, progress');
+  console.log(
+    'Handlers: courses, quizzes, library, assignments, enroll, progress',
+  );
   console.log('         roadmap (AI), pdf-summary (AI)\n');
 }
 

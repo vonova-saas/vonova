@@ -7,8 +7,9 @@ import { LMS_AI_CONNECTION_NAME } from '../constants';
 @Injectable()
 export class PdfSummaryRepository {
   constructor(
-    @InjectModel(PdfSummary.name, LMS_AI_CONNECTION_NAME) private pdfSummaryModel: Model<PdfSummaryDocument>,
-  ) { }
+    @InjectModel(PdfSummary.name, LMS_AI_CONNECTION_NAME)
+    private pdfSummaryModel: Model<PdfSummaryDocument>,
+  ) {}
 
   async create(summaryData: Partial<PdfSummary>): Promise<PdfSummaryDocument> {
     const summary = new this.pdfSummaryModel(summaryData);
@@ -20,19 +21,32 @@ export class PdfSummaryRepository {
   }
 
   async findByUserId(userId: string): Promise<PdfSummaryDocument[]> {
-    return this.pdfSummaryModel.find({ user_id: userId }).sort({ created_at: -1 }).exec();
+    return this.pdfSummaryModel
+      .find({ user_id: userId })
+      .sort({ created_at: -1 })
+      .exec();
   }
 
-  async findByFileHash(fileHash: string, summaryType: string): Promise<PdfSummaryDocument | null> {
-    return this.pdfSummaryModel.findOne({ file_hash: fileHash, summary_type: summaryType }).exec();
+  async findByFileHash(
+    fileHash: string,
+    summaryType: string,
+  ): Promise<PdfSummaryDocument | null> {
+    return this.pdfSummaryModel
+      .findOne({ file_hash: fileHash, summary_type: summaryType })
+      .exec();
   }
 
-  async updateStatus(sessionId: string, status: string): Promise<PdfSummaryDocument | null> {
-    return this.pdfSummaryModel.findOneAndUpdate(
-      { session_id: sessionId },
-      { status, updated_at: new Date() },
-      { new: true }
-    ).exec();
+  async updateStatus(
+    sessionId: string,
+    status: string,
+  ): Promise<PdfSummaryDocument | null> {
+    return this.pdfSummaryModel
+      .findOneAndUpdate(
+        { session_id: sessionId },
+        { status, updated_at: new Date() },
+        { new: true },
+      )
+      .exec();
   }
 
   async countByUserId(userId: string): Promise<number> {
@@ -40,12 +54,16 @@ export class PdfSummaryRepository {
   }
 
   async deleteBySessionId(sessionId: string): Promise<boolean> {
-    const result = await this.pdfSummaryModel.deleteMany({ session_id: sessionId }).exec();
+    const result = await this.pdfSummaryModel
+      .deleteMany({ session_id: sessionId })
+      .exec();
     return result.deletedCount > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const result = await this.pdfSummaryModel.deleteMany({ user_id: userId }).exec();
+    const result = await this.pdfSummaryModel
+      .deleteMany({ user_id: userId })
+      .exec();
     return result.deletedCount;
   }
 
@@ -58,17 +76,21 @@ export class PdfSummaryRepository {
   }
 
   async getAverageProcessingTime(): Promise<number> {
-    const result = await this.pdfSummaryModel.aggregate([
-      { $group: { _id: null, avg: { $avg: '$processing_time_ms' } } }
-    ]).exec();
+    const result = await this.pdfSummaryModel
+      .aggregate([
+        { $group: { _id: null, avg: { $avg: '$processing_time_ms' } } },
+      ])
+      .exec();
     return result.length > 0 ? result[0].avg || 0 : 0;
   }
 
   async getLanguageDistribution(): Promise<Record<string, number>> {
-    const result = await this.pdfSummaryModel.aggregate([
-      { $group: { _id: '$language', count: { $sum: 1 } } },
-      { $project: { language: '$_id', count: 1, _id: 0 } }
-    ]).exec();
+    const result = await this.pdfSummaryModel
+      .aggregate([
+        { $group: { _id: '$language', count: { $sum: 1 } } },
+        { $project: { language: '$_id', count: 1, _id: 0 } },
+      ])
+      .exec();
 
     const distribution: Record<string, number> = {};
     result.forEach((item: any) => {

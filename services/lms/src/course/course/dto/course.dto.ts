@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsArray, IsNumber, IsBoolean, IsEnum, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  IsBoolean,
+  IsEnum,
+  IsUrl,
+} from 'class-validator';
 
 export class CoursePriceDto {
   @IsNumber()
@@ -53,7 +61,6 @@ export class CreateCourseDto {
 
   price: CoursePriceDto;
 }
-
 
 export class UpdateCourseDto extends CreateCourseDto {
   @IsOptional()

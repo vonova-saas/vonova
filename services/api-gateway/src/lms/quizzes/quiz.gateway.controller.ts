@@ -32,7 +32,7 @@ import {
 @Controller('api/v1/lms/quizzes')
 @UseGuards(JwtAuthGuard)
 export class QuizGatewayController {
-  constructor(private readonly quizService: QuizGatewayService) { }
+  constructor(private readonly quizService: QuizGatewayService) {}
 
   /**
    * Create a new quiz
@@ -42,7 +42,8 @@ export class QuizGatewayController {
    */
   @ApiOperation({
     summary: 'Create new quiz',
-    description: 'Creates a new quiz with questions and options for students to complete.',
+    description:
+      'Creates a new quiz with questions and options for students to complete.',
   })
   @ApiResponse({
     status: 201,
@@ -125,9 +126,7 @@ export class QuizGatewayController {
     description: 'Retrieves a specific quiz by its ID.',
   })
   @Get('/:quizId')
-  async getQuizById(
-    @Param('quizId') quizId: string,
-  ) {
+  async getQuizById(@Param('quizId') quizId: string) {
     return firstValueFrom(this.quizService.getQuizById(quizId));
   }
 
@@ -176,12 +175,11 @@ export class QuizGatewayController {
    */
   @ApiOperation({
     summary: 'Get quiz attempt',
-    description: 'Retrieves detailed information about a specific quiz attempt.',
+    description:
+      'Retrieves detailed information about a specific quiz attempt.',
   })
   @Get('/attempts/:attemptId')
-  async getAttempt(
-    @Param('attemptId') attemptId: string,
-  ) {
+  async getAttempt(@Param('attemptId') attemptId: string) {
     return firstValueFrom(this.quizService.getAttempt(attemptId));
   }
 
@@ -193,7 +191,8 @@ export class QuizGatewayController {
    */
   @ApiOperation({
     summary: 'Get quiz attempts',
-    description: 'Retrieves all attempts a user has made for a particular quiz.',
+    description:
+      'Retrieves all attempts a user has made for a particular quiz.',
   })
   @Get('/:userId/:quizId/my-attempts')
   async getAttemptsForQuiz(

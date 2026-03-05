@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
@@ -33,11 +32,12 @@ import {
 @Controller('api/v1/lms/assignments')
 @UseGuards(JwtAuthGuard)
 export class AssignmentGatewayController {
-  constructor(private readonly assignmentService: AssignmentGatewayService) { }
+  constructor(private readonly assignmentService: AssignmentGatewayService) {}
 
   @ApiOperation({
     summary: 'Create new assignment',
-    description: 'Creates a new assignment with questions and options for students to complete.',
+    description:
+      'Creates a new assignment with questions and options for students to complete.',
   })
   @ApiResponse({
     status: 201,

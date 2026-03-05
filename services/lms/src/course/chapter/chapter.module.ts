@@ -6,10 +6,12 @@ import { Chapter, ChapterSchema } from './schema/chapter.schema';
 import { Course, CourseSchema } from '../course/schema/course.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([
-    { name: Chapter.name, schema: ChapterSchema },
-    { name: Course.name, schema: CourseSchema },
-  ])],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Chapter.name, schema: ChapterSchema },
+      { name: Course.name, schema: CourseSchema },
+    ]),
+  ],
   controllers: [ChapterController],
   providers: [ChapterService],
 })

@@ -9,15 +9,22 @@ import {
 
 @Controller('quizzes')
 export class QuizController {
-  constructor(private readonly quizService: QuizService) { }
+  constructor(private readonly quizService: QuizService) {}
 
   @MessagePattern({ cmd: 'quiz.create' })
-  createQuiz(@Payload('dto') dto: CreateQuizDto, @Payload('userId') userId: string) {
+  createQuiz(
+    @Payload('dto') dto: CreateQuizDto,
+    @Payload('userId') userId: string,
+  ) {
     return this.quizService.createQuiz(dto, userId);
   }
 
   @MessagePattern({ cmd: 'quiz.update' })
-  updateQuiz(@Payload('quizId') quizId: string, @Payload('dto') dto: UpdateQuizDto, @Payload('userId') userId: string) {
+  updateQuiz(
+    @Payload('quizId') quizId: string,
+    @Payload('dto') dto: UpdateQuizDto,
+    @Payload('userId') userId: string,
+  ) {
     return this.quizService.updateQuiz(quizId, dto, userId);
   }
 
@@ -32,7 +39,10 @@ export class QuizController {
   }
 
   @MessagePattern({ cmd: 'quiz.delete' })
-  deleteQuiz(@Payload('quizId') quizId: string, @Payload('userId') userId: string) {
+  deleteQuiz(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
     return this.quizService.deleteQuiz(quizId, userId);
   }
 
@@ -52,7 +62,10 @@ export class QuizController {
   }
 
   @MessagePattern({ cmd: 'quiz.getAttemptsForQuiz' })
-  getMyAttempts(@Payload('quizId') quizId: string, @Payload('userId') userId: string) {
+  getMyAttempts(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
     return this.quizService.getMyAttemptsForQuiz(quizId, userId);
   }
 }

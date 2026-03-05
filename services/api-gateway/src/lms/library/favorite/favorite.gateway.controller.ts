@@ -1,7 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { Controller, Post, Get, Param, Query, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -19,11 +28,12 @@ import * as favoriteSchema from '../schema/favorite.schema';
 @Controller('api/v1/lms/library/favorite')
 @UseGuards(JwtAuthGuard)
 export class FavoriteGatewayController {
-  constructor(private readonly favoriteService: FavoriteGatewayService) { }
+  constructor(private readonly favoriteService: FavoriteGatewayService) {}
 
   @ApiOperation({
     summary: 'Toggle favorite status',
-    description: 'Adds or removes an item (book, guide, or presentation) from the user\'s favorites.',
+    description:
+      "Adds or removes an item (book, guide, or presentation) from the user's favorites.",
   })
   @ApiParam({
     name: 'itemType',
@@ -69,7 +79,9 @@ export class FavoriteGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.favoriteService.toggleFavorite(itemType, itemId, userId));
+    return firstValueFrom(
+      this.favoriteService.toggleFavorite(itemType, itemId, userId),
+    );
   }
 
   @ApiOperation({
@@ -91,8 +103,14 @@ export class FavoriteGatewayController {
           item: {
             type: 'object',
             properties: {
-              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
-              coverUrl: { type: 'string', example: 'https://example.com/cover.jpg' },
+              title: {
+                type: 'string',
+                example: 'JavaScript: The Complete Guide',
+              },
+              coverUrl: {
+                type: 'string',
+                example: 'https://example.com/cover.jpg',
+              },
             },
           },
           createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },

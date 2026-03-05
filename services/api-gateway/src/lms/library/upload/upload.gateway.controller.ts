@@ -1,4 +1,12 @@
-import { Controller, Post, Param, Body, Headers, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  Headers,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import {
   ApiTags,
@@ -18,11 +26,12 @@ import { CompleteDto, PresignDto } from './dto/upload.dto';
 @Controller('api/v1/lms/library/items')
 @UseGuards(JwtAuthGuard)
 export class UploadGatewayController {
-  constructor(private readonly uploadService: UploadGatewayService) { }
+  constructor(private readonly uploadService: UploadGatewayService) {}
 
   @ApiOperation({
     summary: 'Get presigned URL for file upload',
-    description: 'Generates a presigned URL for uploading files to cloud storage for library items.',
+    description:
+      'Generates a presigned URL for uploading files to cloud storage for library items.',
   })
   @ApiParam({
     name: 'itemType',
@@ -47,11 +56,17 @@ export class UploadGatewayController {
     schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', example: 'https://s3.amazonaws.com/bucket/presigned-url' },
+        url: {
+          type: 'string',
+          example: 'https://s3.amazonaws.com/bucket/presigned-url',
+        },
         fields: {
           type: 'object',
           properties: {
-            key: { type: 'string', example: 'uploads/2023/javascript-guide.pdf' },
+            key: {
+              type: 'string',
+              example: 'uploads/2023/javascript-guide.pdf',
+            },
             policy: { type: 'string', example: 'base64-policy' },
             'x-amz-signature': { type: 'string', example: 'signature' },
           },
@@ -81,7 +96,9 @@ export class UploadGatewayController {
   ) {
     // Auth removed as requested — ownerId resolved from req.user?.id or header x-user-id
     const ownerId = (req as any).user?.id ?? xUserId;
-    return firstValueFrom(this.uploadService.presignFile(itemType, itemId, ownerId, body));
+    return firstValueFrom(
+      this.uploadService.presignFile(itemType, itemId, ownerId, body),
+    );
   }
 
   @Post(':itemType/:itemId/file/complete')
@@ -93,6 +110,8 @@ export class UploadGatewayController {
     @Headers('x-user-id') xUserId?: string,
   ) {
     const ownerId = (req as any).user?.id ?? xUserId;
-    return firstValueFrom(this.uploadService.completeUpload(itemType, itemId, ownerId, body));
+    return firstValueFrom(
+      this.uploadService.completeUpload(itemType, itemId, ownerId, body),
+    );
   }
 }

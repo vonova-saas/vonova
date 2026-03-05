@@ -30,16 +30,29 @@ export class ReaderController {
     const { presentationId } = data;
     if (!presentationId) throw new Error('presentationId is required');
 
-    const result = await this.readerService.getPresentationContent(presentationId);
+    const result =
+      await this.readerService.getPresentationContent(presentationId);
     return { message: 'Presentation content', data: result };
   }
 
   @MessagePattern({ cmd: 'library.reader.updateBookProgress' })
-  async updateBookProgress(@Payload() data: { bookId: string; userId: string; dto: UpdateBookProgressDto }) {
+  async updateBookProgress(
+    @Payload()
+    data: {
+      bookId: string;
+      userId: string;
+      dto: UpdateBookProgressDto;
+    },
+  ) {
     const { bookId, userId, dto } = data;
-    if (!bookId || !userId || !dto) throw new Error('bookId, userId and dto are required');
+    if (!bookId || !userId || !dto)
+      throw new Error('bookId, userId and dto are required');
 
-    const result = await this.readerService.updateBookProgress(bookId, userId, dto as any);
+    const result = await this.readerService.updateBookProgress(
+      bookId,
+      userId,
+      dto as any,
+    );
     return { message: 'Progress updated', data: result };
   }
 

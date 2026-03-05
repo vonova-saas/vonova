@@ -5,7 +5,6 @@ import { AuthGatewayModule } from 'src/app/auth/auth.module';
 import { ChapterGatewayController } from './chapter.gateway.controller';
 import { ChapterGatewayService } from './chapter.gateway.service';
 
-
 @Module({
   imports: [NatsClientModule, AuthGatewayModule],
   controllers: [ChapterGatewayController],

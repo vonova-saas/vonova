@@ -66,7 +66,12 @@ describe('RoadmapController', () => {
       mockRoadmapService.generateRoadmap.mockResolvedValue(mockResponse);
 
       const req = { userId: 'user-123' };
-      const result = await controller.generateRoadmap(dto, req, '127.0.0.1', 'test-agent');
+      const result = await controller.generateRoadmap(
+        dto,
+        req,
+        '127.0.0.1',
+        'test-agent',
+      );
 
       expect(result).toBeDefined();
       expect(result.roadmapId).toBe('test-id');
@@ -85,10 +90,20 @@ describe('RoadmapController', () => {
       mockRoadmapService.getRoadmapById.mockResolvedValue(mockResponse);
 
       const req = { userId: 'user-123' };
-      const result = await controller.getRoadmapById('test-id', req, '127.0.0.1', 'test-agent');
+      const result = await controller.getRoadmapById(
+        'test-id',
+        req,
+        '127.0.0.1',
+        'test-agent',
+      );
 
       expect(result).toBeDefined();
-      expect(service.getRoadmapById).toHaveBeenCalledWith('test-id', 'user-123', '127.0.0.1', 'test-agent');
+      expect(service.getRoadmapById).toHaveBeenCalledWith(
+        'test-id',
+        'user-123',
+        '127.0.0.1',
+        'test-agent',
+      );
     });
   });
 
@@ -107,7 +122,7 @@ describe('RoadmapController', () => {
         dto,
         req,
         '127.0.0.1',
-        'test-agent'
+        'test-agent',
       );
 
       expect(result.success).toBe(true);
@@ -119,7 +134,13 @@ describe('RoadmapController', () => {
       const req = {};
 
       await expect(
-        controller.updateProgress('test-id', dto, req, '127.0.0.1', 'test-agent')
+        controller.updateProgress(
+          'test-id',
+          dto,
+          req,
+          '127.0.0.1',
+          'test-agent',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -138,7 +159,9 @@ describe('RoadmapController', () => {
     });
 
     it('should throw BadRequestException when roadmap ID is empty', async () => {
-      await expect(controller.deleteRoadmap('   ')).rejects.toThrow(BadRequestException);
+      await expect(controller.deleteRoadmap('   ')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -158,4 +181,3 @@ describe('RoadmapController', () => {
     });
   });
 });
-

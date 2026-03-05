@@ -27,7 +27,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('api/v1/billing')
 @UseGuards(JwtAuthGuard)
 export class BillingGatewayController {
-  constructor(private readonly billingService: BillingGatewayService) { }
+  constructor(private readonly billingService: BillingGatewayService) {}
 
   @ApiOperation({
     summary: 'Get user billing information',

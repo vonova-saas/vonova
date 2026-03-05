@@ -44,7 +44,7 @@ import type { UploadedFile as CustomUploadedFile } from '../../common/interfaces
 @ApiCookieAuth()
 @Controller('api/v1/auth')
 export class AuthGatewayController {
-  constructor(private readonly authService: AuthGatewayService) { }
+  constructor(private readonly authService: AuthGatewayService) {}
 
   // Register Flow
   @ApiOperation({
@@ -86,7 +86,8 @@ export class AuthGatewayController {
 
   @ApiOperation({
     summary: 'Verify user email',
-    description: 'Verifies user email using the verification code sent to their email.',
+    description:
+      'Verifies user email using the verification code sent to their email.',
   })
   @ApiResponse({
     status: 200,
@@ -188,7 +189,8 @@ export class AuthGatewayController {
 
   @ApiOperation({
     summary: 'Upload profile picture',
-    description: 'Uploads a profile picture for the user. Requires multipart/form-data with file field.',
+    description:
+      'Uploads a profile picture for the user. Requires multipart/form-data with file field.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -282,7 +284,8 @@ export class AuthGatewayController {
   // Login
   @ApiOperation({
     summary: 'User login',
-    description: 'Authenticates user credentials and sets authentication cookies.',
+    description:
+      'Authenticates user credentials and sets authentication cookies.',
   })
   @ApiResponse({
     status: 200,
@@ -412,7 +415,8 @@ export class AuthGatewayController {
 
   @ApiOperation({
     summary: 'Get current user',
-    description: 'Retrieves current user information using access token from cookie.',
+    description:
+      'Retrieves current user information using access token from cookie.',
   })
   @ApiResponse({
     status: 200,
@@ -476,7 +480,8 @@ export class AuthGatewayController {
 
   @ApiOperation({
     summary: 'Verify password reset code',
-    description: 'Verifies the password reset code and sets a reset token cookie.',
+    description:
+      'Verifies the password reset code and sets a reset token cookie.',
   })
   @ApiResponse({
     status: 200,
@@ -581,7 +586,8 @@ export class AuthGatewayController {
   // OAuth Endpoints
   @ApiOperation({
     summary: 'OAuth Google login',
-    description: 'Authenticates user via Google OAuth and sets authentication cookies or redirects to welcome flow.',
+    description:
+      'Authenticates user via Google OAuth and sets authentication cookies or redirects to welcome flow.',
   })
   @ApiResponse({
     status: 200,
@@ -598,14 +604,23 @@ export class AuthGatewayController {
                 user: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439011',
+                    },
                     email: { type: 'string', example: 'john.doe@gmail.com' },
                     name: { type: 'string', example: 'John Doe' },
                     role: { type: 'string', example: 'STUDENT' },
                   },
                 },
-                accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-                refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+                accessToken: {
+                  type: 'string',
+                  example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                },
+                refreshToken: {
+                  type: 'string',
+                  example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                },
               },
             },
           },
@@ -613,7 +628,10 @@ export class AuthGatewayController {
         {
           type: 'object',
           properties: {
-            message: { type: 'string', example: 'OAuth login successful, please complete welcome step' },
+            message: {
+              type: 'string',
+              example: 'OAuth login successful, please complete welcome step',
+            },
             data: {
               type: 'object',
               properties: {
@@ -621,7 +639,10 @@ export class AuthGatewayController {
                 user: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439011',
+                    },
                     email: { type: 'string', example: 'john.doe@gmail.com' },
                   },
                 },

@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsNumber, Min, IsEnum, IsBoolean, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  Min,
+  IsEnum,
+  IsBoolean,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class CreateLessonDto {
   @IsString()
@@ -35,7 +43,7 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  index: number =0;
+  index: number = 0;
 
   @IsOptional()
   @IsNumber()

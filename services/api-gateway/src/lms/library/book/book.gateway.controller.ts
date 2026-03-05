@@ -37,11 +37,12 @@ import {
 @Controller('api/v1/lms/library/books')
 @UseGuards(JwtAuthGuard)
 export class BookGatewayController {
-  constructor(private readonly bookService: BookGatewayService) { }
+  constructor(private readonly bookService: BookGatewayService) {}
 
   @ApiOperation({
     summary: 'Create new book',
-    description: 'Creates a new book with title, authors, topics, and optional metadata.',
+    description:
+      'Creates a new book with title, authors, topics, and optional metadata.',
   })
   @ApiResponse({
     status: 201,
@@ -52,23 +53,44 @@ export class BookGatewayController {
         _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
         title: { type: 'string', example: 'JavaScript: The Complete Guide' },
         slug: { type: 'string', example: 'javascript-complete-guide' },
-        summary: { type: 'string', example: 'A comprehensive guide to JavaScript programming.' },
-        description: { type: 'string', example: 'This book covers everything from basic JavaScript concepts to advanced topics.' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to JavaScript programming.',
+        },
+        description: {
+          type: 'string',
+          example:
+            'This book covers everything from basic JavaScript concepts to advanced topics.',
+        },
         authors: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
               name: { type: 'string', example: 'John Doe' },
-              avatarUrl: { type: 'string', example: 'https://example.com/author-avatar.jpg' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
             },
           },
         },
-        topics: { type: 'array', items: { type: 'string' }, example: ['javascript', 'programming'] },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming'],
+        },
         level: { type: 'string', example: 'Intermediate' },
-        coverUrl: { type: 'string', example: 'https://example.com/book-cover.jpg' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/book-cover.jpg',
+        },
         language: { type: 'string', example: 'en' },
-        badges: { type: 'array', items: { type: 'string' }, example: ['bestseller'] },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['bestseller'],
+        },
         pageCount: { type: 'number', example: 450 },
         readingTimeMin: { type: 'number', example: 180 },
         status: { type: 'string', example: 'DRAFT' },
@@ -87,10 +109,7 @@ export class BookGatewayController {
     description: 'Unauthorized - JWT token is required',
   })
   @Post('createBook')
-  async createBook(
-    @Body() dto: CreateBookDto,
-    @Request() req: any,
-  ) {
+  async createBook(@Body() dto: CreateBookDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub;
     return firstValueFrom(this.bookService.createBook(dto, userId));
   }
@@ -137,14 +156,13 @@ export class BookGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.bookService.updateBookProgress(bookId, userId, body));
+    return firstValueFrom(
+      this.bookService.updateBookProgress(bookId, userId, body),
+    );
   }
 
   @Delete(':id')
-  async deleteBook(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async deleteBook(@Param('id') id: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub;
     return firstValueFrom(this.bookService.deleteBook(id, userId));
   }

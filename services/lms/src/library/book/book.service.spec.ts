@@ -13,7 +13,12 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateBookDto, PublishBookDto, UpdateBookDto, UpdateProgressDto } from './dto/book.dto';
+import {
+  CreateBookDto,
+  PublishBookDto,
+  UpdateBookDto,
+  UpdateProgressDto,
+} from './dto/book.dto';
 
 describe('BookService', () => {
   let service: BookService;
@@ -161,7 +166,13 @@ describe('BookService', () => {
       const result = await service.getBooksService(query);
 
       expect(bookModelMock.countDocuments).toHaveBeenCalled();
-      expect(result).toEqual({ items, total: 0, page: 1, limit: 10, totalPages: 0 });
+      expect(result).toEqual({
+        items,
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+      });
     });
   });
 
@@ -267,9 +278,9 @@ describe('BookService', () => {
       const book = { createdBy: { toString: () => 'other-user' } };
       bookModelMock.findById.mockResolvedValue(book);
 
-      await expect(
-        service.deleteBookService('id', 'user1'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.deleteBookService('id', 'user1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

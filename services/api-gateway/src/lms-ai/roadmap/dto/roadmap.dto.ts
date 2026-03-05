@@ -1,12 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsNumber, IsOptional, IsArray, Min, Max, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  Min,
+  Max,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class GenerateRoadmapDto {
   @ApiProperty({
     description: 'Learning topic or subject',
     example: 'React.js',
     minLength: 1,
-    maxLength: 100
+    maxLength: 100,
   })
   @IsString()
   @IsNotEmpty()
@@ -15,7 +24,7 @@ export class GenerateRoadmapDto {
   @ApiProperty({
     description: 'Skill level of the learner',
     enum: ['beginner', 'intermediate', 'advanced'],
-    example: 'beginner'
+    example: 'beginner',
   })
   @IsEnum(['beginner', 'intermediate', 'advanced'])
   skill_level: 'beginner' | 'intermediate' | 'advanced';
@@ -24,7 +33,7 @@ export class GenerateRoadmapDto {
     description: 'Duration of the learning roadmap in weeks',
     example: 12,
     minimum: 1,
-    maximum: 52
+    maximum: 52,
   })
   @IsNumber()
   @Min(1)
@@ -35,7 +44,7 @@ export class GenerateRoadmapDto {
     description: 'Specific focus areas or subtopics',
     example: ['hooks', 'state management', 'routing'],
     required: false,
-    type: [String]
+    type: [String],
   })
   @IsOptional()
   @IsArray()
@@ -49,7 +58,7 @@ export class UpdateRoadmapProgressDto {
     example: 5,
     minimum: 1,
     maximum: 52,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber()
@@ -62,7 +71,7 @@ export class UpdateRoadmapProgressDto {
     example: 8,
     minimum: 1,
     maximum: 52,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber()
@@ -75,7 +84,7 @@ export class UpdateRoadmapProgressDto {
     example: 75,
     minimum: 0,
     maximum: 100,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber()
@@ -87,7 +96,7 @@ export class UpdateRoadmapProgressDto {
     description: 'Time spent in minutes',
     example: 120,
     minimum: 0,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber()
@@ -98,7 +107,7 @@ export class UpdateRoadmapProgressDto {
     description: 'Notes about the progress',
     example: 'Completed React hooks section',
     maxLength: 1000,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -109,7 +118,7 @@ export class BulkDeleteRoadmapsDto {
   @ApiProperty({
     description: 'Array of roadmap IDs to delete',
     example: ['roadmap-id-1', 'roadmap-id-2'],
-    type: [String]
+    type: [String],
   })
   @IsArray()
   @IsString({ each: true })
@@ -117,10 +126,9 @@ export class BulkDeleteRoadmapsDto {
 
   @ApiProperty({
     description: 'User ID for ownership validation',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   user_id?: string;
 }
-

@@ -18,19 +18,31 @@ export class CourseGatewayService {
   }
 
   updateCourse(courseId: string, dto: UpdateCourseDto, ownerId: string) {
-    return this.client.send({ cmd: 'app.courses.update' }, { courseId, dto, ownerId });
+    return this.client.send(
+      { cmd: 'app.courses.update' },
+      { courseId, dto, ownerId },
+    );
   }
 
   publishCourse(courseId: string, dto: PublishCourseDto, ownerId: string) {
-    return this.client.send({ cmd: 'app.courses.publish' }, { courseId, dto, ownerId });
+    return this.client.send(
+      { cmd: 'app.courses.publish' },
+      { courseId, dto, ownerId },
+    );
   }
 
   deleteCourse(courseId: string, ownerId: string) {
-    return this.client.send({ cmd: 'app.courses.delete' }, { courseId, ownerId });
+    return this.client.send(
+      { cmd: 'app.courses.delete' },
+      { courseId, ownerId },
+    );
   }
 
   recomputeAggregates(courseId: string) {
-    return this.client.send({ cmd: 'app.courses.recomputeAggregates' }, { courseId });
+    return this.client.send(
+      { cmd: 'app.courses.recomputeAggregates' },
+      { courseId },
+    );
   }
 
   getAllCourses(filters?: any) {

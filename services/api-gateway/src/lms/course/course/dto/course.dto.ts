@@ -63,7 +63,8 @@ export class CreateCourseDto {
 
   @ApiPropertyOptional({
     description: 'Detailed description of the course',
-    example: 'This comprehensive JavaScript course covers everything from basics to advanced topics including ES6+, async programming, and modern frameworks.',
+    example:
+      'This comprehensive JavaScript course covers everything from basics to advanced topics including ES6+, async programming, and modern frameworks.',
     type: String,
   })
   @IsOptional()

@@ -5,7 +5,6 @@ import { AuthGatewayModule } from 'src/app/auth/auth.module';
 import { CourseGatewayController } from './course.gateway.controller';
 import { CourseGatewayService } from './course.gateway.service';
 
-
 @Module({
   imports: [NatsClientModule, AuthGatewayModule],
   controllers: [CourseGatewayController],

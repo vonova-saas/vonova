@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
@@ -32,7 +32,7 @@ import {
 @Controller('api/v1/lms/courses/:courseId/chapters/:chapterId/lessons')
 @UseGuards(JwtAuthGuard)
 export class LessonGatewayController {
-  constructor(private readonly lessonService: LessonGatewayService) { }
+  constructor(private readonly lessonService: LessonGatewayService) {}
 
   @ApiOperation({
     summary: 'Create new lesson',
@@ -57,7 +57,10 @@ export class LessonGatewayController {
         _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
         courseId: { type: 'string', example: '507f1f77bcf86cd799439011' },
         chapterId: { type: 'string', example: '507f1f77bcf86cd799439011' },
-        title: { type: 'string', example: 'Introduction to JavaScript Variables' },
+        title: {
+          type: 'string',
+          example: 'Introduction to JavaScript Variables',
+        },
         index: { type: 'number', example: 0 },
         durationMinutes: { type: 'number', example: 45 },
         type: { type: 'string', example: 'VIDEO' },
@@ -88,7 +91,9 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.lessonService.createLesson(courseId, chapterId, dto, ownerId));
+    return firstValueFrom(
+      this.lessonService.createLesson(courseId, chapterId, dto, ownerId),
+    );
   }
 
   @Patch(':lessonId')
@@ -99,7 +104,9 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.lessonService.updateLesson(courseId, lessonId, dto, ownerId));
+    return firstValueFrom(
+      this.lessonService.updateLesson(courseId, lessonId, dto, ownerId),
+    );
   }
 
   @Patch('reorder')
@@ -109,7 +116,9 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.lessonService.reorderLessons(courseId, dto, ownerId));
+    return firstValueFrom(
+      this.lessonService.reorderLessons(courseId, dto, ownerId),
+    );
   }
 
   @Delete(':lessonId')
@@ -119,6 +128,8 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub;
-    return firstValueFrom(this.lessonService.deleteLesson(courseId, lessonId, ownerId));
+    return firstValueFrom(
+      this.lessonService.deleteLesson(courseId, lessonId, ownerId),
+    );
   }
 }

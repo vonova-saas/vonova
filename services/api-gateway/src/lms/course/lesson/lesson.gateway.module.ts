@@ -5,7 +5,6 @@ import { AuthGatewayModule } from 'src/app/auth/auth.module';
 import { LessonGatewayController } from './lesson.gateway.controller';
 import { LessonGatewayService } from './lesson.gateway.service';
 
-
 @Module({
   imports: [NatsClientModule, AuthGatewayModule],
   controllers: [LessonGatewayController],

@@ -8,17 +8,34 @@ export class ProgressController {
   constructor(private readonly progressService: ProgressService) {}
 
   @MessagePattern({ cmd: 'app.courses.progress.complete' })
-  complete(@Payload() data: { courseId: string; lessonId: string; userId: string; completed: boolean; timeSpentSec: number }) {
+  complete(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      completed: boolean;
+      timeSpentSec: number;
+    },
+  ) {
     const { courseId, lessonId, userId, completed, timeSpentSec } = data;
-    if (!courseId || !lessonId || !userId) throw new Error('courseId, lessonId and userId are required');
+    if (!courseId || !lessonId || !userId)
+      throw new Error('courseId, lessonId and userId are required');
 
-    return this.progressService.markLessonComplete(courseId, lessonId, userId, completed, timeSpentSec);
+    return this.progressService.markLessonComplete(
+      courseId,
+      lessonId,
+      userId,
+      completed,
+      timeSpentSec,
+    );
   }
 
   @MessagePattern({ cmd: 'app.courses.progress.getMy' })
   myProgress(@Payload() data: { courseId: string; userId: string }) {
     const { courseId, userId } = data;
-    if (!courseId || !userId) throw new Error('courseId and userId are required');
+    if (!courseId || !userId)
+      throw new Error('courseId and userId are required');
 
     return this.progressService.getMyCourseProgress(courseId, userId);
   }

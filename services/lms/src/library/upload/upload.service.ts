@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Book } from '../schema/book/book.schema';
@@ -6,7 +10,6 @@ import { Guide } from '../schema/guide.schema';
 import { LibraryAsset } from '../schema/library-asset.schema';
 import { Presentation } from '../schema/presentation.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
-
 
 @Injectable()
 export class UploadService {
@@ -26,7 +29,6 @@ export class UploadService {
     private readonly presModel: Model<Presentation>,
   ) {}
 
-
   async presignFile(
     itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
     itemId: string,
@@ -37,8 +39,15 @@ export class UploadService {
   ) {
     const { model } = await this.ensureOwner(itemType, itemId, ownerId);
 
-    const objectKey = this.s3Service.generateObjectKey(itemId, itemId, fileName);
-    const uploadUrl = await this.s3Service.getPresignedPutUrl(objectKey, mimeType);
+    const objectKey = this.s3Service.generateObjectKey(
+      itemId,
+      itemId,
+      fileName,
+    );
+    const uploadUrl = await this.s3Service.getPresignedPutUrl(
+      objectKey,
+      mimeType,
+    );
 
     const asset = await this.assetModel.create({
       ownerId,
@@ -56,7 +65,6 @@ export class UploadService {
     return { uploadUrl, assetId: asset.id, objectKey };
   }
 
-
   async completeUpload(
     itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
     itemId: string,
@@ -67,7 +75,8 @@ export class UploadService {
     await this.ensureOwner(itemType, itemId, ownerId);
 
     const exists = await this.s3Service.headObjectExists(objectKey);
-    if (!exists) throw new NotFoundException('Uploaded file not found in bucket');
+    if (!exists)
+      throw new NotFoundException('Uploaded file not found in bucket');
 
     const asset = await this.assetModel.findById(assetId);
     if (!asset) throw new NotFoundException('Asset not found');
@@ -77,13 +86,21 @@ export class UploadService {
     await asset.save();
 
     // Link file to item
-    if (itemType === 'BOOK') await this.bookModel.findByIdAndUpdate(itemId, { fileAssetId: asset._id });
-    if (itemType === 'GUIDE') await this.guideModel.findByIdAndUpdate(itemId, { fileAssetId: asset._id });
-    if (itemType === 'PRESENTATION') await this.presModel.findByIdAndUpdate(itemId, { fileAssetId: asset._id });
+    if (itemType === 'BOOK')
+      await this.bookModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
+    if (itemType === 'GUIDE')
+      await this.guideModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
+    if (itemType === 'PRESENTATION')
+      await this.presModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
 
     return { assetId: asset.id, itemId };
   }
-
 
   private async ensureOwner(
     itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
@@ -94,7 +111,8 @@ export class UploadService {
 
     if (itemType === 'BOOK') model = await this.bookModel.findById(itemId);
     if (itemType === 'GUIDE') model = await this.guideModel.findById(itemId);
-    if (itemType === 'PRESENTATION') model = await this.presModel.findById(itemId);
+    if (itemType === 'PRESENTATION')
+      model = await this.presModel.findById(itemId);
 
     if (!model) throw new NotFoundException('Item not found');
 

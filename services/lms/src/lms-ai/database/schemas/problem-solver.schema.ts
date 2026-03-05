@@ -5,7 +5,7 @@ export type ProblemSolverDocument = ProblemSolver & Document;
 
 @Schema({
   collection: 'PROBLEM_SOLVER',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class ProblemSolver {
   @Prop({ required: true, unique: true, index: true })
@@ -29,7 +29,7 @@ export class ProblemSolver {
   @Prop({
     enum: ['beginner', 'intermediate', 'advanced'],
     default: 'beginner',
-    index: true
+    index: true,
   })
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';
 
@@ -68,4 +68,3 @@ ProblemSolverSchema.index({ userId: 1, created_at: -1 });
 ProblemSolverSchema.index({ difficulty_level: 1, created_at: -1 });
 ProblemSolverSchema.index({ category: 1, created_at: -1 });
 ProblemSolverSchema.index({ ai_model_used: 1, created_at: -1 });
-

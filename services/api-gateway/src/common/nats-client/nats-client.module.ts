@@ -20,4 +20,4 @@ import configuration from '../config/configuration';
   ],
   exports: [ClientsModule],
 })
-export class NatsClientModule { }
+export class NatsClientModule {}

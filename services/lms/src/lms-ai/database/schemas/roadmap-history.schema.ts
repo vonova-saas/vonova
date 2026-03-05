@@ -5,50 +5,65 @@ export type RoadmapHistoryDocument = RoadmapHistory & Document;
 
 @Schema({
   collection: 'ROADMAP_AI_HISTORY',
-  timestamps: false
+  timestamps: false,
 })
 export class RoadmapHistory {
   @Prop({
     type: String,
     required: true,
     index: true,
-    ref: 'Roadmap'
+    ref: 'Roadmap',
   })
   roadmapId: string;
 
   @Prop({
     type: String,
-    required: true
+    required: true,
   })
   userId: string;
 
   @Prop({
     required: true,
-    enum: ['generated', 'viewed', 'started', 'week_completed', 'milestone_reached', 'completed', 'archived'],
-    index: true
+    enum: [
+      'generated',
+      'viewed',
+      'started',
+      'week_completed',
+      'milestone_reached',
+      'completed',
+      'archived',
+    ],
+    index: true,
   })
-  action: 'generated' | 'viewed' | 'started' | 'week_completed' | 'milestone_reached' | 'completed' | 'archived';
+  action:
+    | 'generated'
+    | 'viewed'
+    | 'started'
+    | 'week_completed'
+    | 'milestone_reached'
+    | 'completed'
+    | 'archived';
 
   @Prop({
     min: 1,
-    max: 52
+    max: 52,
   })
   week_number: number;
 
   @Prop({
     min: 1,
-    max: 52
+    max: 52,
   })
   milestone_week: number;
 
   @Prop({
     min: 0,
-    max: 100
+    max: 100,
   })
   progress_percentage: number;
 
   @Prop({
-    min: 0
+    min: 0,
   })
   time_spent_minutes: number;
 
@@ -68,7 +83,8 @@ export class RoadmapHistory {
   timestamp: Date;
 }
 
-export const RoadmapHistorySchema = SchemaFactory.createForClass(RoadmapHistory);
+export const RoadmapHistorySchema =
+  SchemaFactory.createForClass(RoadmapHistory);
 
 // Compound indexes for better query performance
 RoadmapHistorySchema.index({ roadmapId: 1, timestamp: -1 });

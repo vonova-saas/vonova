@@ -8,9 +8,12 @@ export class FavoriteController {
   constructor(private readonly favoriteService: FavoriteService) {}
 
   @MessagePattern({ cmd: 'library.favorite.toggle' })
-  createFavorite(@Payload() data: { itemType: ItemType; itemId: string; userId: string }) {
+  createFavorite(
+    @Payload() data: { itemType: ItemType; itemId: string; userId: string },
+  ) {
     const { itemType, itemId, userId } = data;
-    if (!itemType || !itemId || !userId) throw new Error('itemType, itemId and userId are required');
+    if (!itemType || !itemId || !userId)
+      throw new Error('itemType, itemId and userId are required');
 
     return this.favoriteService.toggleFavorite(itemType, itemId, userId);
   }

@@ -1,4 +1,16 @@
-import { IsString, IsOptional, IsBoolean, IsEnum, IsNumber, Min, Max, IsNotEmpty, IsArray, ArrayMinSize, ArrayMaxSize } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  Min,
+  Max,
+  IsNotEmpty,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
+} from 'class-validator';
 
 export class UploadPdfDto {
   @IsOptional()

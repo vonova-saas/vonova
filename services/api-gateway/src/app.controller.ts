@@ -6,7 +6,7 @@ import { Controller, Get } from '@nestjs/common';
 @ApiTags('Gateway')
 @Controller('api/v1')
 export class AppController {
-  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) { }
+  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) {}
 
   @Get()
   @ApiOperation({ summary: 'Get gateway status' })

@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { LessonProgress, LessonProgressDocument } from './schema/lesson-progress.schema';
+import {
+  LessonProgress,
+  LessonProgressDocument,
+} from './schema/lesson-progress.schema';
 import { Lesson } from '../lesson/schema/lesson.schema';
 import { EnrollService } from '../enroll/enroll.service';
-
 
 @Injectable()
 export class ProgressService {
@@ -16,7 +22,13 @@ export class ProgressService {
     private enrollmentService: EnrollService,
   ) {}
 
-  async markLessonComplete(courseId: string, lessonId: string, userId: string, completed = true, timeSpentSec?: number) {
+  async markLessonComplete(
+    courseId: string,
+    lessonId: string,
+    userId: string,
+    completed = true,
+    timeSpentSec?: number,
+  ) {
     const enrolled = await this.enrollmentService.isEnrolled(courseId, userId);
     if (!enrolled) throw new ForbiddenException('You must be enrolled');
 
@@ -41,7 +53,11 @@ export class ProgressService {
   async getMyCourseProgress(courseId: string, userId: string) {
     const [lessons, completed] = await Promise.all([
       this.lessonModel.countDocuments({ courseId }),
-      this.lessonProgressModel.countDocuments({ courseId, userId, completed: true }),
+      this.lessonProgressModel.countDocuments({
+        courseId,
+        userId,
+        completed: true,
+      }),
     ]);
 
     return {

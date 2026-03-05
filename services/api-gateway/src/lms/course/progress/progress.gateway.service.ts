@@ -9,17 +9,28 @@ export class ProgressGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  markLessonComplete(courseId: string, lessonId: string, userId: string, dto: MarkLessonCompleteDto) {
-    return this.client.send({ cmd: 'app.courses.progress.complete' }, { 
-      courseId, 
-      lessonId, 
-      userId, 
-      completed: dto.completed, 
-      timeSpentSec: dto.timeSpentSec 
-    });
+  markLessonComplete(
+    courseId: string,
+    lessonId: string,
+    userId: string,
+    dto: MarkLessonCompleteDto,
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.progress.complete' },
+      {
+        courseId,
+        lessonId,
+        userId,
+        completed: dto.completed,
+        timeSpentSec: dto.timeSpentSec,
+      },
+    );
   }
 
   getMyCourseProgress(courseId: string, userId: string) {
-    return this.client.send({ cmd: 'app.courses.progress.getMy' }, { courseId, userId });
+    return this.client.send(
+      { cmd: 'app.courses.progress.getMy' },
+      { courseId, userId },
+    );
   }
 }

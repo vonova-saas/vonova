@@ -1,6 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateGuideDto, UpdateGuideDto, PublishGuideDto } from './dto/guide.dto';
+import {
+  CreateGuideDto,
+  UpdateGuideDto,
+  PublishGuideDto,
+} from './dto/guide.dto';
 import { GuideService } from './guide.service';
 
 @Controller()
@@ -16,11 +20,30 @@ export class GuideController {
   }
 
   @MessagePattern({ cmd: 'library.guides.getAll' })
-  async listGuides(@Payload() data: { q?: string; topics?: string; level?: string; sort?: string; page?: number; limit?: number; status?: string }) {
+  async listGuides(
+    @Payload()
+    data: {
+      q?: string;
+      topics?: string;
+      level?: string;
+      sort?: string;
+      page?: number;
+      limit?: number;
+      status?: string;
+    },
+  ) {
     const { q, topics, level, sort, page, limit, status } = data || {};
     const topicsArray = topics ? topics.split(',') : undefined;
 
-    return this.guideService.listGuidesService({ q, topics: topicsArray, level, sort, page, limit, status });
+    return this.guideService.listGuidesService({
+      q,
+      topics: topicsArray,
+      level,
+      sort,
+      page,
+      limit,
+      status,
+    });
   }
 
   @MessagePattern({ cmd: 'library.guides.getById' })

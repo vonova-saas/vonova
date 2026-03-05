@@ -1,4 +1,11 @@
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateReviewCourseDto {
@@ -27,7 +34,8 @@ export class CreateReviewCourseDto {
 
   @ApiPropertyOptional({
     description: 'Detailed review content',
-    example: 'This course provided comprehensive coverage of JavaScript concepts with great examples and exercises.',
+    example:
+      'This course provided comprehensive coverage of JavaScript concepts with great examples and exercises.',
     maxLength: 2000,
     type: String,
   })

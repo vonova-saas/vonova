@@ -25,7 +25,10 @@ export class BookGatewayService {
 
   getBooks(query: GetBooksQueryDto) {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
-    return this.client.send({ cmd: 'book.getAll' }, { ...query, topics: topicsArray });
+    return this.client.send(
+      { cmd: 'book.getAll' },
+      { ...query, topics: topicsArray },
+    );
   }
 
   getBookById(id: string) {
@@ -40,8 +43,15 @@ export class BookGatewayService {
     return this.client.send({ cmd: 'book.update' }, { id, dto, userId });
   }
 
-  updateBookProgress(bookId: string, userId: string, body: UpdateBookProgressDto) {
-    return this.client.send({ cmd: 'book.updateProgress' }, { bookId, userId, ...body });
+  updateBookProgress(
+    bookId: string,
+    userId: string,
+    body: UpdateBookProgressDto,
+  ) {
+    return this.client.send(
+      { cmd: 'book.updateProgress' },
+      { bookId, userId, ...body },
+    );
   }
 
   deleteBook(id: string, userId: string) {

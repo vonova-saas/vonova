@@ -6,7 +6,7 @@ export class RoadmapGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) { }
+  ) {}
 
   generateRoadmap(data: any) {
     return this.client.send({ cmd: 'lms.ai.roadmap.generate' }, data);
