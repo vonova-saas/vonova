@@ -221,6 +221,7 @@ export class RoadmapService {
       request.topic,
       request.skill_level,
       request.duration_weeks,
+      request.userId,
     );
 
     return similar.length > 0
@@ -235,7 +236,8 @@ export class RoadmapService {
     existingRoadmap: IRoadmapData,
     request: IRoadmapRequest,
   ): boolean {
-    // Use cached roadmap if it's similar enough
+    // Only use cached roadmap if it belongs to the same user and is similar enough
+    if (existingRoadmap.userId !== request.userId) return false;
     return (
       existingRoadmap.topic.toLowerCase() === request.topic.toLowerCase() &&
       existingRoadmap.skill_level === request.skill_level &&
@@ -612,7 +614,7 @@ export class RoadmapService {
     }
   }
 
-  async getServiceStats(): Promise<{
+  async getServiceStats(userId?: string): Promise<{
     total_roadmaps: number;
     total_generations: number;
     active_roadmaps: number;
@@ -620,6 +622,9 @@ export class RoadmapService {
     roadmaps_by_status: Record<string, number>;
   }> {
     try {
+      const historyFilters = userId
+        ? { userId, startDate: undefined, endDate: undefined }
+        : { startDate: undefined, endDate: undefined };
       const [
         totalRoadmaps,
         totalGenerations,
@@ -627,14 +632,11 @@ export class RoadmapService {
         avgGenerationTime,
         roadmapsByStatus,
       ] = await Promise.all([
-        this.roadmapRepository.getTotalCount(),
-        this.roadmapHistoryRepository.getTotalCount({
-          startDate: undefined,
-          endDate: undefined,
-        }),
-        this.roadmapRepository.getActiveRoadmapsCount(),
-        this.roadmapRepository.getAverageGenerationTime(),
-        this.roadmapRepository.getRoadmapsByStatus(),
+        this.roadmapRepository.getTotalCount(userId ? { userId } : undefined),
+        this.roadmapHistoryRepository.getTotalCount(historyFilters),
+        this.roadmapRepository.getActiveRoadmapsCount(userId),
+        this.roadmapRepository.getAverageGenerationTime(userId),
+        this.roadmapRepository.getRoadmapsByStatus(userId),
       ]);
 
       return {

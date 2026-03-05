@@ -5,7 +5,6 @@ import { PdfSummaryService } from './pdf-summary.service';
 
 describe('PdfSummaryController', () => {
   let controller: PdfSummaryController;
-  let service: PdfSummaryService;
 
   const mockPdfSummaryService = {
     uploadPDF: jest.fn(),
@@ -31,7 +30,6 @@ describe('PdfSummaryController', () => {
     }).compile();
 
     controller = module.get<PdfSummaryController>(PdfSummaryController);
-    service = module.get<PdfSummaryService>(PdfSummaryService);
   });
 
   it('should be defined', () => {
@@ -40,7 +38,7 @@ describe('PdfSummaryController', () => {
 
   describe('healthCheck', () => {
     it('should return health status', () => {
-      const result = controller.healthCheck();
+      const result = controller.healthCheck({} as any, {} as any);
 
       expect(result).toBeDefined();
       expect(result.success).toBe(true);
@@ -60,7 +58,7 @@ describe('PdfSummaryController', () => {
         {} as any,
       );
 
-      expect(service.deleteSession).toHaveBeenCalledWith(
+      expect(mockPdfSummaryService.deleteSession).toHaveBeenCalledWith(
         'test-session-id',
         undefined,
       );
@@ -94,7 +92,7 @@ describe('PdfSummaryController', () => {
       );
 
       expect(result).toBeDefined();
-      expect(service.getFullSummary).toHaveBeenCalledWith(
+      expect(mockPdfSummaryService.getFullSummary).toHaveBeenCalledWith(
         'test-session',
         'test-user',
         '127.0.0.1',
@@ -152,10 +150,10 @@ describe('PdfSummaryController', () => {
         failed_session_ids: [],
       });
 
-      const result = await controller.bulkDeleteSessions(dto);
+      const result = await controller.bulkDeleteSessions(dto as any, {} as any);
 
       expect(result.success).toBe(true);
-      expect(service.bulkDeleteSessions).toHaveBeenCalled();
+      expect(mockPdfSummaryService.bulkDeleteSessions).toHaveBeenCalled();
     });
   });
 
@@ -168,7 +166,10 @@ describe('PdfSummaryController', () => {
 
       mockPdfSummaryService.getServiceStats.mockResolvedValue(mockStats);
 
-      const result = await controller.getServiceStats();
+      const result = await controller.getServiceStats(
+        { user_id: 'test-user' } as any,
+        {} as any,
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();

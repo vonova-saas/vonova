@@ -8,7 +8,7 @@ import { PdfSummaryService } from './pdf-summary.service';
 
 @Controller()
 export class PdfSummaryController {
-  constructor(private readonly pdfSummaryService: PdfSummaryService) {}
+  constructor(private readonly pdfSummaryService: PdfSummaryService) { }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
   async uploadPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -154,8 +154,16 @@ export class PdfSummaryController {
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.stats' })
-  async getServiceStats(@Payload() _data: any, @Ctx() _ctx: NatsContext) {
-    const stats = await this.pdfSummaryService.getServiceStats();
+  async getServiceStats(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    if (!userId) {
+      throw new BadRequestException('user_id is required');
+    }
+    const stats = await this.pdfSummaryService.getServiceStats(userId);
     return {
       success: true,
       message: 'Service statistics retrieved successfully',

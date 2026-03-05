@@ -67,19 +67,36 @@ export class PdfSummaryRepository {
     return result.deletedCount;
   }
 
-  async getTotalCount(): Promise<number> {
-    return this.pdfSummaryModel.countDocuments().exec();
+  async getTotalCount(userId?: string): Promise<number> {
+    const query: any = {};
+    if (userId) {
+      query.user_id = userId;
+    }
+    return this.pdfSummaryModel.countDocuments(query).exec();
   }
 
-  async getActiveSessionsCount(): Promise<number> {
-    return this.pdfSummaryModel.countDocuments({ status: 'completed' }).exec();
+  async getActiveSessionsCount(userId?: string): Promise<number> {
+    const query: any = { status: 'completed' };
+    if (userId) {
+      query.user_id = userId;
+    }
+    return this.pdfSummaryModel.countDocuments(query).exec();
   }
 
-  async getAverageProcessingTime(): Promise<number> {
+  async getAverageProcessingTime(userId?: string): Promise<number> {
+    const matchStage: any = {};
+    if (userId) {
+      matchStage.user_id = userId;
+    }
+
+    const pipeline: any[] = [];
+    if (Object.keys(matchStage).length > 0) {
+      pipeline.push({ $match: matchStage });
+    }
+    pipeline.push({ $group: { _id: null, avg: { $avg: '$processing_time_ms' } } });
+
     const result = await this.pdfSummaryModel
-      .aggregate([
-        { $group: { _id: null, avg: { $avg: '$processing_time_ms' } } },
-      ])
+      .aggregate(pipeline)
       .exec();
     return result.length > 0 ? result[0].avg || 0 : 0;
   }

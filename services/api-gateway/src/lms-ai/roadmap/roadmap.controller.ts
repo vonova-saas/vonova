@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
   Ip,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
@@ -44,15 +45,24 @@ export class RoadmapGatewayController {
     return firstValueFrom(this.roadmapService.getHealth());
   }
 
-  @Public()
   @Get('stats')
-  @ApiOperation({ summary: 'Get service statistics and metrics' })
+  @ApiOperation({
+    summary: 'Get service statistics and metrics',
+    description:
+      'Returns roadmap statistics for the authenticated user. When authenticated, only that user\'s roadmaps and generations are counted.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Statistics retrieved successfully',
   })
-  async getServiceStats() {
-    return firstValueFrom(this.roadmapService.getServiceStats());
+  async getServiceStats(@Request() req: any) {
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new UnauthorizedException(
+        'Authentication required to retrieve roadmap statistics',
+      );
+    }
+    return firstValueFrom(this.roadmapService.getServiceStats(userId));
   }
 
   @Public()

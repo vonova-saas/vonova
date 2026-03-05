@@ -51,8 +51,8 @@ export class PdfSummaryService {
       .replace('https://localhost', 'https://127.0.0.1');
     this.FALLBACK_PYTHON_SERVICE_URL = fallback
       ? fallback
-          .replace('http://localhost', 'http://127.0.0.1')
-          .replace('https://localhost', 'https://127.0.0.1')
+        .replace('http://localhost', 'http://127.0.0.1')
+        .replace('https://localhost', 'https://127.0.0.1')
       : undefined;
 
     this.logger.log(
@@ -201,8 +201,8 @@ export class PdfSummaryService {
           // Provide helpful message about re-uploading
           throw new BadRequestException(
             `Session expired in AI service (7-day TTL). Your PDF data is safely stored. ` +
-              `To continue chatting, please re-upload the same PDF file. ` +
-              `The system will recognize it and restore the session.`,
+            `To continue chatting, please re-upload the same PDF file. ` +
+            `The system will recognize it and restore the session.`,
           );
         }
       }
@@ -249,7 +249,34 @@ export class PdfSummaryService {
         throw new BadRequestException('Only PDF files are allowed');
       }
 
-      const fileContent = request.file.buffer;
+      // Normalize buffer coming over the wire (may be plain Buffer or { type: 'Buffer', data: [...] })
+      let fileContent: Buffer;
+      const rawBuffer = (request.file as any).buffer;
+
+      this.logger.debug(`Raw buffer type: ${typeof rawBuffer}, isBuffer: ${Buffer.isBuffer(rawBuffer)}`);
+
+      if (Buffer.isBuffer(rawBuffer)) {
+        fileContent = rawBuffer;
+      } else if (
+        rawBuffer &&
+        typeof rawBuffer === 'object' &&
+        rawBuffer.type === 'Buffer' &&
+        Array.isArray(rawBuffer.data)
+      ) {
+        fileContent = Buffer.from(rawBuffer.data);
+      } else if (rawBuffer && typeof rawBuffer === 'object' && Array.isArray((rawBuffer as any).data)) {
+        // Handle case where it's just { data: [...] } without type: 'Buffer'
+        fileContent = Buffer.from((rawBuffer as any).data);
+      } else {
+        this.logger.error('Invalid file buffer received', {
+          type: typeof rawBuffer,
+          hasBuffer: !!rawBuffer,
+          keys: rawBuffer ? Object.keys(rawBuffer) : [],
+          rawBuffer: rawBuffer
+        });
+        throw new BadRequestException('Invalid file buffer received');
+      }
+
       const filename = request.file.originalname;
       const fileSize = fileContent.length;
       const totalPages = await this.extractPageCount(fileContent);
@@ -505,15 +532,15 @@ export class PdfSummaryService {
           if (dbSummary) {
             throw new BadRequestException(
               `Session expired in AI service. Sessions expire after 7 days in the AI service for performance reasons, ` +
-                `but your session data is stored in the database. Please re-upload the PDF to recreate the session. ` +
-                `Session ID: ${sessionId}`,
+              `but your session data is stored in the database. Please re-upload the PDF to recreate the session. ` +
+              `Session ID: ${sessionId}`,
             );
           }
 
           // No session found anywhere
           throw new BadRequestException(
             `Session not found. The session may have expired or the AI service was restarted. ` +
-              `Please re-upload the PDF to create a new session.`,
+            `Please re-upload the PDF to create a new session.`,
           );
         }
 
@@ -800,14 +827,14 @@ export class PdfSummaryService {
             // Session exists in database but expired in AI service (7-day TTL)
             throw new BadRequestException(
               `Session expired in AI service. Sessions in the AI service expire after 7 days for performance reasons, ` +
-                `but your data is safely stored in the database. Please re-upload the PDF to recreate the session in the AI service. ` +
-                `The session ID will remain the same: ${dbSummary.session_id}`,
+              `but your data is safely stored in the database. Please re-upload the PDF to recreate the session in the AI service. ` +
+              `The session ID will remain the same: ${dbSummary.session_id}`,
             );
           } else {
             // Session doesn't exist in either place
             throw new BadRequestException(
               `Session not found. The session may have expired or the AI service was restarted. ` +
-                `Please re-upload the PDF to create a new session.`,
+              `Please re-upload the PDF to create a new session.`,
             );
           }
         }
@@ -824,8 +851,8 @@ export class PdfSummaryService {
       if (responseData.status === false) {
         throw new Error(
           responseData.error ||
-            responseData.detail ||
-            'Python service returned error',
+          responseData.detail ||
+          'Python service returned error',
         );
       }
 
@@ -988,8 +1015,51 @@ export class PdfSummaryService {
     const pageMatches = content.match(/\/Count\s+(\d+)/);
     return pageMatches && pageMatches[1] ? parseInt(pageMatches[1]) : 1;
   }
-
   private generateFileHash(content: Buffer): string {
+    // Ensure content is a Buffer
+    if (!Buffer.isBuffer(content)) {
+      this.logger.error(`generateFileHash received non-Buffer content: ${typeof content}`, content);
+
+      // Try to convert if it's an object with Buffer-like structure
+      if (content && typeof content === 'object') {
+        try {
+          const contentObj = content as any;
+          // Handle { type: 'Buffer', data: [...] } format
+          if (contentObj.type === 'Buffer' && Array.isArray(contentObj.data)) {
+            content = Buffer.from(contentObj.data);
+          }
+          // Handle { data: [...] } format
+          else if (Array.isArray(contentObj.data)) {
+            content = Buffer.from(contentObj.data);
+          }
+          // Handle Uint8Array
+          else if (contentObj instanceof Uint8Array) {
+            content = Buffer.from(contentObj);
+          }
+          // Handle Array
+          else if (Array.isArray(contentObj)) {
+            content = Buffer.from(contentObj);
+          }
+          else {
+            throw new Error(`Expected Buffer but received ${typeof content} with keys: ${Object.keys(contentObj)}`);
+          }
+        } catch (conversionError) {
+          this.logger.error(`Failed to convert content to Buffer:`, conversionError);
+          throw new Error(`Expected Buffer but received ${typeof content}: ${conversionError instanceof Error ? conversionError.message : 'Unknown conversion error'}`);
+        }
+      } else if (typeof content === 'string') {
+        // Convert string to Buffer
+        content = Buffer.from(content, 'utf8');
+      } else {
+        throw new Error(`Expected Buffer but received ${typeof content}`);
+      }
+    }
+
+    // Double-check we have a Buffer before proceeding
+    if (!Buffer.isBuffer(content)) {
+      throw new Error(`Failed to convert content to Buffer, final type: ${typeof content}`);
+    }
+
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
@@ -1081,7 +1151,7 @@ export class PdfSummaryService {
     }
   }
 
-  async getServiceStats(): Promise<{
+  async getServiceStats(userId?: string): Promise<{
     total_summaries: number;
     total_chats: number;
     active_sessions: number;
@@ -1090,10 +1160,10 @@ export class PdfSummaryService {
     try {
       const [totalSummaries, totalChats, activeSessions, avgProcessingTime] =
         await Promise.all([
-          this.pdfSummaryRepository.getTotalCount(),
-          this.pdfChatHistoryRepository.getTotalCount(),
-          this.pdfSummaryRepository.getActiveSessionsCount(),
-          this.pdfSummaryRepository.getAverageProcessingTime(),
+          this.pdfSummaryRepository.getTotalCount(userId),
+          this.pdfChatHistoryRepository.getTotalCount({ userId }),
+          this.pdfSummaryRepository.getActiveSessionsCount(userId),
+          this.pdfSummaryRepository.getAverageProcessingTime(userId),
         ]);
 
       return {

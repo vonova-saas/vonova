@@ -26,8 +26,9 @@ export class RoadmapController {
   }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.stats' })
-  async getServiceStats(@Payload() _data: any, @Ctx() _ctx: NatsContext) {
-    const stats = await this.roadmapService.getServiceStats();
+  async getServiceStats(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const userId = data?.userId;
+    const stats = await this.roadmapService.getServiceStats(userId);
     return {
       success: true,
       message: 'Service statistics retrieved successfully',

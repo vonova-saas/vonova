@@ -48,8 +48,8 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.deleteSession' }, data);
   }
 
-  getServiceStats() {
-    return this.client.send({ cmd: 'lms.ai.pdf.stats' }, {});
+  getServiceStats(data: { user_id?: string }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.stats' }, data);
   }
 
   bulkDeleteSessions(data: { session_ids: string[]; user_id?: string }) {

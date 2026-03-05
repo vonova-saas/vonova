@@ -298,8 +298,17 @@ export class PdfSummaryGatewayController {
     status: 200,
     description: 'Statistics retrieved successfully',
   })
-  async getServiceStats() {
-    return firstValueFrom(this.pdfSummaryService.getServiceStats());
+  async getServiceStats(@Request() req: any) {
+    const rawUserId = req?.user?._id ?? req?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    return firstValueFrom(
+      this.pdfSummaryService.getServiceStats({
+        user_id: userId,
+      }),
+    );
   }
 
   @Post('batch/delete')

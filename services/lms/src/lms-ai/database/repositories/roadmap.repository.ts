@@ -35,13 +35,18 @@ export class RoadmapRepository {
     topic: string,
     skillLevel: string,
     durationWeeks: number,
+    userId?: string,
   ): Promise<RoadmapDocument[]> {
+    const query: Record<string, unknown> = {
+      topic: new RegExp(topic, 'i'),
+      skill_level: skillLevel,
+      duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 },
+    };
+    if (userId?.trim()) {
+      query.userId = userId.trim();
+    }
     return this.roadmapModel
-      .find({
-        topic: new RegExp(topic, 'i'),
-        skill_level: skillLevel,
-        duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 },
-      })
+      .find(query)
       .sort({ created_at: -1 })
       .limit(5)
       .exec();
@@ -90,18 +95,22 @@ export class RoadmapRepository {
     return this.roadmapModel.countDocuments(query).exec();
   }
 
-  async getActiveRoadmapsCount(): Promise<number> {
-    return this.roadmapModel
-      .countDocuments({ status: { $in: ['generated', 'in_progress'] } })
-      .exec();
+  async getActiveRoadmapsCount(userId?: string): Promise<number> {
+    const query: Record<string, unknown> = {
+      status: { $in: ['generated', 'in_progress'] },
+    };
+    if (userId?.trim()) query.userId = userId.trim();
+    return this.roadmapModel.countDocuments(query).exec();
   }
 
-  async getAverageGenerationTime(): Promise<number> {
+  async getAverageGenerationTime(userId?: string): Promise<number> {
+    const match: Record<string, unknown> = {
+      generation_time_ms: { $exists: true, $ne: null },
+    };
+    if (userId?.trim()) match.userId = userId.trim();
     const result = await this.roadmapModel
       .aggregate([
-        {
-          $match: { generation_time_ms: { $exists: true, $ne: null } },
-        },
+        { $match: match },
         {
           $group: {
             _id: null,
@@ -113,17 +122,13 @@ export class RoadmapRepository {
     return result.length > 0 ? result[0].avgTime : 0;
   }
 
-  async getRoadmapsByStatus(): Promise<Record<string, number>> {
-    const result = await this.roadmapModel
-      .aggregate([
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-          },
-        },
-      ])
-      .exec();
+  async getRoadmapsByStatus(userId?: string): Promise<Record<string, number>> {
+    const pipeline: any[] = [];
+    if (userId?.trim()) {
+      pipeline.push({ $match: { userId: userId.trim() } });
+    }
+    pipeline.push({ $group: { _id: '$status', count: { $sum: 1 } } });
+    const result = await this.roadmapModel.aggregate(pipeline).exec();
     const statusMap: Record<string, number> = {};
     result.forEach((item) => {
       statusMap[item._id] = item.count;
