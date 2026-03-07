@@ -12,6 +12,8 @@ import { Account } from './schema/account.schema';
 import { RefreshToken } from './schema/refreshToken.schema';
 import { EmailVerification } from './schema/emailVerification.schema';
 import { PasswordReset } from './schema/passwordReset.schema';
+import { WaitlistService } from '../waitlist/waitlist.service';
+import { NotificationService } from '../notification/notification.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -27,6 +29,8 @@ describe('AuthService', () => {
     create: jest.fn(),
   } as any;
   const passwordResetModelMock = {} as any;
+  const waitlistServiceMock = {} as any;
+  const notificationServiceMock = {} as any;
 
   const jwtServiceMock = {
     sign: jest.fn().mockReturnValue('signed-token'),
@@ -54,6 +58,8 @@ describe('AuthService', () => {
           useValue: passwordResetModelMock,
         },
         { provide: JwtService, useValue: jwtServiceMock },
+        { provide: WaitlistService, useValue: waitlistServiceMock },
+        { provide: NotificationService, useValue: notificationServiceMock },
       ],
     }).compile();
 

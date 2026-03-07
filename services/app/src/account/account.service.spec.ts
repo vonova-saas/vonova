@@ -1,31 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountService } from './account.service';
 import { getModelToken } from '@nestjs/mongoose';
-import { UserAccount } from './schema/account.schema';
+import { User } from '../auth/schema/user.schema';
 import { RpcException } from '@nestjs/microservices';
 import { UpdateAccountDto } from './dto/update-account.dto';
 
 describe('AccountService', () => {
   let service: AccountService;
-  let accountModelMock: {
-    findOne: jest.Mock;
-    create: jest.Mock;
+  let userModelMock: {
+    findById: jest.Mock;
     findOneAndUpdate: jest.Mock;
   };
 
   const mockUserId = '507f1f77bcf86cd799439011';
-  const mockAccount = {
-    _id: '507f1f77bcf86cd799439012',
-    userId: mockUserId,
+  const mockUser = {
+    _id: mockUserId,
     name: 'John Doe',
     email: 'john@example.com',
-    avatarUrl: null,
+    profilePictureUrl: null,
+    bio: null,
+    dateOfBirth: null,
+    address: null,
   };
 
   beforeEach(async () => {
-    accountModelMock = {
-      findOne: jest.fn(),
-      create: jest.fn(),
+    userModelMock = {
+      findById: jest.fn(),
       findOneAndUpdate: jest.fn(),
     };
 
@@ -33,8 +33,8 @@ describe('AccountService', () => {
       providers: [
         AccountService,
         {
-          provide: getModelToken(UserAccount.name),
-          useValue: accountModelMock,
+          provide: getModelToken(User.name),
+          useValue: userModelMock,
         },
       ],
     }).compile();
@@ -47,86 +47,107 @@ describe('AccountService', () => {
   });
 
   describe('findOne', () => {
-    it('should return existing account', async () => {
-      accountModelMock.findOne.mockResolvedValue(mockAccount);
+    it('should return existing user account', async () => {
+      userModelMock.findById.mockResolvedValue(mockUser);
 
       const result = await service.findOne(mockUserId);
 
-      expect(accountModelMock.findOne).toHaveBeenCalledWith({
-        userId: mockUserId,
-      });
+      expect(userModelMock.findById).toHaveBeenCalledWith(mockUserId);
       expect(result).toEqual({
         message: 'User account found successfully',
-        data: mockAccount,
+        data: {
+          _id: mockUser._id,
+          userId: mockUser._id,
+          name: mockUser.name,
+          email: mockUser.email,
+          avatarUrl: mockUser.profilePictureUrl,
+          bio: mockUser.bio || '',
+          dateOfBirth: mockUser.dateOfBirth || null,
+          address: mockUser.address || '',
+        },
       });
     });
 
-    it('should create account when not found but defaults provided', async () => {
-      accountModelMock.findOne.mockResolvedValue(null);
-
-      const createdAccount = { ...mockAccount };
-      accountModelMock.create.mockResolvedValue(createdAccount);
-
-      const defaults = {
-        name: 'John Doe',
-        email: 'john@example.com',
-        avatarUrl: 'http://example.com/avatar.png',
-      };
-
-      const result = await service.findOne(mockUserId, defaults);
-
-      expect(accountModelMock.findOne).toHaveBeenCalledWith({
-        userId: mockUserId,
-      });
-      expect(accountModelMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: defaults.name,
-          email: defaults.email,
-          avatarUrl: defaults.avatarUrl,
-        }),
-      );
-      expect(result).toEqual({
-        message: 'User account found successfully',
-        data: createdAccount,
-      });
-    });
-
-    it('should throw RpcException when not found and no defaults', async () => {
-      accountModelMock.findOne.mockResolvedValue(null);
+    it('should throw RpcException when user not found', async () => {
+      userModelMock.findById.mockResolvedValue(null);
 
       await expect(service.findOne(mockUserId)).rejects.toThrow(RpcException);
     });
   });
 
   describe('update', () => {
-    it('should update account and return updated data', async () => {
-      const updated = { ...mockAccount, name: 'New Name' };
-      accountModelMock.findOneAndUpdate.mockReturnValue({
-        lean: jest.fn().mockResolvedValue(updated),
+    it('should update user account and return updated data', async () => {
+      const updatedUser = { ...mockUser, name: 'New Name' };
+      userModelMock.findById.mockResolvedValue(mockUser);
+      userModelMock.findOneAndUpdate.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(updatedUser),
       } as any);
 
       const dto = { name: 'New Name' } as UpdateAccountDto;
       const result = await service.update(mockUserId, dto);
 
-      expect(accountModelMock.findOneAndUpdate).toHaveBeenCalledWith(
-        { userId: mockUserId },
-        { $set: dto },
-        { upsert: true, new: true, runValidators: true },
+      expect(userModelMock.findById).toHaveBeenCalledWith(mockUserId);
+      expect(userModelMock.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: mockUserId },
+        {
+          $set: {
+            name: 'New Name',
+          },
+        },
+        { new: true, runValidators: true },
       );
       expect(result).toEqual({
         message: 'User account updated successfully',
-        data: updated,
+        data: {
+          _id: updatedUser._id,
+          userId: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          avatarUrl: updatedUser.profilePictureUrl,
+          bio: updatedUser.bio || '',
+          dateOfBirth: updatedUser.dateOfBirth || null,
+          address: updatedUser.address || '',
+        },
       });
     });
 
-    it('should throw RpcException when update returns null', async () => {
-      accountModelMock.findOneAndUpdate.mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null),
-      } as any);
+    it('should throw RpcException when user not found for update', async () => {
+      userModelMock.findById.mockResolvedValue(null);
 
       await expect(
         service.update(mockUserId, { name: 'New Name' } as UpdateAccountDto),
       ).rejects.toThrow(RpcException);
+    });
+
+    it('should update only provided fields', async () => {
+      const updatedUser = {
+        ...mockUser,
+        profilePictureUrl: 'new-avatar.jpg',
+        bio: 'New bio',
+      };
+      userModelMock.findById.mockResolvedValue(mockUser);
+      userModelMock.findOneAndUpdate.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(updatedUser),
+      } as any);
+
+      const dto = {
+        avatarUrl: 'new-avatar.jpg',
+        bio: 'New bio',
+      } as UpdateAccountDto;
+      const result = await service.update(mockUserId, dto);
+
+      expect(userModelMock.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: mockUserId },
+        {
+          $set: {
+            profilePictureUrl: 'new-avatar.jpg',
+            bio: 'New bio',
+          },
+        },
+        { new: true, runValidators: true },
+      );
+      expect(result.data.avatarUrl).toBe('new-avatar.jpg');
+      expect(result.data.bio).toBe('New bio');
     });
   });
 });

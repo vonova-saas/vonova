@@ -22,7 +22,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { BookGatewayService } from './book.gateway.service';
 import {
   CreateBookDto,

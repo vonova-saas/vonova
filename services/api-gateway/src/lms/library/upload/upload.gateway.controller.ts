@@ -17,7 +17,7 @@ import {
   ApiHeader,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { UploadGatewayService } from './upload.gateway.service';
 import { CompleteDto, PresignDto } from './dto/upload.dto';
 

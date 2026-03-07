@@ -16,19 +16,18 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { ReviewGatewayService } from './review.gateway.service';
-import { CreateOrUpdateReviewDto, ListReviewsQuery } from './dto/review.dto';
+import { CreateOrUpdateReviewDto } from './dto/review.dto';
 
 @ApiTags('LMS Library Reviews')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/items')
 @UseGuards(JwtAuthGuard)
 export class ReviewGatewayController {
-  constructor(private readonly reviewService: ReviewGatewayService) {}
+  constructor(private readonly reviewService: ReviewGatewayService) { }
 
   @ApiOperation({
     summary: 'Create or update review',
