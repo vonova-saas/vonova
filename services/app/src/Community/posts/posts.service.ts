@@ -29,8 +29,15 @@ export class PostsService {
     return new Types.ObjectId(id);
   }
 
-  private isOwnerOrAdmin(resourceAuthorId: string, userId: string, role: string): boolean {
-    return resourceAuthorId.toString() === userId.toString() || role === Role.INSTRUCTOR_USER;
+  private isOwnerOrAdmin(
+    resourceAuthorId: string,
+    userId: string,
+    role: string,
+  ): boolean {
+    return (
+      resourceAuthorId.toString() === userId.toString() ||
+      role === Role.INSTRUCTOR_USER
+    );
   }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
@@ -107,7 +114,12 @@ export class PostsService {
     };
   }
 
-  async updatePost(postId: string, userId: string, role: string, dto: UpdatePostDto) {
+  async updatePost(
+    postId: string,
+    userId: string,
+    role: string,
+    dto: UpdatePostDto,
+  ) {
     const post = await this.postModel.findById(this.toObjectId(postId));
 
     if (!post) throw new NotFoundErr('Post not found');
@@ -174,7 +186,9 @@ export class PostsService {
 
     if (alreadyLiked) {
       // Unlike
-      post.likes = post.likes.filter((id) => id.toString() !== userId.toString()) as any;
+      post.likes = post.likes.filter(
+        (id) => id.toString() !== userId.toString(),
+      ) as any;
       post.likesCount = Math.max(0, post.likesCount - 1);
     } else {
       // Like
