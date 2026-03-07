@@ -5,11 +5,11 @@ import { Course } from '../course/schema/course.schema';
 import { Enrollment, EnrollmentDocument } from './schema/enrollment.schema';
 import { Lesson } from '../lesson/schema/lesson.schema';
 
-
 @Injectable()
 export class EnrollService {
   constructor(
-    @InjectModel(Enrollment.name) private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Enrollment.name)
+    private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Course.name) private courseModel: Model<Course>,
     @InjectModel(Lesson.name) private lessonModel: Model<Lesson>,
   ) {}

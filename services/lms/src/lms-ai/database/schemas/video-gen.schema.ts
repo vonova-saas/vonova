@@ -5,7 +5,7 @@ export type VideoGenDocument = VideoGen & Document;
 
 @Schema({
   collection: 'VIDEO_GEN',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class VideoGen {
   @Prop({ required: true, unique: true, index: true })
@@ -29,7 +29,7 @@ export class VideoGen {
   @Prop({
     enum: ['pending', 'processing', 'completed', 'failed'],
     default: 'pending',
-    index: true
+    index: true,
   })
   status: 'pending' | 'processing' | 'completed' | 'failed';
 
@@ -64,4 +64,3 @@ export const VideoGenSchema = SchemaFactory.createForClass(VideoGen);
 VideoGenSchema.index({ userId: 1, created_at: -1 });
 VideoGenSchema.index({ status: 1, created_at: -1 });
 VideoGenSchema.index({ ai_model_used: 1, created_at: -1 });
-

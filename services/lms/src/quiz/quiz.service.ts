@@ -17,14 +17,19 @@ export class QuizService {
     @InjectModel(QuizAnswer.name) private answerModel: Model<QuizAnswer>,
   ) {}
 
-  async createQuiz(dto: CreateQuizDto) {
-    const quiz = await this.quizModel.create({ ...dto });
+  async createQuiz(dto: CreateQuizDto, userId: string) {
+    const quiz = await this.quizModel.create({ ...dto, createdBy: userId });
     return quiz;
   }
 
-  async updateQuiz(quizId: string, dto: UpdateQuizDto) {
+  async updateQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Optional: Add authorization check to ensure user can update this quiz
+    if (quiz.createdBy.toString() !== userId) {
+      throw new NotFoundException('Quiz not found or access denied');
+    }
 
     if (dto.title) quiz.title = dto.title;
     if (dto.description) quiz.description = dto.description;
@@ -46,18 +51,21 @@ export class QuizService {
     return quiz;
   }
 
-  async getAllQuizzes() {
-    return this.quizModel.find();
+  async getAllQuizzes(userId: string) {
+    return this.quizModel.find({ createdBy: userId });
   }
 
-  async getQuizById(id: string) {
-    const quiz = await this.quizModel.findById(id);
+  async getQuizById(quizId: string) {
+    const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
     return quiz;
   }
 
-  async deleteQuiz(id: string) {
-    const quiz = await this.quizModel.findById(id);
+  async deleteQuiz(quizId: string, userId: string) {
+    const quiz = await this.quizModel.findOne({
+      _id: quizId,
+      createdBy: userId,
+    });
     if (!quiz) throw new NotFoundException('Quiz not found');
 
     await quiz.deleteOne();
@@ -95,7 +103,7 @@ export class QuizService {
 
     const attempt = await this.answerModel.create({
       quiz: quiz._id,
-      userId: 'temp-user', // remove auth now
+      userId: 'student', // Default for student submissions
       answers: formatted,
       score,
       total,
@@ -111,7 +119,9 @@ export class QuizService {
     return attempt;
   }
 
-  async getMyAttemptsForQuiz(quizId: string) {
-    return this.answerModel.find({ quiz: quizId }).sort({ createdAt: -1 });
+  async getMyAttemptsForQuiz(quizId: string, userId: string) {
+    return this.answerModel
+      .find({ quiz: quizId, userId })
+      .sort({ createdAt: -1 });
   }
 }

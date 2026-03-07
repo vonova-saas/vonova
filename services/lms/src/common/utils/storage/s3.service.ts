@@ -21,26 +21,49 @@ export class S3Service {
     });
   }
 
-  async getPresignedPutUrl(objectKey: string, contentType: string, expiresInSeconds = Number(process.env.S3_PRESIGN_EXPIRES) || 180): Promise<string> {
-    const command = new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: objectKey, ContentType: contentType });
+  async getPresignedPutUrl(
+    objectKey: string,
+    contentType: string,
+    expiresInSeconds = Number(process.env.S3_PRESIGN_EXPIRES) || 180,
+  ): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: objectKey,
+      ContentType: contentType,
+    });
     return getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
   }
 
-  async getPresignedGetUrl(objectKey: string, expiresInSeconds = Number(process.env.S3_PRESIGN_EXPIRES) || 180): Promise<string> {
-    const command = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: objectKey });
+  async getPresignedGetUrl(
+    objectKey: string,
+    expiresInSeconds = Number(process.env.S3_PRESIGN_EXPIRES) || 180,
+  ): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: objectKey,
+    });
     return getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
   }
 
   async headObjectExists(objectKey: string): Promise<boolean> {
     try {
-      await this.s3.send(new HeadObjectCommand({ Bucket: process.env.S3_BUCKET, Key: objectKey }));
+      await this.s3.send(
+        new HeadObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: objectKey,
+        }),
+      );
       return true;
     } catch (err) {
       return false;
     }
   }
 
-  generateObjectKey(courseId: string, lessonId: string, fileName: string): string {
+  generateObjectKey(
+    courseId: string,
+    lessonId: string,
+    fileName: string,
+  ): string {
     const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     return `courses/${courseId}/lessons/${lessonId}/${Date.now()}_${sanitized}`;
   }

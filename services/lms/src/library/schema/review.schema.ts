@@ -5,10 +5,20 @@ export type LibraryReviewDocument = LibraryReview & Document;
 
 @Schema({ timestamps: true })
 export class LibraryReview {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   userId: mongoose.Schema.Types.ObjectId;
 
-  @Prop({ type: String, enum: ['BOOK', 'GUIDE', 'PRESENTATION'], required: true, index: true })
+  @Prop({
+    type: String,
+    enum: ['BOOK', 'GUIDE', 'PRESENTATION'],
+    required: true,
+    index: true,
+  })
   itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION';
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, required: true, index: true })
@@ -26,4 +36,7 @@ export class LibraryReview {
 
 export const LibraryReviewSchema = SchemaFactory.createForClass(LibraryReview);
 
-LibraryReviewSchema.index({ userId: 1, itemType: 1, itemId: 1 }, { unique: true });
+LibraryReviewSchema.index(
+  { userId: 1, itemType: 1, itemId: 1 },
+  { unique: true },
+);

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export interface Option {
   id: string;
@@ -69,8 +69,8 @@ export class Quiz extends Document implements QuizDocument {
   @Prop({ type: [QuestionSchema], default: [] })
   questions: Question[];
 
-  // @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  // createdBy: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: Types.ObjectId;
 
   createdAt: Date;
   updatedAt: Date;

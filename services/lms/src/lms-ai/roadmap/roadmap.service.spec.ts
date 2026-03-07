@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { RoadmapService } from './roadmap.service';
 import { RoadmapRepository } from '../database/repositories/roadmap.repository';
 import { RoadmapHistoryRepository } from '../database/repositories/roadmap-history.repository';
@@ -17,14 +20,19 @@ describe('RoadmapService', () => {
     create: jest.fn(),
     updateStatus: jest.fn(),
     deleteById: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helpers
+    getTotalCount: jest.fn(),
+    getActiveRoadmapsCount: jest.fn(),
+    getAverageGenerationTime: jest.fn(),
+    getRoadmapsByStatus: jest.fn(),
+  } as unknown as jest.Mocked<RoadmapRepository>;
 
   const mockRoadmapHistoryRepository = {
     create: jest.fn(),
     findByRoadmapId: jest.fn(),
-    count: jest.fn(),
-  };
+    // Stats helper
+    getTotalCount: jest.fn(),
+  } as unknown as jest.Mocked<RoadmapHistoryRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -80,23 +88,26 @@ describe('RoadmapService', () => {
 
     it('should throw BadRequestException for missing topic', async () => {
       await expect(
-        service.generateRoadmap({ ...validRequest, topic: '' })
+        service.generateRoadmap({ ...validRequest, topic: '' }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for invalid skill level', async () => {
       await expect(
-        service.generateRoadmap({ ...validRequest, skill_level: 'invalid' as any })
+        service.generateRoadmap({
+          ...validRequest,
+          skill_level: 'invalid' as any,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for invalid duration', async () => {
       await expect(
-        service.generateRoadmap({ ...validRequest, duration_weeks: 0 })
+        service.generateRoadmap({ ...validRequest, duration_weeks: 0 }),
       ).rejects.toThrow(BadRequestException);
 
       await expect(
-        service.generateRoadmap({ ...validRequest, duration_weeks: 53 })
+        service.generateRoadmap({ ...validRequest, duration_weeks: 53 }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -105,7 +116,7 @@ describe('RoadmapService', () => {
         service.generateRoadmap({
           ...validRequest,
           focus_areas: Array(11).fill('area'),
-        })
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -163,9 +174,9 @@ describe('RoadmapService', () => {
     it('should throw BadRequestException when roadmap not found', async () => {
       roadmapRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.getRoadmapById('non-existent-id')
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.getRoadmapById('non-existent-id')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -174,7 +185,7 @@ describe('RoadmapService', () => {
       roadmapRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateProgress('non-existent-id', 'user-123', 1)
+        service.updateProgress('non-existent-id', 'user-123', 1),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -188,9 +199,18 @@ describe('RoadmapService', () => {
       roadmapRepository.updateStatus.mockResolvedValue(undefined);
       roadmapHistoryRepository.create.mockResolvedValue(undefined as any);
 
-      await service.updateProgress('test-id', 'user-123', undefined, undefined, 100);
+      await service.updateProgress(
+        'test-id',
+        'user-123',
+        undefined,
+        undefined,
+        100,
+      );
 
-      expect(roadmapRepository.updateStatus).toHaveBeenCalledWith('test-id', 'completed');
+      expect(roadmapRepository.updateStatus).toHaveBeenCalledWith(
+        'test-id',
+        'completed',
+      );
     });
 
     it('should update roadmap status to in_progress when progress > 0', async () => {
@@ -203,22 +223,40 @@ describe('RoadmapService', () => {
       roadmapRepository.updateStatus.mockResolvedValue(undefined);
       roadmapHistoryRepository.create.mockResolvedValue(undefined as any);
 
-      await service.updateProgress('test-id', 'user-123', undefined, undefined, 50);
+      await service.updateProgress(
+        'test-id',
+        'user-123',
+        undefined,
+        undefined,
+        50,
+      );
 
-      expect(roadmapRepository.updateStatus).toHaveBeenCalledWith('test-id', 'in_progress');
+      expect(roadmapRepository.updateStatus).toHaveBeenCalledWith(
+        'test-id',
+        'in_progress',
+      );
     });
   });
 
   describe('getServiceStats', () => {
     it('should return service statistics', async () => {
-      (roadmapRepository as any).count = jest.fn().mockResolvedValue(10);
-      (roadmapHistoryRepository as any).count = jest.fn().mockResolvedValue(50);
+      roadmapRepository.getTotalCount.mockResolvedValue(10);
+      roadmapHistoryRepository.getTotalCount.mockResolvedValue(50);
+      roadmapRepository.getActiveRoadmapsCount.mockResolvedValue(3);
+      roadmapRepository.getAverageGenerationTime.mockResolvedValue(1200);
+      roadmapRepository.getRoadmapsByStatus.mockResolvedValue({
+        generated: 5,
+        in_progress: 3,
+        completed: 2,
+      });
 
       const result = await service.getServiceStats();
 
       expect(result).toBeDefined();
-      expect(result.total_roadmaps).toBeDefined();
+      expect(result.total_roadmaps).toBe(10);
+      expect(result.total_generations).toBe(50);
+      expect(result.active_roadmaps).toBe(3);
+      expect(result.roadmaps_by_status.generated).toBe(5);
     });
   });
 });
-

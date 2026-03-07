@@ -1,37 +1,62 @@
-import { Controller, Post, Param, Body, Headers, Req } from '@nestjs/common';
-import type { Request } from 'express';
-import { CompleteDto, PresignDto } from './dto/upload.dto';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UploadService } from './upload.service';
 
-
-@Controller('library/items')
+@Controller()
 export class UploadController {
-constructor(private readonly uploadService: UploadService) {}
+  constructor(private readonly uploadService: UploadService) {}
 
+  @MessagePattern({ cmd: 'library.upload.presign' })
+  async presign(
+    @Payload()
+    data: {
+      itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION';
+      itemId: string;
+      ownerId: string;
+      fileName: string;
+      mimeType: string;
+      size: number;
+    },
+  ) {
+    const { itemType, itemId, ownerId, fileName, mimeType, size } = data;
+    if (!itemType || !itemId || !ownerId || !fileName || !mimeType || !size)
+      throw new Error(
+        'itemType, itemId, ownerId, fileName, mimeType and size are required',
+      );
 
-@Post(':itemType/:itemId/file/presign')
-async presign(
-@Param('itemType') itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
-@Param('itemId') itemId: string,
-@Body() body: PresignDto,
-@Req() req: Request,
-@Headers('x-user-id') xUserId?: string,
-) {
-// Auth removed as requested — ownerId resolved from req.user?.id or header x-user-id
-const ownerId = (req as any).user?.id ?? xUserId;
-return this.uploadService.presignFile(itemType, itemId, ownerId, body.fileName, body.mimeType, body.size);
-}
+    return this.uploadService.presignFile(
+      itemType,
+      itemId,
+      ownerId,
+      fileName,
+      mimeType,
+      size,
+    );
+  }
 
+  @MessagePattern({ cmd: 'library.upload.complete' })
+  async complete(
+    @Payload()
+    data: {
+      itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION';
+      itemId: string;
+      ownerId: string;
+      assetId: string;
+      objectKey: string;
+    },
+  ) {
+    const { itemType, itemId, ownerId, assetId, objectKey } = data;
+    if (!itemType || !itemId || !ownerId || !assetId || !objectKey)
+      throw new Error(
+        'itemType, itemId, ownerId, assetId and objectKey are required',
+      );
 
-@Post(':itemType/:itemId/file/complete')
-async complete(
-@Param('itemType') itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
-@Param('itemId') itemId: string,
-@Body() body: CompleteDto,
-@Req() req: Request,
-@Headers('x-user-id') xUserId?: string,
-) {
-const ownerId = (req as any).user?.id ?? xUserId;
-return this.uploadService.completeUpload(itemType, itemId, ownerId, body.assetId, body.objectKey);
-}
+    return this.uploadService.completeUpload(
+      itemType,
+      itemId,
+      ownerId,
+      assetId,
+      objectKey,
+    );
+  }
 }

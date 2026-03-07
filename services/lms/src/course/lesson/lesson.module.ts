@@ -6,7 +6,6 @@ import { Lesson, LessonSchema } from './schema/lesson.schema';
 import { Course, CourseSchema } from '../course/schema/course.schema';
 import { Chapter, ChapterSchema } from '../chapter/schema/chapter.schema';
 
-
 @Module({
   imports: [
     MongooseModule.forFeature([

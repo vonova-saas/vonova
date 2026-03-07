@@ -1,25 +1,28 @@
-import { Controller, Post, Delete, Param, Get, Query, Body } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FavoriteService } from './favorite.service';
 import type { ItemType } from '../schema/favorite.schema';
 
-
-@Controller('/library/favorite')
+@Controller()
 export class FavoriteController {
   constructor(private readonly favoriteService: FavoriteService) {}
 
-  @Post('/:itemType/:itemId')
+  @MessagePattern({ cmd: 'library.favorite.toggle' })
   createFavorite(
-    @Param('itemType') itemType: ItemType,
-    @Param('itemId') itemId: string,
-    @Body('userId') userId: string
+    @Payload() data: { itemType: ItemType; itemId: string; userId: string },
   ) {
+    const { itemType, itemId, userId } = data;
+    if (!itemType || !itemId || !userId)
+      throw new Error('itemType, itemId and userId are required');
+
     return this.favoriteService.toggleFavorite(itemType, itemId, userId);
   }
 
-  @Get('/me')
-  getMyFavorites(@Query('userId') userId: string) {
+  @MessagePattern({ cmd: 'library.favorite.getMy' })
+  getMyFavorites(@Payload() data: { userId: string }) {
+    const { userId } = data;
+    if (!userId) throw new Error('userId is required');
+
     return this.favoriteService.getMyFavorites(userId);
   }
-
-
 }

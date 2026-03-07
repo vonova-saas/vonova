@@ -22,7 +22,7 @@ export class SupportController {
   }
 
   @MessagePattern({ cmd: 'findOneSupport' })
-  findOne(@Payload('userId') userId: string, @Payload() id: string) {
+  findOne(@Payload('userId') userId: string, @Payload('id') id: string) {
     return this.supportService.findOne(userId, id);
   }
 
@@ -39,29 +39,32 @@ export class SupportController {
   }
 
   @MessagePattern({ cmd: 'removeSupport' })
-  remove(@Payload('userId') userId: string, @Payload() id: string) {
+  remove(@Payload('userId') userId: string, @Payload('id') id: string) {
     return this.supportService.remove(userId, id);
   }
 
   @MessagePattern({ cmd: 'createMessage' })
   createMessage(
     @Payload('userId') userId: string,
-    @Payload() id: string,
-    @Payload() message: string,
+    @Payload('id') id: string,
+    @Payload('message') message: string,
   ) {
     return this.supportService.createMessage(userId, id, message);
   }
 
   @MessagePattern({ cmd: 'findOneMessages' })
-  findOneMessages(@Payload('userId') userId: string, @Payload() id: string) {
+  findOneMessages(
+    @Payload('userId') userId: string,
+    @Payload('id') id: string,
+  ) {
     return this.supportService.findOneMessages(userId, id);
   }
 
   @MessagePattern({ cmd: 'updateStatus' })
   updateStatus(
     @Payload('userId') userId: string,
-    @Payload() id: string,
-    @Payload() status: string,
+    @Payload('id') id: string,
+    @Payload('status') status: string,
   ) {
     return this.supportService.updateStatus(userId, id, status);
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
@@ -12,6 +11,13 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { AssignmentGatewayService } from './assignment.gateway.service';
@@ -21,11 +27,46 @@ import {
   UpdateAssignmentDto,
 } from './dto/assignment.dto';
 
+@ApiTags('LMS Assignments')
+@ApiBearerAuth()
 @Controller('api/v1/lms/assignments')
 @UseGuards(JwtAuthGuard)
 export class AssignmentGatewayController {
   constructor(private readonly assignmentService: AssignmentGatewayService) {}
 
+  @ApiOperation({
+    summary: 'Create new assignment',
+    description:
+      'Creates a new assignment with questions and options for students to complete.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Assignment created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
+        description: {
+          type: 'string',
+          example: 'Test your knowledge of basic JavaScript concepts.',
+        },
+        topic: { type: 'string', example: 'JavaScript Programming' },
+        noOfQuestions: { type: 'number', example: 10 },
+        questions: { type: 'array', items: { type: 'object' } },
+        createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid assignment data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
   @Post()
   async createAssignment(
     @Body() dto: CreateAssignmentDto,

@@ -37,9 +37,4 @@ export default () => ({
   CORS_WHITELIST: process.env.CORS_WHITELIST,
   CORS_BLACKLIST: process.env.CORS_BLACKLIST,
   CORS_SECURITY_HEADERS: process.env.CORS_SECURITY_HEADERS,
-
-  // Swagger server URLs (from .env); used so "Execute" in API docs hits the right host
-  API_GATEWAY_ORIGIN: process.env.API_GATEWAY_ORIGIN,
-  SWAGGER_SERVER_LOCAL: process.env.SWAGGER_SERVER_LOCAL,
-  SWAGGER_SERVER_PRODUCTION: process.env.SWAGGER_SERVER_PRODUCTION,
 });

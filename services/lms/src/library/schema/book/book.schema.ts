@@ -53,7 +53,15 @@ export class Book {
   @Prop({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' })
   status: LibraryStatus;
 
-  @Prop({ type: { views: Number, favoritesCount: Number, ratingAverage: Number, ratingCount: Number }, default: {} })
+  @Prop({
+    type: {
+      views: Number,
+      favoritesCount: Number,
+      ratingAverage: Number,
+      ratingCount: Number,
+    },
+    default: {},
+  })
   metrics: BookMetrics;
 
   @Prop({ type: [String], default: [] })

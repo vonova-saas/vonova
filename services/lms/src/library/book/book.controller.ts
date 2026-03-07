@@ -19,10 +19,7 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.publish' })
-  publishBook(
-    @Payload('id') id: string,
-    @Payload('dto') body: PublishBookDto,
-  ) {
+  publishBook(@Payload('id') id: string, @Payload('dto') body: PublishBookDto) {
     return this.bookService.publishBookService(id, body, 'USER_ID'); // replace with Auth later
   }
 
@@ -43,10 +40,7 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.update' })
-  updateBook(
-    @Payload('id') id: string,
-    @Payload('dto') body: UpdateBookDto,
-  ) {
+  updateBook(@Payload('id') id: string, @Payload('dto') body: UpdateBookDto) {
     return this.bookService.updateBookService(id, body, 'USER_ID'); // replace with Auth later
   }
 

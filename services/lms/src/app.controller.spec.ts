@@ -18,7 +18,7 @@ describe('AppController', () => {
       const result = appController.getHealth();
       expect(result).toEqual({
         status: 'Healthy!',
-        service: 'LMS Service',
+        service: 'API Gateway Service',
         version: '1.0.0',
         timestamp: expect.any(String) as unknown as string,
       });

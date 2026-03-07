@@ -37,8 +37,8 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
         // Use LOCAL only if it's not the Docker hostname (reachable when running outside Docker)
         const uri =
           local &&
-            !local.includes('mongodb://database:') &&
-            !local.includes('mongodb://database/')
+          !local.includes('mongodb://database:') &&
+          !local.includes('mongodb://database/')
             ? local
             : remote || local || 'mongodb://localhost:27017/';
         return { uri };
@@ -69,4 +69,4 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
   controllers: [AppController],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

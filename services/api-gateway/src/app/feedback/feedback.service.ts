@@ -1,10 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-  FeedbackDto,
-  AddMessageDto,
-  UpdateStatusDto,
-} from './dto/feedback.dto';
+import { FeedbackDto } from './dto/feedback.dto';
 
 @Injectable()
 export class FeedbackGatewayService {
@@ -39,7 +35,7 @@ export class FeedbackGatewayService {
     return this.client.send({ cmd: 'removeFeedback' }, { userId, id });
   }
 
-  createMessage(userId: string, id: string, message: AddMessageDto) {
+  createMessage(userId: string, id: string, message: string) {
     return this.client.send({ cmd: 'createMessage' }, { userId, id, message });
   }
 
@@ -47,7 +43,7 @@ export class FeedbackGatewayService {
     return this.client.send({ cmd: 'findOneMessages' }, { userId, id });
   }
 
-  updateStatus(userId: string, id: string, status: UpdateStatusDto) {
+  updateStatus(userId: string, id: string, status: string) {
     return this.client.send({ cmd: 'updateStatus' }, { userId, id, status });
   }
 }

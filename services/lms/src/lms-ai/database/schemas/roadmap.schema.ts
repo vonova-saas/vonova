@@ -41,7 +41,7 @@ export class Milestone {
 
 @Schema({
   collection: 'ROADMAP_AI',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class Roadmap {
   @Prop({ required: true, unique: true, index: true })
@@ -75,7 +75,7 @@ export class Roadmap {
   @Prop({
     required: true,
     enum: ['beginner', 'intermediate', 'advanced'],
-    index: true
+    index: true,
   })
   skill_level: 'beginner' | 'intermediate' | 'advanced';
 
@@ -83,7 +83,7 @@ export class Roadmap {
     required: true,
     min: 1,
     max: 52,
-    index: true
+    index: true,
   })
   duration_weeks: number;
 
@@ -117,7 +117,7 @@ export class Roadmap {
   @Prop({
     enum: ['generated', 'in_progress', 'completed', 'archived'],
     default: 'generated',
-    index: true
+    index: true,
   })
   status: 'generated' | 'in_progress' | 'completed' | 'archived';
 }
@@ -137,7 +137,10 @@ RoadmapSchema.virtual('calculatedTotalHours').get(function () {
 // Pre-save middleware to calculate total hours
 RoadmapSchema.pre('save', function (next) {
   if (this.weeks && this.weeks.length > 0) {
-    this.total_estimated_hours = this.weeks.reduce((total, week) => total + week.estimated_hours, 0);
+    this.total_estimated_hours = this.weeks.reduce(
+      (total, week) => total + week.estimated_hours,
+      0,
+    );
   }
   this.updated_at = new Date();
   next();
@@ -152,10 +155,16 @@ RoadmapSchema.statics.findByUser = function (userId: string) {
   return this.find({ userId: userId }).sort({ created_at: -1 });
 };
 
-RoadmapSchema.statics.findSimilar = function (topic: string, skillLevel: string, durationWeeks: number) {
+RoadmapSchema.statics.findSimilar = function (
+  topic: string,
+  skillLevel: string,
+  durationWeeks: number,
+) {
   return this.find({
     topic: new RegExp(topic, 'i'),
     skill_level: skillLevel,
-    duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 }
-  }).sort({ created_at: -1 }).limit(5);
+    duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 },
+  })
+    .sort({ created_at: -1 })
+    .limit(5);
 };

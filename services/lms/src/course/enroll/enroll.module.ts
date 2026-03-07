@@ -10,7 +10,7 @@ import { CourseModule } from '../course/course.module';
     MongooseModule.forFeature([
       { name: Enrollment.name, schema: EnrollmentSchema },
     ]),
-    CourseModule, 
+    CourseModule,
   ],
   controllers: [EnrollController],
   providers: [EnrollService],

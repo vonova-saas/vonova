@@ -20,11 +20,25 @@ async function bootstrap() {
   // Security
   app.use(helmet());
 
-  // CORS - will be configured in app.module.ts
+  // CORS configuration
+  const rawOrigins = configuration().CORS_ORIGIN;
+  const parsedOrigins =
+    rawOrigins != null && rawOrigins.trim() !== ''
+      ? rawOrigins
+          .split(',')
+          .map((o) => o.trim().replace(/^"|"$/g, ''))
+          .filter((o) => o.length > 0)
+      : [];
+
+  const origins =
+    parsedOrigins.length > 0
+      ? parsedOrigins
+      : [configuration().FRONTEND_ORIGIN].filter(
+          (o): o is string => typeof o === 'string' && o.length > 0,
+        );
+
   app.enableCors({
-    origin:
-      configuration().CORS_ORIGIN?.split(',') ||
-      configuration().FRONTEND_ORIGIN,
+    origin: origins,
     credentials: true,
     methods: configuration().CORS_METHODS?.split(',') || [
       'GET',

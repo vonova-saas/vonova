@@ -10,10 +10,9 @@ import {
   UseGuards,
   Request,
   Ip,
-  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   ApiTags,
@@ -25,18 +24,18 @@ import {
 import { RoadmapGatewayService } from './roadmap.service';
 import {
   GenerateRoadmapDto,
-  UpdateProgressDto,
+  UpdateRoadmapProgressDto,
   BulkDeleteRoadmapsDto,
 } from './dto/roadmap.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-@ApiTags('Roadmap AI')
+@ApiTags('Roadmap Generation AI')
 @Controller('api/v1/roadmap')
 @UseGuards(JwtAuthGuard)
 export class RoadmapGatewayController {
-  constructor(private readonly roadmapService: RoadmapGatewayService) { }
+  constructor(private readonly roadmapService: RoadmapGatewayService) {}
 
   @Public()
   @Get('health')
@@ -46,15 +45,24 @@ export class RoadmapGatewayController {
     return firstValueFrom(this.roadmapService.getHealth());
   }
 
-  @Public()
   @Get('stats')
-  @ApiOperation({ summary: 'Get service statistics and metrics' })
+  @ApiOperation({
+    summary: 'Get service statistics and metrics',
+    description:
+      'Returns roadmap statistics for the authenticated user. When authenticated, only that user\'s roadmaps and generations are counted.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Statistics retrieved successfully',
   })
-  async getServiceStats() {
-    return firstValueFrom(this.roadmapService.getServiceStats());
+  async getServiceStats(@Request() req: any) {
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new UnauthorizedException(
+        'Authentication required to retrieve roadmap statistics',
+      );
+    }
+    return firstValueFrom(this.roadmapService.getServiceStats(userId));
   }
 
   @Public()
@@ -78,16 +86,14 @@ export class RoadmapGatewayController {
   @ApiResponse({ status: 201, description: 'Roadmap generated successfully' })
   async generateRoadmap(
     @Body() generateRoadmapDto: GenerateRoadmapDto,
-    @Request() req: any,
+    @Query('userId') userId: string,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
   ) {
     return firstValueFrom(
       this.roadmapService.generateRoadmap({
         ...generateRoadmapDto,
-        userId: req.user._id,
+        userId,
         ip,
-        userAgent,
       }),
     );
   }
@@ -100,12 +106,12 @@ export class RoadmapGatewayController {
   })
   async bulkDeleteRoadmaps(
     @Body() bulkDeleteDto: BulkDeleteRoadmapsDto,
-    @Request() req: any,
+    @Query('userId') userId: string,
   ) {
     return firstValueFrom(
       this.roadmapService.bulkDeleteRoadmaps({
         ...bulkDeleteDto,
-        user_id: req.user._id,
+        user_id: userId,
       }),
     );
   }
@@ -123,8 +129,8 @@ export class RoadmapGatewayController {
     required: false,
   })
   @ApiQuery({
-    name: 'user_id',
-    description: 'Filter by user ID',
+    name: 'userId',
+    description: 'User ID',
     required: false,
   })
   @ApiResponse({
@@ -132,16 +138,34 @@ export class RoadmapGatewayController {
     description: 'Query analytics retrieved successfully',
   })
   async getQueryAnalytics(
-    @Request() req: any,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
-    @Query('user_id') userId?: string,
+    @Query('userId') userId?: string,
   ) {
     return firstValueFrom(
       this.roadmapService.getQueryAnalytics({
         start_date: startDate,
         end_date: endDate,
-        user_id: userId || req.user._id,
+        user_id: userId,
+      }),
+    );
+  }
+
+  @Get('user-roadmaps')
+  @ApiOperation({ summary: 'Get all roadmaps for a user' })
+  @ApiQuery({
+    name: 'userId',
+    description: 'User ID',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User roadmaps retrieved successfully',
+  })
+  async getUserRoadmaps(@Query('userId') userId: string) {
+    return firstValueFrom(
+      this.roadmapService.getUserRoadmaps({
+        userId,
       }),
     );
   }
@@ -150,9 +174,9 @@ export class RoadmapGatewayController {
   @ApiOperation({ summary: 'Get roadmap by ID' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID' })
   @ApiQuery({
-    name: 'user_id',
-    description: 'Optional user identifier',
-    required: false,
+    name: 'userId',
+    description: 'User ID',
+    required: true,
   })
   @ApiResponse({
     status: 200,
@@ -160,17 +184,14 @@ export class RoadmapGatewayController {
   })
   async getRoadmapById(
     @Param('roadmapId') roadmapId: string,
-    @Request() req: any,
+    @Query('userId') userId: string,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
-    @Query('user_id') userId?: string,
   ): Promise<any> {
     return firstValueFrom(
       this.roadmapService.getRoadmapById({
         roadmapId,
-        userId: userId || req.user._id,
+        userId,
         ip,
-        userAgent,
       }),
     );
   }
@@ -178,21 +199,24 @@ export class RoadmapGatewayController {
   @Put(':roadmapId/progress')
   @ApiOperation({ summary: 'Update roadmap progress' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID' })
+  @ApiQuery({
+    name: 'userId',
+    description: 'User ID',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Progress updated successfully' })
   async updateProgress(
     @Param('roadmapId') roadmapId: string,
-    @Body() updateProgressDto: UpdateProgressDto,
-    @Request() req: any,
+    @Body() updateProgressDto: UpdateRoadmapProgressDto,
+    @Query('userId') userId: string,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
   ) {
     return firstValueFrom(
       this.roadmapService.updateProgress({
         roadmapId,
-        userId: req.user._id,
+        userId,
         ...updateProgressDto,
         ip,
-        userAgent,
       }),
     );
   }
@@ -200,15 +224,20 @@ export class RoadmapGatewayController {
   @Delete(':roadmapId')
   @ApiOperation({ summary: 'Delete roadmap and cleanup resources' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID to delete' })
+  @ApiQuery({
+    name: 'userId',
+    description: 'User ID',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Roadmap deleted successfully' })
   async deleteRoadmap(
     @Param('roadmapId') roadmapId: string,
-    @Request() req: any,
+    @Query('userId') userId: string,
   ) {
     return firstValueFrom(
       this.roadmapService.deleteRoadmap({
         roadmapId,
-        userId: req.user._id,
+        userId,
       }),
     );
   }

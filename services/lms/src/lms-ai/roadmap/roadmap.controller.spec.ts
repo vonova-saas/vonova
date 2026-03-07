@@ -65,8 +65,15 @@ describe('RoadmapController', () => {
 
       mockRoadmapService.generateRoadmap.mockResolvedValue(mockResponse);
 
-      const req = { userId: 'user-123' };
-      const result = await controller.generateRoadmap(dto, req, '127.0.0.1', 'test-agent');
+      const result = await controller.generateRoadmap(
+        {
+          ...dto,
+          userId: 'user-123',
+          ip: '127.0.0.1',
+          userAgent: 'test-agent',
+        } as any,
+        {} as any,
+      );
 
       expect(result).toBeDefined();
       expect(result.roadmapId).toBe('test-id');
@@ -84,30 +91,43 @@ describe('RoadmapController', () => {
 
       mockRoadmapService.getRoadmapById.mockResolvedValue(mockResponse);
 
-      const req = { userId: 'user-123' };
-      const result = await controller.getRoadmapById('test-id', req, '127.0.0.1', 'test-agent');
+      const result = await controller.getRoadmapById(
+        {
+          roadmapId: 'test-id',
+          userId: 'user-123',
+          ip: '127.0.0.1',
+          userAgent: 'test-agent',
+        } as any,
+        {} as any,
+      );
 
       expect(result).toBeDefined();
-      expect(service.getRoadmapById).toHaveBeenCalledWith('test-id', 'user-123', '127.0.0.1', 'test-agent');
+      expect(service.getRoadmapById).toHaveBeenCalledWith(
+        'test-id',
+        'user-123',
+        '127.0.0.1',
+        'test-agent',
+      );
     });
   });
 
   describe('updateProgress', () => {
     it('should update roadmap progress', async () => {
-      const dto = {
-        week_number: 1,
-        progress_percentage: 25,
-      };
-
       mockRoadmapService.updateProgress.mockResolvedValue(undefined);
 
-      const req = { userId: 'user-123' };
       const result = await controller.updateProgress(
-        'test-id',
-        dto,
-        req,
-        '127.0.0.1',
-        'test-agent'
+        {
+          roadmapId: 'test-id',
+          userId: 'user-123',
+          week_number: 1,
+          milestone_week: 1,
+          progress_percentage: 25,
+          time_spent_minutes: 60,
+          notes: 'Good progress',
+          ip: '127.0.0.1',
+          userAgent: 'test-agent',
+        } as any,
+        {} as any,
       );
 
       expect(result.success).toBe(true);
@@ -115,11 +135,16 @@ describe('RoadmapController', () => {
     });
 
     it('should throw BadRequestException when user_id is missing', async () => {
-      const dto = { week_number: 1 };
-      const req = {};
-
       await expect(
-        controller.updateProgress('test-id', dto, req, '127.0.0.1', 'test-agent')
+        controller.updateProgress(
+          {
+            roadmapId: 'test-id',
+            week_number: 1,
+            ip: '127.0.0.1',
+            userAgent: 'test-agent',
+          } as any,
+          {} as any,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -131,14 +156,19 @@ describe('RoadmapController', () => {
         message: 'Roadmap deleted successfully',
       });
 
-      const result = await controller.deleteRoadmap('test-id');
+      const result = await controller.deleteRoadmap(
+        { roadmapId: 'test-id', userId: undefined } as any,
+        {} as any,
+      );
 
       expect(result.success).toBe(true);
       expect(service.deleteRoadmap).toHaveBeenCalledWith('test-id', undefined);
     });
 
     it('should throw BadRequestException when roadmap ID is empty', async () => {
-      await expect(controller.deleteRoadmap('   ')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.deleteRoadmap({ roadmapId: '   ' } as any, {} as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -158,4 +188,3 @@ describe('RoadmapController', () => {
     });
   });
 });
-

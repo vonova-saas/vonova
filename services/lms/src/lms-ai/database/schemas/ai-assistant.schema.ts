@@ -5,7 +5,7 @@ export type AiAssistantDocument = AiAssistant & Document;
 
 @Schema({
   collection: 'AI_ASSISTANT',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class AiAssistant {
   @Prop({ required: true, unique: true, index: true })
@@ -54,4 +54,3 @@ export const AiAssistantSchema = SchemaFactory.createForClass(AiAssistant);
 AiAssistantSchema.index({ userId: 1, created_at: -1 });
 AiAssistantSchema.index({ session_id: 1, created_at: -1 });
 AiAssistantSchema.index({ ai_model_used: 1, created_at: -1 });
-

@@ -5,7 +5,6 @@ import { PdfSummaryService } from './pdf-summary.service';
 
 describe('PdfSummaryController', () => {
   let controller: PdfSummaryController;
-  let service: PdfSummaryService;
 
   const mockPdfSummaryService = {
     uploadPDF: jest.fn(),
@@ -31,7 +30,6 @@ describe('PdfSummaryController', () => {
     }).compile();
 
     controller = module.get<PdfSummaryController>(PdfSummaryController);
-    service = module.get<PdfSummaryService>(PdfSummaryService);
   });
 
   it('should be defined', () => {
@@ -40,7 +38,7 @@ describe('PdfSummaryController', () => {
 
   describe('healthCheck', () => {
     it('should return health status', () => {
-      const result = controller.healthCheck();
+      const result = controller.healthCheck({} as any, {} as any);
 
       expect(result).toBeDefined();
       expect(result.success).toBe(true);
@@ -55,13 +53,21 @@ describe('PdfSummaryController', () => {
         message: 'Session deleted successfully',
       });
 
-      await controller.deleteSession('test-session-id');
+      await controller.deleteSession(
+        { sessionId: 'test-session-id', userId: undefined } as any,
+        {} as any,
+      );
 
-      expect(service.deleteSession).toHaveBeenCalledWith('test-session-id', undefined);
+      expect(mockPdfSummaryService.deleteSession).toHaveBeenCalledWith(
+        'test-session-id',
+        undefined,
+      );
     });
 
     it('should throw BadRequestException when session ID is empty', async () => {
-      await expect(controller.deleteSession('   ')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.deleteSession({ sessionId: '   ' } as any, {} as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -75,11 +81,23 @@ describe('PdfSummaryController', () => {
 
       mockPdfSummaryService.getFullSummary.mockResolvedValue(mockSummary);
 
-      const req = {};
-      const result = await controller.getFullSummary('test-session', req, '127.0.0.1', 'test-agent');
+      const result = await controller.getFullSummary(
+        {
+          session_id: 'test-session',
+          user_id: 'test-user',
+          ip: '127.0.0.1',
+          userAgent: 'test-agent',
+        } as any,
+        {} as any,
+      );
 
       expect(result).toBeDefined();
-      expect(service.getFullSummary).toHaveBeenCalled();
+      expect(mockPdfSummaryService.getFullSummary).toHaveBeenCalledWith(
+        'test-session',
+        'test-user',
+        '127.0.0.1',
+        'test-agent',
+      );
     });
   });
 
@@ -92,9 +110,18 @@ describe('PdfSummaryController', () => {
         totalPages: 1,
       };
 
-      mockPdfSummaryService.getSessionChatHistory.mockResolvedValue(mockHistory);
+      mockPdfSummaryService.getSessionChatHistory.mockResolvedValue(
+        mockHistory,
+      );
 
-      const result = await controller.getSessionChatHistory('test-session', 'test-session', '1', '20');
+      const result = await controller.getSessionChatHistory(
+        {
+          sessionId: 'test-session',
+          page: '1',
+          limit: '20',
+        } as any,
+        {} as any,
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
@@ -102,7 +129,10 @@ describe('PdfSummaryController', () => {
 
     it('should throw BadRequestException when sessionId is missing', async () => {
       await expect(
-        controller.getSessionChatHistory('', undefined, '1', '20')
+        controller.getSessionChatHistory(
+          { sessionId: '', page: '1', limit: '20' } as any,
+          {} as any,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -120,10 +150,10 @@ describe('PdfSummaryController', () => {
         failed_session_ids: [],
       });
 
-      const result = await controller.bulkDeleteSessions(dto);
+      const result = await controller.bulkDeleteSessions(dto as any, {} as any);
 
       expect(result.success).toBe(true);
-      expect(service.bulkDeleteSessions).toHaveBeenCalled();
+      expect(mockPdfSummaryService.bulkDeleteSessions).toHaveBeenCalled();
     });
   });
 
@@ -136,11 +166,13 @@ describe('PdfSummaryController', () => {
 
       mockPdfSummaryService.getServiceStats.mockResolvedValue(mockStats);
 
-      const result = await controller.getServiceStats();
+      const result = await controller.getServiceStats(
+        { user_id: 'test-user' } as any,
+        {} as any,
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
     });
   });
 });
-

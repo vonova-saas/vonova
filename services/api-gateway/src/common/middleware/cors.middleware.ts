@@ -25,6 +25,10 @@ export class CorsMiddleware implements NestMiddleware {
       'Access-Control-Allow-Headers',
       'Content-Type, Authorization, X-Requested-With',
     );
+    res.header(
+      'Access-Control-Expose-Headers',
+      'X-Detected-Language, X-User-Audio-S3-Key, X-User-Audio-S3-Url, X-AI-Audio-S3-Key, X-AI-Audio-S3-Url',
+    );
     res.header('Access-Control-Allow-Credentials', 'true');
 
     // Security headers

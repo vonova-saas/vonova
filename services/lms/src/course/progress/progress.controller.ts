@@ -1,30 +1,42 @@
-import { Controller, Post, Get, Param, Body } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProgressService } from './progress.service';
 import { MarkLessonCompleteDto } from './dto/progress.dto';
 
-@Controller('courses')
+@Controller()
 export class ProgressController {
   constructor(private readonly progressService: ProgressService) {}
 
-  @Post(':courseId/lessons/:lessonId/complete')
+  @MessagePattern({ cmd: 'app.courses.progress.complete' })
   complete(
-    @Param('courseId') courseId: string,
-    @Param('lessonId') lessonId: string,
-    @Body() dto: MarkLessonCompleteDto,
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      completed: boolean;
+      timeSpentSec: number;
+    },
   ) {
-    const userId = 'mockUserId';
+    const { courseId, lessonId, userId, completed, timeSpentSec } = data;
+    if (!courseId || !lessonId || !userId)
+      throw new Error('courseId, lessonId and userId are required');
+
     return this.progressService.markLessonComplete(
       courseId,
       lessonId,
       userId,
-      dto.completed,
-      dto.timeSpentSec,
+      completed,
+      timeSpentSec,
     );
   }
 
-  @Get(':courseId/progress/me')
-  myProgress(@Param('courseId') courseId: string) {
-    const userId = 'mockUserId';
+  @MessagePattern({ cmd: 'app.courses.progress.getMy' })
+  myProgress(@Payload() data: { courseId: string; userId: string }) {
+    const { courseId, userId } = data;
+    if (!courseId || !userId)
+      throw new Error('courseId and userId are required');
+
     return this.progressService.getMyCourseProgress(courseId, userId);
   }
 }

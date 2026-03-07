@@ -13,6 +13,7 @@ import {
   IRoadmapData,
   IWeek,
   IMilestone,
+  IRoadmapHistory,
 } from './interfaces/roadmap.interface';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,23 +22,31 @@ export class RoadmapService {
   private readonly logger = new Logger(RoadmapService.name);
   private readonly PYTHON_SERVICE_URL: string;
   private readonly FALLBACK_PYTHON_SERVICE_URL: string | undefined;
-  private readonly DEFAULT_TIMEOUT = 300000; // 5 minutes timeout
+  private readonly DEFAULT_TIMEOUT = 300_000; // 5 minutes
 
   constructor(
     private readonly roadmapRepository: RoadmapRepository,
     private readonly roadmapHistoryRepository: RoadmapHistoryRepository,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {
-    const primary = this.configService.get('ROADMAP_AI_SERVICE_URL') || 'http://127.0.0.1:5000';
+    const primary =
+      this.configService.get('ROADMAP_AI_SERVICE_URL') ||
+      'http://127.0.0.1:5000';
     const fallback = this.configService.get('FALLBACK_ROADMAP_AI_SERVICE_URL');
-    this.PYTHON_SERVICE_URL = primary.replace('http://localhost', 'http://127.0.0.1').replace('https://localhost', 'https://127.0.0.1');
-    this.FALLBACK_PYTHON_SERVICE_URL = fallback ? fallback.replace('http://localhost', 'http://127.0.0.1').replace('https://localhost', 'https://127.0.0.1') : undefined;
+    this.PYTHON_SERVICE_URL = primary
+      .replace('http://localhost', 'http://127.0.0.1')
+      .replace('https://localhost', 'https://127.0.0.1');
+    this.FALLBACK_PYTHON_SERVICE_URL = fallback
+      ? fallback
+        .replace('http://localhost', 'http://127.0.0.1')
+        .replace('https://localhost', 'https://127.0.0.1')
+      : undefined;
   }
 
   async generateRoadmap(
     request: IRoadmapRequest,
     userIp?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<IRoadmapResponse> {
     const startTime = Date.now();
 
@@ -47,16 +56,26 @@ export class RoadmapService {
 
       // Check for similar roadmaps
       const existingRoadmap = await this.findSimilarRoadmap(request);
-      if (existingRoadmap && this.shouldUseCachedRoadmap(existingRoadmap, request)) {
+      if (
+        existingRoadmap &&
+        this.shouldUseCachedRoadmap(existingRoadmap, request)
+      ) {
         this.logger.log(`Using cached roadmap for topic: ${request.topic}`);
         return this.formatRoadmapResponse(existingRoadmap);
       }
 
       // Call AI service (Python endpoint is /generate-roadmap per service README)
-      const aiResponse = await this.callPythonService('/generate-roadmap', request);
+      const aiResponse = await this.callPythonService(
+        '/generate-roadmap',
+        request,
+      );
 
       // Process and save roadmap
-      const roadmap = await this.processAndSaveRoadmap(aiResponse, request, startTime);
+      const roadmap = await this.processAndSaveRoadmap(
+        aiResponse,
+        request,
+        startTime,
+      );
 
       // Log history
       await this.logRoadmapHistory(
@@ -64,11 +83,10 @@ export class RoadmapService {
         request.userId,
         'generated',
         userIp,
-        userAgent
+        userAgent,
       );
 
       return this.formatRoadmapResponse(roadmap);
-
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(`Error generating roadmap: ${err.message}`, err.stack);
@@ -80,7 +98,7 @@ export class RoadmapService {
     roadmapId: string,
     userId?: string,
     userIp?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<IRoadmapResponse> {
     try {
       const roadmap = await this.roadmapRepository.findById(roadmapId);
@@ -91,13 +109,19 @@ export class RoadmapService {
 
       // Log view history
       if (userId) {
-        await this.logRoadmapHistory(roadmapId, userId, 'viewed', userIp, userAgent);
+        await this.logRoadmapHistory(
+          roadmapId,
+          userId,
+          'viewed',
+          userIp,
+          userAgent,
+        );
       }
 
       // Convert RoadmapDocument to IRoadmapData
       const roadmapData: IRoadmapData = {
         ...roadmap.toObject(),
-        userId: roadmap.userId.toString()
+        userId: roadmap.userId.toString(),
       };
       return this.formatRoadmapResponse(roadmapData);
     } catch (error) {
@@ -115,7 +139,7 @@ export class RoadmapService {
     timeSpentMinutes?: number,
     notes?: string,
     userIp?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     try {
       const roadmap = await this.roadmapRepository.findById(roadmapId);
@@ -132,9 +156,14 @@ export class RoadmapService {
       }
 
       // Log progress history
-      const action = progressPercentage === 100 ? 'completed' :
-        weekNumber ? 'week_completed' :
-          milestoneWeek ? 'milestone_reached' : 'started';
+      const action =
+        progressPercentage === 100
+          ? 'completed'
+          : weekNumber
+            ? 'week_completed'
+            : milestoneWeek
+              ? 'milestone_reached'
+              : 'started';
 
       await this.logRoadmapHistory(
         roadmapId,
@@ -147,12 +176,14 @@ export class RoadmapService {
           milestone_week: milestoneWeek,
           progress_percentage: progressPercentage,
           time_spent_minutes: timeSpentMinutes,
-          notes
-        }
+          notes,
+        },
       );
-
     } catch (error) {
-      this.logger.error(`Error updating progress: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error updating progress: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -163,11 +194,18 @@ export class RoadmapService {
       throw new BadRequestException('Topic is required');
     }
 
-    if (!request.skill_level || !['beginner', 'intermediate', 'advanced'].includes(request.skill_level)) {
+    if (
+      !request.skill_level ||
+      !['beginner', 'intermediate', 'advanced'].includes(request.skill_level)
+    ) {
       throw new BadRequestException('Invalid skill level');
     }
 
-    if (!request.duration_weeks || request.duration_weeks < 1 || request.duration_weeks > 52) {
+    if (
+      !request.duration_weeks ||
+      request.duration_weeks < 1 ||
+      request.duration_weeks > 52
+    ) {
       throw new BadRequestException('Duration must be between 1 and 52 weeks');
     }
 
@@ -176,32 +214,49 @@ export class RoadmapService {
     }
   }
 
-  private async findSimilarRoadmap(request: IRoadmapRequest): Promise<IRoadmapData | null> {
+  private async findSimilarRoadmap(
+    request: IRoadmapRequest,
+  ): Promise<IRoadmapData | null> {
     const similar = await this.roadmapRepository.findSimilar(
       request.topic,
       request.skill_level,
-      request.duration_weeks
+      request.duration_weeks,
+      request.userId,
     );
 
-    return similar.length > 0 ? {
-      ...similar[0].toObject(),
-      userId: similar[0].userId.toString()
-    } : null;
+    return similar.length > 0
+      ? {
+        ...similar[0].toObject(),
+        userId: similar[0].userId.toString(),
+      }
+      : null;
   }
 
-  private shouldUseCachedRoadmap(existingRoadmap: IRoadmapData, request: IRoadmapRequest): boolean {
-    // Use cached roadmap if it's similar enough
-    return existingRoadmap.topic.toLowerCase() === request.topic.toLowerCase() &&
+  private shouldUseCachedRoadmap(
+    existingRoadmap: IRoadmapData,
+    request: IRoadmapRequest,
+  ): boolean {
+    // Only use cached roadmap if it belongs to the same user and is similar enough
+    if (existingRoadmap.userId !== request.userId) return false;
+    return (
+      existingRoadmap.topic.toLowerCase() === request.topic.toLowerCase() &&
       existingRoadmap.skill_level === request.skill_level &&
-      Math.abs(existingRoadmap.duration_weeks - request.duration_weeks) <= 2;
+      Math.abs(existingRoadmap.duration_weeks - request.duration_weeks) <= 2
+    );
   }
 
-  private async callPythonService(endpoint: string, data: object): Promise<Record<string, unknown>> {
+  private async callPythonService(
+    endpoint: string,
+    data: object,
+  ): Promise<Record<string, unknown>> {
     const url = `${this.PYTHON_SERVICE_URL}${endpoint}`;
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify(data),
         signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT),
       });
@@ -213,11 +268,13 @@ export class RoadmapService {
         );
       }
 
-      const responseData = (await response.json()) as Record<string, unknown>;
+      const responseData: Record<string, unknown> = await response.json();
       if (responseData.status === false) {
-        throw new InternalServerErrorException(
-          (responseData.error as string) || (responseData.detail as string) || 'Python service returned error',
-        );
+        const errorMessage =
+          (responseData.error as string) ||
+          (responseData.detail as string) ||
+          'Python service returned error';
+        throw new InternalServerErrorException(errorMessage);
       }
       return responseData;
     } catch (error) {
@@ -227,10 +284,15 @@ export class RoadmapService {
       if (this.FALLBACK_PYTHON_SERVICE_URL) {
         try {
           const fallbackUrl = `${this.FALLBACK_PYTHON_SERVICE_URL}${endpoint}`;
-          this.logger.warn(`Retrying roadmap AI call against fallback: ${fallbackUrl}`);
+          this.logger.warn(
+            `Retrying roadmap AI call against fallback: ${fallbackUrl}`,
+          );
           const retry = await fetch(fallbackUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT),
           });
@@ -240,7 +302,8 @@ export class RoadmapService {
               `Python service (fallback) responded with status: ${retry.status}, body: ${text}`,
             );
           }
-          return (await retry.json()) as Record<string, unknown>;
+          const fallbackResponse: Record<string, unknown> = await retry.json();
+          return fallbackResponse;
         } catch (fallbackErr) {
           this.logger.error(
             `Fallback roadmap AI call failed: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`,
@@ -248,7 +311,9 @@ export class RoadmapService {
         }
       }
 
-      throw new InternalServerErrorException(`Failed to call Python service: ${err.message}`);
+      throw new InternalServerErrorException(
+        `Failed to call Python service: ${err.message}`,
+      );
     }
   }
 
@@ -261,10 +326,13 @@ export class RoadmapService {
 
     const text = aiResponse.text as Record<string, unknown> | undefined;
     const metadata = aiResponse.metadata as Record<string, unknown> | undefined;
-    const roadmapData = {
+    const queryText = text?.query as string | undefined;
+    const summaryText = metadata?.summary as string | undefined;
+
+    const roadmapData: IRoadmapData = {
       roadmapId,
-      title: (text?.query as string) || `Learning Path: ${request.topic}`,
-      overview: (metadata?.summary as string) || 'AI-generated learning roadmap',
+      title: queryText || `Learning Path: ${request.topic}`,
+      overview: summaryText || 'AI-generated learning roadmap',
       prerequisites: [],
       weeks: this.extractWeeksFromResponse(aiResponse),
       milestones: this.extractMilestonesFromResponse(aiResponse),
@@ -275,15 +343,29 @@ export class RoadmapService {
       duration_weeks: request.duration_weeks,
       focus_areas: request.focus_areas,
       userId: request.userId,
+      created_at: new Date(),
+      updated_at: new Date(),
       ai_model_used: 'cohere-command-r-plus',
       generation_time_ms: Date.now() - startTime,
-      status: 'generated' as const
+      total_estimated_hours: this.calculateTotalHours(
+        this.extractWeeksFromResponse(aiResponse),
+      ),
+      status: 'generated' as const,
     };
 
     return await this.roadmapRepository.create(roadmapData);
   }
 
-  private extractWeeksFromResponse(aiResponse: Record<string, unknown>): IWeek[] {
+  private calculateTotalHours(weeks: IWeek[]): number {
+    return weeks.reduce(
+      (total, week) => total + (week.estimated_hours || 0),
+      0,
+    );
+  }
+
+  private extractWeeksFromResponse(
+    aiResponse: Record<string, unknown>,
+  ): IWeek[] {
     const weeks: IWeek[] = [];
     const text = aiResponse.text as Record<string, unknown> | undefined;
     const chapters = (text?.chapters as Record<string, unknown>) || {};
@@ -297,24 +379,27 @@ export class RoadmapService {
         topics: topics as string[],
         resources: [`${chapterName} documentation`, `${chapterName} tutorials`],
         projects: [`Build ${chapterName} project`],
-        estimated_hours: 20
+        estimated_hours: 20,
       });
     });
 
     return weeks;
   }
 
-  private extractMilestonesFromResponse(aiResponse: Record<string, unknown>): IMilestone[] {
+  private extractMilestonesFromResponse(
+    aiResponse: Record<string, unknown>,
+  ): IMilestone[] {
     // Extract milestones from AI response
     const milestones: IMilestone[] = [];
     const weeks = this.extractWeeksFromResponse(aiResponse);
 
     weeks.forEach((week, index) => {
-      if ((index + 1) % 4 === 0) { // Every 4 weeks
+      if ((index + 1) % 4 === 0) {
+        // Every 4 weeks
         milestones.push({
           week: index + 1,
           milestone: `Complete ${week.title}`,
-          deliverable: `${week.title} project`
+          deliverable: `${week.title} project`,
         });
       }
     });
@@ -325,7 +410,14 @@ export class RoadmapService {
   private async logRoadmapHistory(
     roadmapId: string,
     userId: string,
-    action: 'generated' | 'viewed' | 'started' | 'week_completed' | 'milestone_reached' | 'completed' | 'archived',
+    action:
+      | 'generated'
+      | 'viewed'
+      | 'started'
+      | 'week_completed'
+      | 'milestone_reached'
+      | 'completed'
+      | 'archived',
     userIp?: string,
     userAgent?: string,
     additionalData?: Record<string, unknown>,
@@ -338,7 +430,7 @@ export class RoadmapService {
         ip_address: userIp,
         user_agent: userAgent,
         metadata: additionalData,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       this.logger.warn(`Failed to log roadmap history: ${error.message}`);
@@ -350,27 +442,30 @@ export class RoadmapService {
       status: true,
       text: {
         query: roadmap.title,
-        chapters: this.formatChaptersFromWeeks(roadmap.weeks)
+        chapters: this.formatChaptersFromWeeks(roadmap.weeks),
       },
       tree: this.formatTreeFromWeeks(roadmap.weeks),
       roadmapId: roadmap.roadmapId,
       metadata: {
         generated: roadmap.created_at.toISOString(),
-        summary: roadmap.overview
+        summary: roadmap.overview,
       },
-      roadmap_data: roadmap
+      roadmap_data: roadmap,
     };
   }
 
   private formatChaptersFromWeeks(weeks: IWeek[]): Record<string, string[]> {
     const chapters: Record<string, string[]> = {};
-    weeks.forEach(week => {
+    weeks.forEach((week) => {
       chapters[week.title] = week.topics;
     });
     return chapters;
   }
 
-  private formatTreeFromWeeks(weeks: IWeek[]): { name: string; children: { name: string; children: { name: string }[] }[] }[] {
+  private formatTreeFromWeeks(weeks: IWeek[]): {
+    name: string;
+    children: { name: string; children: { name: string }[] }[];
+  }[] {
     return [
       {
         name: 'Learning Path',
@@ -383,18 +478,33 @@ export class RoadmapService {
   }
 
   // Health and status helpers used by controller endpoints
-  async testAiConnection(): Promise<{ ok: boolean; message: string; endpoint: string }> {
+  async testAiConnection(): Promise<{
+    ok: boolean;
+    message: string;
+    endpoint: string;
+  }> {
     const endpoint = `${this.PYTHON_SERVICE_URL}/health`;
     try {
-      const res = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(5000) });
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000),
+      });
       if (!res.ok) {
         const txt = await res.text();
-        return { ok: false, message: `AI service unhealthy: ${res.status} ${txt}`, endpoint };
+        return {
+          ok: false,
+          message: `AI service unhealthy: ${res.status} ${txt}`,
+          endpoint,
+        };
       }
       return { ok: true, message: 'AI service reachable', endpoint };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'unknown error';
-      return { ok: false, message: `AI service not reachable: ${msg}`, endpoint };
+      return {
+        ok: false,
+        message: `AI service not reachable: ${msg}`,
+        endpoint,
+      };
     }
   }
 
@@ -408,14 +518,14 @@ export class RoadmapService {
       },
       details: {
         ai_endpoint: ai.endpoint,
-        ai_message: ai.message
-      }
+        ai_message: ai.message,
+      },
     };
   }
 
   async deleteRoadmap(
     roadmapId: string,
-    userId?: string
+    userId?: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
       // 1. Get roadmap from database to check ownership
@@ -426,7 +536,9 @@ export class RoadmapService {
 
       // Optional: Check user ownership if userId provided
       if (userId && roadmap.userId && roadmap.userId !== userId) {
-        throw new BadRequestException('You do not have permission to delete this roadmap');
+        throw new BadRequestException(
+          'You do not have permission to delete this roadmap',
+        );
       }
 
       // 2. Delete roadmap from database
@@ -434,15 +546,19 @@ export class RoadmapService {
       this.logger.log(`Roadmap deleted from database: ${roadmapDeleted}`);
 
       // 3. Delete history records
-      const historyDeleted = await this.roadmapHistoryRepository.deleteByRoadmapId(roadmapId);
+      const historyDeleted =
+        await this.roadmapHistoryRepository.deleteByRoadmapId(roadmapId);
       this.logger.log(`History deleted from database: ${historyDeleted}`);
 
       return {
         success: true,
-        message: 'Roadmap and all associated data deleted successfully'
+        message: 'Roadmap and all associated data deleted successfully',
       };
     } catch (error) {
-      this.logger.error(`Error deleting roadmap: ${error instanceof Error ? error.message : 'Unknown error'}`, error instanceof Error ? error.stack : '');
+      this.logger.error(
+        `Error deleting roadmap: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : '',
+      );
       throw error;
     }
   }
@@ -450,9 +566,9 @@ export class RoadmapService {
   async getRoadmapHistory(
     roadmapId: string,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<{
-    history: any[];
+    history: IRoadmapHistory[];
     total: number;
     page: number;
     totalPages: number;
@@ -464,14 +580,41 @@ export class RoadmapService {
         throw new BadRequestException('Roadmap not found');
       }
 
-      return await this.roadmapHistoryRepository.findByRoadmapIdPaginated(roadmapId, page, limit);
+      const result = await this.roadmapHistoryRepository.findByRoadmapIdPaginated(
+        roadmapId,
+        page,
+        limit,
+      );
+
+      // Transform RoadmapHistoryDocument[] to IRoadmapHistory[]
+      return {
+        ...result,
+        history: result.history.map(item => ({
+          _id: item._id?.toString(),
+          roadmapId: item.roadmapId,
+          userId: item.userId,
+          action: item.action,
+          timestamp: item.timestamp,
+          ip_address: item.ip_address,
+          user_agent: item.user_agent,
+          metadata: item.metadata,
+          week_number: item.week_number,
+          milestone_week: item.milestone_week,
+          progress_percentage: item.progress_percentage,
+          time_spent_minutes: item.time_spent_minutes,
+          notes: item.notes,
+        })),
+      };
     } catch (error) {
-      this.logger.error(`Error getting roadmap history: ${error instanceof Error ? error.message : 'Unknown error'}`, error instanceof Error ? error.stack : '');
+      this.logger.error(
+        `Error getting roadmap history: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : '',
+      );
       throw error;
     }
   }
 
-  async getServiceStats(): Promise<{
+  async getServiceStats(userId?: string): Promise<{
     total_roadmaps: number;
     total_generations: number;
     active_roadmaps: number;
@@ -479,12 +622,21 @@ export class RoadmapService {
     roadmaps_by_status: Record<string, number>;
   }> {
     try {
-      const [totalRoadmaps, totalGenerations, activeRoadmaps, avgGenerationTime, roadmapsByStatus] = await Promise.all([
-        this.roadmapRepository.getTotalCount(),
-        this.roadmapHistoryRepository.getTotalCount({ startDate: undefined, endDate: undefined }),
-        this.roadmapRepository.getActiveRoadmapsCount(),
-        this.roadmapRepository.getAverageGenerationTime(),
-        this.roadmapRepository.getRoadmapsByStatus()
+      const historyFilters = userId
+        ? { userId, startDate: undefined, endDate: undefined }
+        : { startDate: undefined, endDate: undefined };
+      const [
+        totalRoadmaps,
+        totalGenerations,
+        activeRoadmaps,
+        avgGenerationTime,
+        roadmapsByStatus,
+      ] = await Promise.all([
+        this.roadmapRepository.getTotalCount(userId ? { userId } : undefined),
+        this.roadmapHistoryRepository.getTotalCount(historyFilters),
+        this.roadmapRepository.getActiveRoadmapsCount(userId),
+        this.roadmapRepository.getAverageGenerationTime(userId),
+        this.roadmapRepository.getRoadmapsByStatus(userId),
       ]);
 
       return {
@@ -492,7 +644,7 @@ export class RoadmapService {
         total_generations: totalGenerations,
         active_roadmaps: activeRoadmaps,
         average_generation_time: Math.round(avgGenerationTime),
-        roadmaps_by_status: roadmapsByStatus
+        roadmaps_by_status: roadmapsByStatus,
       };
     } catch (error) {
       this.logger.error('Error getting service stats:', error);
@@ -501,14 +653,14 @@ export class RoadmapService {
         total_generations: 0,
         active_roadmaps: 0,
         average_generation_time: 0,
-        roadmaps_by_status: {}
+        roadmaps_by_status: {},
       };
     }
   }
 
   async bulkDeleteRoadmaps(
     roadmapIds: string[],
-    userId?: string
+    userId?: string,
   ): Promise<{
     total_requested: number;
     deleted: number;
@@ -519,7 +671,7 @@ export class RoadmapService {
       total_requested: roadmapIds.length,
       deleted: 0,
       failed: 0,
-      failed_roadmap_ids: [] as string[]
+      failed_roadmap_ids: [] as string[],
     };
 
     for (const roadmapId of roadmapIds) {
@@ -529,7 +681,9 @@ export class RoadmapService {
       } catch (error) {
         results.failed++;
         results.failed_roadmap_ids.push(roadmapId);
-        this.logger.warn(`Failed to delete roadmap ${roadmapId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        this.logger.warn(
+          `Failed to delete roadmap ${roadmapId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
     }
 
@@ -539,7 +693,7 @@ export class RoadmapService {
   async getQueryAnalytics(
     startDate?: string,
     endDate?: string,
-    userId?: string
+    userId?: string,
   ): Promise<{
     total_generations: number;
     popular_topics: Array<{ topic: string; count: number }>;
@@ -564,13 +718,13 @@ export class RoadmapService {
         popularTopics,
         skillLevelDistribution,
         averageDuration,
-        completionRate
+        completionRate,
       ] = await Promise.all([
         this.roadmapHistoryRepository.getTotalCount(filters),
         this.roadmapRepository.getPopularTopics(10),
         this.roadmapRepository.getSkillLevelDistribution(),
         this.roadmapRepository.getAverageDuration(),
-        this.roadmapRepository.getCompletionRate()
+        this.roadmapRepository.getCompletionRate(),
       ]);
 
       return {
@@ -578,11 +732,39 @@ export class RoadmapService {
         popular_topics: popularTopics,
         skill_level_distribution: skillLevelDistribution,
         average_duration_weeks: Math.round(averageDuration * 10) / 10,
-        completion_rate: Math.round(completionRate * 100) / 100
+        completion_rate: Math.round(completionRate * 100) / 100,
       };
     } catch (error) {
       this.logger.error('Error getting query analytics:', error);
-      throw new InternalServerErrorException('Failed to retrieve query analytics');
+      throw new InternalServerErrorException(
+        'Failed to retrieve query analytics',
+      );
+    }
+  }
+
+  async getUserRoadmaps(userId: string): Promise<IRoadmapData[]> {
+    try {
+      if (!userId) {
+        throw new BadRequestException('User ID is required');
+      }
+
+      const roadmaps = await this.roadmapRepository.findByUserId(userId);
+
+      return roadmaps.map((roadmap) => ({
+        ...roadmap.toObject(),
+        userId: roadmap.userId.toString(),
+        roadmapId: roadmap.roadmapId,
+        created_at: roadmap.created_at,
+        updated_at: roadmap.updated_at,
+      }));
+    } catch (error) {
+      this.logger.error(
+        `Error getting user roadmaps for userId ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to retrieve user roadmaps',
+      );
     }
   }
 }

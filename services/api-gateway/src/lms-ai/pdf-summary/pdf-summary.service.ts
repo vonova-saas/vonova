@@ -6,7 +6,7 @@ export class PdfSummaryGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   uploadPDF(data: any) {
     return this.client.send({ cmd: 'lms.ai.pdf.upload' }, data);
@@ -32,7 +32,11 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.summarize' }, data);
   }
 
-  getSessionChatHistory(data: { sessionId: string; page?: string; limit?: string }) {
+  getSessionChatHistory(data: {
+    sessionId: string;
+    page?: string;
+    limit?: string;
+  }) {
     return this.client.send({ cmd: 'lms.ai.pdf.getChatHistory' }, data);
   }
 
@@ -44,15 +48,23 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.deleteSession' }, data);
   }
 
-  getServiceStats() {
-    return this.client.send({ cmd: 'lms.ai.pdf.stats' }, {});
+  getSessionsByUserId(data: { user_id: string }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.getSessionsByUserId' }, data);
+  }
+
+  getServiceStats(data: { user_id?: string }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.stats' }, data);
   }
 
   bulkDeleteSessions(data: { session_ids: string[]; user_id?: string }) {
     return this.client.send({ cmd: 'lms.ai.pdf.batchDelete' }, data);
   }
 
-  getQueryAnalytics(data: { start_date?: string; end_date?: string; user_id?: string }) {
+  getQueryAnalytics(data: {
+    start_date?: string;
+    end_date?: string;
+    user_id?: string;
+  }) {
     return this.client.send({ cmd: 'lms.ai.pdf.getQueryAnalytics' }, data);
   }
 
@@ -63,5 +75,15 @@ export class PdfSummaryGatewayService {
   testAiConnection() {
     return this.client.send({ cmd: 'lms.ai.pdf.testAiConnection' }, {});
   }
-}
 
+  voiceAsk(data: {
+    session_id: string;
+    audioBase64: string;
+    mimeType?: string;
+    filename?: string;
+    user_id?: string;
+    idempotency_key?: string;
+  }) {
+    return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
+  }
+}

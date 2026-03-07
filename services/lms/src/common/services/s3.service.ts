@@ -1,6 +1,16 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /**
  * S3 service for direct upload/delete (e.g. LMS-AI PDF summary).
@@ -42,7 +52,9 @@ export class S3Service {
       },
     });
 
-    this.logger.log(`S3 Service initialized with bucket: ${this.bucketName}, region: ${this.region}`);
+    this.logger.log(
+      `S3 Service initialized with bucket: ${this.bucketName}, region: ${this.region}`,
+    );
   }
 
   async uploadFile(
@@ -55,9 +67,13 @@ export class S3Service {
       const timestamp = Date.now();
       const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const uniqueFileName = `${timestamp}-${sanitizedFileName}`;
-      const s3Key = folder ? `${folder}/${uniqueFileName}` : `pdfs/${uniqueFileName}`;
+      const s3Key = folder
+        ? `${folder}/${uniqueFileName}`
+        : `pdfs/${uniqueFileName}`;
 
-      this.logger.log(`Uploading file to S3: ${s3Key} (${fileBuffer.length} bytes)`);
+      this.logger.log(
+        `Uploading file to S3: ${s3Key} (${fileBuffer.length} bytes)`,
+      );
 
       await this.s3Client.send(
         new PutObjectCommand({
@@ -77,12 +93,37 @@ export class S3Service {
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Error uploading file to S3: ${msg}`);
-      throw new InternalServerErrorException(`Failed to upload file to S3: ${msg}`);
+      throw new InternalServerErrorException(
+        `Failed to upload file to S3: ${msg}`,
+      );
     }
   }
 
   getFileUrl(s3Key: string): string {
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+  }
+
+  async getPresignedGetUrl(
+    s3Key: string,
+    expiresInSeconds?: number,
+  ): Promise<string> {
+    const defaultExpires = (() => {
+      const raw = this.configService.get<string>('AWS_S3_PRESIGN_EXPIRES');
+      const parsed = raw ? Number(raw) : NaN;
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 3600;
+    })();
+    const expires =
+      typeof expiresInSeconds === 'number' && expiresInSeconds > 0
+        ? expiresInSeconds
+        : defaultExpires;
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+    });
+    return getSignedUrl(this.s3Client, command, {
+      expiresIn: expires,
+    });
   }
 
   async deleteFile(s3Key: string): Promise<boolean> {

@@ -1,0 +1,14 @@
+import { Module } from '@nestjs/common';
+import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AuthGatewayModule } from 'src/app/auth/auth.module';
+import { GuideGatewayController } from './guide.gateway.controller';
+import { GuideGatewayService } from './guide.gateway.service';
+
+@Module({
+  imports: [NatsClientModule, AuthGatewayModule],
+  controllers: [GuideGatewayController],
+  providers: [GuideGatewayService, JwtAuthGuard],
+  exports: [JwtAuthGuard],
+})
+export class GuideGatewayModule {}

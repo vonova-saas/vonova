@@ -1,4 +1,3 @@
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -73,4 +72,8 @@ export type CourseDocument = Course & Document;
 
 export const CourseSchema = SchemaFactory.createForClass(Course);
 CourseSchema.set('validateBeforeSave', false);
-CourseSchema.index({ title: 'text', smallDescription: 'text', description: 'text' });
+CourseSchema.index({
+  title: 'text',
+  smallDescription: 'text',
+  description: 'text',
+});

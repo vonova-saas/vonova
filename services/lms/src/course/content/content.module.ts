@@ -8,7 +8,6 @@ import { Lesson, LessonSchema } from '../lesson/schema/lesson.schema';
 import { Asset, AssetSchema } from './schema/asset.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 
-
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -19,6 +18,6 @@ import { S3Service } from '../../common/utils/storage/s3.service';
     ]),
   ],
   controllers: [ContentController],
-  providers: [ContentService,S3Service],
+  providers: [ContentService, S3Service],
 })
 export class ContentModule {}

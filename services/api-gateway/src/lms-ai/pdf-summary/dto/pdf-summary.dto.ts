@@ -1,11 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsEnum, IsNumber, Min, Max, IsNotEmpty, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  Min,
+  Max,
+  IsNotEmpty,
+  IsArray,
+} from 'class-validator';
 
 export class UploadPdfDto {
   @ApiProperty({
     description: 'User identifier',
     example: 'user-uuid-123',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -14,7 +24,7 @@ export class UploadPdfDto {
   @ApiProperty({
     description: 'Whether to automatically generate summary after upload',
     example: true,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsBoolean()
@@ -24,16 +34,17 @@ export class UploadPdfDto {
     description: 'Type of summary to generate',
     enum: ['brief', 'detailed', 'comprehensive'],
     example: 'brief',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsEnum(['brief', 'detailed', 'comprehensive'])
   summary_type?: 'brief' | 'detailed' | 'comprehensive';
 
   @ApiProperty({
-    description: 'Language code for the PDF (ISO 639-1, e.g., en, es, fr, de, ar)',
+    description:
+      'Language code for the PDF (ISO 639-1, e.g., en, es, fr, de, ar)',
     example: 'en',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -43,7 +54,7 @@ export class UploadPdfDto {
 export class ChatWithPdfDto {
   @ApiProperty({
     description: 'Session ID returned from upload',
-    example: 'session-uuid-456'
+    example: 'session-uuid-456',
   })
   @IsString()
   @IsNotEmpty()
@@ -51,7 +62,7 @@ export class ChatWithPdfDto {
 
   @ApiProperty({
     description: 'Question to ask about the PDF',
-    example: 'What are the main conclusions of this research?'
+    example: 'What are the main conclusions of this research?',
   })
   @IsString()
   @IsNotEmpty()
@@ -60,7 +71,7 @@ export class ChatWithPdfDto {
   @ApiProperty({
     description: 'User identifier',
     example: 'user-uuid-123',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -71,7 +82,7 @@ export class ChatWithPdfDto {
     example: 1000,
     minimum: 100,
     maximum: 5000,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber()
@@ -83,7 +94,7 @@ export class ChatWithPdfDto {
 export class RateChatResponseDto {
   @ApiProperty({
     description: 'Chat ID to rate',
-    example: 'chat-uuid-789'
+    example: 'chat-uuid-789',
   })
   @IsString()
   @IsNotEmpty()
@@ -93,7 +104,7 @@ export class RateChatResponseDto {
     description: 'Rating value (1-5)',
     example: 5,
     minimum: 1,
-    maximum: 5
+    maximum: 5,
   })
   @IsNumber()
   @Min(1)
@@ -103,7 +114,7 @@ export class RateChatResponseDto {
   @ApiProperty({
     description: 'User identifier',
     example: 'user-uuid-123',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -114,7 +125,7 @@ export class BulkDeleteSessionsDto {
   @ApiProperty({
     description: 'Array of session IDs to delete',
     example: ['session-id-1', 'session-id-2'],
-    type: [String]
+    type: [String],
   })
   @IsArray()
   @IsString({ each: true })
@@ -122,7 +133,7 @@ export class BulkDeleteSessionsDto {
 
   @ApiProperty({
     description: 'User ID for ownership validation',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import { Controller, BadRequestException } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
@@ -12,7 +12,15 @@ export class PdfSummaryController {
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
   async uploadPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { file, user_id, auto_summarize, summary_type, language, ip = '', userAgent = '' } = data;
+    const {
+      file,
+      user_id,
+      auto_summarize,
+      summary_type,
+      language,
+      ip = '',
+      userAgent = '',
+    } = data;
 
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -20,19 +28,21 @@ export class PdfSummaryController {
 
     // Additional file validation
     if (file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('Invalid file type. Only PDF files are allowed.');
+      throw new BadRequestException(
+        'Invalid file type. Only PDF files are allowed.',
+      );
     }
 
     const request = {
       file: {
         buffer: file.buffer,
         originalname: file.originalname,
-        mimetype: file.mimetype
+        mimetype: file.mimetype,
       },
       ...(user_id && { user_id }),
       auto_summarize,
       ...(summary_type && { summary_type }),
-      ...(language && { language })
+      ...(language && { language }),
     };
 
     return this.pdfSummaryService.uploadPDF(request, ip, userAgent);
@@ -40,12 +50,19 @@ export class PdfSummaryController {
 
   @MessagePattern({ cmd: 'lms.ai.pdf.chat' })
   async chatWithPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { session_id, question, user_id, context_length, ip = '', userAgent = '' } = data;
+    const {
+      session_id,
+      question,
+      user_id,
+      context_length,
+      ip = '',
+      userAgent = '',
+    } = data;
     const request = {
       session_id,
       question,
       ...(user_id && { user_id }),
-      ...(context_length && { context_length })
+      ...(context_length && { context_length }),
     };
 
     return this.pdfSummaryService.chatWithPDF(request, ip, userAgent);
@@ -58,7 +75,12 @@ export class PdfSummaryController {
       throw new BadRequestException('session_id is required');
     }
 
-    return this.pdfSummaryService.getFullSummary(session_id, user_id, ip, userAgent);
+    return this.pdfSummaryService.getFullSummary(
+      session_id,
+      user_id,
+      ip,
+      userAgent,
+    );
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.getChatHistory' })
@@ -76,12 +98,16 @@ export class PdfSummaryController {
       throw new BadRequestException('Invalid page or limit parameter');
     }
 
-    const result = await this.pdfSummaryService.getSessionChatHistory(sessionId.trim(), pageNum, limitNum);
+    const result = await this.pdfSummaryService.getSessionChatHistory(
+      sessionId.trim(),
+      pageNum,
+      limitNum,
+    );
 
     return {
       success: true,
       message: 'Session chat history retrieved successfully',
-      data: result
+      data: result,
     };
   }
 
@@ -98,7 +124,7 @@ export class PdfSummaryController {
       message: 'PDF Summary Service is healthy',
       timestamp: new Date().toISOString(),
       service: 'pdf-summary',
-      version: '1.0.0'
+      version: '1.0.0',
     };
   }
 
@@ -109,7 +135,7 @@ export class PdfSummaryController {
       success: status.ok,
       message: status.message,
       endpoint: status.endpoint,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -120,16 +146,41 @@ export class PdfSummaryController {
       throw new BadRequestException('Session ID is required');
     }
 
-    await this.pdfSummaryService.deleteSession(sessionId.trim(), userId);
+    const result = await this.pdfSummaryService.deleteSession(
+      sessionId.trim(),
+      userId,
+    );
+    return result;
+  }
+
+  @MessagePattern({ cmd: 'lms.ai.pdf.getSessionsByUserId' })
+  async getSessionsByUserId(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    if (!userId) {
+      throw new BadRequestException('user_id is required');
+    }
+    return this.pdfSummaryService.getSessionsByUserId(userId);
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.stats' })
-  async getServiceStats(@Payload() _data: any, @Ctx() _ctx: NatsContext) {
-    const stats = await this.pdfSummaryService.getServiceStats();
+  async getServiceStats(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    if (!userId) {
+      throw new BadRequestException('user_id is required');
+    }
+    const stats = await this.pdfSummaryService.getServiceStats(userId);
     return {
       success: true,
       message: 'Service statistics retrieved successfully',
-      data: stats
+      data: stats,
     };
   }
 
@@ -138,24 +189,45 @@ export class PdfSummaryController {
     const { session_ids, user_id } = data;
     const result = await this.pdfSummaryService.bulkDeleteSessions(
       session_ids,
-      user_id
+      user_id,
     );
 
     return {
       success: true,
       message: 'Bulk delete operation completed',
-      data: result
+      data: result,
     };
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.getQueryAnalytics' })
   async getQueryAnalytics(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { start_date, end_date, user_id } = data;
-    const analytics = await this.pdfSummaryService.getQueryAnalytics(start_date, end_date, user_id);
+    const analytics = await this.pdfSummaryService.getQueryAnalytics(
+      start_date,
+      end_date,
+      user_id,
+    );
     return {
       success: true,
       message: 'Query analytics retrieved successfully',
-      data: analytics
+      data: analytics,
     };
+  }
+
+  @MessagePattern({ cmd: 'lms.ai.pdf.voiceAsk' })
+  async voiceAsk(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const { session_id, audioBase64, mimeType, filename, user_id, idempotency_key } = data;
+    if (!session_id || !audioBase64) {
+      throw new BadRequestException('session_id and audioBase64 are required');
+    }
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    return this.pdfSummaryService.voiceAsk(
+      session_id,
+      audioBuffer,
+      mimeType || 'audio/webm',
+      filename,
+      user_id,
+      idempotency_key,
+    );
   }
 }

@@ -47,8 +47,11 @@ export class RoadmapGatewayService {
     return this.client.send({ cmd: 'lms.ai.roadmap.getHistory' }, data);
   }
 
-  getServiceStats() {
-    return this.client.send({ cmd: 'lms.ai.roadmap.stats' }, {});
+  getServiceStats(userId?: string) {
+    return this.client.send(
+      { cmd: 'lms.ai.roadmap.stats' },
+      userId ? { userId } : {},
+    );
   }
 
   bulkDeleteRoadmaps(data: { roadmap_ids: string[]; user_id?: string }) {
@@ -73,5 +76,9 @@ export class RoadmapGatewayService {
 
   getHealth() {
     return this.client.send({ cmd: 'lms.ai.roadmap.health' }, {});
+  }
+
+  getUserRoadmaps(data: { userId: string }) {
+    return this.client.send({ cmd: 'lms.ai.roadmap.getUserRoadmaps' }, data);
   }
 }

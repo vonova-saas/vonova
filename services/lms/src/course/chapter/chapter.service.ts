@@ -11,7 +11,10 @@ export class ChapterService {
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
   ) {}
 
-  async createChapter(courseId: string, dto: { title: string; index?: number }) {
+  async createChapter(
+    courseId: string,
+    dto: { title: string; index?: number },
+  ) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
 
@@ -36,7 +39,7 @@ export class ChapterService {
     Object.assign(chapter, dto);
     await chapter.save();
 
-    return {message: 'Chapter updated successfully' , chapter };
+    return { message: 'Chapter updated successfully', chapter };
   }
 
   async reorderChapters(
@@ -62,6 +65,6 @@ export class ChapterService {
     if (!chapter) throw new NotFoundException('Chapter not found');
 
     await chapter.deleteOne();
-    return {message: 'Chapter deleted successfully' };
+    return { message: 'Chapter deleted successfully' };
   }
 }

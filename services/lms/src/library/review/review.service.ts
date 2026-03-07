@@ -30,12 +30,10 @@ export class ReviewService {
     title?: string,
     body?: string,
   ) {
-
-    
     await this.ensureItemExists(itemType, itemId);
 
     console.log('cc');
-    
+
     const review = await this.reviewModel.findOneAndUpdate(
       { userId, itemType, itemId },
       { $set: { rating, title, body } },
@@ -69,11 +67,16 @@ export class ReviewService {
     return review;
   }
 
-
   async recomputeRatingAggregate(itemType: LibraryItemType, itemId: string) {
     const agg = await this.reviewModel.aggregate([
       { $match: { itemType, itemId: new mongoose.Types.ObjectId(itemId) } },
-      { $group: { _id: '$itemId', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: '$itemId',
+          avg: { $avg: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const ratingAverage = agg[0]?.avg ? Math.round(agg[0].avg * 10) / 10 : 0;
@@ -85,25 +88,27 @@ export class ReviewService {
       },
     };
 
-    if (itemType === 'BOOK') await this.bookModel.updateOne({ _id: itemId }, update);
-    if (itemType === 'GUIDE') await this.guideModel.updateOne({ _id: itemId }, update);
-    if (itemType === 'PRESENTATION') await this.presentationModel.updateOne({ _id: itemId }, update);
+    if (itemType === 'BOOK')
+      await this.bookModel.updateOne({ _id: itemId }, update);
+    if (itemType === 'GUIDE')
+      await this.guideModel.updateOne({ _id: itemId }, update);
+    if (itemType === 'PRESENTATION')
+      await this.presentationModel.updateOne({ _id: itemId }, update);
 
     return { ratingAverage, ratingCount };
   }
 
-async ensureItemExists(itemType: LibraryItemType, itemId: string) {
-  let exists = null;
+  async ensureItemExists(itemType: LibraryItemType, itemId: string) {
+    let exists = null;
 
-  if (itemType === 'BOOK') {
-   return exists = await this.bookModel.findById(itemId);
-  } else if (itemType === 'GUIDE') {
-   return exists = await this.guideModel.findById(itemId);
-  } else if (itemType === 'PRESENTATION') {
-   return exists = await this.presentationModel.findById(itemId);
+    if (itemType === 'BOOK') {
+      return (exists = await this.bookModel.findById(itemId));
+    } else if (itemType === 'GUIDE') {
+      return (exists = await this.guideModel.findById(itemId));
+    } else if (itemType === 'PRESENTATION') {
+      return (exists = await this.presentationModel.findById(itemId));
+    }
+
+    if (!exists) throw new NotFoundException('Item not found');
   }
-
-  if (!exists) throw new NotFoundException('Item not found');
-}
-
 }

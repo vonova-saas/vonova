@@ -5,7 +5,7 @@ export type PdfChatHistoryDocument = PdfChatHistory & Document;
 
 @Schema({
   collection: 'PDF_SUMMARY_CHAT',
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 })
 export class PdfChatHistory {
   @Prop({ required: true, unique: true, index: true })
@@ -28,13 +28,13 @@ export class PdfChatHistory {
 
   @Prop({
     enum: ['active', 'inactive', 'error'],
-    default: 'active'
+    default: 'active',
   })
   ai_wizard_status: 'active' | 'inactive' | 'error';
 
   @Prop({
     enum: ['normal', 'enhanced', 'cached'],
-    default: 'normal'
+    default: 'normal',
   })
   magic_level: 'normal' | 'enhanced' | 'cached';
 
@@ -63,7 +63,8 @@ export class PdfChatHistory {
   updated_at: Date;
 }
 
-export const PdfChatHistorySchema = SchemaFactory.createForClass(PdfChatHistory);
+export const PdfChatHistorySchema =
+  SchemaFactory.createForClass(PdfChatHistory);
 
 // Indexes for better query performance
 PdfChatHistorySchema.index({ session_id: 1, created_at: -1 });

@@ -1,25 +1,30 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ContentService } from './content.service';
 
-@Controller('courses')
+@Controller()
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
 
-  @Get('/:courseId/content')
+  @MessagePattern({ cmd: 'app.courses.content.getTree' })
   async getCourseContentTree(
-    @Param('courseId') courseId: string,
+    @Payload() data: { courseId: string; userId: string },
   ) {
-  
-    const userId = 'TEMP_USER';
+    const { courseId, userId } = data;
+    if (!courseId || !userId)
+      throw new Error('courseId and userId are required');
+
     return this.contentService.getCourseContentTree(courseId, userId);
   }
 
-  @Get('/:courseId/lessons/:lessonId/content')
+  @MessagePattern({ cmd: 'app.courses.content.getLesson' })
   async getLessonContent(
-    @Param('courseId') courseId: string,
-    @Param('lessonId') lessonId: string,
+    @Payload() data: { courseId: string; lessonId: string; userId: string },
   ) {
-    const userId = 'TEMP_USER';
+    const { courseId, lessonId, userId } = data;
+    if (!courseId || !lessonId || !userId)
+      throw new Error('courseId, lessonId and userId are required');
+
     return this.contentService.getLessonContent(courseId, lessonId, userId);
   }
 }

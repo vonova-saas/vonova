@@ -1,30 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { RoadmapHistory, RoadmapHistoryDocument } from '../schemas/roadmap-history.schema';
+import {
+  RoadmapHistory,
+  RoadmapHistoryDocument,
+} from '../schemas/roadmap-history.schema';
 import { LMS_AI_CONNECTION_NAME } from '../constants';
 
 @Injectable()
 export class RoadmapHistoryRepository {
   constructor(
-    @InjectModel(RoadmapHistory.name, LMS_AI_CONNECTION_NAME) private roadmapHistoryModel: Model<RoadmapHistoryDocument>,
-  ) { }
+    @InjectModel(RoadmapHistory.name, LMS_AI_CONNECTION_NAME)
+    private roadmapHistoryModel: Model<RoadmapHistoryDocument>,
+  ) {}
 
-  async create(historyData: Partial<RoadmapHistory>): Promise<RoadmapHistoryDocument> {
+  async create(
+    historyData: Partial<RoadmapHistory>,
+  ): Promise<RoadmapHistoryDocument> {
     const history = new this.roadmapHistoryModel(historyData);
     return history.save();
   }
 
   async findByRoadmapId(roadmapId: string): Promise<RoadmapHistoryDocument[]> {
-    return this.roadmapHistoryModel.find({ roadmapId }).sort({ timestamp: -1 }).exec();
+    return this.roadmapHistoryModel
+      .find({ roadmapId })
+      .sort({ timestamp: -1 })
+      .exec();
   }
 
   async findByUserId(userId: string): Promise<RoadmapHistoryDocument[]> {
-    return this.roadmapHistoryModel.find({ userId }).sort({ timestamp: -1 }).exec();
+    return this.roadmapHistoryModel
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .exec();
   }
 
   async findByAction(action: string): Promise<RoadmapHistoryDocument[]> {
-    return this.roadmapHistoryModel.find({ action }).sort({ timestamp: -1 }).exec();
+    return this.roadmapHistoryModel
+      .find({ action })
+      .sort({ timestamp: -1 })
+      .exec();
   }
 
   async countByRoadmapId(roadmapId: string): Promise<number> {
@@ -35,7 +50,11 @@ export class RoadmapHistoryRepository {
     return this.roadmapHistoryModel.countDocuments({ userId }).exec();
   }
 
-  async findByRoadmapIdPaginated(roadmapId: string, page: number, limit: number): Promise<{
+  async findByRoadmapIdPaginated(
+    roadmapId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
     history: RoadmapHistoryDocument[];
     total: number;
     page: number;
@@ -49,23 +68,29 @@ export class RoadmapHistoryRepository {
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.roadmapHistoryModel.countDocuments({ roadmapId }).exec()
+      this.roadmapHistoryModel.countDocuments({ roadmapId }).exec(),
     ]);
 
     return {
       history,
       total,
       page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 
   async deleteByRoadmapId(roadmapId: string): Promise<number> {
-    const result = await this.roadmapHistoryModel.deleteMany({ roadmapId }).exec();
+    const result = await this.roadmapHistoryModel
+      .deleteMany({ roadmapId })
+      .exec();
     return result.deletedCount;
   }
 
-  async getTotalCount(filters?: { userId?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+  async getTotalCount(filters?: {
+    userId?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<number> {
     const query: any = {};
     if (filters?.userId) {
       query.userId = filters.userId;

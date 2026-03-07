@@ -39,7 +39,9 @@ export class RpcExceptionFilter implements ExceptionFilter {
       if (ex?.statusCode != null) {
         statusCode = ex.statusCode as number;
         message =
-          typeof ex.message === 'string' ? ex.message : (ex.message as string) ?? message;
+          typeof ex.message === 'string'
+            ? ex.message
+            : ((ex.message as string) ?? message);
         error = (ex.error as string) ?? error;
       } else if (ex?.details && typeof ex.details === 'object') {
         const d = ex.details as Record<string, unknown>;

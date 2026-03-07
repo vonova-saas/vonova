@@ -6,7 +6,7 @@ import { Controller, Get } from '@nestjs/common';
 @ApiTags('Gateway')
 @Controller('api/v1')
 export class AppController {
-  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) { }
+  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) {}
 
   @Get()
   @ApiOperation({ summary: 'Get gateway status' })
@@ -22,16 +22,29 @@ export class AppController {
 
   // Backend Services
   @Get('app/health')
+  @ApiOperation({ summary: 'Get app service health' })
+  @ApiResponse({ status: 200, description: 'App service is running' })
   getAppHealth() {
     return this.natsClient.send({ cmd: 'getAppHealth' }, {});
   }
 
+  @Get('lms/health')
+  @ApiOperation({ summary: 'Get LMS service health' })
+  @ApiResponse({ status: 200, description: 'LMS service is running' })
+  getLmsHealth() {
+    return this.natsClient.send({ cmd: 'getLmsHealth' }, {});
+  }
+
   @Get('lms-ai/health')
+  @ApiOperation({ summary: 'Get LMS AI service health' })
+  @ApiResponse({ status: 200, description: 'LMS AI service is running' })
   getLmsAiHealth() {
     return this.natsClient.send({ cmd: 'getLmsAiHealth' }, {});
   }
 
   @Get('lms-ai/info')
+  @ApiOperation({ summary: 'Get LMS AI service info' })
+  @ApiResponse({ status: 200, description: 'LMS AI service info' })
   getLmsAiInfo() {
     return this.natsClient.send({ cmd: 'getLmsAiInfo' }, {});
   }

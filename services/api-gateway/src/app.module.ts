@@ -19,6 +19,20 @@ import { PdfSummaryGatewayModule } from './lms-ai/pdf-summary/pdf-summary.module
 import { FaviconController } from './common/controllers/favicon.controller';
 import { QuizGatewayModule } from './lms/quizzes/quiz.gateway.module';
 import { AssignmentGatewayModule } from './lms/assignments/assignment.gateway.module';
+import { CourseGatewayModule } from './lms/course/course/course.gateway.module';
+import { ChapterGatewayModule } from './lms/course/chapter/chapter.gateway.module';
+import { LessonGatewayModule } from './lms/course/lesson/lesson.gateway.module';
+import { ContentGatewayModule } from './lms/course/content/content.gateway.module';
+import { ProgressGatewayModule } from './lms/course/progress/progress.gateway.module';
+import { EnrollGatewayModule } from './lms/course/enroll/enroll.gateway.module';
+import { ReviewCourseGatewayModule } from './lms/course/review-course/review-course.gateway.module';
+import { BookGatewayModule } from './lms/library/book/book.gateway.module';
+import { PresentationGatewayModule } from './lms/library/presentation/presentation.gateway.module';
+import { GuideGatewayModule } from './lms/library/guide/guide.gateway.module';
+import { FavoriteGatewayModule } from './lms/library/favorite/favorite.gateway.module';
+import { ReviewGatewayModule } from './lms/library/review/review.gateway.module';
+import { ReaderGatewayModule } from './lms/library/reader/reader.gateway.module';
+import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module';
 
 @Module({
   imports: [
@@ -40,6 +54,20 @@ import { AssignmentGatewayModule } from './lms/assignments/assignment.gateway.mo
     //* LMS Services
     QuizGatewayModule,
     AssignmentGatewayModule,
+    CourseGatewayModule,
+    ChapterGatewayModule,
+    LessonGatewayModule,
+    ContentGatewayModule,
+    ProgressGatewayModule,
+    EnrollGatewayModule,
+    ReviewCourseGatewayModule,
+    BookGatewayModule,
+    PresentationGatewayModule,
+    GuideGatewayModule,
+    FavoriteGatewayModule,
+    ReviewGatewayModule,
+    ReaderGatewayModule,
+    UploadGatewayModule,
     //* LMS AI Services
     RoadmapGatewayModule,
     PdfSummaryGatewayModule,
@@ -57,6 +85,7 @@ export class AppModule {
       .exclude(
         { path: 'health', method: RequestMethod.GET },
         { path: 'app/health', method: RequestMethod.GET },
+        { path: 'lms/health', method: RequestMethod.GET },
       )
       .forRoutes('*');
   }

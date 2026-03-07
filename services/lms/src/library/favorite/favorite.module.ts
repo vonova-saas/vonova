@@ -7,7 +7,6 @@ import { BookSchema } from '../schema/book/book.schema';
 import { GuideSchema } from '../schema/guide.schema';
 import { PresentationSchema } from '../schema/presentation.schema';
 
-
 @Module({
   imports: [
     MongooseModule.forFeature([

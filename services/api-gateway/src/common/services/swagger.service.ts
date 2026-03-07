@@ -14,7 +14,18 @@ export class SwaggerService {
   ) {}
 
   createSwaggerDocument(app: INestApplication) {
-    const swaggerConfig = new DocumentBuilder()
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const localServer =
+      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
+      `http://localhost:${this.configService.get('PORT')}`;
+    const productionServer =
+      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
+      'http://localhost:4000';
+    if (!productionServer) {
+      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
+    }
+
+    let swaggerConfig = new DocumentBuilder()
       .setTitle('Vonova API Gateway')
       .setDescription(
         'API Gateway for Vonova microservices platform. ' +
@@ -28,30 +39,34 @@ export class SwaggerService {
         'https://vonova.tech',
         'vonovacompany@gmail.com',
       )
-      .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/');
-
-    // Server URLs from .env; first added is the default for "Execute" in Swagger UI
-    const publicOrigin = this.configService.get<string>('API_GATEWAY_ORIGIN');
-    const localUrl =
-      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
-      `http://localhost:${this.configService.get('PORT')}`;
-    const productionUrl = this.configService.get<string>('SWAGGER_SERVER_PRODUCTION');
-
-    if (publicOrigin) {
-      swaggerConfig.addServer(publicOrigin, 'Current Server (Railway / Deployed)');
-    }
-    swaggerConfig.addServer(localUrl, 'Local Development Server');
-    if (productionUrl) {
-      swaggerConfig.addServer(productionUrl, 'Production');
-    }
-    swaggerConfig
-      .addTag('Auth', 'Authentication and authorization endpoints')
-      .addTag('Gateway', 'Gateway status and service management')
-      .addTag('Health', 'Health check endpoints for gateway and services')
-      .addTag('App Service', 'App service endpoints (proxied)')
-      .addTag('LMS Service', 'LMS service endpoints (proxied)')
-      .addTag('Roadmap AI', 'AI-powered learning roadmap generation')
-      .addTag('PDF Summary', 'AI-powered PDF summarization and chat')
+      .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/')
+      .addTag('Gateway', 'API Gateway')
+      .addTag('Authentication', 'Authentication')
+      .addTag('Account Management', 'Account management')
+      .addTag('Settings Management', 'Settings management')
+      .addTag('Billing Management', 'Billing management')
+      .addTag('Support Management', 'Support management')
+      .addTag('Feedback Management', 'Feedback management')
+      .addTag('Waitlist Management', 'Waitlist management')
+      .addTag('Roadmap Generation AI', 'AI-powered learning roadmap generation')
+      .addTag('PDF Summarization AI', 'AI-powered PDF summarization and chat')
+      .addTag('LMS Quizzes', 'LMS Quizzes')
+      .addTag('LMS Assignments', 'LMS Assignments')
+      .addTag('LMS Courses', 'LMS Courses')
+      .addTag('LMS Course Chapters', 'LMS Course Chapters')
+      .addTag('LMS Course Lessons', 'LMS Course Lessons')
+      .addTag('LMS Course Content', 'LMS Course Content')
+      .addTag('LMS Course Progress', 'LMS Course Progress')
+      .addTag('LMS Course Enrollment', 'LMS Course Enrollment')
+      .addTag('LMS Course Reviews', 'LMS Course Reviews')
+      .addTag('LMS Library Books', 'LMS Library Books')
+      .addTag('LMS Library Presentations', 'LMS Library Presentations')
+      .addTag('LMS Library Guides', 'LMS Library Guides')
+      .addTag('LMS Library Favorites', 'LMS Library Favorites')
+      .addTag('LMS Library Reviews', 'LMS Library Reviews')
+      .addTag('LMS Library Reader', 'LMS Library Reader')
+      .addTag('LMS Library Upload', 'LMS Library Upload')
+      .addTag('Favicon', 'Favicon')
       // Cookie-based authentication (primary method)
       .addApiKey(
         {
@@ -74,6 +89,17 @@ export class SwaggerService {
         },
         'bearer',
       );
+
+    // Register servers: in production, put production server first so it becomes default in Swagger UI
+    if (isProduction) {
+      swaggerConfig = swaggerConfig
+        .addServer(productionServer, 'Production Server')
+        .addServer(localServer, 'Local Development Server');
+    } else {
+      swaggerConfig = swaggerConfig
+        .addServer(localServer, 'Local Development Server')
+        .addServer(productionServer, 'Production Server');
+    }
 
     // Add basic auth for production Swagger UI protection
     if (
@@ -136,9 +162,22 @@ export class SwaggerService {
 
     SwaggerModule.setup('api-docs', app, document, swaggerOptions);
 
-    this.loggerService.log(
-      `📚 Swagger docs available at http://localhost:${this.configService.get('PORT')}/api-docs`,
-    );
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const localServer =
+      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
+      `http://localhost:${this.configService.get('PORT')}`;
+    const productionServer =
+      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
+      'http://localhost:4000';
+    if (!productionServer) {
+      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
+    }
+
+    const swaggerBaseUrl = isProduction
+      ? `${productionServer}/api-docs`
+      : `${localServer}/api-docs`;
+
+    this.loggerService.log(`📚 Swagger docs available at ${swaggerBaseUrl}`);
     if (
       this.configService.get('NODE_ENV') === 'production' &&
       this.configService.get('SWAGGER_USER') &&

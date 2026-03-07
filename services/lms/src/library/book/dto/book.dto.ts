@@ -1,5 +1,17 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUrl, Min, MinLength, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 export class AuthorDto {

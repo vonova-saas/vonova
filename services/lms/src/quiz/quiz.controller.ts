@@ -12,28 +12,38 @@ export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @MessagePattern({ cmd: 'quiz.create' })
-  createQuiz(@Payload() dto: CreateQuizDto) {
-    return this.quizService.createQuiz(dto);
+  createQuiz(
+    @Payload('dto') dto: CreateQuizDto,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.createQuiz(dto, userId);
   }
 
   @MessagePattern({ cmd: 'quiz.update' })
-  updateQuiz(@Payload('id') id: string, @Payload('dto') dto: UpdateQuizDto) {
-    return this.quizService.updateQuiz(id, dto);
+  updateQuiz(
+    @Payload('quizId') quizId: string,
+    @Payload('dto') dto: UpdateQuizDto,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.updateQuiz(quizId, dto, userId);
   }
 
   @MessagePattern({ cmd: 'quiz.getAll' })
-  getAllQuizzes() {
-    return this.quizService.getAllQuizzes();
+  getAllQuizzes(@Payload('userId') userId: string) {
+    return this.quizService.getAllQuizzes(userId);
   }
 
   @MessagePattern({ cmd: 'quiz.getById' })
-  getQuiz(@Payload('id') id: string) {
-    return this.quizService.getQuizById(id);
+  getQuiz(@Payload('quizId') quizId: string) {
+    return this.quizService.getQuizById(quizId);
   }
 
   @MessagePattern({ cmd: 'quiz.delete' })
-  deleteQuiz(@Payload('id') id: string) {
-    return this.quizService.deleteQuiz(id);
+  deleteQuiz(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.deleteQuiz(quizId, userId);
   }
 
   // ===== Attempts =====
@@ -52,7 +62,10 @@ export class QuizController {
   }
 
   @MessagePattern({ cmd: 'quiz.getAttemptsForQuiz' })
-  getMyAttempts(@Payload('quizId') quizId: string) {
-    return this.quizService.getMyAttemptsForQuiz(quizId);
+  getMyAttempts(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.getMyAttemptsForQuiz(quizId, userId);
   }
 }

@@ -3,12 +3,20 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ReaderController } from './reader.controller';
 import { ReaderService } from './reader.service';
 import { Book, BookSchema } from '../schema/book/book.schema';
-import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
-import { BookProgress, BookProgressSchema } from '../schema/book/book-progress.schema';
+import {
+  LibraryAsset,
+  LibraryAssetSchema,
+} from '../schema/library-asset.schema';
+import {
+  BookProgress,
+  BookProgressSchema,
+} from '../schema/book/book-progress.schema';
 import { Guide, GuideSchema } from '../schema/guide.schema';
-import { Presentation, PresentationSchema } from '../schema/presentation.schema';
+import {
+  Presentation,
+  PresentationSchema,
+} from '../schema/presentation.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
-
 
 @Module({
   imports: [
@@ -21,6 +29,6 @@ import { S3Service } from '../../common/utils/storage/s3.service';
     ]),
   ],
   controllers: [ReaderController],
-  providers: [ReaderService,S3Service],
+  providers: [ReaderService, S3Service],
 })
 export class ReaderModule {}

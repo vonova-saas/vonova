@@ -204,36 +204,33 @@ export class AuthService {
       });
     }
 
-    // Validate coupon code if provided
-    if (dto.couponCode) {
-      const validationResult = await this.waitlistService.checkCouponCode({
-        email: dto.email,
-        couponCode: dto.couponCode,
-      });
-
-      if (validationResult.valid) {
-        user.couponCode = dto.couponCode;
-        user.expireCouponCode = new Date(
-          Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
-        ); // 3 months
-
-        // Mark the promo code as used in waitlist
-        await this.waitlistService.markPromoCodeAsUsed(
-          dto.email,
-          dto.couponCode,
-        );
-      } else {
-        throw new RpcException({
-          statusCode: 400,
-          message: 'Invalid or expired coupon code',
-          error: 'Bad Request',
+    // Validate coupon code if provided (optional: invalid code is skipped, welcome still succeeds)
+    if (dto.couponCode?.trim()) {
+      try {
+        const validationResult = await this.waitlistService.checkCouponCode({
+          email: dto.email,
+          couponCode: dto.couponCode.trim(),
         });
+
+        if (validationResult.valid) {
+          user.couponCode = dto.couponCode.trim();
+          user.expireCouponCode = new Date(
+            Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
+          ); // 3 months
+
+          await this.waitlistService.markPromoCodeAsUsed(
+            dto.email,
+            dto.couponCode.trim(),
+          );
+        }
+      } catch {
+        // Invalid or expired promo: do not block welcome; continue without applying coupon
       }
     }
 
     user.role = dto.role as Role;
-    user.knowAboutUs = dto.knowAboutUs ?? 'Email';
-    user.profilePictureUrl = dto.profilePictureUrl ?? null;
+    user.knowAboutUs = dto.knowAboutUs;
+    user.profilePictureUrl = dto.profilePictureUrl;
     user.lastLogin = new Date();
     await user.save();
 
@@ -487,31 +484,31 @@ export class AuthService {
     }
 
     user.role = role as Role;
-    user.knowAboutUs = knowAboutUs ?? 'Google';
+    user.knowAboutUs = knowAboutUs;
     if (username) user.name = username;
     if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
 
-    // Validate coupon code if provided
-    if (couponCode) {
-      const validationResult = await this.waitlistService.checkCouponCode({
-        email: user.email,
-        couponCode: couponCode,
-      });
-
-      if (validationResult.valid) {
-        user.couponCode = couponCode;
-        user.expireCouponCode = new Date(
-          Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
-        ); // 3 months
-
-        // Mark the promo code as used in waitlist
-        await this.waitlistService.markPromoCodeAsUsed(user.email, couponCode);
-      } else {
-        throw new RpcException({
-          statusCode: 400,
-          message: 'Invalid or expired coupon code',
-          error: 'Bad Request',
+    // Validate coupon code if provided (optional: invalid code is skipped)
+    if (couponCode?.trim()) {
+      try {
+        const validationResult = await this.waitlistService.checkCouponCode({
+          email: user.email,
+          couponCode: couponCode.trim(),
         });
+
+        if (validationResult.valid) {
+          user.couponCode = couponCode.trim();
+          user.expireCouponCode = new Date(
+            Date.now() + 3 * 30 * 24 * 60 * 60 * 1000,
+          ); // 3 months
+
+          await this.waitlistService.markPromoCodeAsUsed(
+            user.email,
+            couponCode.trim(),
+          );
+        }
+      } catch {
+        // Invalid or expired promo: do not block welcome
       }
     }
 

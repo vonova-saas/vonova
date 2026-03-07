@@ -4,7 +4,10 @@ import { GuideService } from './guide.service';
 import { S3Service } from '../../common/utils/storage/s3.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Guide, GuideSchema } from '../schema/guide.schema';
-import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
+import {
+  LibraryAsset,
+  LibraryAssetSchema,
+} from '../schema/library-asset.schema';
 
 @Module({
   imports: [
@@ -14,6 +17,6 @@ import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema
     ]),
   ],
   controllers: [GuideController],
-  providers: [GuideService, S3Service]
+  providers: [GuideService, S3Service],
 })
 export class GuideModule {}

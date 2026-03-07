@@ -1,38 +1,40 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Patch, 
-  Delete, 
-  Param, 
-  Body, 
-  Query 
-} from '@nestjs/common';
-import { CreateGuideDto, UpdateGuideDto, PublishGuideDto } from './dto/guide.dto';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  CreateGuideDto,
+  UpdateGuideDto,
+  PublishGuideDto,
+} from './dto/guide.dto';
 import { GuideService } from './guide.service';
 
-@Controller('library/guides')
+@Controller()
 export class GuideController {
   constructor(private readonly guideService: GuideService) {}
 
-  
-  @Post()
-  async createGuide(@Body() dto: CreateGuideDto) {
+  @MessagePattern({ cmd: 'library.guides.create' })
+  async createGuide(@Payload() data: { dto: CreateGuideDto }) {
+    const { dto } = data;
+    if (!dto) throw new Error('dto is required');
+
     return this.guideService.createGuideService(dto);
   }
 
-
-  @Get()
+  @MessagePattern({ cmd: 'library.guides.getAll' })
   async listGuides(
-    @Query('q') q?: string,
-    @Query('topics') topics?: string,
-    @Query('level') level?: string,
-    @Query('sort') sort?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('status') status?: string,
+    @Payload()
+    data: {
+      q?: string;
+      topics?: string;
+      level?: string;
+      sort?: string;
+      page?: number;
+      limit?: number;
+      status?: string;
+    },
   ) {
+    const { q, topics, level, sort, page, limit, status } = data || {};
     const topicsArray = topics ? topics.split(',') : undefined;
+
     return this.guideService.listGuidesService({
       q,
       topics: topicsArray,
@@ -44,32 +46,43 @@ export class GuideController {
     });
   }
 
-  
-  @Get(':id')
-  async getGuideById(@Param('id') id: string) {
+  @MessagePattern({ cmd: 'library.guides.getById' })
+  async getGuideById(@Payload() data: { id: string }) {
+    const { id } = data;
+    if (!id) throw new Error('id is required');
+
     return this.guideService.getGuideByIdService(id);
   }
 
-  @Get('slug/:slug')
-  async getGuideBySlug(@Param('slug') slug: string) {
+  @MessagePattern({ cmd: 'library.guides.getBySlug' })
+  async getGuideBySlug(@Payload() data: { slug: string }) {
+    const { slug } = data;
+    if (!slug) throw new Error('slug is required');
+
     return this.guideService.getGuideBySlugService(slug);
   }
 
-  
-  @Patch(':id')
-  async updateGuide(@Param('id') id: string, @Body() dto: UpdateGuideDto) {
+  @MessagePattern({ cmd: 'library.guides.update' })
+  async updateGuide(@Payload() data: { id: string; dto: UpdateGuideDto }) {
+    const { id, dto } = data;
+    if (!id || !dto) throw new Error('id and dto are required');
+
     return this.guideService.updateGuideService(id, dto);
   }
 
+  @MessagePattern({ cmd: 'library.guides.publish' })
+  async publishGuide(@Payload() data: { id: string; dto: PublishGuideDto }) {
+    const { id, dto } = data;
+    if (!id || !dto) throw new Error('id and dto are required');
 
-  @Patch(':id/publish')
-  async publishGuide(@Param('id') id: string, @Body() dto: PublishGuideDto) {
     return this.guideService.publishGuideService(id, dto.status);
   }
 
-  
-  @Delete(':id')
-  async deleteGuide(@Param('id') id: string) {
+  @MessagePattern({ cmd: 'library.guides.delete' })
+  async deleteGuide(@Payload() data: { id: string }) {
+    const { id } = data;
+    if (!id) throw new Error('id is required');
+
     return this.guideService.deleteGuideService(id);
   }
 }

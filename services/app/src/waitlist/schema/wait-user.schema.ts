@@ -31,6 +31,9 @@ export class WaitUser extends Document {
 export type WaitUserDocument = WaitUser & Document;
 export const WaitUserSchema = SchemaFactory.createForClass(WaitUser);
 
+// Indexes for better performance
+WaitUserSchema.index({ email: 1 });
+WaitUserSchema.index({ promoCode: 1 });
 WaitUserSchema.index({ email: 1, promoCode: 1 });
 WaitUserSchema.index({ expiresAt: 1 });
 WaitUserSchema.index({ used: 1 });
