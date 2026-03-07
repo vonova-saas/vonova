@@ -9,4 +9,4 @@ import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
   providers: [AuthGatewayService],
   exports: [AuthGatewayService],
 })
-export class AuthGatewayModule {}
+export class AuthGatewayModule { }

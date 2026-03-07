@@ -19,7 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ReviewGatewayService } from './review.gateway.service';
 import { CreateOrUpdateReviewDto, ListReviewsQuery } from './dto/review.dto';
 

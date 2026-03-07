@@ -1,16 +1,23 @@
-import { Controller, BadRequestException } from '@nestjs/common';
+import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { RoadmapService } from './roadmap.service';
 
 @Controller()
 export class RoadmapController {
-  constructor(private readonly roadmapService: RoadmapService) {}
+  private readonly logger = new Logger(RoadmapController.name);
+
+  constructor(private readonly roadmapService: RoadmapService) { }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { userId, ip = '', userAgent = '', ...generateRoadmapDto } = data;
     const request = { ...generateRoadmapDto, userId };
+
+    this.logger.log(
+      `Received roadmap generation request for topic: "${request.topic}", user: ${userId}`,
+    );
+
     return this.roadmapService.generateRoadmap(request, ip, userAgent);
   }
 
@@ -89,8 +96,14 @@ export class RoadmapController {
   async getRoadmapById(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { roadmapId, userId, ip = '', userAgent = '' } = data;
     if (!roadmapId) {
+      this.logger.warn('Get roadmap request missing roadmapId');
       throw new BadRequestException('Roadmap ID is required');
     }
+
+    this.logger.log(
+      `Received get roadmap request: ${roadmapId}${userId ? ` for user: ${userId}` : ''}`,
+    );
+
     return this.roadmapService.getRoadmapById(roadmapId, userId, ip, userAgent);
   }
 
@@ -108,8 +121,14 @@ export class RoadmapController {
       userAgent = '',
     } = data;
     if (!userId) {
+      this.logger.warn('Update progress request missing userId');
       throw new BadRequestException('User ID is required');
     }
+
+    this.logger.log(
+      `Received progress update request for roadmap: ${roadmapId}, user: ${userId}, progress: ${progress_percentage}%`,
+    );
+
     await this.roadmapService.updateProgress(
       roadmapId,
       userId,
@@ -132,8 +151,13 @@ export class RoadmapController {
   async deleteRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { roadmapId, userId } = data;
     if (!roadmapId || roadmapId.trim() === '') {
+      this.logger.warn('Delete roadmap request missing roadmapId');
       throw new BadRequestException('Roadmap ID is required');
     }
+
+    this.logger.log(
+      `Received delete roadmap request: ${roadmapId}${userId ? ` for user: ${userId}` : ''}`,
+    );
 
     const result = await this.roadmapService.deleteRoadmap(
       roadmapId.trim(),
@@ -173,10 +197,15 @@ export class RoadmapController {
   async getUserRoadmaps(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const { userId } = data;
     if (!userId || userId.trim() === '') {
+      this.logger.warn('Get user roadmaps request missing userId');
       throw new BadRequestException('User ID is required');
     }
 
+    this.logger.log(`Received get user roadmaps request for user: ${userId}`);
+
     const roadmaps = await this.roadmapService.getUserRoadmaps(userId.trim());
+
+    this.logger.log(`Retrieved ${roadmaps.length} roadmaps for user: ${userId}`);
 
     return {
       success: true,

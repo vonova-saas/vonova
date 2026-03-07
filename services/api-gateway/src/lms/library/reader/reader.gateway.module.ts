@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { AuthGatewayModule } from 'src/app/auth/auth.module';
+import { NatsClientModule } from '../../common/nats-client/nats-client.module';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AuthGatewayModule } from '../../app/auth/auth.module';
 import { ReaderGatewayController } from './reader.gateway.controller';
 import { ReaderGatewayService } from './reader.gateway.service';
 

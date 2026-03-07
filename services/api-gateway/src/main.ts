@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 // import { LoggerService } from './common/services/logger.service';
 import { SwaggerService } from './common/services/swagger.service';
@@ -25,17 +25,17 @@ async function bootstrap() {
   const parsedOrigins =
     rawOrigins != null && rawOrigins.trim() !== ''
       ? rawOrigins
-          .split(',')
-          .map((o) => o.trim().replace(/^"|"$/g, ''))
-          .filter((o) => o.length > 0)
+        .split(',')
+        .map((o) => o.trim().replace(/^"|"$/g, ''))
+        .filter((o) => o.length > 0)
       : [];
 
   const origins =
     parsedOrigins.length > 0
       ? parsedOrigins
       : [configuration().FRONTEND_ORIGIN].filter(
-          (o): o is string => typeof o === 'string' && o.length > 0,
-        );
+        (o): o is string => typeof o === 'string' && o.length > 0,
+      );
 
   app.enableCors({
     origin: origins,
@@ -58,8 +58,36 @@ async function bootstrap() {
   // Cookie parser
   app.use(cookieParser());
 
-  // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe());
+  // Global validation pipe with detailed error messages
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints;
+          const property = error.property;
+
+          if (constraints) {
+            const constraintMessages = Object.values(constraints);
+            return constraintMessages.join(', ');
+          }
+          return `${property} validation failed`;
+        });
+
+        return new BadRequestException({
+          statusCode: 400,
+          message: messages[0] || 'Validation failed',
+          error: 'Bad Request',
+          details: errors,
+        });
+      },
+    }),
+  );
   app.useGlobalFilters(new RpcExceptionFilter());
 
   // Logging with morgan (for HTTP request logging to console)

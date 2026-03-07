@@ -10,6 +10,15 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 
+export enum SkillLevel {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+  BEGINNER_CAP = 'Beginner',
+  INTERMEDIATE_CAP = 'Intermediate',
+  ADVANCED_CAP = 'Advanced',
+}
+
 export class GenerateRoadmapDto {
   @ApiProperty({
     description: 'Learning topic or subject',
@@ -23,11 +32,13 @@ export class GenerateRoadmapDto {
 
   @ApiProperty({
     description: 'Skill level of the learner',
-    enum: ['beginner', 'intermediate', 'advanced'],
-    example: 'beginner',
+    enum: SkillLevel,
+    example: SkillLevel.BEGINNER,
   })
-  @IsEnum(['beginner', 'intermediate', 'advanced'])
-  skill_level: 'beginner' | 'intermediate' | 'advanced';
+  @IsEnum(SkillLevel, {
+    message: `skill_level must be one of the following values: ${Object.values(SkillLevel).join(', ')}`,
+  })
+  skill_level: SkillLevel;
 
   @ApiProperty({
     description: 'Duration of the learning roadmap in weeks',

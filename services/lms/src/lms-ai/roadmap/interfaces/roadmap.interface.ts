@@ -19,9 +19,20 @@ export interface ITreeNode {
   children?: ITreeNode[];
 }
 
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
+
+export const SKILL_LEVEL_VALUES: SkillLevel[] = [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'Beginner',
+  'Intermediate',
+  'Advanced'
+];
+
 export interface IRoadmapRequest {
   topic: string;
-  skill_level: 'beginner' | 'intermediate' | 'advanced';
+  skill_level: SkillLevel;
   duration_weeks: number;
   focus_areas?: string[];
   userId: string;
@@ -37,7 +48,7 @@ export interface IRoadmapData {
   final_project: string;
   next_steps: string[];
   topic: string;
-  skill_level: 'beginner' | 'intermediate' | 'advanced';
+  skill_level: SkillLevel;
   duration_weeks: number;
   focus_areas?: string[];
   userId: string;
@@ -69,13 +80,13 @@ export interface IRoadmapHistory {
   roadmapId: string;
   userId: string;
   action:
-    | 'generated'
-    | 'viewed'
-    | 'started'
-    | 'week_completed'
-    | 'milestone_reached'
-    | 'completed'
-    | 'archived';
+  | 'generated'
+  | 'viewed'
+  | 'started'
+  | 'week_completed'
+  | 'milestone_reached'
+  | 'completed'
+  | 'archived';
   timestamp: Date;
   ip_address?: string;
   user_agent?: string;

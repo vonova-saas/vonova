@@ -11,4 +11,4 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
   providers: [FeedbackGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class FeedbackGatewayModule {}
+export class FeedbackGatewayModule { }

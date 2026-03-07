@@ -19,7 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { GuideGatewayService } from './guide.gateway.service';
 import {
   CreateGuideDto,

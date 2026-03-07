@@ -11,4 +11,4 @@ import { AuthGatewayModule } from '../auth/auth.module';
   providers: [BillingGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class BillingGatewayModule {}
+export class BillingGatewayModule { }

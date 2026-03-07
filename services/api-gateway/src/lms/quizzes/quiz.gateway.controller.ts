@@ -19,7 +19,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuizGatewayService } from './quiz.gateway.service';
 import {
   CreateQuizDto,

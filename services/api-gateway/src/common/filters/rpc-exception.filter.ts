@@ -26,11 +26,31 @@ export class RpcExceptionFilter implements ExceptionFilter {
       statusCode = exception.getStatus();
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null && 'message' in res) {
-        const r = res as { message?: string | string[]; error?: string };
+        const r = res as {
+          message?: string | string[];
+          error?: string;
+          details?: Array<{
+            property?: string;
+            constraints?: Record<string, string>;
+          }>;
+        };
         message = Array.isArray(r.message)
           ? (r.message[0] ?? message)
           : (r.message ?? message);
         error = r.error ?? 'Error';
+
+        // If we have validation details, format the message properly
+        if (r.details && Array.isArray(r.details)) {
+          const validationError = r.details[0];
+          if (validationError?.constraints) {
+            const constraints = validationError.constraints;
+            const constraintMessages = Object.values(constraints);
+            if (constraintMessages.length > 0) {
+              const firstMessage = constraintMessages[0];
+              message = typeof firstMessage === 'string' ? firstMessage : message;
+            }
+          }
+        }
       } else {
         message = typeof res === 'string' ? res : message;
       }
@@ -51,7 +71,11 @@ export class RpcExceptionFilter implements ExceptionFilter {
         error = (d.error as string) ?? error;
       } else if (ex?.message !== undefined && ex?.message !== null) {
         message =
-          typeof ex.message === 'string' ? ex.message : String(ex.message);
+          typeof ex.message === 'string'
+            ? ex.message
+            : typeof ex.message === 'object'
+              ? JSON.stringify(ex.message)
+              : String(ex.message);
         error = (ex.error as string) ?? error;
       }
     }
