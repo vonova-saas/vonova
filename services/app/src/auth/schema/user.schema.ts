@@ -4,9 +4,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as bcrypt from 'bcryptjs';
 import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
-import * as bcrypt from 'bcryptjs';
 import { Role } from '../enums/role.enum';
 
 export type UserDocument = HydratedDocument<User>;
@@ -38,7 +38,7 @@ export class User {
   @IsBoolean()
   isVerified: boolean;
 
-  @Prop({ lowercase: true, trim: true })
+  @Prop({ type: String, lowercase: true, trim: true, default: null })
   @IsString()
   knowAboutUs: string | null;
 
