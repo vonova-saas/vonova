@@ -10,16 +10,12 @@ export class WelcomeEmailDto {
   role: string;
 
   @IsString()
-  @IsNotEmpty()
-  profilePictureUrl: string;
+  @IsOptional()
+  couponCode?: string;
 
   @IsString()
   @IsOptional()
-  couponCode: string;
-
-  @IsString()
-  @IsNotEmpty()
-  knowAboutUs: string;
+  knowAboutUs?: string;
 
   @IsString()
   @IsOptional()

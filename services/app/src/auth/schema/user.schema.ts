@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -41,7 +40,7 @@ export class User {
 
   @Prop({ lowercase: true, trim: true })
   @IsString()
-  knowAboutUs: string;
+  knowAboutUs: string | null;
 
   @Prop({ type: String, default: null })
   @IsString()

@@ -21,15 +21,6 @@ export class WelcomeEmailDto {
   role: string;
 
   @ApiPropertyOptional({
-    description: 'Profile picture URL if provided',
-    example: 'https://example.com/profile.jpg',
-    type: String,
-  })
-  @IsString()
-  @IsOptional()
-  profilePictureUrl?: string;
-
-  @ApiPropertyOptional({
     description: 'Optional coupon code for discounts',
     example: 'WELCOME20',
     type: String,
@@ -44,8 +35,8 @@ export class WelcomeEmailDto {
     type: String,
   })
   @IsString()
-  @IsNotEmpty()
-  knowAboutUs: string;
+  @IsOptional()
+  knowAboutUs?: string;
 
   @ApiPropertyOptional({
     description: 'User agent string from client',
