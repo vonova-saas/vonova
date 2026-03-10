@@ -1,4 +1,4 @@
-# Books Recommendation 
+# Books Recommendation API
 
 A FastAPI-based recommendation system for technical books using TF-IDF + Cosine Similarity. The system filters and processes a dataset of technical books to provide intelligent search and recommendation capabilities.
 
@@ -18,13 +18,6 @@ A FastAPI-based recommendation system for technical books using TF-IDF + Cosine 
 - Kaggle API token for dataset download
 - Cohere API key for translation services
 - Required packages (see `requirements.txt`)
-- **Package Versions**:
-  - fastapi>=0.68.0
-  - uvicorn>=0.15.0
-  - scikit-learn>=1.0.0
-  - pandas>=1.3.0
-  - cohere>=3.0.0
-  - python-dotenv>=0.19.0
 
 ## 🛠️ Installation
 
@@ -188,22 +181,19 @@ Books-Recommendation/
 ├── .env.example              # Environment variables template
 ├── Dockerfile                # Docker configuration
 ├── README.md                 # This file
-├── Notebook/                 # Jupyter notebook for development
-│   └── BooksRec.ipynb       # Development notebook
 ├── training/                 # Training scripts
 │   └── train.py              # Model training pipeline
 ├── Utils/                    # Utility modules
 │   ├── __init__.py
 │   ├── logging.py           # Logging utilities
 │   └── translation.py       # Translation utilities
-└── Schemas/                  # Pydantic schemas
-    └── recommend_schema.py  # Request/response schemas
+├── Schemas/                  # Pydantic schemas
+│   └── recommend_schema.py  # Request/response schemas
+└── model_files/             # Generated model files
+    ├── FINAL_BOOKS_CLEAN.csv # Processed book dataset
+    ├── vectorizer.pkl        # TF-IDF vectorizer
+    └── similarity_sparse.pkl # Similarity matrix
 ```
-
-**Note**: The `model_files/` directory is generated during training and contains:
-- `FINAL_BOOKS_CLEAN.csv` # Processed book dataset
-- `vectorizer.pkl`        # TF-IDF vectorizer
-- `similarity_sparse.pkl` # Similarity matrix
 
 ## ⚙️ Configuration
 
@@ -217,22 +207,6 @@ Environment variables:
 | `AI_SERVICE_PORT` | Service port | `5030` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 
-## 🧪 Testing
-
-```bash
-# Run unit tests
-python -m pytest tests/
-
-# Run integration tests
-python -m pytest tests/integration/
-
-# Test coverage
-python -m pytest --cov=. tests/
-
-# Test API endpoints
-python -m pytest tests/test_api.py
-```
-
 ## 📈 Performance
 
 - **Load Time**: <2s (startup)
@@ -240,9 +214,6 @@ python -m pytest tests/test_api.py
 - **Recommendations**: <100ms per query
 - **Memory Usage**: ~500MB
 - **Dataset Size**: 9,237 books
-- **API Response Time**: <150ms average
-- **Concurrent Users**: Supports 500+ simultaneous requests
-- **Uptime**: 99.95% availability
 
 ## 🛠️ Tech Stack
 
@@ -341,23 +312,12 @@ uvicorn main:app --reload --port 5030
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass:
-   ```bash
-   python -m pytest tests/
-   ```
-6. Update documentation as needed
-7. Submit a pull request with clear description
-
-### Development Guidelines
-- Follow PEP 8 style guidelines
-- Add type hints for new functions
-- Include docstrings for all public methods
-- Test edge cases and error conditions
-- Update README for API changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## 📄 License
 
 This feature is part of the Vonova AI project and is licensed under the Apache License.
+
