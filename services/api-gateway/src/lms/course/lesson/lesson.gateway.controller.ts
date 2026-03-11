@@ -32,13 +32,10 @@ import {
   UpdateLessonDto,
   ReorderLessonDto,
   VideoUploadUrlDto,
-  VideoUploadResponseDto,
-  VideoUrlResponseDto,
 } from './dto/lesson.dto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { Readable } from 'stream';
-import configuration from 'src/common/config/configuration';
 
 @ApiTags('LMS Course Lessons')
 @ApiBearerAuth()

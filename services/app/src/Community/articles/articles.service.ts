@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ArticleDocument, IArticle } from './schemas/article.schema';
@@ -13,20 +17,20 @@ export class ArticlesService {
   constructor(
     @InjectModel('Article') private articleModel: Model<ArticleDocument>,
     private readonly s3Service: S3Service,
-  ) { }
+  ) {}
 
   // Article CRUD Operations
   async createArticle(createArticleDto: CreateArticleDto): Promise<IArticle> {
     // Set default author ID
     const articleData = {
       ...createArticleDto,
-      author: '507f1f77bcf86cd799439013' // Default author ID
+      author: '507f1f77bcf86cd799439013', // Default author ID
     };
 
     // Check if slug already exists
     if (articleData.slug) {
       const existingArticle = await this.articleModel.findOne({
-        slug: articleData.slug
+        slug: articleData.slug,
       });
       if (existingArticle) {
         throw new BadRequestException('Article with this slug already exists');
@@ -37,19 +41,20 @@ export class ArticlesService {
     return article.save();
   }
 
-  async updateArticle(id: string, updateArticleDto: UpdateArticleDto): Promise<IArticle> {
+  async updateArticle(
+    id: string,
+    updateArticleDto: UpdateArticleDto,
+  ): Promise<IArticle> {
     const article = await this.articleModel.findById(id);
     if (!article) {
       throw new NotFoundException('Article not found');
     }
 
-
-
     // Check slug uniqueness if provided
     if (updateArticleDto.slug && updateArticleDto.slug !== article.slug) {
       const existingArticle = await this.articleModel.findOne({
         slug: updateArticleDto.slug,
-        _id: { $ne: id }
+        _id: { $ne: id },
       });
       if (existingArticle) {
         throw new BadRequestException('Article with this slug already exists');
@@ -78,8 +83,8 @@ export class ArticlesService {
 
     // Delete the article
     await this.articleModel.findByIdAndDelete(id);
-    
-    return { message: 'Article deleted successfully' }
+
+    return { message: 'Article deleted successfully' };
   }
 
   async getArticleBySlug(slug: string): Promise<IArticle> {
@@ -108,10 +113,12 @@ export class ArticlesService {
     return article;
   }
 
-  async getArticles(query: QueryArticlesDto): Promise<PaginationResult<IArticle>> {
+  async getArticles(
+    query: QueryArticlesDto,
+  ): Promise<PaginationResult<IArticle>> {
     const paginationOptions = PaginationUtil.createPaginationOptions(
       query.page,
-      query.limit
+      query.limit,
     );
     const skip = PaginationUtil.getSkipValue(paginationOptions);
 
@@ -119,10 +126,23 @@ export class ArticlesService {
     const filter: any = {};
 
     if (query.category) {
-      const categories = Array.isArray(query.category) ? query.category : [query.category];
-      const validCategories = ['architecture', 'devops', 'backend', 'databases', 'frontend', 'mobile', 'ai', 'security'];
-      const filteredCategories = categories.filter(cat => validCategories.includes(cat));
-      
+      const categories = Array.isArray(query.category)
+        ? query.category
+        : [query.category];
+      const validCategories = [
+        'architecture',
+        'devops',
+        'backend',
+        'databases',
+        'frontend',
+        'mobile',
+        'ai',
+        'security',
+      ];
+      const filteredCategories = categories.filter((cat) =>
+        validCategories.includes(cat),
+      );
+
       if (filteredCategories.length > 0) {
         filter.category = { $in: filteredCategories };
       }
@@ -135,7 +155,6 @@ export class ArticlesService {
     if (query.publishedStatus) {
       filter.publishedStatus = query.publishedStatus;
     }
-
 
     // Date range filter
     if (query.dateFrom || query.dateTo) {
@@ -166,17 +185,24 @@ export class ArticlesService {
         .skip(skip)
         .limit(paginationOptions.limit)
         .exec(),
-      this.articleModel.countDocuments(filter)
+      this.articleModel.countDocuments(filter),
     ]);
 
-    return PaginationUtil.createPaginationResult(articles, total, paginationOptions);
+    return PaginationUtil.createPaginationResult(
+      articles,
+      total,
+      paginationOptions,
+    );
   }
 
-  async updatePublishedStatus(id: string, status: 'draft' | 'published' | 'archived'): Promise<IArticle> {
+  async updatePublishedStatus(
+    id: string,
+    status: 'draft' | 'published' | 'archived',
+  ): Promise<IArticle> {
     const article = await this.articleModel.findByIdAndUpdate(
       id,
       { publishedStatus: status },
-      { new: true }
+      { new: true },
     );
 
     if (!article) {
@@ -186,7 +212,11 @@ export class ArticlesService {
     return article;
   }
 
-  async updateCoverImage(id: string, coverImage: string, coverImageKey: string): Promise<IArticle> {
+  async updateCoverImage(
+    id: string,
+    coverImage: string,
+    coverImageKey: string,
+  ): Promise<IArticle> {
     const article = await this.articleModel.findById(id);
     if (!article) {
       throw new NotFoundException('Article not found');
@@ -204,7 +234,7 @@ export class ArticlesService {
 
     article.coverImage = coverImage;
     article.coverImageKey = coverImageKey;
-    
+
     return article.save();
   }
 }
