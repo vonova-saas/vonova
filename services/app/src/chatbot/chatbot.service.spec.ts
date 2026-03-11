@@ -1,21 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChatbotService } from './chatbot.service';
 import { getModelToken } from '@nestjs/mongoose';
+import { ChatbotService } from './chatbot.service';
 import { Chatbot } from './entities/chatbot.entity';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
-  let chatbotModelMock: {
-    create: jest.Mock;
-    find: jest.Mock;
-    findById: jest.Mock;
-  };
 
   beforeEach(async () => {
-    chatbotModelMock = {
+    const chatbotModelMock = {
       create: jest.fn(),
       find: jest.fn(),
       findById: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

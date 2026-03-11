@@ -101,6 +101,58 @@ export class UploadGatewayController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Complete file upload',
+    description:
+      'Completes the file upload process after the file has been successfully uploaded to cloud storage.',
+  })
+  @ApiParam({
+    name: 'itemType',
+    description: 'Type of item (BOOK, GUIDE, or PRESENTATION)',
+    enum: ['BOOK', 'GUIDE', 'PRESENTATION'],
+    example: 'BOOK',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'The unique identifier of the item',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'Optional user ID header (alternative to JWT token)',
+    required: false,
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'File upload completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'File upload completed successfully' },
+        fileUrl: {
+          type: 'string',
+          example: 'https://s3.amazonaws.com/bucket/uploads/javascript-guide.pdf',
+        },
+        fileName: { type: 'string', example: 'javascript-guide.pdf' },
+        fileSize: { type: 'number', example: 5242880 },
+        mimeType: { type: 'string', example: 'application/pdf' },
+        uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid completion data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token or x-user-id required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Item not found',
+  })
   @Post(':itemType/:itemId/file/complete')
   async complete(
     @Param('itemType') itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',

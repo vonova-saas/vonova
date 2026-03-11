@@ -11,12 +11,13 @@ export class Comment extends Document {
 
   @Prop({ required: true, trim: true, maxlength: 1000 })
   text: string;
+  
+@Prop({ type: String, default: null })
+image?: string;
 
-  @Prop({ type: String, default: null })
-  image?: string;
+@Prop({ type: String, default: null })
+imageKey?: string;
 
-  @Prop({ type: String, default: null })
-  imageKey?: string;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   likes: Types.ObjectId[];

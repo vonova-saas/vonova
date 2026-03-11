@@ -61,9 +61,9 @@ describe('QuizController', () => {
       const expected: CreateQuizDto & { id: string } = { id: '1', ...dto };
       quizServiceMock.createQuiz.mockResolvedValue(expected);
 
-      const result = await controller.createQuiz(dto);
+      const result = await controller.createQuiz(dto, 'USER_ID');
 
-      expect(quizServiceMock.createQuiz).toHaveBeenCalledWith(dto);
+      expect(quizServiceMock.createQuiz).toHaveBeenCalledWith(dto, 'USER_ID');
       expect(result).toEqual(expected);
     });
   });
@@ -75,9 +75,9 @@ describe('QuizController', () => {
       const expected: UpdateQuizDto & { id: string } = { id, ...dto };
       quizServiceMock.updateQuiz.mockResolvedValue(expected);
 
-      const result = await controller.updateQuiz(id, dto);
+      const result = await controller.updateQuiz(id, dto, 'USER_ID');
 
-      expect(quizServiceMock.updateQuiz).toHaveBeenCalledWith(id, dto);
+      expect(quizServiceMock.updateQuiz).toHaveBeenCalledWith(id, dto, 'USER_ID');
       expect(result).toEqual(expected);
     });
   });
@@ -115,9 +115,9 @@ describe('QuizController', () => {
       };
       quizServiceMock.deleteQuiz.mockResolvedValue(expected);
 
-      const result = await controller.deleteQuiz(id);
+      const result = await controller.deleteQuiz(id, 'USER_ID');
 
-      expect(quizServiceMock.deleteQuiz).toHaveBeenCalledWith(id);
+      expect(quizServiceMock.deleteQuiz).toHaveBeenCalledWith(id, 'USER_ID');
       expect(result).toEqual(expected);
     });
   });
@@ -131,11 +131,12 @@ describe('QuizController', () => {
       const expected: { id: string } = { id: 'attempt-id' };
       quizServiceMock.submitQuizAnswers.mockResolvedValue(expected);
 
-      const result = await controller.submitQuiz(quizId, answers);
+      const payload = { quizId, answers };
+      const result = await controller.submitQuiz(payload);
 
       expect(quizServiceMock.submitQuizAnswers).toHaveBeenCalledWith(
-        quizId,
-        answers,
+        payload,
+        undefined,
       );
       expect(result).toEqual(expected);
     });
@@ -160,9 +161,10 @@ describe('QuizController', () => {
       const expected = [{ id: 'attempt-id' }] as any[];
       quizServiceMock.getMyAttemptsForQuiz.mockResolvedValue(expected);
 
-      const result = await controller.getMyAttempts(quizId);
+      const payload = { quizId, userId: 'USER_ID' };
+      const result = await controller.getMyAttempts(payload);
 
-      expect(quizServiceMock.getMyAttemptsForQuiz).toHaveBeenCalledWith(quizId);
+      expect(quizServiceMock.getMyAttemptsForQuiz).toHaveBeenCalledWith(payload, undefined);
       expect(result).toEqual(expected);
     });
   });

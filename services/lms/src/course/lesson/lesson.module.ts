@@ -5,6 +5,7 @@ import { LessonController } from './lesson.controller';
 import { Lesson, LessonSchema } from './schema/lesson.schema';
 import { Course, CourseSchema } from '../course/schema/course.schema';
 import { Chapter, ChapterSchema } from '../chapter/schema/chapter.schema';
+import { S3ConfigService } from './config/s3.config';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { Chapter, ChapterSchema } from '../chapter/schema/chapter.schema';
     ]),
   ],
   controllers: [LessonController],
-  providers: [LessonService],
+  providers: [LessonService, S3ConfigService],
 })
 export class LessonModule {}

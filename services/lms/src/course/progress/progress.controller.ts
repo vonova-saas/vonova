@@ -14,18 +14,24 @@ export class ProgressController {
       courseId: string;
       lessonId: string;
       userId: string;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
       completed: boolean;
       timeSpentSec: number;
     },
   ) {
-    const { courseId, lessonId, userId, completed, timeSpentSec } = data;
+    const { courseId, lessonId, userId, createdBy, user, completed, timeSpentSec } = data;
     if (!courseId || !lessonId || !userId)
       throw new Error('courseId, lessonId and userId are required');
+
+    // Extract createdBy from multiple possible sources
+    const creatorId = createdBy || user?.id || user?.sub || userId;
 
     return this.progressService.markLessonComplete(
       courseId,
       lessonId,
       userId,
+      creatorId,
       completed,
       timeSpentSec,
     );

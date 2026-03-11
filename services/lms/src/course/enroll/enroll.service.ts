@@ -14,7 +14,7 @@ export class EnrollService {
     @InjectModel(Lesson.name) private lessonModel: Model<Lesson>,
   ) {}
 
-  async enrollCourse(courseId: string, userId: string, couponCode?: string) {
+  async enrollCourse(courseId: string, userId: string, createdBy: string, couponCode?: string) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
 
@@ -24,6 +24,7 @@ export class EnrollService {
     return this.enrollmentModel.create({
       courseId,
       userId,
+      createdBy,
       status: 'ACTIVE',
       purchasedAt: new Date(),
       pricePaid: course.price?.amount,

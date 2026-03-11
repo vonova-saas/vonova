@@ -114,6 +114,44 @@ export class BookGatewayController {
     return firstValueFrom(this.bookService.createBook(dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Publish book',
+    description:
+      'Publishes or unpublishes a book, making it available or unavailable to readers.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book publish status updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid publish data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only book owner can publish',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Patch(':id/publish')
   async publishBook(
     @Param('id') id: string,
@@ -124,21 +162,312 @@ export class BookGatewayController {
     return firstValueFrom(this.bookService.publishBook(id, dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Get books',
+    description:
+      'Retrieves a list of books with optional filtering by search query, topics, level, and sorting.',
+  })
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query to filter books by title or content',
+    required: false,
+    example: 'javascript',
+  })
+  @ApiQuery({
+    name: 'topics',
+    description: 'Filter by topics (comma-separated)',
+    required: false,
+    example: 'javascript,programming',
+  })
+  @ApiQuery({
+    name: 'level',
+    description: 'Filter by difficulty level',
+    required: false,
+    enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+    example: 'INTERMEDIATE',
+  })
+  @ApiQuery({
+    name: 'sort',
+    description: 'Sort order',
+    required: false,
+    enum: ['newest', 'oldest', 'popular', 'rating'],
+    example: 'popular',
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Page number for pagination',
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of books per page',
+    required: false,
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Books retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        books: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+              slug: { type: 'string', example: 'javascript-complete-guide' },
+              summary: {
+                type: 'string',
+                example: 'A comprehensive guide to JavaScript programming.',
+              },
+              authors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', example: 'John Doe' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/author-avatar.jpg',
+                    },
+                  },
+                },
+              },
+              topics: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['javascript', 'programming'],
+              },
+              level: { type: 'string', example: 'Intermediate' },
+              coverUrl: {
+                type: 'string',
+                example: 'https://example.com/book-cover.jpg',
+              },
+              pageCount: { type: 'number', example: 450 },
+              readingTimeMin: { type: 'number', example: 180 },
+              status: { type: 'string', example: 'PUBLISHED' },
+              averageRating: { type: 'number', example: 4.5 },
+              reviewCount: { type: 'number', example: 25 },
+              isFavorite: { type: 'boolean', example: false },
+            },
+          },
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 20 },
+            total: { type: 'number', example: 100 },
+            totalPages: { type: 'number', example: 5 },
+          },
+        },
+      },
+    },
+  })
   @Get()
   async getBooks(@Query() query: GetBooksQueryDto) {
     return firstValueFrom(this.bookService.getBooks(query));
   }
 
+  @ApiOperation({
+    summary: 'Get book by ID',
+    description:
+      'Retrieves a specific book using its unique identifier including full details and content availability.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+        slug: { type: 'string', example: 'javascript-complete-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to JavaScript programming.',
+        },
+        description: {
+          type: 'string',
+          example:
+            'This book covers everything from basic JavaScript concepts to advanced topics.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/book-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['bestseller', 'featured'],
+        },
+        pageCount: { type: 'number', example: 450 },
+        readingTimeMin: { type: 'number', example: 180 },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 25 },
+        isFavorite: { type: 'boolean', example: false },
+        userProgress: {
+          type: 'object',
+          properties: {
+            currentPage: { type: 'number', example: 125 },
+            totalPages: { type: 'number', example: 450 },
+            progressPercentage: { type: 'number', example: 0.28 },
+            lastReadAt: { type: 'string', example: '2023-01-15T00:00:00.000Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Get(':id')
   async getBookById(@Param('id') id: string) {
     return firstValueFrom(this.bookService.getBookById(id));
   }
 
+  @ApiOperation({
+    summary: 'Get book by slug',
+    description:
+      'Retrieves a specific book using its URL-friendly slug identifier.',
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'The URL-friendly slug of the book',
+    example: 'javascript-complete-guide',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+        slug: { type: 'string', example: 'javascript-complete-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to JavaScript programming.',
+        },
+        description: {
+          type: 'string',
+          example:
+            'This book covers everything from basic JavaScript concepts to advanced topics.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/book-cover.jpg',
+        },
+        pageCount: { type: 'number', example: 450 },
+        readingTimeMin: { type: 'number', example: 180 },
+        status: { type: 'string', example: 'PUBLISHED' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 25 },
+        isFavorite: { type: 'boolean', example: false },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Get('slug/:slug')
   async getBookBySlug(@Param('slug') slug: string) {
     return firstValueFrom(this.bookService.getBookBySlug(slug));
   }
 
+  @ApiOperation({
+    summary: 'Update book',
+    description:
+      'Updates an existing book with new information. Only the book owner can update.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+        updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid book data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only book owner can update',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Patch(':id')
   async updateBook(
     @Param('id') id: string,
@@ -149,6 +478,46 @@ export class BookGatewayController {
     return firstValueFrom(this.bookService.updateBook(id, dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Update book progress',
+    description:
+      'Updates the reading progress of a book for the authenticated user, including current page and completion status.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book progress updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        bookId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        currentPage: { type: 'number', example: 125 },
+        totalPages: { type: 'number', example: 450 },
+        progressPercentage: { type: 'number', example: 0.28 },
+        isCompleted: { type: 'boolean', example: false },
+        lastReadAt: { type: 'string', example: '2023-01-15T00:00:00.000Z' },
+        readingTimeMinutes: { type: 'number', example: 45 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid progress data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Patch(':id/progress')
   async updateBookProgress(
     @Param('id') bookId: string,
@@ -161,6 +530,38 @@ export class BookGatewayController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Delete book',
+    description:
+      'Permanently deletes a book and all its associated content. This action cannot be undone.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Book deleted successfully' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only book owner can delete',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Delete(':id')
   async deleteBook(@Param('id') id: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub;

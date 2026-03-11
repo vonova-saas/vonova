@@ -5,6 +5,7 @@ import {
   Min,
   ArrayMinSize,
   ValidateNested,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -14,7 +15,7 @@ export class CreateChapterDto {
 
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(1)
   index?: number;
 }
 
@@ -25,16 +26,17 @@ export class UpdateChapterDto {
 
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(1)
   index?: number;
 }
 
 export class ReorderChapterItemDto {
   @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for chapterId' })
   chapterId: string;
 
   @IsInt()
-  @Min(0)
+  @Min(1)
   index: number;
 }
 

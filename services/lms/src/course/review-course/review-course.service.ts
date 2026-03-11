@@ -28,6 +28,7 @@ export class ReviewCourseService {
   async createReview(
     courseId: string,
     userId: string,
+    createdBy: string,
     rating: number,
     title?: string,
     body?: string,
@@ -45,7 +46,7 @@ export class ReviewCourseService {
 
     const review = await this.reviewModel.findOneAndUpdate(
       { userId, courseId },
-      { $set: { rating, title, body } },
+      { $set: { rating, title, body, createdBy } },
       { new: true, upsert: true },
     );
 

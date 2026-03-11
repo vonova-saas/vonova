@@ -12,18 +12,24 @@ export class ReviewCourseController {
     data: {
       courseId: string;
       userId: string;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
       rating: number;
       title: string;
       body: string;
     },
   ) {
-    const { courseId, userId, rating, title, body } = data;
+    const { courseId, userId, createdBy, user, rating, title, body } = data;
     if (!courseId || !userId || !rating)
       throw new Error('courseId, userId and rating are required');
+
+    // Extract createdBy from multiple possible sources
+    const creatorId = createdBy || user?.id || user?.sub || userId;
 
     const review = await this.reviewService.createReview(
       courseId,
       userId,
+      creatorId,
       rating,
       title,
       body,

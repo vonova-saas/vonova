@@ -9,10 +9,10 @@ export class EnrollGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  enrollCourse(courseId: string, userId: string, dto?: EnrollCourseDto) {
+  enrollCourse(courseId: string, userId: string, createdBy: string, dto?: EnrollCourseDto) {
     return this.client.send(
       { cmd: 'app.courses.enroll' },
-      { courseId, userId, ...dto },
+      { courseId, userId, createdBy, user: { id: createdBy }, ...dto },
     );
   }
 

@@ -13,28 +13,32 @@ export class CourseGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  createCourse(dto: CreateCourseDto, ownerId: string) {
-    return this.client.send({ cmd: 'app.courses.create' }, { dto, ownerId });
+  createCourse(dto: CreateCourseDto, createdBy: string) {
+    return this.client.send({ cmd: 'app.courses.create' }, { 
+      dto, 
+      createdBy,
+      user: { id: createdBy }
+    });
   }
 
   updateCourse(courseId: string, dto: UpdateCourseDto, ownerId: string) {
     return this.client.send(
       { cmd: 'app.courses.update' },
-      { courseId, dto, ownerId },
+      { courseId, dto, ownerId, user: { id: ownerId } },
     );
   }
 
   publishCourse(courseId: string, dto: PublishCourseDto, ownerId: string) {
     return this.client.send(
       { cmd: 'app.courses.publish' },
-      { courseId, dto, ownerId },
+      { courseId, dto, ownerId, user: { id: ownerId } },
     );
   }
 
   deleteCourse(courseId: string, ownerId: string) {
     return this.client.send(
       { cmd: 'app.courses.delete' },
-      { courseId, ownerId },
+      { courseId, ownerId, user: { id: ownerId } },
     );
   }
 

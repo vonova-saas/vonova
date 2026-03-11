@@ -22,11 +22,11 @@ export class CourseService {
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
   ) {}
 
-  async createCourse(dto: CreateCourseDto, ownerId: string) {
+  async createCourse(dto: CreateCourseDto, createdBy: string) {
     const courseData = {
       ...dto,
-      ownerId,
       price: dto.price ?? { amount: 0, currency: 'USD', isFree: true },
+      ownerId: createdBy,
     };
     const course = await this.courseModel.create(courseData);
     return { message: 'Course created successfully', course };

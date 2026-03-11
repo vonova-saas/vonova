@@ -11,6 +11,9 @@ export class Lesson {
   @Prop({ type: Types.ObjectId, ref: 'Chapter', required: true, index: true })
   chapterId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: Types.ObjectId;
+
   @Prop({ required: true })
   title: string;
 
@@ -31,6 +34,15 @@ export class Lesson {
 
   @Prop({ type: Types.ObjectId, ref: 'Asset', default: null })
   videoAssetId?: Types.ObjectId | null;
+
+  @Prop()
+  videoUrl?: string;
+
+  @Prop()
+  videoObjectKey?: string;
+
+  @Prop({ default: false })
+  hasVideo?: boolean;
 }
 
 export type LessonDocument = Lesson & Document;

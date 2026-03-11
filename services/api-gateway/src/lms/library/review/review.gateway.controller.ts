@@ -16,18 +16,19 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { ReviewGatewayService } from './review.gateway.service';
-import { CreateOrUpdateReviewDto } from './dto/review.dto';
+import { CreateOrUpdateReviewDto, ListReviewsQuery } from './dto/review.dto';
 
 @ApiTags('LMS Library Reviews')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/items')
 @UseGuards(JwtAuthGuard)
 export class ReviewGatewayController {
-  constructor(private readonly reviewService: ReviewGatewayService) { }
+  constructor(private readonly reviewService: ReviewGatewayService) {}
 
   @ApiOperation({
     summary: 'Create or update review',
@@ -101,6 +102,93 @@ export class ReviewGatewayController {
     return { message: 'Review created or updated successfully', data: review };
   }
 
+  @ApiOperation({
+    summary: 'List reviews',
+    description:
+      'Retrieves a paginated list of reviews for a specific library item (book, guide, or presentation).',
+  })
+  @ApiParam({
+    name: 'itemType',
+    description: 'Type of item being reviewed',
+    example: 'BOOK',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'The unique identifier of the item',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Page number for pagination',
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of reviews per page',
+    required: false,
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reviews list fetched successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Reviews list fetched successfully',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            reviews: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                  itemType: { type: 'string', example: 'BOOK' },
+                  itemId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                  userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                  rating: { type: 'number', example: 5 },
+                  title: { type: 'string', example: 'Excellent JavaScript Guide!' },
+                  body: {
+                    type: 'string',
+                    example: 'This guide provided comprehensive coverage...',
+                  },
+                  user: {
+                    type: 'object',
+                    properties: {
+                      name: { type: 'string', example: 'John Doe' },
+                      avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    },
+                  },
+                  createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                  updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 20 },
+                total: { type: 'number', example: 50 },
+                totalPages: { type: 'number', example: 3 },
+              },
+            },
+            averageRating: { type: 'number', example: 4.5 },
+            totalReviews: { type: 'number', example: 50 },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Item not found',
+  })
   @Get(':itemType/:itemId/reviews')
   async listReviews(
     @Param('itemType') itemType: any,
@@ -114,6 +202,59 @@ export class ReviewGatewayController {
     return { message: 'Reviews list fetched successfully', data };
   }
 
+  @ApiOperation({
+    summary: 'Get my review',
+    description:
+      'Retrieves the review written by the authenticated user for a specific library item.',
+  })
+  @ApiParam({
+    name: 'itemType',
+    description: 'Type of item being reviewed',
+    example: 'BOOK',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'The unique identifier of the item',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User review fetched successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'User review fetched successfully',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            itemType: { type: 'string', example: 'BOOK' },
+            itemId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            rating: { type: 'number', example: 5 },
+            title: { type: 'string', example: 'Excellent JavaScript Guide!' },
+            body: {
+              type: 'string',
+              example: 'This guide provided comprehensive coverage...',
+            },
+            createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+            updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Item not found or user has not reviewed the item',
+  })
   @Get(':itemType/:itemId/reviews/me')
   async getMyReview(
     @Param('itemType') itemType: any,

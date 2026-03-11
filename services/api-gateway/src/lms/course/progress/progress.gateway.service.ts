@@ -13,6 +13,7 @@ export class ProgressGatewayService {
     courseId: string,
     lessonId: string,
     userId: string,
+    createdBy: string,
     dto: MarkLessonCompleteDto,
   ) {
     return this.client.send(
@@ -21,6 +22,8 @@ export class ProgressGatewayService {
         courseId,
         lessonId,
         userId,
+        createdBy,
+        user: { id: createdBy },
         completed: dto.completed,
         timeSpentSec: dto.timeSpentSec,
       },

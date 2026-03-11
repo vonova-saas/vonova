@@ -16,13 +16,10 @@ export interface PaginationOptions {
 }
 
 export class PaginationUtil {
-  static createPaginationOptions(
-    page?: number,
-    limit?: number,
-  ): PaginationOptions {
+  static createPaginationOptions(page?: number, limit?: number): PaginationOptions {
     const parsedPage = Math.max(1, page || 1);
     const parsedLimit = Math.min(100, Math.max(1, limit || 10));
-
+    
     return {
       page: parsedPage,
       limit: parsedLimit,
@@ -32,10 +29,10 @@ export class PaginationUtil {
   static createPaginationResult<T>(
     data: T[],
     total: number,
-    options: PaginationOptions,
+    options: PaginationOptions
   ): PaginationResult<T> {
     const totalPages = Math.ceil(total / options.limit);
-
+    
     return {
       data,
       pagination: {

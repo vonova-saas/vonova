@@ -6,6 +6,9 @@ export class Chapter {
   @Prop({ type: Types.ObjectId, ref: 'Course', required: true, index: true })
   courseId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: Types.ObjectId;
+
   @Prop({ required: true })
   title: string;
 

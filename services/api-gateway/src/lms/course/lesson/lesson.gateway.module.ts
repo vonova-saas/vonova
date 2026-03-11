@@ -11,4 +11,4 @@ import { LessonGatewayService } from './lesson.gateway.service';
   providers: [LessonGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class LessonGatewayModule {}
+export class LessonGatewayModule {} 

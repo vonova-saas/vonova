@@ -8,6 +8,9 @@ export class LessonProgress {
   @Prop({ type: Types.ObjectId, required: true, ref: 'User', index: true })
   userId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, required: true, ref: 'Course', index: true })
   courseId: Types.ObjectId;
 

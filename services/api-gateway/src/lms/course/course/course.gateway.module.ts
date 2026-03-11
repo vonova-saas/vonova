@@ -11,4 +11,4 @@ import { CourseGatewayService } from './course.gateway.service';
   providers: [CourseGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class CourseGatewayModule { }
+export class CourseGatewayModule {}

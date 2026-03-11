@@ -13,7 +13,11 @@ describe('QuizService', () => {
   let quizModelMock: {
     create: jest.Mock;
     findById: jest.Mock;
+    findOne: jest.Mock;
+    findByIdAndUpdate: jest.Mock;
+    findByIdAndDelete: jest.Mock;
     find: jest.Mock;
+    countDocuments: jest.Mock;
   };
   let quizAnswerModelMock: {
     create: jest.Mock;
@@ -25,7 +29,11 @@ describe('QuizService', () => {
     quizModelMock = {
       create: jest.fn(),
       findById: jest.fn(),
+      findOne: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
       find: jest.fn(),
+      countDocuments: jest.fn(),
     };
 
     quizAnswerModelMock = {
@@ -110,19 +118,22 @@ describe('QuizService', () => {
     it('should delete quiz when found', async () => {
       const deleteOne = jest.fn();
       const quiz = { _id: 'quiz-id', deleteOne } as any;
-      quizModelMock.findById.mockResolvedValue(quiz);
+      quizModelMock.findOne.mockResolvedValue(quiz);
 
-      const result = await service.deleteQuiz('quiz-id');
+      const result = await service.deleteQuiz('quiz-id', 'user-id');
 
-      expect(quizModelMock.findById).toHaveBeenCalledWith('quiz-id');
+      expect(quizModelMock.findOne).toHaveBeenCalledWith({
+        _id: 'quiz-id',
+        createdBy: 'user-id',
+      });
       expect(deleteOne).toHaveBeenCalled();
       expect(result).toEqual({ message: 'Quiz deleted successfully' });
     });
 
     it('should throw NotFoundException when quiz does not exist', async () => {
-      quizModelMock.findById.mockResolvedValue(null);
+      quizModelMock.findOne.mockResolvedValue(null);
 
-      await expect(service.deleteQuiz('missing-id')).rejects.toThrow(
+      await expect(service.deleteQuiz('missing-id', 'user-id')).rejects.toThrow(
         NotFoundException,
       );
     });

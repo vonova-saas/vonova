@@ -26,6 +26,7 @@ export class ProgressService {
     courseId: string,
     lessonId: string,
     userId: string,
+    createdBy: string,
     completed = true,
     timeSpentSec?: number,
   ) {
@@ -41,6 +42,7 @@ export class ProgressService {
         $set: {
           completed,
           completedAt: completed ? new Date() : undefined,
+          createdBy,
         },
         $inc: {
           timeSpentSec: timeSpentSec || 0,

@@ -9,12 +9,14 @@ export class ReviewCourseGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  createReview(courseId: string, userId: string, dto: CreateReviewCourseDto) {
+  createReview(courseId: string, userId: string, createdBy: string, dto: CreateReviewCourseDto) {
     return this.client.send(
       { cmd: 'app.courses.reviews.create' },
       {
         courseId,
         userId,
+        createdBy,
+        user: { id: createdBy },
         rating: dto.rating,
         title: dto.title,
         body: dto.body,

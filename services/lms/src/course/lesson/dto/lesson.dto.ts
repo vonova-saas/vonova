@@ -6,7 +6,11 @@ import {
   IsEnum,
   IsBoolean,
   ArrayMinSize,
+  IsUrl,
+  ValidateNested,
+  Matches,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateLessonDto {
   @IsString()
@@ -43,7 +47,7 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  index: number = 0;
+  index?: number;
 
   @IsOptional()
   @IsNumber()
@@ -63,7 +67,43 @@ export class UpdateLessonDto {
   content?: string;
 }
 
+export class ReorderLessonItemDto {
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for lessonId' })
+  lessonId: string;
+
+  @IsNumber()
+  @Min(0)
+  index: number;
+}
+
 export class ReorderLessonDto {
+  @ValidateNested({ each: true })
+  @Type(() => ReorderLessonItemDto)
   @ArrayMinSize(1)
-  order: Array<{ lessonId: string; index: number }>;
+  order: ReorderLessonItemDto[];
+}
+
+export class VideoUploadUrlDto {
+  @IsString()
+  objectKey: string;
+
+  @IsString()
+  contentType: string;
+}
+
+export class VideoUploadResponseDto {
+  @IsString()
+  uploadUrl: string;
+
+  @IsString()
+  objectKey: string;
+
+  @IsNumber()
+  size: number;
+}
+
+export class VideoUrlResponseDto {
+  @IsString()
+  videoUrl: string;
 }

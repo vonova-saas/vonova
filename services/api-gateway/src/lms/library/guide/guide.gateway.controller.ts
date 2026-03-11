@@ -107,6 +107,125 @@ export class GuideGatewayController {
     return firstValueFrom(this.guideService.createGuide(dto));
   }
 
+  @ApiOperation({
+    summary: 'List guides',
+    description:
+      'Retrieves a list of guides with optional filtering by search query, topics, level, and sorting.',
+  })
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query to filter guides by title or content',
+    required: false,
+    example: 'javascript',
+  })
+  @ApiQuery({
+    name: 'topics',
+    description: 'Filter by topics (comma-separated)',
+    required: false,
+    example: 'javascript,programming',
+  })
+  @ApiQuery({
+    name: 'level',
+    description: 'Filter by difficulty level',
+    required: false,
+    enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+    example: 'INTERMEDIATE',
+  })
+  @ApiQuery({
+    name: 'sort',
+    description: 'Sort order',
+    required: false,
+    enum: ['newest', 'oldest', 'popular', 'rating'],
+    example: 'popular',
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Page number for pagination',
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of guides per page',
+    required: false,
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'status',
+    description: 'Filter by publication status',
+    required: false,
+    enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
+    example: 'PUBLISHED',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guides retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        guides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: {
+                type: 'string',
+                example: 'Complete JavaScript Learning Guide',
+              },
+              slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+              summary: {
+                type: 'string',
+                example: 'A comprehensive guide to learning JavaScript.',
+              },
+              authors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', example: 'John Doe' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/author-avatar.jpg',
+                    },
+                  },
+                },
+              },
+              topics: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['javascript', 'programming'],
+              },
+              level: { type: 'string', example: 'Intermediate' },
+              coverUrl: {
+                type: 'string',
+                example: 'https://example.com/guide-cover.jpg',
+              },
+              language: { type: 'string', example: 'en' },
+              badges: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['featured'],
+              },
+              status: { type: 'string', example: 'PUBLISHED' },
+              averageRating: { type: 'number', example: 4.5 },
+              reviewCount: { type: 'number', example: 15 },
+              isFavorite: { type: 'boolean', example: false },
+            },
+          },
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 20 },
+            total: { type: 'number', example: 50 },
+            totalPages: { type: 'number', example: 3 },
+          },
+        },
+      },
+    },
+  })
   @Get()
   async listGuides(
     @Query('q') q?: string,
@@ -131,16 +250,213 @@ export class GuideGatewayController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Get guide by ID',
+    description:
+      'Retrieves a specific guide using its unique identifier including full details and content structure.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the guide',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'Complete JavaScript Learning Guide',
+        },
+        slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to learning JavaScript.',
+        },
+        description: {
+          type: 'string',
+          example: 'This guide covers everything from basics to advanced.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/guide-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['featured', 'popular'],
+        },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 15 },
+        isFavorite: { type: 'boolean', example: false },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', example: 'Getting Started' },
+              content: { type: 'string', example: 'Section content here...' },
+              order: { type: 'number', example: 1 },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Get(':id')
   async getGuideById(@Param('id') id: string) {
     return firstValueFrom(this.guideService.getGuideById(id));
   }
 
+  @ApiOperation({
+    summary: 'Get guide by slug',
+    description:
+      'Retrieves a specific guide using its URL-friendly slug identifier.',
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'The URL-friendly slug of the guide',
+    example: 'complete-javascript-learning-guide',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'Complete JavaScript Learning Guide',
+        },
+        slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to learning JavaScript.',
+        },
+        description: {
+          type: 'string',
+          example: 'This guide covers everything from basics to advanced.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/guide-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['featured'],
+        },
+        status: { type: 'string', example: 'PUBLISHED' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 15 },
+        isFavorite: { type: 'boolean', example: false },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Get('slug/:slug')
   async getGuideBySlug(@Param('slug') slug: string) {
     return firstValueFrom(this.guideService.getGuideBySlug(slug));
   }
 
+  @ApiOperation({
+    summary: 'Update guide',
+    description:
+      'Updates an existing guide with new information. Only the guide owner can update.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the guide',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'Complete JavaScript Learning Guide',
+        },
+        updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid guide data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only guide owner can update',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Patch(':id')
   async updateGuide(
     @Param('id') id: string,
@@ -150,6 +466,44 @@ export class GuideGatewayController {
     return firstValueFrom(this.guideService.updateGuide(id, dto));
   }
 
+  @ApiOperation({
+    summary: 'Publish guide',
+    description:
+      'Publishes or unpublishes a guide, making it available or unavailable to readers.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the guide',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide publish status updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid publish data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only guide owner can publish',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Patch(':id/publish')
   async publishGuide(
     @Param('id') id: string,
@@ -159,6 +513,38 @@ export class GuideGatewayController {
     return firstValueFrom(this.guideService.publishGuide(id, dto));
   }
 
+  @ApiOperation({
+    summary: 'Delete guide',
+    description:
+      'Permanently deletes a guide and all its associated content. This action cannot be undone.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the guide',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Guide deleted successfully' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only guide owner can delete',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Delete(':id')
   async deleteGuide(@Param('id') id: string, @Request() _req: any) {
     return firstValueFrom(this.guideService.deleteGuide(id));

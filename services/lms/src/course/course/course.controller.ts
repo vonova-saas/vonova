@@ -12,11 +12,15 @@ export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
   @MessagePattern({ cmd: 'app.courses.create' })
-  createCourse(@Payload() data: { dto: CreateCourseDto; ownerId: string }) {
-    const { dto, ownerId } = data;
-    if (!dto || !ownerId) throw new Error('dto and ownerId are required');
+  createCourse(@Payload() data: { dto: CreateCourseDto; createdBy?: string; user?: { id?: string; sub?: string } }) {
+    const { dto, createdBy, user } = data;
+    if (!dto) throw new Error('dto is required');
+    
+    // Extract createdBy from multiple possible sources
+    const userId = createdBy || user?.id || user?.sub;
+    if (!userId) throw new Error('User identification is required');
 
-    return this.courseService.createCourse(dto, ownerId);
+    return this.courseService.createCourse(dto, userId);
   }
 
   @MessagePattern({ cmd: 'app.courses.update' })
@@ -25,14 +29,18 @@ export class CourseController {
     data: {
       courseId: string;
       dto: UpdateCourseDto;
-      ownerId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
     },
   ) {
-    const { courseId, dto, ownerId } = data;
-    if (!courseId || !dto || !ownerId)
-      throw new Error('courseId, dto and ownerId are required');
+    const { courseId, dto, ownerId, user } = data;
+    if (!courseId || !dto) throw new Error('courseId and dto are required');
+    
+    // Extract ownerId from multiple possible sources
+    const userId = ownerId || user?.id || user?.sub;
+    if (!userId) throw new Error('User identification is required');
 
-    return this.courseService.updateCourse(courseId, dto, ownerId);
+    return this.courseService.updateCourse(courseId, dto, userId);
   }
 
   @MessagePattern({ cmd: 'app.courses.publish' })
@@ -41,23 +49,30 @@ export class CourseController {
     data: {
       courseId: string;
       dto: PublishCourseDto;
-      ownerId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
     },
   ) {
-    const { courseId, dto, ownerId } = data;
-    if (!courseId || !dto || !ownerId)
-      throw new Error('courseId, dto and ownerId are required');
+    const { courseId, dto, ownerId, user } = data;
+    if (!courseId || !dto) throw new Error('courseId and dto are required');
+    
+    // Extract ownerId from multiple possible sources
+    const userId = ownerId || user?.id || user?.sub;
+    if (!userId) throw new Error('User identification is required');
 
-    return this.courseService.publishCourse(courseId, dto, ownerId);
+    return this.courseService.publishCourse(courseId, dto, userId);
   }
 
   @MessagePattern({ cmd: 'app.courses.delete' })
-  deleteCourse(@Payload() data: { courseId: string; ownerId: string }) {
-    const { courseId, ownerId } = data;
-    if (!courseId || !ownerId)
-      throw new Error('courseId and ownerId are required');
+  deleteCourse(@Payload() data: { courseId: string; ownerId?: string; user?: { id?: string; sub?: string } }) {
+    const { courseId, ownerId, user } = data;
+    if (!courseId) throw new Error('courseId is required');
+    
+    // Extract ownerId from multiple possible sources
+    const userId = ownerId || user?.id || user?.sub;
+    if (!userId) throw new Error('User identification is required');
 
-    return this.courseService.deleteCourse(courseId, ownerId);
+    return this.courseService.deleteCourse(courseId, userId);
   }
 
   @MessagePattern({ cmd: 'app.courses.recomputeAggregates' })

@@ -16,17 +16,12 @@ export class ArticlesController {
   // ─── Articles ──────────────────────────────────────────────────────────────
 
   @MessagePattern({ cmd: 'app.community.articles.create' })
-  async createArticle(
-    @Payload() data: { dto: CreateArticleDto; image?: Express.Multer.File },
-  ) {
+  async createArticle(@Payload() data: { dto: CreateArticleDto; image?: Express.Multer.File }) {
     const { dto, image } = data;
     if (!dto) throw new Error('dto is required');
 
     if (image) {
-      const uploadResult = await this.s3Service.uploadFile(
-        image,
-        'articles/cover-images',
-      );
+      const uploadResult = await this.s3Service.uploadFile(image, 'articles/cover-images');
       dto.coverImage = uploadResult.url;
       dto.coverImageKey = uploadResult.key;
     }
@@ -36,22 +31,12 @@ export class ArticlesController {
   }
 
   @MessagePattern({ cmd: 'app.community.articles.update' })
-  async updateArticle(
-    @Payload()
-    data: {
-      id: string;
-      dto: UpdateArticleDto;
-      image?: Express.Multer.File;
-    },
-  ) {
+  async updateArticle(@Payload() data: { id: string; dto: UpdateArticleDto; image?: Express.Multer.File }) {
     const { id, dto, image } = data;
     if (!id || !dto) throw new Error('id and dto are required');
 
     if (image) {
-      const uploadResult = await this.s3Service.uploadFile(
-        image,
-        'articles/cover-images',
-      );
+      const uploadResult = await this.s3Service.uploadFile(image, 'articles/cover-images');
       dto.coverImage = uploadResult.url;
       dto.coverImageKey = uploadResult.key;
     }
@@ -96,16 +81,7 @@ export class ArticlesController {
   @MessagePattern({ cmd: 'app.community.articles.getCategories' })
   async getCategories(@Payload() data: { page?: number; limit?: number }) {
     const { page = 1, limit = 10 } = data || {};
-    const categories = [
-      'architecture',
-      'devops',
-      'backend',
-      'databases',
-      'frontend',
-      'mobile',
-      'ai',
-      'security',
-    ];
+    const categories = ['architecture', 'devops', 'backend', 'databases', 'frontend', 'mobile', 'ai', 'security'];
 
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
@@ -130,29 +106,17 @@ export class ArticlesController {
     const { id } = data;
     if (!id) throw new Error('id is required');
 
-    const article = await this.articlesService.updatePublishedStatus(
-      id,
-      'published',
-    );
+    const article = await this.articlesService.updatePublishedStatus(id, 'published');
     return { message: 'Article approved successfully', data: article };
   }
 
   @MessagePattern({ cmd: 'app.community.articles.uploadCoverImage' })
-  async uploadCoverImage(
-    @Payload() data: { id: string; image: Express.Multer.File },
-  ) {
+  async uploadCoverImage(@Payload() data: { id: string; image: Express.Multer.File }) {
     const { id, image } = data;
     if (!id || !image) throw new Error('id and image are required');
 
-    const uploadResult = await this.s3Service.uploadFile(
-      image,
-      'articles/cover-images',
-    );
-    const article = await this.articlesService.updateCoverImage(
-      id,
-      uploadResult.url,
-      uploadResult.key,
-    );
+    const uploadResult = await this.s3Service.uploadFile(image, 'articles/cover-images');
+    const article = await this.articlesService.updateCoverImage(id, uploadResult.url, uploadResult.key);
     return { message: 'Cover image uploaded successfully', data: article };
   }
 }

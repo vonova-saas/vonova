@@ -114,6 +114,47 @@ export class PresentationGatewayController {
     return firstValueFrom(this.presentationService.create(dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Update presentation',
+    description:
+      'Updates an existing presentation with new information. Only the presentation owner can update.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'JavaScript Fundamentals Presentation',
+        },
+        updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid presentation data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only presentation owner can update',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Patch('updatePresentation/:id')
   async update(
     @Param('id') id: string,
@@ -124,6 +165,44 @@ export class PresentationGatewayController {
     return firstValueFrom(this.presentationService.update(id, dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Publish presentation',
+    description:
+      'Publishes or unpublishes a presentation, making it available or unavailable to viewers.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation publish status updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid publish data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only presentation owner can publish',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Patch('publishPresentation/:id')
   async publish(
     @Param('id') id: string,
@@ -134,6 +213,38 @@ export class PresentationGatewayController {
     return firstValueFrom(this.presentationService.publish(id, dto, userId));
   }
 
+  @ApiOperation({
+    summary: 'Delete presentation',
+    description:
+      'Permanently deletes a presentation and all its associated content. This action cannot be undone.',
+  })
+  @ApiParam({
+    name: 'presentationId',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Presentation deleted successfully' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only presentation owner can delete',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Delete('deletePresentation/:presentationId')
   async delete(
     @Param('presentationId') presentationId: string,
@@ -145,16 +256,280 @@ export class PresentationGatewayController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Get all presentations',
+    description:
+      'Retrieves a list of presentations with optional filtering and sorting.',
+  })
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query to filter presentations by title or content',
+    required: false,
+    example: 'javascript',
+  })
+  @ApiQuery({
+    name: 'topics',
+    description: 'Filter by topics (comma-separated)',
+    required: false,
+    example: 'javascript,programming',
+  })
+  @ApiQuery({
+    name: 'level',
+    description: 'Filter by difficulty level',
+    required: false,
+    enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+    example: 'INTERMEDIATE',
+  })
+  @ApiQuery({
+    name: 'sort',
+    description: 'Sort order',
+    required: false,
+    enum: ['newest', 'oldest', 'popular', 'rating'],
+    example: 'popular',
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Page number for pagination',
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of presentations per page',
+    required: false,
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentations retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        presentations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: {
+                type: 'string',
+                example: 'JavaScript Fundamentals Presentation',
+              },
+              slug: {
+                type: 'string',
+                example: 'javascript-fundamentals-presentation',
+              },
+              summary: {
+                type: 'string',
+                example: 'An introduction to JavaScript fundamentals.',
+              },
+              authors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', example: 'John Doe' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/author-avatar.jpg',
+                    },
+                  },
+                },
+              },
+              topics: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['javascript', 'programming'],
+              },
+              level: { type: 'string', example: 'Beginner' },
+              coverUrl: {
+                type: 'string',
+                example: 'https://example.com/presentation-cover.jpg',
+              },
+              language: { type: 'string', example: 'en' },
+              badges: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['interactive'],
+              },
+              status: { type: 'string', example: 'PUBLISHED' },
+              averageRating: { type: 'number', example: 4.5 },
+              reviewCount: { type: 'number', example: 10 },
+              isFavorite: { type: 'boolean', example: false },
+            },
+          },
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 20 },
+            total: { type: 'number', example: 30 },
+            totalPages: { type: 'number', example: 2 },
+          },
+        },
+      },
+    },
+  })
   @Get('getAllPresentations')
   async getAll(@Query() query: any) {
     return firstValueFrom(this.presentationService.getAll(query));
   }
 
+  @ApiOperation({
+    summary: 'Get presentation by ID',
+    description:
+      'Retrieves a specific presentation using its unique identifier including full details and content structure.',
+  })
+  @ApiParam({
+    name: 'presentationId',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'JavaScript Fundamentals Presentation',
+        },
+        slug: {
+          type: 'string',
+          example: 'javascript-fundamentals-presentation',
+        },
+        summary: {
+          type: 'string',
+          example: 'An introduction to JavaScript fundamentals.',
+        },
+        description: {
+          type: 'string',
+          example: 'This presentation covers basic JavaScript concepts.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Beginner' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/presentation-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['interactive', 'featured'],
+        },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 10 },
+        isFavorite: { type: 'boolean', example: false },
+        slides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', example: 'Introduction' },
+              content: { type: 'string', example: 'Slide content here...' },
+              order: { type: 'number', example: 1 },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Get('getPresentationById/:presentationId')
   async getById(@Param('presentationId') presentationId: string) {
     return firstValueFrom(this.presentationService.getById(presentationId));
   }
 
+  @ApiOperation({
+    summary: 'Get presentation content',
+    description:
+      'Retrieves the full content and slides of a specific presentation for viewing.',
+  })
+  @ApiParam({
+    name: 'presentationId',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation content retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'JavaScript Fundamentals Presentation',
+        },
+        slides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'Introduction to JavaScript' },
+              content: {
+                type: 'string',
+                example: 'Slide content including text, images, and interactive elements...',
+              },
+              order: { type: 'number', example: 1 },
+              slideType: { type: 'string', example: 'TITLE' },
+              duration: { type: 'number', example: 30 },
+              notes: {
+                type: 'string',
+                example: 'Speaker notes for this slide',
+              },
+            },
+          },
+        },
+        totalSlides: { type: 'number', example: 25 },
+        estimatedDuration: { type: 'number', example: 1800 },
+        lastViewedAt: { type: 'string', example: '2023-01-15T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - No access to presentation',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Get(':presentationId/content')
   async getContent(@Param('presentationId') presentationId: string) {
     return firstValueFrom(this.presentationService.getContent(presentationId));

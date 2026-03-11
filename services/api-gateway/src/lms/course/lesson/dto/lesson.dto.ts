@@ -6,8 +6,13 @@ import {
   IsEnum,
   IsBoolean,
   ArrayMinSize,
+  IsUrl,
+  ValidateNested,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
 
 export class CreateLessonDto {
   @ApiProperty({
@@ -88,7 +93,7 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  index: number = 0;
+  index?: number;
 
   @ApiPropertyOptional({
     description: 'Updated duration of the lesson in minutes',
@@ -130,6 +135,27 @@ export class UpdateLessonDto {
   content?: string;
 }
 
+export class ReorderLessonItemDto {
+  @ApiProperty({
+    description: 'ID of the lesson to reorder',
+    example: '507f1f77bcf86cd799439011',
+    type: String,
+  })
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for lessonId' })
+  lessonId: string;
+
+  @ApiProperty({
+    description: 'New index position for lesson',
+    example: 2,
+    minimum: 0,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(0)
+  index: number;
+}
+
 export class ReorderLessonDto {
   @ApiProperty({
     description: 'Array of lessons with their new order positions',
@@ -143,6 +169,113 @@ export class ReorderLessonDto {
     },
     minItems: 1,
   })
+  @ValidateNested({ each: true })
+  @Type(() => ReorderLessonItemDto)
   @ArrayMinSize(1)
-  order: Array<{ lessonId: string; index: number }>;
+  order: ReorderLessonItemDto[];
+}
+
+export class VideoUploadDto {
+  @ApiProperty({
+    description: 'Original filename of the video file being uploaded',
+    example: 'lesson-1-introduction.mp4',
+    type: String,
+  })
+  @IsString()
+  fileName: string;
+
+  @ApiProperty({
+    description: 'MIME content type of the video file',
+    example: 'video/mp4',
+    enum: ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/webm'],
+    type: String,
+  })
+  @IsString()
+  contentType: string;
+}
+
+export class VideoAttachDto {
+  @ApiProperty({
+    description: 'External video URL (YouTube, Vimeo, etc.) to attach to the lesson',
+    example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    type: String,
+  })
+  @IsUrl()
+  videoUrl: string;
+
+  @ApiProperty({
+    description: 'Duration of the video in minutes',
+    example: 45,
+    minimum: 0,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(0)
+  durationMinutes: number;
+}
+
+export class VideoAttachAutomaticDto {
+  @ApiProperty({
+    description: 'Duration of the uploaded video in minutes. This should match the actual video length.',
+    example: 45,
+    minimum: 0,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(0)
+  durationMinutes: number;
+}
+
+export class VideoUploadUrlDto {
+  @ApiProperty({
+    description: 'Object key of the video in S3',
+    example: 'userId/courses/courseId/lessons/lessonId/uuid-video.mp4',
+    type: String,
+  })
+  @IsString()
+  objectKey: string;
+
+  @ApiProperty({
+    description: 'Content type of the video file',
+    example: 'video/mp4',
+    type: String,
+  })
+  @IsString()
+  contentType: string;
+}
+
+export class VideoUploadResponseDto {
+  @ApiProperty({
+    description: 'Presigned URL for uploading video directly to S3',
+    example: 'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
+    type: String,
+  })
+  @IsString()
+  uploadUrl: string;
+
+  @ApiProperty({
+    description: 'Object key of the uploaded video',
+    example: 'userId/courses/courseId/lessons/lessonId/uuid-video.mp4',
+    type: String,
+  })
+  @IsString()
+  objectKey: string;
+
+  @ApiProperty({
+    description: 'Size of the uploaded video in bytes',
+    example: 724519,
+    type: Number,
+  })
+  @IsNumber()
+  size: number;
+}
+
+export class VideoUrlResponseDto {
+  @ApiProperty({
+    description: 'Presigned URL for accessing the video',
+    example: 'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
+    type: String,
+  })
+  @IsString()
+  videoUrl: string;
 }

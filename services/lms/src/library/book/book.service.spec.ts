@@ -3,11 +3,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { BookService } from './book.service';
-import { Book, BookDocument } from '../../../schemas/library/book/book.schema';
+import { Book, BookDocument } from '../schema/book/book.schema';
+import { Types } from 'mongoose';
 import {
   BookProgress,
   BookProgressDocument,
-} from '../../../schemas/library/book/book-progress.schema';
+} from '../schema/book/book-progress.schema';
 import {
   BadRequestException,
   ForbiddenException,
@@ -89,7 +90,7 @@ describe('BookService', () => {
         pageCount: 0,
         readingTimeMin: 0,
       };
-      const created = { _id: 'b1', ...dto } as Partial<BookDocument>;
+      const created = { _id: 'b1', ...dto } as unknown as Partial<BookDocument>;
       bookModelMock.create.mockResolvedValue(created);
 
       const result = await service.createBookService(dto, 'user1');
@@ -115,7 +116,7 @@ describe('BookService', () => {
       const id = 'book-id';
       const dto: PublishBookDto = { status: 'PUBLISHED' };
       const book = { _id: id, createdBy: { toString: () => 'user1' } };
-      const updated = { _id: id, status: 'PUBLISHED' } as Partial<BookDocument>;
+      const updated = { _id: 'book-id', status: 'PUBLISHED' } as unknown as Partial<BookDocument>;
       bookModelMock.findById.mockResolvedValue(book);
       bookModelMock.findByIdAndUpdate.mockResolvedValue(updated);
 
@@ -179,7 +180,7 @@ describe('BookService', () => {
   describe('getBookByIdService', () => {
     it('should return book when found', async () => {
       const id = 'book-id';
-      const book = { _id: id } as Partial<BookDocument>;
+      const book = { _id: id } as unknown as Partial<BookDocument>;
       bookModelMock.findById.mockResolvedValue(book);
 
       const result = await service.getBookByIdService(id);
@@ -223,7 +224,7 @@ describe('BookService', () => {
       const id = 'book-id';
       const dto: UpdateBookDto = { title: 'Updated' } as UpdateBookDto;
       const book = { createdBy: { toString: () => 'user1' } };
-      const updated = { _id: id, ...dto } as Partial<BookDocument>;
+      const updated = { _id: 'book-id', ...dto } as unknown as Partial<BookDocument>;
       bookModelMock.findById.mockResolvedValue(book);
       bookModelMock.findByIdAndUpdate.mockResolvedValue(updated);
 
@@ -328,14 +329,14 @@ describe('BookService', () => {
         timeSpentSec: 30,
         completed: true,
       };
-      const book = { _id: bookId } as Partial<BookDocument>;
+      const book = { _id: 'book-id' } as unknown as Partial<BookDocument>;
       const progress = {
-        userId,
-        bookId,
+        userId: 'user1',
+        bookId: 'book-id',
         lastPage: 10,
         timeSpentSec: 30,
         completed: true,
-      } as Partial<BookProgressDocument>;
+      } as unknown as Partial<BookProgressDocument>;
       bookModelMock.findById.mockResolvedValue(book);
       bookProgressModelMock.findOneAndUpdate.mockResolvedValue(progress);
 

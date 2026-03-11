@@ -11,14 +11,14 @@ export class ContentGatewayService {
   getCourseContentTree(courseId: string, userId: string) {
     return this.client.send(
       { cmd: 'app.courses.content.getTree' },
-      { courseId, userId },
+      { courseId, userId, user: { id: userId } },
     );
   }
 
   getLessonContent(courseId: string, lessonId: string, userId: string) {
     return this.client.send(
       { cmd: 'app.courses.content.getLesson' },
-      { courseId, lessonId, userId },
+      { courseId, lessonId, userId, user: { id: userId } },
     );
   }
 }

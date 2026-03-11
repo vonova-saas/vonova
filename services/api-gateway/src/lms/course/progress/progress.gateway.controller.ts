@@ -79,12 +79,73 @@ export class ProgressGatewayController {
     @Body() dto: MarkLessonCompleteDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    const createdBy = userId;
     return firstValueFrom(
-      this.progressService.markLessonComplete(courseId, lessonId, userId, dto),
+      this.progressService.markLessonComplete(courseId, lessonId, userId, createdBy, dto),
     );
   }
 
+  @ApiOperation({
+    summary: 'Get course progress',
+    description:
+      'Retrieves the overall progress of the authenticated user for a specific course including completed lessons and time spent.',
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'The unique identifier of the course',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course progress retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        courseId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        overallProgress: { type: 'number', example: 0.65 },
+        completedLessons: { type: 'number', example: 13 },
+        totalLessons: { type: 'number', example: 20 },
+        totalTimeSpent: { type: 'number', example: 7200 },
+        lastAccessedAt: { type: 'string', example: '2023-01-15T00:00:00.000Z' },
+        chapters: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              chapterId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'Introduction to JavaScript' },
+              progress: { type: 'number', example: 1.0 },
+              completedLessons: { type: 'number', example: 5 },
+              totalLessons: { type: 'number', example: 5 },
+            },
+          },
+        },
+        nextLesson: {
+          type: 'object',
+          properties: {
+            lessonId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            title: { type: 'string', example: 'Advanced JavaScript Concepts' },
+            chapterTitle: { type: 'string', example: 'Advanced Topics' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course or progress not found',
+  })
   @Get('progress/me')
   async getMyCourseProgress(
     @Param('courseId') courseId: string,
