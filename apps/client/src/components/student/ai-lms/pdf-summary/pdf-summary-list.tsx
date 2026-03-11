@@ -20,7 +20,6 @@ import {
   Grid3X3,
   List,
   BarChart3,
-  ArrowLeft,
 } from "lucide-react";
 import { PDFFile } from "./types";
 //import { mockPDFFiles } from "./fake-data";
@@ -106,23 +105,8 @@ export default function PDFSummaryList({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleBackToMain = () => {
-    router.push(`/student/${studentId}/pdf-summary`);
-  };
-
   return (
     <div className="w-full space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBackToMain}
-            className="flex items-center gap-2 hover:bg-muted/50 cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to PDF Summary
-          </Button>
-        </div>
       {/* Stats Card */}
       <Card className="shadow-xl border-2 border-border/50 backdrop-blur-sm from-background to-muted/20">
         <CardContent className="p-8">

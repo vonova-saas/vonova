@@ -21,7 +21,7 @@ export const uploadPDFMutationFn = async (
   if (data.language)
     formData.append("language", data.language);
 
-  const response = await API.post("/api/v1/pdf-summary/upload", formData, {
+  const response = await API.post("/pdf-summary/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -31,7 +31,7 @@ export const uploadPDFMutationFn = async (
 export const chatWithPDFMutationFn = async (
   data: ChatRequest
 ): Promise<ChatResponse> => {
-  const response = await API.post("/api/v1/pdf-summary/chat", data);
+  const response = await API.post("/pdf-summary/chat", data);
   return response.data;
 };
 
@@ -39,7 +39,7 @@ export const chatWithPDFMutationFn = async (
 export const getPDFSummaryQueryFn = async (
   data: GetSummaryRequest
 ): Promise<GetSummaryResponse> => {
-  const response = await API.get("/api/v1/pdf-summary/summarize", {
+  const response = await API.get("/pdf-summary/summarize", {
     params: {
       session_id: data.session_id,
       user_id: data.user_id,
@@ -52,7 +52,7 @@ export const getPDFSummaryQueryFn = async (
 export const getChatHistoryQueryFn = async (
   sessionId: string
 ): Promise<ChatHistoryResponse> => {
-  const response = await API.get(`/api/v1/pdf-summary/session/${sessionId}/chat-history`);
+  const response = await API.get(`/pdf-summary/session/${sessionId}/chat-history`);
   return response.data;
 };
 
@@ -60,11 +60,11 @@ export const getChatHistoryQueryFn = async (
 export const deleteSessionMutationFn = async (
   sessionId: string
 ): Promise<DeleteSessionResponse> => {
-  const response = await API.delete(`/api/v1/pdf-summary/session/${sessionId}`);
+  const response = await API.delete(`/pdf-summary/session/${sessionId}`);
   return response.data;
 };
 
 export const getSessionsQueryFn = async (): Promise<GetSessionsResponse> => {
-  const response = await API.get("/api/v1/pdf-summary/sessions");
+  const response = await API.get("/pdf-summary/sessions");
   return response.data;
 };

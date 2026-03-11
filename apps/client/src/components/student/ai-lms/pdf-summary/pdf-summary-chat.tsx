@@ -82,6 +82,7 @@ const fakeResponses = [
       "From reviewing your PDF, I can provide the following insights:\n\n**Document Overview:**\n- Type: [Document type]\n- Length: [Number of pages]\n- Main Focus: [Primary topic]\n\n**Critical Information:**\n- [Important point 1]\n- [Important point 2]\n- [Important point 3]\n\nWould you like me to dive deeper into any particular section or answer specific questions about the content?",
   },
 ];
+ 
 
 export default function PDFSummaryChat({
   initialPDF,
@@ -104,7 +105,7 @@ export default function PDFSummaryChat({
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-// const studentId = useUserId() || "";
+   //const studentId = useUserId() || "";
 
   const generateFakeResponse = () => {
     const responseIndex = Math.floor(Math.random() * fakeResponses.length);
@@ -211,7 +212,7 @@ export default function PDFSummaryChat({
       handleFileUpload(pdfFiles);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [studentId]);
 
  const { getRootProps, getInputProps, isDragReject } = useDropzone({
     onDrop,

@@ -1,5 +1,6 @@
 "use client";
-import useAuth from "@/hooks/app/auth/use-auth";
+
+//import useAuth from "@/hooks/app/auth/use-auth";
 import Link from "next/link";
 import { AppSidebar } from "@/components/student/main/app-sidebar";
 import {
@@ -65,8 +66,9 @@ const segmentNameMap = {
 
 export default function DashboardLayout({ children }: Props) {
   const pathname = usePathname();
-  const { data: authData } = useAuth();
-const userId = authData?.user?._id;
+  const userId = useUserId();
+  //const { data: authData } = useAuth();
+  //const userId = authData?.user?._id;
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of 'student' segment in the URL path
   const studentIndex = segments.indexOf(`${userId}`);
