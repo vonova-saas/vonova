@@ -14,7 +14,8 @@ import {
   getRecentRoadmaps,
 } from "@/utils/functions";
 import { motion, AnimatePresence } from "framer-motion";
-import useStudentId from "@/hooks/student/use-student-id";
+import { useAuthContext } from "@/context/app/auth/auth-context";
+import { Input } from "@/components/ui/input";
 
 enum Visibility {
   PUBLIC = "public",
@@ -41,7 +42,8 @@ const isRoadmapGeneratedByUser = async (_dbRoadmapId: string) => ({
 });
 
 export const GeneratorControls = (props: Props) => {
-  const studentId = useStudentId();
+  const { user } = useAuthContext();
+  const userId = user?._id;
   const {
     title,
     mutate,
@@ -112,9 +114,9 @@ export const GeneratorControls = (props: Props) => {
 
     // Redirect if roadmapId changes
     if (roadmapId) {
-      router.push(`/${studentId}/ai-roadmap-generator/${roadmapId}`);
+      router.push(`/student/${userId}/ai-roadmap-generator/${roadmapId}`);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, dbRoadmapId, roadmapId, setModelApiKey, router]);
 
   const onSubmit = async (
@@ -133,6 +135,14 @@ export const GeneratorControls = (props: Props) => {
           duration: 4000,
         });
       }
+
+      const durationWeeksNum = parseInt(durationWeeks);
+      if (isNaN(durationWeeksNum) || durationWeeksNum < 1 || durationWeeksNum > 12) {
+        return toast.error("Invalid duration", {
+          description: "Duration must be between 1 and 12 weeks.",
+          duration: 4000,
+        });
+      }
       // Optionally, add profanity or validation checks here for topic
       toast.info("Generating roadmap", {
         description: "We are generating a roadmap for you.",
@@ -143,7 +153,7 @@ export const GeneratorControls = (props: Props) => {
           body: {
             topic,
             skill_level: skillLevel,
-            duration_weeks: durationWeeks,
+            duration_weeks: parseInt(durationWeeks),
           },
         },
         {
@@ -176,7 +186,7 @@ export const GeneratorControls = (props: Props) => {
               setRecentRoadmaps(getRecentRoadmaps());
               // Add a short delay before redirecting to ensure localStorage is updated
               setTimeout(() => {
-                router.push(`/${studentId}/ai-roadmap-generator/${id}`);
+                router.push(`/student/${userId}/ai-roadmap-generator/${id}`);
               }, 100);
             }
           },
@@ -200,7 +210,7 @@ export const GeneratorControls = (props: Props) => {
   const changeRoadmapVisibility = async (
     _dbRoadmapId: string,
     _value: any,
-  ) => {};
+  ) => { };
 
   // Utility function to format visibility
   const formatVisibility = (visibility?: Visibility) => {
@@ -231,7 +241,7 @@ export const GeneratorControls = (props: Props) => {
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            <input
+            <Input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -254,7 +264,7 @@ export const GeneratorControls = (props: Props) => {
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            <input
+            <Input
               type="text"
               value={skillLevel}
               onChange={(e) => setSkillLevel(e.target.value)}
@@ -278,9 +288,10 @@ export const GeneratorControls = (props: Props) => {
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            <input
+            <Input
               type="number"
               min="1"
+              max="12"
               value={durationWeeks}
               onChange={(e) => setDurationWeeks(e.target.value)}
               onKeyDown={(e) => {

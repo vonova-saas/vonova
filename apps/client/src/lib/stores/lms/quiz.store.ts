@@ -1,10 +1,12 @@
 import { create } from "zustand";
+import useAuth from "@/hooks/app/auth/use-auth";
 import {
   getAllQuizzesMutationFn,
   getQuizByIdMutationFn,
   createNewQuizMutationFn,
   updateQuizMutationFn,
   deleteQuizMutationFn,
+  getInstructorQuizzesMutationFn,
   getAttemptsMutationFn,
 } from "@/services/student/lms/quizzes/quiz.api";
 import type {
@@ -30,10 +32,11 @@ type QuizStore = {
   error: string | null;
   // actions
   fetchAll: () => Promise<void>;
+  fetchInstructorQuizzes: (userId: string) => Promise<void>;
   fetchById: (id: string) => Promise<QuizType | undefined>;
-  createQuiz: (payload: createQuizType) => Promise<QuizType | undefined>;
-  updateQuiz: (id: string, payload: updateQuizType) => Promise<void>;
-  deleteQuiz: (id: string) => Promise<void>;
+  createQuiz: (payload: createQuizType, userId?: string) => Promise<QuizType | undefined>;
+  updateQuiz: (id: string, payload: updateQuizType, userId?: string) => Promise<void>;
+  deleteQuiz: (id: string, userId?: string) => Promise<void>;
   fetchAttempts: (quizId: string) => Promise<AttemptSummary[]>;
   getLatestAttempt: (quizId: string) => AttemptSummary | null;
   clearError: () => void;
@@ -68,6 +71,37 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
+  fetchInstructorQuizzes: async (userId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await getInstructorQuizzesMutationFn(userId);
+
+      // Handle different response structures
+      let list: QuizType[] = [];
+      if (res && res.data && Array.isArray(res.data)) {
+        list = res.data;
+      } else if (res && Array.isArray(res)) {
+        list = res;
+      } else {
+        console.warn("Unexpected response structure:", res);
+        list = [];
+      }
+
+      const map: Record<string, QuizType> = {};
+      const ids: string[] = [];
+      for (const q of list) {
+        map[q._id] = q;
+        ids.push(q._id);
+      }
+      set({ quizzesById: map, allIds: ids });
+    } catch (e: unknown) {
+      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      set({ error: msg || "Failed to load instructor quizzes" });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   fetchById: async (id: string) => {
     const cached = get().quizzesById[id];
     if (cached) return cached;
@@ -86,10 +120,12 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  createQuiz: async (payload: createQuizType) => {
+  createQuiz: async (payload: createQuizType, userId?: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await createNewQuizMutationFn(payload);
+      if (!userId) throw new Error("User ID required");
+
+      const res = await createNewQuizMutationFn(userId, payload);
       const created = (res as { data: QuizType }).data as unknown as QuizType;
       set((st) => ({
         quizzesById: { ...st.quizzesById, [created._id]: created },
@@ -105,10 +141,12 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  updateQuiz: async (id: string, payload: updateQuizType) => {
+  updateQuiz: async (id: string, payload: updateQuizType, userId?: string) => {
     set({ loading: true, error: null });
     try {
-      await updateQuizMutationFn(id, payload);
+      if (!userId) throw new Error("User ID required");
+
+      await updateQuizMutationFn(userId, id, payload);
       // optimistic: merge into cache
       set((st) => ({
         quizzesById: st.quizzesById[id]
@@ -123,10 +161,12 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  deleteQuiz: async (id: string) => {
+  deleteQuiz: async (id: string, userId?: string) => {
     set({ loading: true, error: null });
     try {
-      await deleteQuizMutationFn(id);
+      if (!userId) throw new Error("User ID required");
+
+      await deleteQuizMutationFn(userId, id);
       set((st) => {
         const rest = { ...st.quizzesById };
         delete rest[id];

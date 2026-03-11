@@ -27,8 +27,20 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
+    const resolvedApiKey = apiKey || process.env.NEXT_PUBLIC_COHERE_API_KEY;
+    if (!resolvedApiKey) {
+      return NextResponse.json(
+        {
+          status: false,
+          message:
+            "Missing Cohere API key. Provide apiKey query param or set NEXT_PUBLIC_COHERE_API_KEY.",
+        },
+        { status: 400 },
+      );
+    }
+
     const model = new ChatCohere({
-      apiKey: apiKey || process.env.NEXT_PUBLIC_COHERE_API_KEY,
+      apiKey: resolvedApiKey,
       model: "command",
     });
 
@@ -75,7 +87,7 @@ export const POST = async (req: NextRequest) => {
     console.log(e);
     return NextResponse.json(
       { status: false, message: "Something went wrong." },
-      { status: 400 },
+      { status: 500 },
     );
   }
 };

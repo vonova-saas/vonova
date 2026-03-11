@@ -16,24 +16,34 @@ import {
 
 // ========== Quiz Managment for Instructor ==========
 export const createNewQuizMutationFn = async (
+  userId: string,
   quizData: createQuizType
 ): Promise<createQuizTypeResponse> => {
-  const response = await API.post(`/lms/quizzes/addQuiz`, quizData);
+  const response = await API.post(`/lms/quizzes/${userId}`, quizData);
   return response.data;
 };
 
 export const updateQuizMutationFn = async (
+  userId: string,
   quizId: string,
   quizData: updateQuizType,
 ): Promise<updateQuizTypeResponse> => {
-  const response = await API.put(`/lms/quizzes/updateQuiz/${quizId}`, quizData);
+  const response = await API.patch(`/lms/quizzes/${userId}/${quizId}`, quizData);
   return response.data;
 };
 
 export const deleteQuizMutationFn = async (
+  userId: string,
   quizId: string,
 ): Promise<deleteQuizTypeResponse> => {
-  const response = await API.delete(`/lms/quizzes/deleteQuiz/${quizId}`);
+  const response = await API.delete(`/lms/quizzes/${userId}/${quizId}`);
+  return response.data;
+};
+
+export const getInstructorQuizzesMutationFn = async (
+  userId: string,
+): Promise<getAllQuizzesTypeResponse> => {
+  const response = await API.get(`/lms/quizzes/${userId}`);
   return response.data;
 };
 
@@ -44,30 +54,30 @@ export const getAllQuizzesMutationFn = async (): Promise<getAllQuizzesTypeRespon
 };
 
 export const getQuizByIdMutationFn = async (
-  quizId: string,
+  id: string,
 ): Promise<getQuizByIdTypeResponse> => {
-  const response = await API.get(`/lms/quizzes/getQuiz/${quizId}`);
+  const response = await API.get(`/lms/quizzes/${id}`);
   return response.data;
 };
 
 export const submitQuizMutationFn = async (
-  quizId: string,
+  id: string,
   answers: submitQuizType,
 ): Promise<submitQuizTypeResponse> => {
-  const response = await API.post(`/lms/quizzes/${quizId}/submit`, answers);
+  const response = await API.post(`/lms/quizzes/${id}/submit`, answers);
   return response.data;
 };
 
 export const getAttemptsMutationFn = async (
-  quizId: string,
+  attemptId: string,
 ): Promise<getAttemptsTypeResponse> => {
-  const response = await API.get(`/lms/quizzes/${quizId}/my-attempts`);
+  const response = await API.get(`/lms/quizzes/attempts/${attemptId}`);
   return response.data;
 };
 
 export const getSpecificAttemptMutationFn = async (
-  attemptId: string,
+  quizId: string,
 ): Promise<getSpecificAttemptTypeResponse> => {
-  const response = await API.get(`/lms/quizzes/attempts/${attemptId}`);
+  const response = await API.get(`/lms/quizzes/${quizId}/my-attempts`);
   return response.data;
 };

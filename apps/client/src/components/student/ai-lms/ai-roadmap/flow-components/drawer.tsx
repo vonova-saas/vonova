@@ -8,7 +8,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +44,7 @@ const saveNodeDetails = async (
 export const Drawer = ({ roadmapId }: DrawerProps) => {
   const [drawerData, setDrawerData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const { drawerOpen, toggleDrawer, drawerDetails, model, modelApiKey } =
     useUIStore(
@@ -59,9 +60,19 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
   const nodeName = `${drawerDetails?.query}_${drawerDetails?.parent}_${drawerDetails?.child}`;
 
   const fetchDetailsData = useCallback(async () => {
+    if (!roadmapId) {
+      setErrorMessage("Missing roadmapId.");
+      return null;
+    }
+    if (!drawerDetails?.query || !drawerDetails?.child || !drawerDetails?.parent) {
+      setErrorMessage("Missing required drawer details.");
+      return null;
+    }
+
     try {
+      const apiKeyParam = modelApiKey ? encodeURIComponent(modelApiKey) : "";
       const response = await axios.post(
-        `/api/v1/${model}/details?apiKey=${modelApiKey}&roadmapId=${roadmapId}`,
+        `/api/v1/${model}/details?apiKey=${apiKeyParam}&roadmapId=${encodeURIComponent(roadmapId)}`,
         {
           query: drawerDetails?.query,
           child: drawerDetails?.child,
@@ -70,7 +81,12 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
       );
       return response.data.text;
     } catch (error) {
-      console.error("Error fetching details data:", error);
+      const message =
+        (error as any)?.response?.data?.message ||
+        (error as Error)?.message ||
+        "Error fetching details data.";
+      setErrorMessage(message);
+      console.warn("Error fetching details data:", message);
       return null;
     }
   }, [
@@ -83,13 +99,22 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
   ]);
 
   const fetchBooksData = useCallback(async () => {
+    if (!drawerDetails?.child) {
+      setErrorMessage("Missing required drawer details.");
+      return null;
+    }
     try {
       const response = await axios.post(`/api/v1/orilley`, {
         data: { query: drawerDetails?.child },
       });
       return response.data.data.results;
     } catch (error) {
-      console.error("Error fetching books data:", error);
+      const message =
+        (error as any)?.response?.data?.message ||
+        (error as Error)?.message ||
+        "Error fetching books data.";
+      setErrorMessage(message);
+      console.warn("Error fetching books data:", message);
       return null;
     }
   }, [drawerDetails?.child]);
@@ -113,6 +138,8 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
   useEffect(() => {
     const fetchAndSaveData = async () => {
       setIsLoading(true);
+      setErrorMessage("");
+      setDrawerData(null);
 
       try {
         const existingDetails = await findSavedNodeDetails(
@@ -159,7 +186,12 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
           });
         }
       } catch (error) {
-        console.error("Error fetching or saving data:", error);
+        const message =
+          (error as any)?.response?.data?.message ||
+          (error as Error)?.message ||
+          "Error fetching resources.";
+        setErrorMessage(message);
+        console.warn("Error fetching or saving data:", message);
       } finally {
         setIsLoading(false);
       }
@@ -241,12 +273,19 @@ export const Drawer = ({ roadmapId }: DrawerProps) => {
   return (
     <Sheet open={drawerOpen} onOpenChange={toggleDrawer}>
       <SheetContent className="overflow-auto min-w-full md:min-w-[700px] bg-background text-foreground p-0">
+        <SheetHeader className="sr-only">
+          <SheetTitle>{drawerDetails?.child ? `${drawerDetails.child} details` : "Details"}</SheetTitle>
+        </SheetHeader>
         {isLoading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background/90">
             <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
             <span className="text-muted-foreground text-lg">
               Loading resources...
             </span>
+          </div>
+        ) : errorMessage ? (
+          <div className="px-6 py-6">
+            <div className="text-sm text-muted-foreground">{errorMessage}</div>
           </div>
         ) : (
           <>

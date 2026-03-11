@@ -25,67 +25,67 @@ export const sidebarNavData = {
   lmsManagement: [
     {
       title: "Dashboard",
-      url: "/:instructorId",
+      url: "/instructor/:instructorId",
       icon: LayoutDashboard,
       isActive: true,
     },
     {
       title: "Courses Management",
-      url: "/:instructorId/courses-management",
+      url: "/instructor/:instructorId/courses-management",
       icon: SquareTerminal
     },
     {
       title: "Material Library Management",
-      url: "/:instructorId/material-library-management",
+      url: "/instructor/:instructorId/material-library-management",
       icon: BookOpen,
     },
     {
       title: "Quiz Management",
-      url: "/:instructorId/quiz-managment",
+      url: "/instructor/:instructorId/quiz-managment",
       icon: ClipboardCheck,
     },
     {
       title: "Problem Solving Management",
-      url: "/:instructorId/problem-solving-management",
+      url: "/instructor/:instructorId/problem-solving-management",
       icon: BrainCog,
     },
     {
       title: "Community",
-      url: "/:instructorId/community",
+      url: "/instructor/:instructorId/community",
       icon: Frame,
     },
   ],
   lmsTools: [
     {
       title: "Presentation Builder",
-      url: "/:instructorId/presentation-builder",
+      url: "/instructor/:instructorId/presentation-builder",
       icon: Presentation,
     },
     {
       title: "Course Recorder",
-      url: "/:instructorId/course-recorder",
+      url: "/instructor/:instructorId/course-recorder",
       icon: Video,
     }
   ],
   app: [
     {
       title: "Settings",
-      url: "/:instructorId/settings",
+      url: "/instructor/:instructorId/settings",
       icon: Settings2,
     },
     {
       title: "Account",
-      url: "/:instructorId/settings/account",
+      url: "/instructor/:instructorId/settings/account",
       icon: User,
     },
     {
       title: "Support",
-      url: "/:instructorId/support",
+      url: "/instructor/:instructorId/support",
       icon: LifeBuoy,
     },
     {
       title: "Feedback",
-      url: "/:instructorId/feedback",
+      url: "/instructor/:instructorId/feedback",
       icon: Send,
     },
   ],

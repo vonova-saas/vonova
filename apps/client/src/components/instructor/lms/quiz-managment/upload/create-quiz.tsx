@@ -7,10 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, CheckCircle, Component as ComponentIcon, BookOpen } from "lucide-react";
 import { createNewQuizMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { useAuthContext } from "@/context/app/auth/auth-context";
 import type { QuizType, Question, createQuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 
 export function CreateQuiz() {
   const router = useRouter();
+  const { user } = useAuthContext();
+  const userId = user?._id;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -59,6 +62,11 @@ export function CreateQuiz() {
     try {
       setSaving(true);
       setError(null);
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      
       const payload: Omit<QuizType, "_id"> = {
         title: title.trim(),
         description: description.trim(),
@@ -66,7 +74,7 @@ export function CreateQuiz() {
         noOfQuestions,
         questions,
       };
-      await createNewQuizMutationFn(payload as createQuizType);
+      await createNewQuizMutationFn(userId, payload as createQuizType);
       router.back();
     } catch (e: unknown) {
       let msg = "Failed to create quiz";

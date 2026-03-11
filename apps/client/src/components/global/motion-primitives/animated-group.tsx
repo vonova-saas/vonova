@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { motion, Variants } from 'motion/react'
 import React from 'react'
 
@@ -98,9 +98,14 @@ function AnimatedGroup({ children, className, variants, preset, as = 'div', asCh
     const containerVariants = variants?.container || selectedVariants.container
     const itemVariants = variants?.item || selectedVariants.item
 
-    const MotionComponent = motion(as)
-
-    const MotionChild = motion(asChild)
+    const MotionComponent = useMemo(
+        () => (typeof motion.create === 'function' ? motion.create(as) : (motion as (c: React.ElementType) => React.ComponentType)(as)),
+        [as]
+    )
+    const MotionChild = useMemo(
+        () => (typeof motion.create === 'function' ? motion.create(asChild) : (motion as (c: React.ElementType) => React.ComponentType)(asChild)),
+        [asChild]
+    )
 
     return (
         <MotionComponent

@@ -50,7 +50,7 @@ export default function ContactSection() {
             <div>
               <Label htmlFor="country">Country/Region</Label>
               <Select>
-                <SelectTrigger>
+                <SelectTrigger id="country">
                   <SelectValue placeholder="Select Country/Region" />
                 </SelectTrigger>
                 <SelectContent>
@@ -72,7 +72,7 @@ export default function ContactSection() {
             <div>
               <Label htmlFor="job">Job function</Label>
               <Select>
-                <SelectTrigger>
+                <SelectTrigger id="job">
                   <SelectValue placeholder="Select Job Function" />
                 </SelectTrigger>
                 <SelectContent>

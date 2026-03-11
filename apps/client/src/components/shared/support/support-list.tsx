@@ -25,11 +25,10 @@ export function SupportList() {
   const router = useRouter();
   const { user } = useAuthContext();
   const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
     if (user?._id) return user._id;
-    if (!pathname) return "";
-    const parts = pathname.split("/").filter(Boolean);
-    return parts[0] || "";
-  }, [pathname, user?._id]);
+    return "";
+  }, [user?._id]);
 
   const [items, setItems] = useState<SupportItem[]>([]);
   const [loading, setLoading] = useState(false);

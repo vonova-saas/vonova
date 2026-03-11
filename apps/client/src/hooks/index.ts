@@ -15,6 +15,10 @@ import useAuth from "./app/auth/use-auth";
 //! Site hooks imports
 
 import useUserId from "./user/use-user-id";
+//? =========== Courses hooks imports ===========
+import { tryCatch } from "./courses/try-catch";
+import { useConfetti } from "./courses/use-confetti";
+import useConstructUrl from "./courses/use-construct-url";
 
 export {
   // App Hooks
@@ -33,4 +37,9 @@ export {
   // User Hooks
   // Site Hooks
   useUserId,
+
+  // Courses Hooks
+  tryCatch,
+  useConfetti,
+  useConstructUrl,
 }

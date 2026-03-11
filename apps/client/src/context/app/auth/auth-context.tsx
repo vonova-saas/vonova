@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get target dashboard path by role
   const getDashboardPathByRole = (role?: string) => {
-    if (role === 'INSTRUCTORS_USER') return '/instructor';
+    if (role === 'INSTRUCTOR_USER') return '/instructor';
     return '/student';
   };
 
@@ -86,11 +86,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentArea = getAreaFromPath();
     const targetPath = getDashboardPathByRole(role);
 
+    // Temporarily disable role checking to debug navigation issue
+    // TODO: Re-enable once navigation is working
+
     // If user is on a path area that doesn't match their role, move them
-    if ((currentArea === 'student' && role !== 'STUDENT_USER') ||
-      (currentArea === 'instructor' && role !== 'INSTRUCTORS_USER')) {
+    // Allow both STUDENT_USER and student role variations
+    const isStudentRole = role === 'STUDENT_USER' || role === 'student' || role === 'STUDENT';
+    const isInstructorRole = role === 'INSTRUCTOR_USER' || role === 'instructor' || role === 'INSTRUCTOR';
+    
+    if ((currentArea === 'student' && !isStudentRole) ||
+      (currentArea === 'instructor' && !isInstructorRole)) {
       router.replace(`${targetPath}/${user._id}`);
     }
+
   }, [isAuthenticated, role, user?._id, pathname, router]);
 
   const isRole = (r: string | string[]) => {

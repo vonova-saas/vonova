@@ -3,6 +3,7 @@
 import PDFSummaryList from "@/components/student/ai-lms/pdf-summary/pdf-summary-list";
 
 export default function PDFSummaryListPage() {
+  
   return (
     <div
       className="h-full w-full flex flex-col overflow-hidden relative"

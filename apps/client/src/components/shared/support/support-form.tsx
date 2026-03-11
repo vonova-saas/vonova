@@ -27,11 +27,10 @@ export function SupportForm() {
   const pathname = usePathname();
   const { user } = useAuthContext();
   const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
     if (user?._id) return user._id;
-    if (!pathname) return '';
-    const parts = pathname.split('/').filter(Boolean);
-    return parts[0] || '';
-  }, [pathname, user?._id]);
+    return '';
+  }, [user?._id]);
   const [formData, setFormData] = useState<SupportFormData>({
     name: '',
     email: '',
@@ -130,7 +129,7 @@ export function SupportForm() {
                 setFormData(prev => ({ ...prev, category: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>

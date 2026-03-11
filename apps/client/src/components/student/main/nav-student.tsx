@@ -53,7 +53,7 @@ export function NavStudent({
   const { data: account, refetch: refetchAccount } = useQuery({
     queryKey: ["account", userId],
     queryFn: () => getAccountMutationFn(userId),
-    enabled: !!userId,
+    enabled: !!userId && userId !== "undefined",
   });
 
   // Listen for account updates triggered by AccountFormClient and refresh data
@@ -102,7 +102,7 @@ export function NavStudent({
         sessionStorage.removeItem('resetToken');
       }
       toast.success("Logged out successfully");
-      window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}/?logout=1`);
+      window.location.assign(`${window.location.origin}/?logout=1`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error("Logout failed", {

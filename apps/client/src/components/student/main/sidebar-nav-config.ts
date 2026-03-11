@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   Send,
   User,
+  BrainCog,
 } from "lucide-react";
 
 export const sidebarNavData = {
@@ -66,11 +67,11 @@ export const sidebarNavData = {
       url: "/student/:studentId/ai-roadmap-generator",
       icon: Zap,
     },
-    // {
-    //   title: "Problem Solving",
-    //   url: "/student/:studentId/problem-solving",
-    //   icon: BrainCog,
-    // },
+    {
+      title: "Problem Solving",
+      url: "/student/:studentId/problem-solving",
+      icon: BrainCog,
+    },
     // {
     //   title: "AI Assistant",
     //   url: "/student/:studentId/ai-assistant",

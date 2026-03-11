@@ -1,6 +1,7 @@
 "use client";
-
+import { toast } from "sonner";
 import { useState, useRef, useCallback } from "react";
+import { useUserId } from "@/hooks";
 import { useDropzone } from "react-dropzone";
 import {
   AIInput,
@@ -58,12 +59,13 @@ import { PDFFile, PDFMessage, UploadProgress } from "./types";
 import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
-import useStudentId from "@/hooks/student/use-student-id";
+import { uploadPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 
 interface PDFSummaryChatProps {
   initialPDF?: PDFFile | null;
   initialMessages?: PDFMessage[];
   isIndividualChat?: boolean;
+  studentId?: string;
 }
 
 const fakeResponses = [
@@ -81,25 +83,28 @@ const fakeResponses = [
   },
 ];
 
-const PDFSummaryChat = ({
-  initialPDF = null,
-  initialMessages = mockMessages,
+export default function PDFSummaryChat({
+  initialPDF,
+  initialMessages = [],
   isIndividualChat = false,
-}: PDFSummaryChatProps = {}) => {
+  studentId: propStudentId,
+}: PDFSummaryChatProps) {
+    const rawId = useUserId();
+    const studentId = rawId && rawId !== "undefined" ? rawId : "";
+  const [text, setText] = useState("");
   const [messages, setMessages] = useState<PDFMessage[]>(initialMessages);
-  const [text, setText] = useState<string>("");
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
   const [isTyping, setIsTyping] = useState(false);
   const [currentBranch, setCurrentBranch] = useState(0);
   const [pdfs, setPdfs] = useState<PDFFile[]>(mockPDFFiles);
-  const [currentPDF, setCurrentPDF] = useState<PDFFile | null>(initialPDF);
+  const [currentPDF, setCurrentPDF] = useState<PDFFile | null>(initialPDF || null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const studentId = useStudentId();
+// const studentId = useUserId() || "";
 
   const generateFakeResponse = () => {
     const responseIndex = Math.floor(Math.random() * fakeResponses.length);
@@ -159,7 +164,7 @@ const PDFSummaryChat = ({
       }
     } else {
       // Navigate to individual chat page
-      window.location.href = `/${studentId}/pdf-summary/${pdfId}`;
+      window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
     }
   };
 
@@ -177,7 +182,7 @@ const PDFSummaryChat = ({
 
   const handleBackToFiles = () => {
     if (isIndividualChat) {
-      window.location.href = `/${studentId}/pdf-summary`;
+      window.location.href = `/student/${studentId}/pdf-summary`;
     }
   };
 
@@ -205,90 +210,101 @@ const PDFSummaryChat = ({
     if (pdfFiles.length > 0) {
       handleFileUpload(pdfFiles);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { getRootProps, getInputProps, isDragReject } = useDropzone({
+ const { getRootProps, getInputProps, isDragReject } = useDropzone({
     onDrop,
     accept: {
       "application/pdf": [".pdf"],
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 5 * 1024 * 1024,
     multiple: true,
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
+    onDropRejected: () => {
+      alert("File too large. Maximum size is 5MB.");
+    },
+  });
+    
+  const handleFileUpload = async (files: File[]) => {
+  const file = files[0];
+  if (!file) return;
+
+  const currentStudentId = studentId ||
+    window.location.pathname.split('/')[2];
+
+  if (!currentStudentId || currentStudentId === 'undefined') {
+    alert("Please refresh the page and try again.");
+    return;
+  }
+
+  const fileId = `${file.name}-${Date.now()}`;
+    if (!studentId) {
+      //toast.error("Session expired. Please refresh the page.");
+      alert("Session expired. Please refresh the page.");
+      return;
+    }
+    setUploadProgress([{
+      fileId,
+      fileName: file.name,
+      progress: 20,
+      status: "uploading",
+      error: null,
+    }]);
+
+    try {
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId ? { ...p, progress: 60 } : p)
+      );
+
+      console.log("studentId before upload:", studentId);
+    const response = await uploadPDFMutationFn({
+    file,
+    user_id: currentStudentId,
+    auto_summarize: true,
+    language: "en",
   });
 
-  const handleFileUpload = (files: File[]) => {
-    files.forEach((file) => {
-      const fileId = `${file.name}-${Date.now()}`;
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId
+          ? { ...p, progress: 100, status: "complete" }
+          : p
+        )
+      );
 
-      // Add to upload progress
-      setUploadProgress((prev) => [
-        ...prev,
-        {
-          fileId,
-          fileName: file.name,
-          progress: 0,
-          status: "uploading",
-          error: null,
-        },
-      ]);
-
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 20;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-
-          // Update status to processing
-          setUploadProgress((prev) =>
-            prev.map((p) =>
-              p.fileId === fileId
-                ? { ...p, progress: 100, status: "processing" }
-                : p,
-            ),
-          );
-
-          // Simulate processing completion
-          setTimeout(() => {
-            setUploadProgress((prev) =>
-              prev.map((p) =>
-                p.fileId === fileId ? { ...p, status: "complete" } : p,
-              ),
-            );
-
-            // Add new PDF to the list
-            const newPDF: PDFFile = {
-              id: fileId,
-              name: file.name,
-              size: file.size,
-              pages: Math.floor(Math.random() * 50) + 10, // Random page count
-              status: "ready",
-              uploadedAt: new Date(),
-              lastAccessed: new Date(),
-              topics: ["Document Analysis", "AI Summary"],
-            };
-
-            setPdfs((prev) => [...prev, newPDF]);
-
-            // Close modal and navigate to chat page after successful upload
-            setTimeout(() => {
-              setShowUploadModal(false);
-              setUploadProgress([]);
-              // Navigate to the new PDF chat page
-              window.location.href = `/${studentId}/pdf-summary/${fileId}`;
-            }, 2000);
-          }, 2000);
-        } else {
-          setUploadProgress((prev) =>
-            prev.map((p) => (p.fileId === fileId ? { ...p, progress } : p)),
-          );
+      setTimeout(() => {
+        setShowUploadModal(false);
+        setUploadProgress([]);
+        
+        // Store session in localStorage
+        const existingSessions = JSON.parse(
+          localStorage.getItem("pdf_sessions") || "[]"
+        );
+        existingSessions.unshift({
+          session_id: response.session_id,
+          file_name: file.name,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem(
+          "pdf_sessions", 
+          JSON.stringify(existingSessions.slice(0, 10))
+        );
+        
+        if (studentId && response?.session_id) {
+          window.location.href = `/student/${studentId}/pdf-summary/${response.session_id}`;
         }
-      }, 200);
-    });
+      }, 2000);
+
+    } catch (err) {
+      console.error("Upload failed:", err);
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId
+          ? { ...p, status: "error", error: "Upload failed, please try again" }
+          : p
+        )
+      );
+    }
   };
 
   const handleCancelUpload = (fileId: string) => {
@@ -598,13 +614,12 @@ const PDFSummaryChat = ({
           <div className="space-y-4">
             {/* Upload Area */}
             <Card
-              className={`border-2 border-dashed transition-colors ${
-                isDragActive
+              className={`border-2 border-dashed transition-colors ${isDragActive
                   ? "border-primary bg-primary/5"
                   : isDragReject
                     ? "border-red-500 bg-red-50"
                     : "border-muted-foreground/25 hover:border-primary/50"
-              }`}
+                }`}
             >
               <CardContent className="p-6">
                 <div
@@ -694,5 +709,3 @@ const PDFSummaryChat = ({
     </>
   );
 };
-
-export default PDFSummaryChat;

@@ -23,11 +23,10 @@ export function FeedbackForm() {
   const pathname = usePathname();
   const { user } = useAuthContext();
   const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
     if (user?._id) return user._id;
-    if (!pathname) return '';
-    const parts = pathname.split('/').filter(Boolean);
-    return parts[0] || '';
-  }, [pathname, user?._id]);
+    return '';
+  }, [user?._id]);
   const [formData, setFormData] = useState<FeedbackFormData>({
     feedbackType: 'suggestion',
     message: '',
@@ -209,6 +208,7 @@ export function FeedbackForm() {
                 value={user?.email || ''}
                 readOnly
                 disabled
+                suppressHydrationWarning={true}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground"
               />
               <p className="text-sm text-muted-foreground">

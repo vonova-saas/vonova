@@ -15,7 +15,7 @@ export type verifyEmailType = {
 export type welcomeUserType = {
   email: string;
   role: string;
-  answerOne: string;
+  knowAboutUs: string;
 };
 
 export type welcomeUserResponseType = {
@@ -52,7 +52,7 @@ export type loginResponseType = {
 //! ============= OAuth Flow Types =============
 export type welcomeUserOAuthGoogleType = {
   role: string;
-  answerOne: string;
+  knowAboutUs: string;
 };
 
 export type welcomeUserOAuthGoogleResponseType = {

@@ -4,7 +4,7 @@ import { getNotificationResponseType, resetNotificationResponseType, updateNotif
 export const getNotificationMutationFn = async (
   userId: string
 ): Promise<getNotificationResponseType> => {
-  const response = await API.get(`/app/notification/${userId}`);
+  const response = await API.get(`/notification/${userId}`);
   return response.data;
 };
 
@@ -12,13 +12,13 @@ export const updateNotificationMutationFn = async (
   userId: string,
   data: updateNotificationType
 ): Promise<updateNotificationResponseType> => {
-  const response = await API.put(`/app/notification/${userId}`, data);
+  const response = await API.put(`/notification/${userId}`, data);
   return response.data;
 };
 
 export const resetNotificationMutationFn = async (
   userId: string
 ): Promise<resetNotificationResponseType> => {
-  const response = await API.get(`/app/notification/${userId}/reset`);
+  const response = await API.get(`/notification/${userId}/reset`);
   return response.data;
 };

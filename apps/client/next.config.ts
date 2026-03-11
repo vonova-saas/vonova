@@ -3,7 +3,6 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    // domains: ['example.com', 'git-scm.com'],
     remotePatterns: [
       {
         protocol: 'https',

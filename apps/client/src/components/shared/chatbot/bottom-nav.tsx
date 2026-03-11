@@ -1,37 +1,43 @@
 "use client";
 
-import { Home, MessageSquare, HelpCircle, CheckSquare, type LucideIcon } from "lucide-react";
+
+import { Home, MessageSquare, HelpCircle, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ChatTab = "home" | "messages" | "help" ;
+export type ChatTab = "home" | "messages" | "help";
 
 const items: { key: ChatTab; label: string; Icon: LucideIcon }[] = [
-  { key: "home", label: "Home", Icon: Home },
+  { key: "home",     label: "Home",     Icon: Home          },
   { key: "messages", label: "Messages", Icon: MessageSquare },
-  { key: "help", label: "Help", Icon: HelpCircle },
+  { key: "help",     label: "Help",     Icon: HelpCircle    },
 ];
 
-export default function BottomNav({ value, onChange }: { value: ChatTab; onChange: (v: ChatTab) => void }) {
+export default function BottomNav({
+  value,
+  onChange,
+}: {
+  value: ChatTab;
+  onChange: (v: ChatTab) => void;
+}) {
   return (
-    <div className="border-t p-2">
-<nav className="grid grid-cols-3 gap-1 px-2">   
-  {items.map(({ key, label, Icon }) => (
-    <button
-      key={key}
-      onClick={() => onChange(key)}
-      className={cn(
-        "flex flex-col items-center justify-center rounded-lg py-3 px-2",  
-        "transition-colors duration-200",
-        value === key 
-          ? "bg-primary/10 text-primary font-medium" 
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-      )}
-    >
-      <Icon className="h-6 w-6 mb-1" />   
-      <span className="text-xs">{label}</span>
-    </button>
-  ))}
-</nav>
+    <div className="border-t bg-background shrink-0">
+      <nav className="grid grid-cols-3 divide-x divide-border">
+        {items.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className={cn(
+              "flex flex-col items-center py-3 text-xs transition-colors",
+              value === key
+                ? "text-primary font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <Icon className="h-5 w-5 mb-1" />
+            {label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

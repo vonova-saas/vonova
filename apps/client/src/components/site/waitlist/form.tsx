@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type ChangeEvent, type FormEvent } from "react";
@@ -184,7 +185,7 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex relative"
               >
-                <input
+                <Input
                   type="email"
                   name="email"
                   value={formData.email}
@@ -211,7 +212,7 @@ export default function WaitlistForm({ onSuccessChange }: FormProps) {
                 className="flex flex-col space-y-3"
               >
                 <div className="flex items-center relative">
-                  <input
+                  <Input
                     type="text"
                     name="fullName"
                     value={formData.fullName}

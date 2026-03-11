@@ -3,8 +3,10 @@ import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle() {
   const [darkMode, setDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // Check for dark mode preference on initial load
     if (typeof window !== "undefined") {
       const isDark =
@@ -37,12 +39,17 @@ export default function ThemeToggle() {
     <button
       onClick={toggleTheme}
       className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-      aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={mounted ? (darkMode ? "Switch to light mode" : "Switch to dark mode") : "Toggle theme"}
+      suppressHydrationWarning={true}
     >
-      {darkMode ? (
-        <Sun className="w-5 h-5 text-gray-400" />
+      {mounted ? (
+        darkMode ? (
+          <Sun className="w-5 h-5 text-gray-400" />
+        ) : (
+          <Moon className="w-5 h-5 text-gray-700" />
+        )
       ) : (
-        <Moon className="w-5 h-5 text-gray-700" />
+        <div className="w-5 h-5" />
       )}
     </button>
   );

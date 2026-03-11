@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import { NavMain } from "@/components/student/main/nav-main";
 import { NavStudent } from "@/components/student/main/nav-student";
@@ -21,6 +22,15 @@ import { NavSubMain } from "./nav-sub-main";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userId = useUserId();
+  const lmsItems = sidebarNavData.lms.map((item) => ({
+  ...item,
+  url: item.url.replace(":studentId", userId || ""),
+}));
+
+const appItems = sidebarNavData.app.map((item) => ({
+  ...item,
+  url: item.url.replace(":studentId", userId || ""),
+}));
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -28,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href={userId ? `/${userId}` : "/student"}>
+              <Link href={userId ? `/student/${userId}` : "/student"}>
                 <div className="bg-muted text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src="/icons/icon.png"
@@ -46,14 +56,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     }
                   </span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={sidebarNavData.lms}/>
-        <NavSubMain items={sidebarNavData.app} title="App" />
+        <NavMain items={lmsItems} />
+        <NavSubMain items={appItems} title="App" />
       </SidebarContent>
       <SidebarFooter>
         <NavStudent student={sidebarNavData.studentData} />

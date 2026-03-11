@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AppSidebar } from "@/components/instructor/main/app-sidebar";
 import {
   Breadcrumb,
@@ -81,22 +82,22 @@ export default function InstructorDashboardLayout({ children }: Props) {
     setMounted(true);
   }, []);
 
-  // Dashboard sections for search
+  // Dashboard sections for search (use /instructor prefix for client-side routes)
   const instructorDashboardSections = [
-    { name: "Dashboard", url: `/${userId}` },
-    { name: "Courses Management", url: `/${userId}/courses-management` },
-    { name: "Material Library Management", url: `/${userId}/material-library-management` },
-    { name: "Quiz Management", url: `/${userId}/quiz-management` },
-    { name: "Problem Solving Management", url: `/${userId}/problem-solving-management` },
-    { name: "Presentation Builder", url: `/${userId}/presentation-builder` },
-    { name: "Course Recorder", url: `/${userId}/course-recorder` },
-    { name: "Community", url: `/${userId}/community` },
-    { name: "Support", url: `/${userId}/support` },
-    { name: "Feedback", url: `/${userId}/feedback` },
-    { name: "Settings", url: `/${userId}/settings` },
-    { name: "Account", url: `/${userId}/account` },
-    { name: "Billing", url: `/${userId}/billing` },
-    { name: "Notifications", url: `/${userId}/notifications` },
+    { name: "Dashboard", url: userId ? `/instructor/${userId}` : "/instructor" },
+    { name: "Courses Management", url: `/instructor/${userId}/courses-management`},
+    { name: "Material Library Management", url: `/instructor/${userId}/material-library-management` },
+    { name: "Quiz Management", url: `/instructor/${userId}/quiz-management` },
+    { name: "Problem Solving Management", url: `/instructor/${userId}/problem-solving-management` },
+    { name: "Presentation Builder", url: `/instructor/${userId}/presentation-builder` },
+    { name: "Course Recorder", url: `/instructor/${userId}/course-recorder` },
+    { name: "Community", url: `/instructor/${userId}/community` },
+    { name: "Support", url: `/instructor/${userId}/support` },
+    { name: "Feedback", url: `/instructor/${userId}/feedback` },
+    { name: "Settings", url: `/instructor/${userId}/settings` },
+    { name: "Account", url: `/instructor/${userId}/account` },
+    { name: "Billing", url: `/instructor/${userId}/billing` },
+    { name: "Notifications", url: `/instructor/${userId}/notifications` },
   ];
 
   const [search, setSearch] = React.useState("");
@@ -135,24 +136,27 @@ export default function InstructorDashboardLayout({ children }: Props) {
                     />
                     <Breadcrumb>
                       <BreadcrumbList className="flex-nowrap overflow-x-auto py-1 scrollbar-hide">
-                        {/* user root link - always visible */}
+                        {/* user root link - always visible (Link for client-side nav) */}
                         <BreadcrumbItem className="whitespace-nowrap">
-                          <BreadcrumbLink
-                            href={userId ? `/${userId}` : '/instructor'}
-                            className="text-sm md:text-base"
-                          >
-                            Dashboard
+                          <BreadcrumbLink asChild>
+                            <Link
+                              href={userId ? `/instructor/${userId}` : "/instructor"}
+                              className="text-sm md:text-base"
+                            >
+                              Dashboard
+                            </Link>
                           </BreadcrumbLink>
                         </BreadcrumbItem>
 
                         {/* Dynamic breadcrumb segments */}
                         {crumbSegments.map((segment, index) => {
-                          const href = `/${userId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                          const href = userId
+                            ? `/instructor/${userId}/${crumbSegments.slice(0, index + 1).join("/")}`
+                            : `/instructor/${crumbSegments.slice(0, index + 1).join("/")}`;
                           const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                           const isLast = index === crumbSegments.length - 1;
-                          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint
+                          const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
-                          // On mobile, only show the last segment if there are multiple segments
                           if (isMobile && !isLast && crumbSegments.length > 1) {
                             return null;
                           }
@@ -161,11 +165,13 @@ export default function InstructorDashboardLayout({ children }: Props) {
                             <React.Fragment key={segment}>
                               <BreadcrumbSeparator className="mx-1" />
                               <BreadcrumbItem className="whitespace-nowrap">
-                                <BreadcrumbLink
-                                  href={href}
-                                  className={`text-sm md:text-base ${isLast ? 'font-medium' : 'text-muted-foreground'}`}
-                                >
-                                  {isMobile && crumbSegments.length > 1 && isLast ? '...' : displayName}
+                                <BreadcrumbLink asChild>
+                                  <Link
+                                    href={href}
+                                    className={`text-sm md:text-base ${isLast ? "font-medium" : "text-muted-foreground"}`}
+                                  >
+                                    {isMobile && crumbSegments.length > 1 && isLast ? "..." : displayName}
+                                  </Link>
                                 </BreadcrumbLink>
                               </BreadcrumbItem>
                             </React.Fragment>

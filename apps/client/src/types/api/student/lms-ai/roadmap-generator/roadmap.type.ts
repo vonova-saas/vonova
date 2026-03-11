@@ -32,6 +32,24 @@ export type generateRoadmapTypeResponse = {
   }
 }
 
+export type updateRoadmapProgressType = {
+  week_number: number;
+  milestone_week: number;
+  progress_percentage: number;
+  time_spent_minutes: number;
+  notes: string;
+}
+
+export type getUserRoadmapsTypeResponse = {
+  message: string;
+  data: generateRoadmapTypeResponse[];
+}
+
+export type deleteRoadmapType = {
+  message: string;
+  success: boolean;
+}
+
 // createdBy: string;
 // createdAt: string;
 // updatedAt: string;

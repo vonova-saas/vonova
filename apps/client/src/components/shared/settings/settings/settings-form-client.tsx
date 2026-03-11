@@ -49,11 +49,10 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
   const pathname = usePathname()
   const { user } = useAuthContext()
   const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
     if (user?._id) return user._id
-    if (!pathname) return ''
-    const parts = pathname.split('/').filter(Boolean)
-    return parts[0] || ''
-  }, [pathname, user?._id])
+    return ''
+  }, [user?._id])
 
   type SettingsFormValues = { font: string; fontSize: string; theme: 'light' | 'dark'; language: string }
   const form = useForm<SettingsFormValues>({
@@ -265,6 +264,7 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
               <div className='relative w-max'>
                 <FormControl>
                   <select
+                    suppressHydrationWarning
                     className={cn(
                       buttonVariants({ variant: 'outline' }),
                       'w-[200px] appearance-none font-normal'

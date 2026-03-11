@@ -64,6 +64,7 @@ export default function AIFeaturesSection() {
             value={activeItem}
             onValueChange={(value) => setActiveItem(value as ImageKey)}
             className="w-full"
+            suppressHydrationWarning
           >
             <AccordionItem value="item-1">
               <AccordionTrigger>

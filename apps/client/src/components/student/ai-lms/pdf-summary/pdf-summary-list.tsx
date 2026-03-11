@@ -23,7 +23,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { PDFFile } from "./types";
-import { mockPDFFiles } from "./fake-data";
+//import { mockPDFFiles } from "./fake-data";
 import PDFSummaryCard from "./pdf-summary-card";
 import useStudentId from "@/hooks/student/use-student-id";
 
@@ -38,10 +38,10 @@ interface PDFSummaryListProps {
 }
 
 export default function PDFSummaryList({
-  pdfs = mockPDFFiles,
+  pdfs = [],
   studentId,
   onChat = (pdfId: string) => {
-    window.location.href = `/${studentId}/pdf-summary/${pdfId}`;
+    window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
   },
   onDelete = (pdfId: string) => {
     console.log("Delete PDF:", pdfId);
@@ -53,7 +53,7 @@ export default function PDFSummaryList({
     console.log("Rename PDF:", pdfId, "to", newName);
   },
   onUpload = () => {
-    window.location.href = `/${studentId}/pdf-summary`;
+    window.location.href = `/student/${studentId}/pdf-summary`;
   },
 }: PDFSummaryListProps) {
   const [search, setSearch] = useState("");
@@ -107,7 +107,7 @@ export default function PDFSummaryList({
   };
 
   const handleBackToMain = () => {
-    router.push(`/${studentId}/pdf-summary`);
+    router.push(`/student/${studentId}/pdf-summary`);
   };
 
   return (

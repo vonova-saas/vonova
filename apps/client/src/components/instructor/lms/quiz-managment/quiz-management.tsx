@@ -8,19 +8,22 @@ import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { useQuizStore } from "@/lib/stores";
 import InstructorQuizList from "./quiz-list";
 import Link from "next/link";
-import { useUserId } from "@/hooks";
+import { useAuthContext } from "@/context/app/auth/auth-context";
 import { useRouter } from "next/navigation";
 
 export default function QuizManagement() {
   const [quizzes, setQuizzes] = useState<QuizType[]>([]);
-  const { quizzesById, allIds, loading, error, fetchAll, deleteQuiz } = useQuizStore();
+  const { quizzesById, allIds, loading, error, fetchInstructorQuizzes, deleteQuiz } = useQuizStore();
   const [search, setSearch] = useState("");
-  const userId = useUserId();
+  const { user } = useAuthContext();
+  const userId = user?._id;
   const router = useRouter();
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    if (userId) {
+      fetchInstructorQuizzes(userId);
+    }
+  }, [userId, fetchInstructorQuizzes]);
 
   useEffect(() => {
     // project map to array for filtering
@@ -29,18 +32,21 @@ export default function QuizManagement() {
   }, [allIds, quizzesById]);
 
   const filtered = useMemo(() => {
-    return quizzes.filter(q =>
+    const result = quizzes.filter(q =>
       q.title.toLowerCase().includes(search.toLowerCase()) ||
       q.description.toLowerCase().includes(search.toLowerCase()) ||
       q.topic.toLowerCase().includes(search.toLowerCase())
     );
+    return result;
   }, [search, quizzes]);
 
   const totalQuestions = useMemo(() => quizzes.reduce((sum, q) => sum + q.questions.length, 0), [quizzes]);
   const totalQuizzes = quizzes.length;
 
   const handleDelete = async (id: string) => {
-    await deleteQuiz(id);
+    if (userId) {
+      await deleteQuiz(id, userId);
+    }
   };
 
   return (
@@ -51,10 +57,10 @@ export default function QuizManagement() {
         <h1 className="text-4xl font-bold leading-tight">Quiz Management</h1>
         <Component className="w-7 h-7 text-primary animate-pulse" />
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" onClick={() => fetchAll()} title="Refresh" className="cursor-pointer">
+          <Button variant="outline" onClick={() => userId && fetchInstructorQuizzes(userId)} title="Refresh" className="cursor-pointer">
             <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
           </Button>
-          <Link href={`/${userId}/quiz-managment/create`}>
+          <Link href={`/instructor/${userId}/quiz-managment/create`}>
             <Button className="cursor-pointer">
               <Plus className="w-4 h-4 mr-2" /> New Quiz
             </Button>
@@ -107,7 +113,7 @@ export default function QuizManagement() {
       ) : (
         <InstructorQuizList
           quizzes={filtered}
-          onEdit={(q) => router.push(`/${userId}/quiz-managment/${q._id}/edit`)}
+          onEdit={(q) => router.push(`/instructor/${userId}/quiz-managment/${q._id}/edit`)}
           onDelete={(id) => handleDelete(id)}
         />
       )}

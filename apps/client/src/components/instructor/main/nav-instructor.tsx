@@ -100,7 +100,7 @@ export function NavInstructor({
         sessionStorage.removeItem('resetToken');
       }
       toast.success("Logged out successfully");
-      window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}/?logout=1`);
+      window.location.assign(`${window.location.origin}/?logout=1`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error("Logout failed", {

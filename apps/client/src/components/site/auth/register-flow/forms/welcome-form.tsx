@@ -76,14 +76,14 @@ const services = [
         type: "text",
       },
       {
-        label: "What class size do you prefer?",
-        placeholder: "e.g. 1:1, Small group (5-10), Large (20+)",
+        label: "Your primary goal on Vonova",
+        placeholder: "e.g. Build audience, Monetize expertise, Mentor students",
         id: "q4",
         type: "text",
       },
       {
-        label: "Your primary goal on Vonova",
-        placeholder: "e.g. Build audience, Monetize expertise, Mentor students",
+        label: "From where you know about Vonova?",
+        placeholder: "e.g. Social media, Friend referral, Search engine",
         id: "q5",
         type: "text",
       },
@@ -133,7 +133,7 @@ export function WelcomeForm({
       setIsLoading(true);
       setError(null);
       // Map UI selection to backend role
-      const role = selectedService === 'student' ? 'STUDENT_USER' : 'INSTRUCTORS_USER';
+      const role = selectedService === 'student' ? 'STUDENT_USER' : 'INSTRUCTOR_USER';
       const email = typeof window !== 'undefined' ? sessionStorage.getItem('verifyEmail') : null;
       let me: welcomeUserResponseType;
 
@@ -143,15 +143,15 @@ export function WelcomeForm({
       if (answers.q2) answerPayload.answerTwo = answers.q2;
       if (answers.q3) answerPayload.answerThree = answers.q3;
       if (answers.q4) answerPayload.answerFour = answers.q4 as string;
-      if (answers.q5) answerPayload.answerFive = answers.q5 as string;
+      if (answers.q5) answerPayload.knowAboutUs = answers.q5;
 
       if (email) {
         // Email registration flow
-        me = await welcomeEmail({ email, role, answerOne: 'one' });
+        me = await welcomeEmail({ email, role, knowAboutUs: 'Social media' });
         // await welcomeEmail({ email, role, ...answerPayload });
       } else {
         // OAuth flow (providerId is read by backend from http-only cookie)
-        me = await welcomeOAuth({ role, answerOne: 'one' });
+        me = await welcomeOAuth({ role, knowAboutUs: 'Social media' });
         // await welcomeOAuth({ role, ...answerPayload });
       }
 
@@ -159,10 +159,10 @@ export function WelcomeForm({
       await queryClient.invalidateQueries({ queryKey: ['authUser'] });
       // const me = await getCurrentUserQueryFn();
       const userId = me?.data?.userId;
-      const userRole = me?.data?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTORS_USER'
+      const userRole = me?.data?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
       if (userId) {
         // Choose target path by role, with sensible localhost fallbacks
-        const targetPath = userRole === "INSTRUCTORS_USER" ? "/instructor" : "/student";
+        const targetPath = userRole === "INSTRUCTOR_USER" ? "/instructor" : "/student";
         window.location.assign(`${targetPath}/${userId}`);
       } else {
         // Fallback if userId is not found

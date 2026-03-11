@@ -53,7 +53,7 @@ export function LoginForm({
       const role = me?.data?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
       if (userId) {
         // Choose target path by role, with sensible localhost fallbacks
-        const targetPath = role === "INSTRUCTORS_USER" ? "/instructor" : "/student";
+        const targetPath = role === "INSTRUCTOR_USER" ? "/instructor" : "/student";
         window.location.assign(`${targetPath}/${userId}`);
       } else {
         // Fallback if userId is not found
