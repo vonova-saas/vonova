@@ -226,6 +226,61 @@ export class PdfSummaryController {
     return result;
   }
 
+  @MessagePattern({ cmd: 'lms.ai.pdf.getSessionsWithFullData' })
+  async getSessionsWithFullData(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+
+    this.logger.log(
+      `Received get sessions with full data request: user_id=${userId}`,
+    );
+
+    if (!userId) {
+      this.logger.warn('Get sessions with full data request missing user_id');
+      throw new BadRequestException('user_id is required');
+    }
+
+    const result =
+      await this.pdfSummaryService.getSessionsWithFullData(userId);
+
+    this.logger.log(
+      `Retrieved ${result.data?.length || 0} sessions with full data for user: ${userId}`,
+    );
+
+    return result;
+  }
+
+  @MessagePattern({ cmd: 'lms.ai.pdf.getSessionWithFullData' })
+  async getSessionWithFullData(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
+    const userId =
+      rawUserId === undefined || rawUserId === null
+        ? undefined
+        : String(rawUserId);
+    const sessionId = data?.sessionId ?? data?.session_id;
+
+    this.logger.log(
+      `Received get session with full data request: sessionId=${sessionId}, user_id=${userId}`,
+    );
+
+    if (!userId) {
+      this.logger.warn('Get session with full data request missing user_id');
+      throw new BadRequestException('user_id is required');
+    }
+    if (!sessionId || String(sessionId).trim() === '') {
+      this.logger.warn('Get session with full data request missing sessionId');
+      throw new BadRequestException('session_id is required');
+    }
+
+    return this.pdfSummaryService.getSessionWithFullData(
+      String(sessionId).trim(),
+      userId,
+    );
+  }
+
   @MessagePattern({ cmd: 'lms.ai.pdf.stats' })
   async getServiceStats(@Payload() data: any, @Ctx() _ctx: NatsContext) {
     const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;

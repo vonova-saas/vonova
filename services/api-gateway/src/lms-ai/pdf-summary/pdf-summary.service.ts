@@ -52,6 +52,20 @@ export class PdfSummaryGatewayService {
     return this.client.send({ cmd: 'lms.ai.pdf.getSessionsByUserId' }, data);
   }
 
+  getSessionsWithFullData(data: { user_id: string }) {
+    return this.client.send(
+      { cmd: 'lms.ai.pdf.getSessionsWithFullData' },
+      data,
+    );
+  }
+
+  getSessionWithFullData(data: { user_id: string; sessionId: string }) {
+    return this.client.send(
+      { cmd: 'lms.ai.pdf.getSessionWithFullData' },
+      data,
+    );
+  }
+
   getServiceStats(data: { user_id?: string }) {
     return this.client.send({ cmd: 'lms.ai.pdf.stats' }, data);
   }

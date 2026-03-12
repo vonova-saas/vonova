@@ -6,6 +6,7 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { Response } from 'express';
 import type { Request } from 'express';
 
@@ -22,7 +23,17 @@ export class RpcExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let error = 'Error';
 
-    if (exception instanceof HttpException) {
+    if (exception instanceof RpcException) {
+      const err = exception.getError() as Record<string, unknown> | string;
+      if (typeof err === 'object' && err !== null && err.statusCode != null) {
+        statusCode = Number(err.statusCode);
+        message =
+          typeof err.message === 'string' ? err.message : message;
+        error = (typeof err.error === 'string' ? err.error : error) as string;
+      } else {
+        message = typeof err === 'string' ? err : message;
+      }
+    } else if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null && 'message' in res) {

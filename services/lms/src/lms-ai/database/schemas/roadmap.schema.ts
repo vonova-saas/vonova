@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 
 export type RoadmapDocument = Roadmap & Document;
 
@@ -160,9 +160,13 @@ RoadmapSchema.statics.findSimilar = function (
   skillLevel: string,
   durationWeeks: number,
 ) {
+  const lower = skillLevel.toLowerCase();
+  const title =
+    skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1).toLowerCase();
+  const skillLevelVariants = [...new Set([skillLevel, lower, title])];
   return this.find({
     topic: new RegExp(topic, 'i'),
-    skill_level: skillLevel,
+    skill_level: { $in: skillLevelVariants },
     duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 },
   })
     .sort({ created_at: -1 })

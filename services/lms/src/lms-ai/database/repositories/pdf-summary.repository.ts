@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PdfSummary, PdfSummaryDocument } from '../schemas/pdf-summary.schema';
 import { LMS_AI_CONNECTION_NAME } from '../constants';
 
@@ -9,7 +9,24 @@ export class PdfSummaryRepository {
   constructor(
     @InjectModel(PdfSummary.name, LMS_AI_CONNECTION_NAME)
     private pdfSummaryModel: Model<PdfSummaryDocument>,
-  ) {}
+  ) { }
+
+  /**
+   * Builds a query that matches user_id as either string or ObjectId (24-char hex).
+   * Ensures sessions are found regardless of how user_id was stored in the DB.
+   */
+  private userMatch(userId: string): { user_id?: string; $or?: Array<{ user_id: string | Types.ObjectId }> } {
+    const strId = String(userId).trim();
+    try {
+      if (/^[a-fA-F0-9]{24}$/.test(strId)) {
+        const oid = new Types.ObjectId(strId);
+        return { $or: [{ user_id: strId }, { user_id: oid }] };
+      }
+    } catch {
+      // fall through
+    }
+    return { user_id: strId };
+  }
 
   async create(summaryData: Partial<PdfSummary>): Promise<PdfSummaryDocument> {
     const summary = new this.pdfSummaryModel(summaryData);
@@ -22,7 +39,7 @@ export class PdfSummaryRepository {
 
   async findByUserId(userId: string): Promise<PdfSummaryDocument[]> {
     return this.pdfSummaryModel
-      .find({ user_id: userId })
+      .find(this.userMatch(userId))
       .sort({ created_at: -1 })
       .exec();
   }
@@ -33,6 +50,28 @@ export class PdfSummaryRepository {
   ): Promise<PdfSummaryDocument | null> {
     return this.pdfSummaryModel
       .findOne({ file_hash: fileHash, summary_type: summaryType })
+      .exec();
+  }
+
+  /**
+   * Finds a summary by file_hash and user_id (for reuse when same user re-uploads same file).
+   * Returns null when userId is missing (anonymous uploads are not reused by user).
+   */
+  async findByFileHashAndUser(
+    fileHash: string,
+    userId: string | undefined,
+  ): Promise<PdfSummaryDocument | null> {
+    if (
+      userId === undefined ||
+      userId === null ||
+      String(userId).trim() === ''
+    ) {
+      return null;
+    }
+    const userCondition = this.userMatch(userId);
+    return this.pdfSummaryModel
+      .findOne({ file_hash: fileHash, ...userCondition })
+      .sort({ created_at: -1 })
       .exec();
   }
 
@@ -50,7 +89,7 @@ export class PdfSummaryRepository {
   }
 
   async countByUserId(userId: string): Promise<number> {
-    return this.pdfSummaryModel.countDocuments({ user_id: userId }).exec();
+    return this.pdfSummaryModel.countDocuments(this.userMatch(userId)).exec();
   }
 
   async deleteBySessionId(sessionId: string): Promise<boolean> {
@@ -62,32 +101,25 @@ export class PdfSummaryRepository {
 
   async deleteByUserId(userId: string): Promise<number> {
     const result = await this.pdfSummaryModel
-      .deleteMany({ user_id: userId })
+      .deleteMany(this.userMatch(userId))
       .exec();
     return result.deletedCount;
   }
 
   async getTotalCount(userId?: string): Promise<number> {
-    const query: any = {};
-    if (userId) {
-      query.user_id = userId;
-    }
+    const query = userId ? this.userMatch(userId) : {};
     return this.pdfSummaryModel.countDocuments(query).exec();
   }
 
   async getActiveSessionsCount(userId?: string): Promise<number> {
-    const query: any = { status: 'completed' };
-    if (userId) {
-      query.user_id = userId;
-    }
+    const query = userId
+      ? { $and: [this.userMatch(userId), { status: 'completed' }] }
+      : { status: 'completed' };
     return this.pdfSummaryModel.countDocuments(query).exec();
   }
 
   async getAverageProcessingTime(userId?: string): Promise<number> {
-    const matchStage: any = {};
-    if (userId) {
-      matchStage.user_id = userId;
-    }
+    const matchStage = userId ? this.userMatch(userId) : {};
 
     const pipeline: any[] = [];
     if (Object.keys(matchStage).length > 0) {

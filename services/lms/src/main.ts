@@ -23,6 +23,7 @@ async function bootstrap() {
       transport: Transport.NATS,
       options: {
         servers: [natsUrl],
+        queue: 'vonova-lms-queue',
       },
     },
   );
@@ -40,6 +41,7 @@ async function bootstrap() {
 
   console.log('\n--- Vonova LMS (LMS + LMS-AI) ---');
   console.log(`NATS: ${natsUrl}`);
+  console.log(`Queue: vonova-lms-queue (one request → one instance)`);
   console.log(`Env:  ${config.NODE_ENV ?? 'development'}`);
   console.log(
     'Handlers: courses, quizzes, library, assignments, enroll, progress',

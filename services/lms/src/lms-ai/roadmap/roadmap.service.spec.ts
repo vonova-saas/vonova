@@ -7,6 +7,7 @@ import {
 import { RoadmapService } from './roadmap.service';
 import { RoadmapRepository } from '../database/repositories/roadmap.repository';
 import { RoadmapHistoryRepository } from '../database/repositories/roadmap-history.repository';
+import { SkillLevel } from './interfaces/roadmap.interface';
 
 describe('RoadmapService', () => {
   let service: RoadmapService;
@@ -81,7 +82,7 @@ describe('RoadmapService', () => {
   describe('generateRoadmap', () => {
     const validRequest = {
       topic: 'Machine Learning',
-      skill_level: 'beginner' as const,
+      skill_level: SkillLevel.BEGINNER,
       duration_weeks: 12,
       userId: 'user-123',
     };
@@ -99,6 +100,43 @@ describe('RoadmapService', () => {
           skill_level: 'invalid' as any,
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should accept all valid skill_level casings (beginner, Beginner, etc.)', async () => {
+      const levels = [
+        'beginner',
+        'Beginner',
+        'intermediate',
+        'Intermediate',
+        'advanced',
+        'Advanced',
+      ];
+      roadmapRepository.findSimilar.mockResolvedValue([]);
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: true,
+          text: { query: 'Test', chapters: { 'Week 1': ['Topic 1'] } },
+          metadata: { summary: 'Summary' },
+        }),
+      });
+      roadmapRepository.create.mockImplementation((data: any) =>
+        Promise.resolve({
+          ...data,
+          roadmapId: data.roadmapId,
+          toObject: () => data,
+          userId: { toString: () => data.userId },
+        } as any),
+      );
+
+      for (const skill_level of levels) {
+        await expect(
+          service.generateRoadmap({
+            ...validRequest,
+            skill_level: skill_level as SkillLevel,
+          }),
+        ).resolves.toBeDefined();
+      }
     });
 
     it('should throw BadRequestException for invalid duration', async () => {
@@ -143,6 +181,33 @@ describe('RoadmapService', () => {
       expect(result).toBeDefined();
       expect(result.roadmapId).toBe('cached-id');
       expect(roadmapRepository.findSimilar).toHaveBeenCalled();
+    });
+
+    it('should use cached roadmap when skill_level differs only by casing (Beginner vs beginner)', async () => {
+      const cachedRoadmap = {
+        toObject: () => ({
+          roadmapId: 'cached-id',
+          topic: 'Machine Learning',
+          skill_level: 'Beginner',
+          duration_weeks: 12,
+          userId: 'user-123',
+          weeks: [],
+          overview: 'Test overview',
+          created_at: new Date(),
+        }),
+        userId: { toString: () => 'user-123' },
+      };
+
+      roadmapRepository.findSimilar.mockResolvedValue([cachedRoadmap] as any);
+      roadmapHistoryRepository.create.mockResolvedValue(undefined as any);
+
+      const result = await service.generateRoadmap({
+        ...validRequest,
+        skill_level: SkillLevel.BEGINNER,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.roadmapId).toBe('cached-id');
     });
   });
 

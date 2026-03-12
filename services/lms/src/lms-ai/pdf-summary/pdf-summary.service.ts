@@ -3,7 +3,11 @@ import {
   Logger,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
+  ServiceUnavailableException,
+  HttpStatus,
 } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { PdfSummaryRepository } from '../database/repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from '../database/repositories/pdf-chat-history.repository';
@@ -21,6 +25,9 @@ import {
 } from './interfaces/pdf-summary.interface';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
+
+/** In-memory lock keyed by fileHash:userId so concurrent uploads of the same file by the same user are serialized. */
+const uploadLocks = new Map<string, Promise<void>>();
 
 @Injectable()
 export class PdfSummaryService {
@@ -132,6 +139,33 @@ export class PdfSummaryService {
           context_length: request.context_length || 1000,
         },
       );
+
+      // Detect AI/provider errors returned inside the answer (e.g. Gemini 429 quota)
+      const answerStr =
+        typeof aiResponse.answer === 'string' ? aiResponse.answer : '';
+      if (answerStr) {
+        const is429 =
+          answerStr.includes('429') ||
+          /quota.*exceeded|exceeded your current quota|rate.limit|rate_limit/i.test(
+            answerStr,
+          );
+        const isAiError =
+          /Error during Q&A:|Error during|generativelanguage\.googleapis\.com|Please retry in/i.test(
+            answerStr,
+          );
+        if (is429 || isAiError) {
+          const statusCode = is429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE;
+          const message = is429
+            ? 'AI rate limit exceeded. Please wait a moment and retry.'
+            : 'The AI service returned an error. Please try again.';
+          this.logger.warn(`AI error in chat answer (${statusCode}): ${answerStr.slice(0, 200)}`);
+          throw new RpcException({
+            statusCode,
+            message,
+            error: is429 ? 'Too Many Requests' : 'Service Unavailable',
+          });
+        }
+      }
 
       // Normalize external status/levels to internal enums
       const normalizedWizardStatus = ((): 'active' | 'inactive' | 'error' => {
@@ -285,23 +319,139 @@ export class PdfSummaryService {
       const fileSize = fileContent.length;
       const totalPages = await this.extractPageCount(fileContent);
       const fileHash = this.generateFileHash(fileContent);
+      const lockKey = `${fileHash}:${request.user_id ?? 'anon'}`;
 
-      // Upload file to S3
-      this.logger.log(`Uploading PDF file to S3: ${filename}`);
-      const s3Key = await this.s3Service.uploadFile(
-        fileContent,
-        filename,
-        'application/pdf',
-        'pdfs',
+      // Serialize concurrent uploads of the same file by the same user (e.g. client retries or multiple NATS consumers).
+      const existingLock = uploadLocks.get(lockKey);
+      if (existingLock) {
+        this.logger.warn(
+          `Another upload for same file (${filename}) in progress, waiting then reusing if available.`,
+        );
+        try {
+          await Promise.race([
+            existingLock,
+            new Promise((_, rej) =>
+              setTimeout(() => rej(new Error('Upload wait timeout')), 120_000),
+            ),
+          ]);
+        } catch {
+          // Timeout or lock released; fall through to re-check DB
+        }
+        const after = await this.pdfSummaryRepository.findByFileHashAndUser(
+          fileHash,
+          request.user_id,
+        );
+        if (after) {
+          const elapsed = Date.now() - startTime;
+          return {
+            status: true,
+            session_id: after.session_id,
+            brief_summary:
+              after.summary_content || 'Summary will be generated on demand',
+            ...(request.user_id && { user_id: request.user_id }),
+            magic_level: 'cached' as const,
+            enchantment_status: 'reused' as const,
+            message:
+              'This PDF was recently uploaded. Reusing the existing session to avoid duplicate processing.',
+            metadata: {
+              filename: after.filename,
+              file_size_bytes: after.file_size_bytes,
+              total_pages: after.total_pages,
+              processing_time_ms: elapsed,
+              s3_key: after.s3_key,
+              s3_url: after.s3_url,
+            },
+          };
+        }
+        throw new InternalServerErrorException(
+          'Previous upload for this file did not complete. Please retry.',
+        );
+      }
+
+      // Idempotency guard: if the same user already has this file, reuse session.
+      const existingSummary =
+        await this.pdfSummaryRepository.findByFileHashAndUser(
+          fileHash,
+          request.user_id,
+        );
+      if (existingSummary) {
+        this.logger.warn(
+          `Reusing existing PDF session ${existingSummary.session_id} for duplicate upload of "${filename}" (file_hash=${fileHash})`,
+        );
+        const elapsed = Date.now() - startTime;
+        const response: IPDFUploadResponse = {
+          status: true,
+          session_id: existingSummary.session_id,
+          brief_summary:
+            existingSummary.summary_content ||
+            'Summary will be generated on demand',
+          ...(request.user_id && { user_id: request.user_id }),
+          magic_level: 'cached',
+          enchantment_status: 'reused',
+          message:
+            'This PDF was recently uploaded. Reusing the existing session to avoid duplicate processing.',
+          metadata: {
+            filename: existingSummary.filename,
+            file_size_bytes: existingSummary.file_size_bytes,
+            total_pages: existingSummary.total_pages,
+            processing_time_ms: elapsed,
+            s3_key: existingSummary.s3_key,
+            s3_url: existingSummary.s3_url,
+          },
+        };
+        return response;
+      }
+
+      let resolveLock: () => void;
+      const lockPromise = new Promise<void>((r) => {
+        resolveLock = r;
+      });
+      uploadLocks.set(lockKey, lockPromise);
+      try {
+        return await this.doUploadAndSave(
+          request,
+          fileContent,
+          filename,
+          fileSize,
+          totalPages,
+          fileHash,
+          startTime,
+          userIp,
+          userAgent,
+        );
+      } finally {
+        resolveLock!();
+        uploadLocks.delete(lockKey);
+      }
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      this.logger.error('Error in PDF upload:', error);
+      throw new InternalServerErrorException(
+        `Failed to upload PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      const s3Url = this.s3Service.getFileUrl(s3Key);
-      this.logger.log(`PDF file uploaded to S3: ${s3Key}`);
+    }
+  }
 
-      // Note: Removed existing summary check - each upload now creates a new session
-      // This ensures users always get a fresh session_id even for the same file
-
-      // Upload to Python service with language support
-      // Note: language and auto_summarize are sent as form data fields via callPythonService
+  /** Performs Python call first; only on success uploads to S3 and saves to DB. Called under upload lock. */
+  private async doUploadAndSave(
+    request: IPDFUploadRequest,
+    fileContent: Buffer,
+    filename: string,
+    fileSize: number,
+    totalPages: number,
+    fileHash: string,
+    startTime: number,
+    userIp?: string,
+    userAgent?: string,
+  ): Promise<IPDFUploadResponse> {
+    try {
+      // Call AI first: nothing is stored in DB or S3 until we get a successful response.
+      this.logger.log(`Sending file to AI Service for upload: ${filename}`);
       const uploadResponse = await this.callPythonService(
         `${this.PYTHON_SERVICE_URL}/upload`,
         {
@@ -316,8 +466,36 @@ export class PdfSummaryService {
         filename,
       );
 
-      // Use the session_id from Python service response
+      // Detect AI errors embedded in brief_summary (e.g. 429 quota from external AI)
+      const briefSummary =
+        typeof uploadResponse.brief_summary === 'string'
+          ? uploadResponse.brief_summary
+          : '';
+      if (
+        briefSummary.includes('[Error in short summary:') ||
+        briefSummary.includes('429') ||
+        /quota\s*exceeded|rate\s*limit/i.test(briefSummary)
+      ) {
+        this.logger.warn(
+          `AI service returned error in brief_summary: ${briefSummary.slice(0, 200)}...`,
+        );
+        throw new ServiceUnavailableException(
+          'AI summary is temporarily unavailable (rate limit or quota). Please try again in a few minutes.',
+        );
+      }
+
       const pythonSessionId = uploadResponse.session_id;
+
+      // Only on AI success: upload to S3 and save to DB.
+      this.logger.log(`Uploading PDF file to S3: ${filename}`);
+      const s3Key = await this.s3Service.uploadFile(
+        fileContent,
+        filename,
+        'application/pdf',
+        'pdfs',
+      );
+      const s3Url = this.s3Service.getFileUrl(s3Key);
+      this.logger.log(`PDF file uploaded to S3: ${s3Key}`);
 
       // Save basic summary data to database
       try {
@@ -451,14 +629,19 @@ export class PdfSummaryService {
   ): Promise<IPDFSummaryResponse> {
     const startTime = Date.now();
 
+    const cleanSessionId = sessionId?.trim();
+    if (!cleanSessionId) {
+      throw new BadRequestException('session_id is required');
+    }
+
     // Ensure session exists and get filename
-    const session = await this.validateSession(sessionId);
+    const session = await this.validateSession(cleanSessionId);
 
     // Call AI service GET /summarize with session_id
     try {
       // Ensure PYTHON_SERVICE_URL is clean and valid
       const baseUrl = this.PYTHON_SERVICE_URL.trim().replace(/\/+$/, ''); // Remove trailing slashes
-      const endpoint = `${baseUrl}/summarize?session_id=${encodeURIComponent(sessionId)}`;
+      const endpoint = `${baseUrl}/summarize?session_id=${encodeURIComponent(cleanSessionId)}`;
 
       // Validate URL before making request
       try {
@@ -504,7 +687,7 @@ export class PdfSummaryService {
 
           // Try to return cached summary from database if available
           const dbSummary =
-            await this.pdfSummaryRepository.findBySessionId(sessionId);
+            await this.pdfSummaryRepository.findBySessionId(cleanSessionId);
           if (dbSummary && dbSummary.summary_content) {
             this.logger.log(
               `Returning cached summary from database for session ${sessionId} (session expired in AI service after 7 days)`,
@@ -515,7 +698,7 @@ export class PdfSummaryService {
               summary: dbSummary.summary_content,
               summary_type: dbSummary.summary_type || 'detailed',
               filename: dbSummary.filename || session.filename || 'Unknown',
-              session_id: sessionId,
+              session_id: cleanSessionId,
               metadata: {
                 generated:
                   dbSummary.updated_at?.toISOString() ||
@@ -532,17 +715,34 @@ export class PdfSummaryService {
             return cachedSummary;
           }
 
-          // Session expired in AI service (7-day TTL) but no cached summary
           if (dbSummary) {
+            // Session exists in DB but AI service no longer knows about it.
+            // Only mention "7-day TTL" if the record is actually older than 7 days.
+            const createdAt =
+              dbSummary.created_at instanceof Date
+                ? dbSummary.created_at.getTime()
+                : undefined;
+            const ageMs =
+              createdAt !== undefined ? Date.now() - createdAt : undefined;
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+            if (ageMs !== undefined && ageMs > sevenDaysMs) {
+              throw new BadRequestException(
+                'Session expired in AI service after 7 days. Your PDF summary is still stored, but the live AI ' +
+                  'session was cleaned up. Please try requesting the summary again, or re-upload the PDF if the ' +
+                  'problem persists.',
+              );
+            }
+
             throw new BadRequestException(
-              `Session expired in AI service. Sessions expire after 7 days in the AI service for performance reasons, but your session data is stored in the database. Please re-upload the PDF to recreate the session. Session ID: ${sessionId}`,
+              'AI session for this PDF is currently unavailable in the AI service, but your summary data is stored. ' +
+                'Please try again in a moment. If the problem continues, re-uploading the PDF will create a fresh session.',
             );
           }
 
-          // No session found anywhere
+          // No session found anywhere (neither AI nor DB)
           throw new BadRequestException(
-            `Session not found. The session may have expired or the AI service was restarted. ` +
-            `Please re-upload the PDF to create a new session.`,
+            'Session not found. The session may have never existed or was fully deleted.',
           );
         }
 
@@ -562,7 +762,7 @@ export class PdfSummaryService {
         summary: aiResponse.summary || 'Summary generated successfully',
         summary_type: aiResponse.summary_type || 'detailed',
         filename: responseFilename,
-        session_id: sessionId,
+        session_id: cleanSessionId,
         metadata: {
           generated: new Date().toISOString(),
           ai_model_used: aiResponse.ai_model_used || 'gemini',
@@ -705,8 +905,13 @@ export class PdfSummaryService {
   private async validateSession(
     sessionId: string,
   ): Promise<{ filename: string }> {
+    const cleanSessionId = sessionId?.trim();
+    if (!cleanSessionId) {
+      return { filename: 'Unknown' };
+    }
     // First try to get from database
-    const summary = await this.pdfSummaryRepository.findBySessionId(sessionId);
+    const summary =
+      await this.pdfSummaryRepository.findBySessionId(cleanSessionId);
     if (summary) {
       return { filename: summary.filename };
     }
@@ -715,7 +920,7 @@ export class PdfSummaryService {
     // We'll allow the session to be used and let Python service validate it
     // The filename will be retrieved from Python service response or use a default
     this.logger.log(
-      `Session ${sessionId} not found in database, but may exist in Python service. Proceeding with validation.`,
+      `Session ${cleanSessionId} not found in database, but may exist in Python service. Proceeding with validation.`,
     );
 
     // Return a default filename - the actual filename will come from Python service responses
@@ -820,25 +1025,46 @@ export class PdfSummaryService {
           response.status === 404 &&
           errorMessage.includes('Session not found')
         ) {
-          // Check if session exists in database (may have expired in AI service after 7 days)
+          const sessionIdFromData = (() => {
+            const raw =
+              (data as any)?.session_id ??
+              (data as any)?.sessionId ??
+              (data as any)?.session;
+            if (raw === undefined || raw === null) return '';
+            return String(raw).trim();
+          })();
+
+          // Check if session exists in database (may have expired in AI service after some time)
           const dbSummary = await this.pdfSummaryRepository.findBySessionId(
-            data.session_id || data.session_id || '',
+            sessionIdFromData,
           );
 
           if (dbSummary) {
-            // Session exists in database but expired in AI service (7-day TTL)
+            const createdAt =
+              dbSummary.created_at instanceof Date
+                ? dbSummary.created_at.getTime()
+                : undefined;
+            const ageMs =
+              createdAt !== undefined ? Date.now() - createdAt : undefined;
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+            if (ageMs !== undefined && ageMs > sevenDaysMs) {
+              throw new BadRequestException(
+                'Session expired in AI service after 7 days. Your PDF data is still stored, ' +
+                  'but the live AI session was cleaned up. You can retry, or re-upload the PDF if the issue persists.',
+              );
+            }
+
             throw new BadRequestException(
-              `Session expired in AI service. Sessions in the AI service expire after 7 days for performance reasons, ` +
-              `but your data is safely stored in the database. Please re-upload the PDF to recreate the session in the AI service. ` +
-              `The session ID will remain the same: ${dbSummary.session_id}`,
-            );
-          } else {
-            // Session doesn't exist in either place
-            throw new BadRequestException(
-              `Session not found. The session may have expired or the AI service was restarted. ` +
-              `Please re-upload the PDF to create a new session.`,
+              'AI session for this PDF is currently unavailable in the AI service, but your data is stored. ' +
+                'Please try again shortly. If the issue continues, re-uploading the PDF will create a fresh session.',
             );
           }
+
+          // Session doesn't exist in either place
+          throw new BadRequestException(
+            'Session not found. The session may have never existed or was fully deleted.',
+          );
         }
 
         throw new Error(
@@ -847,6 +1073,26 @@ export class PdfSummaryService {
       }
 
       const responseData = await response.json();
+
+      // Detect AI errors embedded in brief_summary (e.g. 429 quota) before treating as success
+      const briefSummary =
+        typeof responseData.brief_summary === 'string'
+          ? responseData.brief_summary
+          : '';
+      if (
+        briefSummary &&
+        (briefSummary.includes('[Error in short summary:') ||
+          briefSummary.includes('429') ||
+          /quota\s*exceeded|rate\s*limit/i.test(briefSummary))
+      ) {
+        this.logger.warn(
+          `AI service returned error in brief_summary: ${briefSummary.slice(0, 200)}...`,
+        );
+        throw new ServiceUnavailableException(
+          'AI summary is temporarily unavailable (rate limit or quota). Please try again in a few minutes.',
+        );
+      }
+
       this.logger.log(`AI Service success response received:`, responseData);
 
       // Check if response has status field, if not, treat as success
@@ -871,10 +1117,11 @@ export class PdfSummaryService {
 
       return responseData;
     } catch (error) {
-      // Re-throw BadRequestException and InternalServerErrorException as-is (don't wrap them)
+      // Re-throw Nest HTTP exceptions as-is (don't wrap them)
       if (
         error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
+        error instanceof InternalServerErrorException ||
+        error instanceof ServiceUnavailableException
       ) {
         throw error;
       }
@@ -926,10 +1173,11 @@ export class PdfSummaryService {
         this.logger.error(
           `Fallback AI service call failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`,
         );
-        // Re-throw BadRequestException from fallback as well
+        // Re-throw Nest HTTP exceptions from fallback as well
         if (
           fallbackError instanceof BadRequestException ||
-          fallbackError instanceof InternalServerErrorException
+          fallbackError instanceof InternalServerErrorException ||
+          fallbackError instanceof ServiceUnavailableException
         ) {
           throw fallbackError;
         }
@@ -990,8 +1238,9 @@ export class PdfSummaryService {
     }
 
     const endpoint = `${this.PYTHON_SERVICE_URL}/voice/ask`;
+    const cleanSessionId = sessionId.trim();
     const formData = new FormData();
-    formData.append('session_id', sessionId.trim());
+    formData.append('session_id', cleanSessionId);
     const ext =
       filename?.split('.').pop() || (mimeType.includes('wav') ? 'wav' : 'webm');
     const safeName = filename?.trim() || `audio.${ext}`;
@@ -1000,7 +1249,61 @@ export class PdfSummaryService {
       userId && String(userId).trim()
         ? String(userId).trim()
         : 'anonymous';
-    const voicePrefix = `voice/pdf-summary/${userIdSegment}/${sessionId.trim()}`;
+    const voicePrefix = `voice/pdf-summary/${userIdSegment}/${cleanSessionId}`;
+
+    formData.append(
+      'audio',
+      new Blob([new Uint8Array(audioBuffer)], { type: mimeType }),
+      safeName,
+    );
+
+    // Call AI first: nothing is stored in DB or S3 until we get a successful response.
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let detail = errorText;
+      try {
+        const errJson = JSON.parse(errorText);
+        if (errJson.detail) detail = errJson.detail;
+      } catch {
+        // use errorText as-is
+      }
+      if (response.status === 404 && detail.includes('Session not found')) {
+        // Check if the session exists in Mongo; if yes, explain that AI session expired
+        const dbSummary =
+          await this.pdfSummaryRepository.findBySessionId(cleanSessionId);
+        if (dbSummary) {
+          throw new BadRequestException(
+            'Voice session expired in AI service. Your PDF is still stored, ' +
+              'but voice chat needs an active AI session. Please re-upload the PDF to recreate the session, ' +
+              `then use the new session_id for voice: ${cleanSessionId}.`,
+          );
+        }
+        throw new BadRequestException(
+          'Session not found. Re-upload the PDF to create a new session.',
+        );
+      }
+      if (response.status === 422) {
+        throw new BadRequestException(
+          detail || 'Could not transcribe audio. Speak clearly.',
+        );
+      }
+      throw new InternalServerErrorException(
+        `Voice ask failed: ${response.status} ${detail}`,
+      );
+    }
+
+    // Only on success: persist to S3 and DB.
+    const arrayBuffer = await response.arrayBuffer();
+    const aiAudioBuffer = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get('content-type') || 'audio/mpeg';
+    const detectedLanguage =
+      response.headers.get('X-Detected-Language') || undefined;
 
     let userAudioS3Key: string | undefined;
     let userAudioS3Url: string | undefined;
@@ -1020,48 +1323,6 @@ export class PdfSummaryService {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Failed to upload user voice to S3: ${msg}`);
     }
-
-    formData.append(
-      'audio',
-      new Blob([new Uint8Array(audioBuffer)], { type: mimeType }),
-      safeName,
-    );
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      body: formData,
-      signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let detail = errorText;
-      try {
-        const errJson = JSON.parse(errorText);
-        if (errJson.detail) detail = errJson.detail;
-      } catch {
-        // use errorText as-is
-      }
-      if (response.status === 404 && detail.includes('Session not found')) {
-        throw new BadRequestException(
-          'Session not found. Re-upload the PDF to create a new session.',
-        );
-      }
-      if (response.status === 422) {
-        throw new BadRequestException(
-          detail || 'Could not transcribe audio. Speak clearly.',
-        );
-      }
-      throw new InternalServerErrorException(
-        `Voice ask failed: ${response.status} ${detail}`,
-      );
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const aiAudioBuffer = Buffer.from(arrayBuffer);
-    const contentType = response.headers.get('content-type') || 'audio/mpeg';
-    const detectedLanguage =
-      response.headers.get('X-Detected-Language') || undefined;
 
     let aiAudioS3Key: string | undefined;
     let aiAudioS3Url: string | undefined;
@@ -1257,6 +1518,8 @@ export class PdfSummaryService {
     s3Url?: string,
     language?: string,
   ): Promise<IPDFSummaryData> {
+    const normalizedUserId =
+      userId !== undefined && userId !== null ? String(userId).trim() : undefined;
     const summaryData = {
       summaryId: uuidv4(),
       session_id: sessionId,
@@ -1270,7 +1533,7 @@ export class PdfSummaryService {
       ai_model_used: 'gemini',
       processing_time_ms: 0,
       chunks_processed: 1,
-      user_id: userId,
+      ...(normalizedUserId && { user_id: normalizedUserId }),
       status: 'completed' as const,
       ...(s3Key && { s3_key: s3Key }),
       ...(s3Url && { s3_url: s3Url }),
@@ -1292,6 +1555,22 @@ export class PdfSummaryService {
     userAgent?: string,
   ): Promise<void> {
     try {
+      // Guard against accidental duplicate inserts (e.g. transport retries)
+      const existing = await this.pdfChatHistoryRepository.findRecentDuplicate(
+        sessionId,
+        question,
+        answer,
+      );
+      if (existing) {
+        this.logger.warn(
+          `Skipping duplicate chat history for session ${sessionId} (question="${question.slice(
+            0,
+            80,
+          )}...")`,
+        );
+        return;
+      }
+
       const chatHistory = {
         chatId: uuidv4(),
         session_id: sessionId,
@@ -1454,6 +1733,254 @@ export class PdfSummaryService {
       };
     });
     return { success: true, data };
+  }
+
+  /**
+   * Get all sessions for a user with full data per session: chat history, full summary, and voice recordings.
+   * Use when you need everything in one call (e.g. export or full dashboard).
+   */
+  async getSessionsWithFullData(userId: string): Promise<{
+    success: boolean;
+    data: Array<{
+      session_id: string;
+      summaryId: string;
+      filename: string;
+      original_filename: string;
+      brief_summary: string;
+      file_size_bytes: number;
+      total_pages: number;
+      status: string;
+      s3_key?: string;
+      s3_url?: string;
+      language?: string;
+      created_at: Date;
+      updated_at: Date;
+      audio_recordings: Array<{
+        audioId: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at: Date;
+        updated_at: Date;
+      }>;
+      chat_history?: {
+        chats: any[];
+        total: number;
+        page: number;
+        totalPages: number;
+      };
+      full_summary?: {
+        status: boolean;
+        summary: string;
+        summary_type: string;
+        filename: string;
+        session_id: string;
+        metadata: {
+          generated: string;
+          ai_model_used: string;
+          processing_time_ms: number;
+          file_size_bytes: number;
+          total_pages: number;
+        };
+      };
+      full_summary_error?: string;
+    }>;
+  }> {
+    if (!userId || userId.trim() === '') {
+      throw new BadRequestException('user_id is required');
+    }
+    const { data: sessions } = await this.getSessionsByUserId(userId.trim());
+    if (!sessions?.length) {
+      return { success: true, data: [] };
+    }
+    const chatLimit = 500;
+    const enriched = await Promise.all(
+      sessions.map(async (session) => {
+        const sessionId = session.session_id;
+        const [chatResult, summaryResult] = await Promise.allSettled([
+          this.getSessionChatHistory(sessionId, 1, chatLimit),
+          this.getFullSummary(sessionId),
+        ]);
+        const chat_history =
+          chatResult.status === 'fulfilled'
+            ? {
+              chats: chatResult.value.chats,
+              total: chatResult.value.total,
+              page: chatResult.value.page,
+              totalPages: chatResult.value.totalPages,
+            }
+            : undefined;
+        let full_summary: IPDFSummaryResponse | undefined = undefined;
+        let full_summary_error: string | undefined;
+        if (summaryResult.status === 'fulfilled') {
+          full_summary = summaryResult.value;
+        } else {
+          full_summary_error =
+            summaryResult.reason?.message ||
+            (typeof summaryResult.reason === 'string'
+              ? summaryResult.reason
+              : 'Failed to load summary');
+        }
+        return {
+          ...session,
+          chat_history,
+          full_summary,
+          ...(full_summary_error && { full_summary_error }),
+        };
+      }),
+    );
+    return { success: true, data: enriched };
+  }
+
+  /**
+   * Get a single session by session_id with full contents: PDF metadata, chat history, full summary, and voice recordings.
+   * Verifies the session exists and belongs to the given user.
+   */
+  async getSessionWithFullData(
+    sessionId: string,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    data: {
+      session_id: string;
+      summaryId: string;
+      filename: string;
+      original_filename: string;
+      brief_summary: string;
+      file_size_bytes: number;
+      total_pages: number;
+      status: string;
+      s3_key?: string;
+      s3_url?: string;
+      language?: string;
+      created_at: Date;
+      updated_at: Date;
+      pdf?: {
+        filename: string;
+        original_filename: string;
+        s3_key?: string;
+        s3_url?: string;
+        file_size_bytes: number;
+        total_pages: number;
+      };
+      chat_history: {
+        chats: any[];
+        total: number;
+        page: number;
+        totalPages: number;
+      };
+      full_summary?: IPDFSummaryResponse;
+      full_summary_error?: string;
+      audio_recordings: Array<{
+        audioId: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at: Date;
+        updated_at: Date;
+      }>;
+    };
+  }> {
+    const cleanSessionId = sessionId?.trim();
+    if (!cleanSessionId) {
+      throw new BadRequestException('session_id is required');
+    }
+    if (!userId || userId.trim() === '') {
+      throw new BadRequestException('user_id is required');
+    }
+    const trimmedUserId = userId.trim();
+    const doc = await this.pdfSummaryRepository.findBySessionId(cleanSessionId);
+    if (!doc) {
+      throw new NotFoundException(
+        `Session not found: ${cleanSessionId}. It may have been deleted or never existed.`,
+      );
+    }
+    if (doc.user_id && doc.user_id !== trimmedUserId) {
+      throw new BadRequestException(
+        'You do not have permission to access this session',
+      );
+    }
+    const [chatResult, summaryResult, audioDocs] = await Promise.all([
+      this.getSessionChatHistory(cleanSessionId, 1, 500),
+      this.getFullSummary(cleanSessionId).then(
+        (s) => s,
+        (err) =>
+          ({
+            error:
+              err?.message ||
+              (typeof err === 'string' ? err : 'Failed to load summary'),
+          }) as { error: string },
+      ),
+      this.pdfSummaryAudioRepository.findBySessionId(cleanSessionId),
+    ]);
+    let full_summary: IPDFSummaryResponse | undefined;
+    let full_summary_error: string | undefined;
+    if (summaryResult && 'error' in summaryResult) {
+      full_summary_error = summaryResult.error;
+    } else if (summaryResult && 'session_id' in summaryResult) {
+      full_summary = summaryResult as IPDFSummaryResponse;
+    }
+    const audio_recordings = audioDocs.map((a) => ({
+      audioId: String(a.audioId ?? ''),
+      ...(a.user_audio_s3_key && { user_audio_s3_key: a.user_audio_s3_key }),
+      ...(a.user_audio_s3_url && { user_audio_s3_url: a.user_audio_s3_url }),
+      ...(a.user_audio_mime_type && {
+        user_audio_mime_type: a.user_audio_mime_type,
+      }),
+      ...(a.ai_audio_s3_key && { ai_audio_s3_key: a.ai_audio_s3_key }),
+      ...(a.ai_audio_s3_url && { ai_audio_s3_url: a.ai_audio_s3_url }),
+      ...(a.ai_audio_content_type && {
+        ai_audio_content_type: a.ai_audio_content_type,
+      }),
+      ...(a.detected_language && {
+        detected_language: a.detected_language,
+      }),
+      created_at: a.created_at,
+      updated_at: a.updated_at,
+    }));
+    return {
+      success: true,
+      data: {
+        session_id: doc.session_id,
+        summaryId: doc.summaryId,
+        filename: doc.filename,
+        original_filename: doc.original_filename,
+        brief_summary: doc.summary_content || '',
+        file_size_bytes: doc.file_size_bytes,
+        total_pages: doc.total_pages,
+        status: doc.status,
+        ...(doc.s3_key && { s3_key: doc.s3_key }),
+        ...(doc.s3_url && { s3_url: doc.s3_url }),
+        ...(doc.language && { language: doc.language }),
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
+        pdf: {
+          filename: doc.filename,
+          original_filename: doc.original_filename,
+          file_size_bytes: doc.file_size_bytes,
+          total_pages: doc.total_pages,
+          ...(doc.s3_key && { s3_key: doc.s3_key }),
+          ...(doc.s3_url && { s3_url: doc.s3_url }),
+        },
+        chat_history: {
+          chats: chatResult.chats,
+          total: chatResult.total,
+          page: chatResult.page,
+          totalPages: chatResult.totalPages,
+        },
+        ...(full_summary && { full_summary }),
+        ...(full_summary_error && { full_summary_error }),
+        audio_recordings,
+      },
+    };
   }
 
   async getServiceStats(userId?: string): Promise<{

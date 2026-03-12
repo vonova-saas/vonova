@@ -12,7 +12,7 @@ export class PdfChatHistoryRepository {
   constructor(
     @InjectModel(PdfChatHistory.name, LMS_AI_CONNECTION_NAME)
     private pdfChatHistoryModel: Model<PdfChatHistoryDocument>,
-  ) {}
+  ) { }
 
   async create(
     chatData: Partial<PdfChatHistory>,
@@ -71,6 +71,26 @@ export class PdfChatHistoryRepository {
     return this.pdfChatHistoryModel
       .find({ user_id: userId })
       .sort({ created_at: -1 })
+      .exec();
+  }
+
+  /**
+   * Finds a recent chat entry with the same session_id, question, and answer (within last 2 minutes).
+   * Used to skip duplicate inserts from transport retries.
+   */
+  async findRecentDuplicate(
+    sessionId: string,
+    question: string,
+    answer: string,
+  ): Promise<PdfChatHistoryDocument | null> {
+    const since = new Date(Date.now() - 2 * 60 * 1000);
+    return this.pdfChatHistoryModel
+      .findOne({
+        session_id: sessionId,
+        question,
+        answer,
+        created_at: { $gte: since },
+      })
       .exec();
   }
 

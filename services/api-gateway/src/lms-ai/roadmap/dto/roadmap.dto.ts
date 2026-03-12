@@ -134,12 +134,4 @@ export class BulkDeleteRoadmapsDto {
   @IsArray()
   @IsString({ each: true })
   roadmap_ids: string[];
-
-  @ApiProperty({
-    description: 'User ID for ownership validation',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  user_id?: string;
 }

@@ -37,6 +37,36 @@ import { Public } from '../../common/decorators/public.decorator';
 export class RoadmapGatewayController {
   constructor(private readonly roadmapService: RoadmapGatewayService) {}
 
+  /** Resolve current user id from req.user (id, sub, or _id) consistently across all roadmap endpoints. */
+  private getCurrentUserId(req: unknown): string | undefined {
+    const r = req as
+      | { user?: { _id?: unknown; id?: unknown; sub?: unknown } }
+      | undefined;
+    const raw = r?.user?.id ?? r?.user?.sub ?? r?.user?._id;
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw === 'string') return raw.trim() || undefined;
+    if (typeof raw === 'object' && raw !== null) {
+      const maybeHex = (raw as { toHexString?: () => string }).toHexString?.();
+      if (typeof maybeHex === 'string' && maybeHex.trim())
+        return maybeHex.trim();
+      const s = (raw as { toString?: () => string }).toString?.();
+      if (typeof s === 'string') {
+        const trimmed = s.trim();
+        if (trimmed && trimmed !== '[object Object]') return trimmed;
+      }
+      return undefined;
+    }
+    if (
+      typeof raw === 'number' ||
+      typeof raw === 'boolean' ||
+      typeof raw === 'bigint' ||
+      typeof raw === 'symbol'
+    ) {
+      return String(raw).trim() || undefined;
+    }
+    return undefined;
+  }
+
   @Public()
   @Get('health')
   @ApiOperation({ summary: 'Roadmap service health' })
@@ -56,7 +86,7 @@ export class RoadmapGatewayController {
     description: 'Statistics retrieved successfully',
   })
   async getServiceStats(@Request() req: any) {
-    const userId = req.user?._id;
+    const userId = this.getCurrentUserId(req);
     if (!userId) {
       throw new UnauthorizedException(
         'Authentication required to retrieve roadmap statistics',
@@ -86,9 +116,13 @@ export class RoadmapGatewayController {
   @ApiResponse({ status: 201, description: 'Roadmap generated successfully' })
   async generateRoadmap(
     @Body() generateRoadmapDto: GenerateRoadmapDto,
-    @Query('userId') userId: string,
+    @Request() req: any,
     @Ip() ip: string,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.generateRoadmap({
         ...generateRoadmapDto,
@@ -106,8 +140,12 @@ export class RoadmapGatewayController {
   })
   async bulkDeleteRoadmaps(
     @Body() bulkDeleteDto: BulkDeleteRoadmapsDto,
-    @Query('userId') userId: string,
+    @Request() req: any,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.bulkDeleteRoadmaps({
         ...bulkDeleteDto,
@@ -128,20 +166,16 @@ export class RoadmapGatewayController {
     description: 'End date (ISO 8601)',
     required: false,
   })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: false,
-  })
   @ApiResponse({
     status: 200,
     description: 'Query analytics retrieved successfully',
   })
   async getQueryAnalytics(
+    @Request() req: any,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
-    @Query('userId') userId?: string,
   ) {
+    const userId = this.getCurrentUserId(req);
     return firstValueFrom(
       this.roadmapService.getQueryAnalytics({
         start_date: startDate,
@@ -153,16 +187,15 @@ export class RoadmapGatewayController {
 
   @Get('user-roadmaps')
   @ApiOperation({ summary: 'Get all roadmaps for a user' })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: true,
-  })
   @ApiResponse({
     status: 200,
     description: 'User roadmaps retrieved successfully',
   })
-  async getUserRoadmaps(@Query('userId') userId: string) {
+  async getUserRoadmaps(@Request() req: any) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.getUserRoadmaps({
         userId,
@@ -173,20 +206,19 @@ export class RoadmapGatewayController {
   @Get(':roadmapId')
   @ApiOperation({ summary: 'Get roadmap by ID' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID' })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: true,
-  })
   @ApiResponse({
     status: 200,
     description: 'Roadmap retrieved successfully',
   })
   async getRoadmapById(
     @Param('roadmapId') roadmapId: string,
-    @Query('userId') userId: string,
+    @Request() req: any,
     @Ip() ip: string,
   ): Promise<any> {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.getRoadmapById({
         roadmapId,
@@ -199,18 +231,17 @@ export class RoadmapGatewayController {
   @Put(':roadmapId/progress')
   @ApiOperation({ summary: 'Update roadmap progress' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID' })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: true,
-  })
   @ApiResponse({ status: 200, description: 'Progress updated successfully' })
   async updateProgress(
     @Param('roadmapId') roadmapId: string,
     @Body() updateProgressDto: UpdateRoadmapProgressDto,
-    @Query('userId') userId: string,
+    @Request() req: any,
     @Ip() ip: string,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.updateProgress({
         roadmapId,
@@ -224,16 +255,15 @@ export class RoadmapGatewayController {
   @Delete(':roadmapId')
   @ApiOperation({ summary: 'Delete roadmap and cleanup resources' })
   @ApiParam({ name: 'roadmapId', description: 'Roadmap ID to delete' })
-  @ApiQuery({
-    name: 'userId',
-    description: 'User ID',
-    required: true,
-  })
   @ApiResponse({ status: 200, description: 'Roadmap deleted successfully' })
   async deleteRoadmap(
     @Param('roadmapId') roadmapId: string,
-    @Query('userId') userId: string,
+    @Request() req: any,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     return firstValueFrom(
       this.roadmapService.deleteRoadmap({
         roadmapId,

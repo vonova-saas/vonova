@@ -33,7 +33,7 @@ import {
 import { PdfSummaryGatewayService } from './pdf-summary.service';
 import {
   UploadPdfDto,
-  ChatWithPdfDto,
+  ChatWithPdfBodyDto,
   RateChatResponseDto,
   BulkDeleteSessionsDto,
 } from './dto/pdf-summary.dto';
@@ -45,7 +45,40 @@ import { Public } from '../../common/decorators/public.decorator';
 @Controller('api/v1/pdf-summary')
 @UseGuards(JwtAuthGuard)
 export class PdfSummaryGatewayController {
-  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) { }
+  constructor(private readonly pdfSummaryService: PdfSummaryGatewayService) {}
+
+  /** Resolve current user id from req.user (id, sub, or _id) so upload and sessions use the same value. */
+  private getCurrentUserId(req: unknown): string | undefined {
+    const r = req as
+      | { user?: { _id?: unknown; id?: unknown; sub?: unknown } }
+      | undefined;
+    const raw = r?.user?.id ?? r?.user?.sub ?? r?.user?._id;
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw === 'string') return raw.trim() || undefined;
+    if (typeof raw === 'object' && raw !== null) {
+      // Prefer Mongo ObjectId-style conversions when available.
+      const maybeHex = (raw as { toHexString?: () => string }).toHexString?.();
+      if (typeof maybeHex === 'string' && maybeHex.trim())
+        return maybeHex.trim();
+
+      const s = (raw as { toString?: () => string }).toString?.();
+      if (typeof s === 'string') {
+        const trimmed = s.trim();
+        if (trimmed && trimmed !== '[object Object]') return trimmed;
+      }
+      // Avoid returning "[object Object]" for arbitrary objects
+      return undefined;
+    }
+    if (
+      typeof raw === 'number' ||
+      typeof raw === 'boolean' ||
+      typeof raw === 'bigint' ||
+      typeof raw === 'symbol'
+    ) {
+      return String(raw).trim() || undefined;
+    }
+    return undefined;
+  }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -70,11 +103,12 @@ export class PdfSummaryGatewayController {
     @Body() uploadPdfDto: UploadPdfDto,
     @Request() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
   ) {
     if (!file) {
       throw new Error('File is required');
     }
+    const user_id = this.getCurrentUserId(req);
+
     return firstValueFrom(
       this.pdfSummaryService.uploadPDF({
         file: {
@@ -82,32 +116,51 @@ export class PdfSummaryGatewayController {
           originalname: file.originalname,
           mimetype: file.mimetype,
         },
-        user_id: req.user._id,
+        ...(user_id && { user_id }),
         ...uploadPdfDto,
         ip,
-        userAgent,
+        userAgent: '',
       }),
     );
   }
 
   @Post('chat')
-  @ApiOperation({ summary: 'Chat with PDF' })
+  @ApiOperation({
+    summary: 'Chat with PDF',
+    description:
+      'Send session_id as query parameter. Body: question and optional context_length only.',
+  })
+  @ApiQuery({
+    name: 'session_id',
+    description: 'Session ID from a previous PDF upload (required)',
+    required: false,
+    example: 'session-uuid-456',
+  })
   @ApiResponse({
     status: 200,
     description: 'Chat response generated successfully',
   })
   async chatWithPDF(
-    @Body() chatWithPdfDto: ChatWithPdfDto,
+    @Body() body: ChatWithPdfBodyDto,
+    @Query('session_id') sessionIdFromQuery: string | undefined,
     @Request() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
   ) {
+    const session_id = sessionIdFromQuery?.trim() ?? '';
+    if (!session_id) {
+      throw new BadRequestException(
+        'session_id is required (pass in query: ?session_id=...)',
+      );
+    }
+    const user_id = this.getCurrentUserId(req);
     return firstValueFrom(
       this.pdfSummaryService.chatWithPDF({
-        ...chatWithPdfDto,
-        user_id: req.user._id,
+        session_id,
+        question: body.question,
+        context_length: body.context_length,
+        ...(user_id && { user_id }),
         ip,
-        userAgent,
+        userAgent: '',
       }),
     );
   }
@@ -174,13 +227,14 @@ export class PdfSummaryGatewayController {
       throw new BadRequestException('session_id is required');
     }
     const idempotency_key = randomUUID();
+    const voiceUserId = this.getCurrentUserId(req);
     const result = (await firstValueFrom(
       this.pdfSummaryService.voiceAsk({
         session_id: sessionId.trim(),
         audioBase64: audio.buffer.toString('base64'),
         mimeType: audio.mimetype,
         filename: audio.originalname,
-        user_id: req?.user?._id,
+        ...(voiceUserId && { user_id: voiceUserId }),
         idempotency_key,
       }),
     )) as {
@@ -216,7 +270,7 @@ export class PdfSummaryGatewayController {
 
     const fallbackRecord = {
       session_id: sessionId.trim(),
-      user_id: req?.user?._id,
+      ...(voiceUserId && { user_id: voiceUserId }),
       user_audio_s3_key: result.userAudioS3Key,
       user_audio_s3_url: result.userAudioS3Url,
       user_audio_mime_type: audio.mimetype,
@@ -245,16 +299,54 @@ export class PdfSummaryGatewayController {
     @Query('session_id') sessionId: string,
     @Request() req: any,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
   ) {
+    const user_id = this.getCurrentUserId(req);
     return firstValueFrom(
       this.pdfSummaryService.getFullSummary({
-        session_id: sessionId,
-        user_id: req.user._id,
+        session_id: sessionId?.trim?.() ?? sessionId,
+        ...(user_id && { user_id }),
         ip,
-        userAgent,
+        userAgent: '',
       }),
     );
+  }
+
+  @Get('session/:sessionId/full')
+  @ApiOperation({
+    summary: 'Get one session by ID with full contents',
+    description:
+      'Returns a single session by session_id with all contents: PDF metadata, chat history (user & AI), full summary, and voice recordings.',
+  })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Session with chat_history, full_summary, audio_recordings, and pdf metadata',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async getSessionWithFullData(
+    @Param('sessionId') sessionId: string,
+    @Request() req: any,
+  ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) {
+      throw new BadRequestException('User not authenticated');
+    }
+    const trimmedSessionId = sessionId?.trim();
+    if (!trimmedSessionId) {
+      throw new BadRequestException('session_id is required');
+    }
+    const result = await firstValueFrom(
+      this.pdfSummaryService.getSessionWithFullData({
+        user_id: userId,
+        sessionId: trimmedSessionId,
+      }),
+    );
+    if (result?.data && typeof result.data === 'object') {
+      (result.data as Record<string, unknown>).audio_recordings =
+        (result.data as Record<string, unknown>).audio_recordings ?? [];
+    }
+    return result;
   }
 
   @Get('session/:sessionId/chat-history')
@@ -295,10 +387,11 @@ export class PdfSummaryGatewayController {
     @Body() rateChatResponseDto: RateChatResponseDto,
     @Request() req: any,
   ) {
+    const user_id = this.getCurrentUserId(req);
     return firstValueFrom(
       this.pdfSummaryService.rateChatResponse({
         ...rateChatResponseDto,
-        user_id: req.user._id,
+        ...(user_id && { user_id }),
       }),
     );
   }
@@ -327,31 +420,44 @@ export class PdfSummaryGatewayController {
     @Param('sessionId') sessionId: string,
     @Request() req: any,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) throw new BadRequestException('User not authenticated');
     return firstValueFrom(
       this.pdfSummaryService.deleteSession({
         sessionId,
-        userId: req.user._id,
+        userId,
       }),
     );
   }
 
   @Get('sessions')
   @ApiOperation({
-    summary: 'Get all sessions, PDFs, and audio recordings for the current user',
+    summary: 'Get all sessions for the current user',
     description:
-      'Returns all PDF summary sessions with PDF metadata. Each session includes a nested audio_recordings array (voice/ask recordings for that session). Session ID appears once per session, not repeated per recording.',
+      'Returns all PDF summary sessions for the current user. Each item includes session_id, summaryId, filename, original_filename, created_at, updated_at.',
   })
   @ApiResponse({
     status: 200,
     description:
-      'Sessions with nested audio_recordings per session',
+      'List of sessions with session_id, summaryId, filename, original_filename, created_at, updated_at',
+    schema: {
+      example: {
+        success: true,
+        data: [
+          {
+            session_id: '810769b8-12aa-45d7-aa6a-54d0cf6fbde9',
+            summaryId: '9c0c0750-f088-4b94-810a-c88f520b43f9',
+            filename: 'Mohamed_Abolyazeed_Backend_CV.pdf',
+            original_filename: 'Mohamed_Abolyazeed_Backend_CV.pdf',
+            created_at: '2026-03-11T18:26:33.008Z',
+            updated_at: '2026-03-11T18:26:33.008Z',
+          },
+        ],
+      },
+    },
   })
   async getSessionsByUserId(@Request() req: any) {
-    const rawUserId = req?.user?._id ?? req?.user?.id;
-    const userId =
-      rawUserId === undefined || rawUserId === null
-        ? undefined
-        : String(rawUserId);
+    const userId = this.getCurrentUserId(req);
     if (!userId) {
       throw new BadRequestException('User not authenticated');
     }
@@ -359,9 +465,14 @@ export class PdfSummaryGatewayController {
       this.pdfSummaryService.getSessionsByUserId({ user_id: userId }),
     );
     if (result?.data && Array.isArray(result.data)) {
-      result.data = result.data.map((session: Record<string, unknown>) => ({
-        ...session,
-        audio_recordings: session.audio_recordings ?? [],
+      const sessions = result.data as Array<Record<string, unknown>>;
+      result.data = sessions.map((session: Record<string, unknown>) => ({
+        session_id: session.session_id,
+        summaryId: session.summaryId,
+        filename: session.filename,
+        original_filename: session.original_filename,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
       }));
     }
     return result;
@@ -374,11 +485,7 @@ export class PdfSummaryGatewayController {
     description: 'Statistics retrieved successfully',
   })
   async getServiceStats(@Request() req: any) {
-    const rawUserId = req?.user?._id ?? req?.user?.id;
-    const userId =
-      rawUserId === undefined || rawUserId === null
-        ? undefined
-        : String(rawUserId);
+    const userId = this.getCurrentUserId(req);
     return firstValueFrom(
       this.pdfSummaryService.getServiceStats({
         user_id: userId,
@@ -396,10 +503,12 @@ export class PdfSummaryGatewayController {
     @Body() bulkDeleteDto: BulkDeleteSessionsDto,
     @Request() req: any,
   ) {
+    const userId = this.getCurrentUserId(req);
+    if (!userId) throw new BadRequestException('User not authenticated');
     return firstValueFrom(
       this.pdfSummaryService.bulkDeleteSessions({
         ...bulkDeleteDto,
-        user_id: req.user._id,
+        user_id: userId,
       }),
     );
   }
@@ -416,11 +525,6 @@ export class PdfSummaryGatewayController {
     description: 'End date (ISO 8601)',
     required: false,
   })
-  @ApiQuery({
-    name: 'user_id',
-    description: 'Filter by user ID',
-    required: false,
-  })
   @ApiResponse({
     status: 200,
     description: 'Query analytics retrieved successfully',
@@ -429,13 +533,13 @@ export class PdfSummaryGatewayController {
     @Request() req: any,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
-    @Query('user_id') userId?: string,
   ) {
+    const currentUserId = this.getCurrentUserId(req);
     return firstValueFrom(
       this.pdfSummaryService.getQueryAnalytics({
         start_date: startDate,
         end_date: endDate,
-        user_id: userId || req.user._id,
+        user_id: currentUserId,
       }),
     );
   }

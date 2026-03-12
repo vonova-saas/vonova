@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Roadmap, RoadmapDocument } from '../schemas/roadmap.schema';
 import { LMS_AI_CONNECTION_NAME } from '../constants';
 
@@ -10,6 +10,23 @@ export class RoadmapRepository {
     @InjectModel(Roadmap.name, LMS_AI_CONNECTION_NAME)
     private roadmapModel: Model<RoadmapDocument>,
   ) { }
+
+  /**
+   * Build query to match userId as string or ObjectId (24-char hex),
+   * to support legacy docs where userId may have been stored as ObjectId.
+   */
+  private userMatch(userId: string): { userId?: string; $or?: Array<{ userId: string | Types.ObjectId }> } {
+    const strId = String(userId).trim();
+    try {
+      if (/^[a-fA-F0-9]{24}$/.test(strId)) {
+        const oid = new Types.ObjectId(strId);
+        return { $or: [{ userId: strId }, { userId: oid }] };
+      }
+    } catch {
+      // fall through
+    }
+    return { userId: strId };
+  }
 
   async create(roadmapData: Partial<Roadmap>): Promise<RoadmapDocument> {
     const roadmap = new this.roadmapModel(roadmapData);
@@ -21,7 +38,10 @@ export class RoadmapRepository {
   }
 
   async findByUserId(userId: string): Promise<RoadmapDocument[]> {
-    return this.roadmapModel.find({ userId }).sort({ created_at: -1 }).exec();
+    return this.roadmapModel
+      .find(this.userMatch(userId))
+      .sort({ created_at: -1 })
+      .exec();
   }
 
   async findByTopic(topic: string): Promise<RoadmapDocument[]> {
@@ -31,19 +51,31 @@ export class RoadmapRepository {
       .exec();
   }
 
+  /**
+   * Returns both casings for skill_level so 'beginner' and 'Beginner' match the same docs.
+   */
+  private static skillLevelQueryVariants(skillLevel: string): string[] {
+    const lower = skillLevel.toLowerCase();
+    const title =
+      skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1).toLowerCase();
+    return [...new Set([skillLevel, lower, title])];
+  }
+
   async findSimilar(
     topic: string,
     skillLevel: string,
     durationWeeks: number,
     userId?: string,
   ): Promise<RoadmapDocument[]> {
+    const skillLevelVariants =
+      RoadmapRepository.skillLevelQueryVariants(skillLevel);
     const query: Record<string, unknown> = {
       topic: new RegExp(topic, 'i'),
-      skill_level: skillLevel,
+      skill_level: { $in: skillLevelVariants },
       duration_weeks: { $gte: durationWeeks - 2, $lte: durationWeeks + 2 },
     };
     if (userId?.trim()) {
-      query.userId = userId.trim();
+      Object.assign(query, this.userMatch(userId));
     }
     return this.roadmapModel
       .find(query)
@@ -66,7 +98,7 @@ export class RoadmapRepository {
   }
 
   async countByUserId(userId: string): Promise<number> {
-    return this.roadmapModel.countDocuments({ userId }).exec();
+    return this.roadmapModel.countDocuments(this.userMatch(userId)).exec();
   }
 
   async deleteById(roadmapId: string): Promise<boolean> {
@@ -81,7 +113,7 @@ export class RoadmapRepository {
   }): Promise<number> {
     const query: any = {};
     if (filters?.userId) {
-      query.userId = filters.userId;
+      Object.assign(query, this.userMatch(filters.userId));
     }
     if (filters?.startDate || filters?.endDate) {
       query.created_at = {};
@@ -99,7 +131,7 @@ export class RoadmapRepository {
     const query: Record<string, unknown> = {
       status: { $in: ['generated', 'in_progress'] },
     };
-    if (userId?.trim()) query.userId = userId.trim();
+    if (userId?.trim()) Object.assign(query, this.userMatch(userId));
     return this.roadmapModel.countDocuments(query).exec();
   }
 
@@ -107,7 +139,7 @@ export class RoadmapRepository {
     const match: Record<string, unknown> = {
       generation_time_ms: { $exists: true, $ne: null },
     };
-    if (userId?.trim()) match.userId = userId.trim();
+    if (userId?.trim()) Object.assign(match, this.userMatch(userId));
     const result = await this.roadmapModel
       .aggregate([
         { $match: match },
@@ -125,7 +157,7 @@ export class RoadmapRepository {
   async getRoadmapsByStatus(userId?: string): Promise<Record<string, number>> {
     const pipeline: any[] = [];
     if (userId?.trim()) {
-      pipeline.push({ $match: { userId: userId.trim() } });
+      pipeline.push({ $match: this.userMatch(userId) });
     }
     pipeline.push({ $group: { _id: '$status', count: { $sum: 1 } } });
     const result = await this.roadmapModel.aggregate(pipeline).exec();

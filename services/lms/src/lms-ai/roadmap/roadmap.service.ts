@@ -288,7 +288,8 @@ export class RoadmapService {
     if (existingRoadmap.userId !== request.userId) return false;
     return (
       existingRoadmap.topic.toLowerCase() === request.topic.toLowerCase() &&
-      existingRoadmap.skill_level === request.skill_level &&
+      existingRoadmap.skill_level.toLowerCase() ===
+        request.skill_level.toLowerCase() &&
       Math.abs(existingRoadmap.duration_weeks - request.duration_weeks) <= 2
     );
   }
@@ -415,7 +416,7 @@ export class RoadmapService {
     this.logger.log(
       `Roadmap saved to database: ${savedRoadmap.roadmapId}, title: "${savedRoadmap.title}"`,
     );
-    return savedRoadmap;
+    return savedRoadmap as unknown as IRoadmapData;
   }
 
   private calculateTotalHours(weeks: IWeek[]): number {

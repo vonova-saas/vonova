@@ -8,14 +8,15 @@ import {
   Max,
   IsNotEmpty,
 } from 'class-validator';
+import { SkillLevel } from '../interfaces/roadmap.interface';
 
 export class GenerateRoadmapDto {
   @IsString()
   @IsNotEmpty()
   topic: string;
 
-  @IsEnum(['beginner', 'intermediate', 'advanced'])
-  skill_level: 'beginner' | 'intermediate' | 'advanced';
+  @IsEnum(SkillLevel)
+  skill_level: SkillLevel;
 
   @IsNumber()
   @Min(1)

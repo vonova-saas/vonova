@@ -19,15 +19,22 @@ export interface ITreeNode {
   children?: ITreeNode[];
 }
 
-export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
+export enum SkillLevel {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+  BEGINNER_CAP = 'Beginner',
+  INTERMEDIATE_CAP = 'Intermediate',
+  ADVANCED_CAP = 'Advanced',
+}
 
 export const SKILL_LEVEL_VALUES: SkillLevel[] = [
-  'beginner',
-  'intermediate',
-  'advanced',
-  'Beginner',
-  'Intermediate',
-  'Advanced'
+  SkillLevel.BEGINNER,
+  SkillLevel.INTERMEDIATE,
+  SkillLevel.ADVANCED,
+  SkillLevel.BEGINNER_CAP,
+  SkillLevel.INTERMEDIATE_CAP,
+  SkillLevel.ADVANCED_CAP
 ];
 
 export interface IRoadmapRequest {
