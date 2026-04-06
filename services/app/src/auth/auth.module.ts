@@ -16,6 +16,7 @@ import {
   PasswordResetSchema,
 } from './schema/passwordReset.schema';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenBlacklistService } from './token-blacklist.service';
 import { NotificationModule } from '../notification/notification.module';
 import { WaitlistModule } from '../waitlist/waitlist.module';
 import configuration from '../common/config/configuration';
@@ -29,16 +30,25 @@ import configuration from '../common/config/configuration';
       { name: EmailVerification.name, schema: EmailVerificationSchema },
       { name: PasswordReset.name, schema: PasswordResetSchema },
     ]),
-    JwtModule.register({
-      secret: configuration().JWT.JWT_ACCESS_SECRET || 'fallback-secret-key',
-      signOptions: {
-        expiresIn: configuration().JWT.JWT_ACCESS_EXPIRES_IN || ('1h' as any),
-      },
-    }),
+    (() => {
+      const accessSecret = configuration().JWT.JWT_ACCESS_SECRET;
+      const accessExpiresIn = configuration().JWT.JWT_ACCESS_EXPIRES_IN;
+      if (!accessSecret || !accessExpiresIn) {
+        throw new Error(
+          'JWT_ACCESS_SECRET and JWT_ACCESS_EXPIRES_IN are required in .env',
+        );
+      }
+      return JwtModule.register({
+        secret: accessSecret,
+        signOptions: {
+          expiresIn: accessExpiresIn as any,
+        },
+      });
+    })(),
     NotificationModule,
     WaitlistModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, TokenBlacklistService],
 })
 export class AuthModule {}

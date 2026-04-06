@@ -422,6 +422,10 @@ export class LessonGatewayController {
     }
 
     try {
+      const awsRegion = process.env.AWS_S3_REGION;
+      if (!awsRegion) {
+        throw new Error('AWS_S3_REGION is required in .env');
+      }
       // Get lesson details to determine userId
       const lessonResponse = await firstValueFrom(this.lessonService.getLesson(lessonId, courseId));
       const lesson = lessonResponse.lesson;
@@ -429,7 +433,7 @@ export class LessonGatewayController {
 
       // Create S3 client directly (bypass NATS)
       const s3Client = new S3Client({
-        region: process.env.AWS_S3_REGION || 'us-east-1',
+        region: awsRegion,
         credentials: {
           accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID!,
           secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY!,
@@ -460,14 +464,14 @@ export class LessonGatewayController {
       // Update lesson with video information (only small metadata via NATS)
       await firstValueFrom(this.lessonService.uploadVideoDirectly(courseId, lessonId, {
         objectKey,
-        videoUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION || 'us-east-1'}.amazonaws.com/${objectKey}`,
+        videoUrl: `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`,
         hasVideo: true,
         size: file.size,
         mimetype: file.mimetype,
         originalName: file.originalname
       }, ownerId));
 
-      const videoUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION || 'us-east-1'}.amazonaws.com/${objectKey}`;
+      const videoUrl = `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`;
 
       return {
         message: 'Video uploaded successfully',

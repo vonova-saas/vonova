@@ -3,8 +3,9 @@ import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './common/config/configuration';
 import { NatsClientModule } from './common/nats-client/nats-client.module';
-import { CorsMiddleware } from './common/middleware/cors.middleware';
 import { BotProtectionMiddleware } from './common/middleware/bot-protection.middleware';
+import { RequestSanitizerMiddleware } from './common/middleware/request-sanitizer.middleware';
+import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { SwaggerService } from './common/services/swagger.service';
 import { LoggerService } from './common/services/logger.service';
 import { WaitlistGatewayModule } from './app/waitlist/waitlist.module';
@@ -17,6 +18,7 @@ import { AuthGatewayModule } from './app/auth/auth.module';
 import { RoadmapGatewayModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryGatewayModule } from './lms-ai/pdf-summary/pdf-summary.module';
 import { FaviconController } from './common/controllers/favicon.controller';
+import { RootRedirectController } from './common/controllers/root-redirect.controller';
 import { QuizGatewayModule } from './lms/quizzes/quiz.gateway.module';
 import { AssignmentGatewayModule } from './lms/assignments/assignment.gateway.module';
 import { CourseGatewayModule } from './lms/course/course/course.gateway.module';
@@ -33,6 +35,7 @@ import { FavoriteGatewayModule } from './lms/library/favorite/favorite.gateway.m
 import { ReviewGatewayModule } from './lms/library/review/review.gateway.module';
 import { ReaderGatewayModule } from './lms/library/reader/reader.gateway.module';
 import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module';
+import { AdminGatewayModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -68,17 +71,20 @@ import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module'
     ReviewGatewayModule,
     ReaderGatewayModule,
     UploadGatewayModule,
+    //* Admin Service
+    AdminGatewayModule,
     //* LMS AI Services
     RoadmapGatewayModule,
     PdfSummaryGatewayModule,
     //* Generative AI Services
   ],
-  controllers: [AppController, FaviconController],
+  controllers: [AppController, FaviconController, RootRedirectController],
   providers: [SwaggerService, LoggerService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorsMiddleware).forRoutes('*');
+    consumer.apply(RequestSanitizerMiddleware).forRoutes('*');
+    consumer.apply(CsrfMiddleware).forRoutes('*');
 
     consumer
       .apply(BotProtectionMiddleware)

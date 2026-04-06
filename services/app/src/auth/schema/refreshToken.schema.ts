@@ -4,7 +4,7 @@ import mongoose, { HydratedDocument } from 'mongoose';
 
 export type RefreshTokenDocument = HydratedDocument<RefreshToken>;
 
-@Schema({ timestamps: true, expires: 600 })
+@Schema({ timestamps: true, strict: true })
 export class RefreshToken {
   @Prop({ required: true, ref: 'User' })
   @IsString()
@@ -30,6 +30,15 @@ export class RefreshToken {
     required: true,
   })
   expiresAt: Date;
+
+  @Prop({ type: String, default: null })
+  rotatedFromTokenHash?: string | null;
+
+  @Prop({ type: Date, default: null })
+  revokedAt?: Date | null;
+
+  @Prop({ type: String, default: null })
+  revokedReason?: string | null;
 }
 
 export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);

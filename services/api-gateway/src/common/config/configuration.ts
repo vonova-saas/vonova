@@ -1,10 +1,8 @@
 export default () => ({
   //? =========== Backend Configuration ===========
-  PORT: parseInt(process.env.PORT || ''),
+  PORT: Number.parseInt(process.env.PORT || '', 10),
   NODE_ENV: process.env.NODE_ENV,
   NATS_URL: process.env.NATS_URL,
-  // NATS_USER: process.env.NATS_USER,
-  // NATS_PASSWORD: process.env.NATS_PASSWORD,
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
   AI_ORIGIN: process.env.AI_ORIGIN,
 
@@ -37,4 +35,8 @@ export default () => ({
   CORS_WHITELIST: process.env.CORS_WHITELIST,
   CORS_BLACKLIST: process.env.CORS_BLACKLIST,
   CORS_SECURITY_HEADERS: process.env.CORS_SECURITY_HEADERS,
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
+  ENABLE_CSRF: process.env.ENABLE_CSRF,
+  NATS_USER: process.env.NATS_USER,
+  NATS_PASSWORD: process.env.NATS_PASSWORD,
 });

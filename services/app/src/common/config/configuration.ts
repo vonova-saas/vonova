@@ -1,14 +1,14 @@
 export default () => ({
   //? =========== Backend Configuration ===========
   NATS_URL: process.env.NATS_URL,
-  // NATS_USER: process.env.NATS_USER,
-  // NATS_PASSWORD: process.env.NATS_PASSWORD,
+  NATS_USER: process.env.NATS_USER,
+  NATS_PASSWORD: process.env.NATS_PASSWORD,
   NODE_ENV: process.env.NODE_ENV,
 
   //* Database configuration (MongoDB),
-  MONGO_URI_REMOTE: process.env.MONGO_URI_REMOTE,
-  MONGO_URI_LOCAL: process.env.MONGO_URI_LOCAL,
-  MONGO_DB_NAME: process.env.MONGO_DB_NAME,
+  MONGO_URI_REMOTE_APP: process.env.MONGO_URI_REMOTE_APP,
+  MONGO_URI_LOCAL_APP: process.env.MONGO_URI_LOCAL_APP,
+  MONGO_DB_NAME_APP: process.env.MONGO_DB_NAME_APP,
 
   //! =========== Authentication Layer ===========
   JWT: {
@@ -28,8 +28,10 @@ export default () => ({
   EMAIL_FROM: process.env.EMAIL_FROM,
 
   //? AWS S3 Configuration
-  AWS_S3_REGION: process.env.AWS_S3_REGION,
-  AWS_S3_ACCESS_KEY_ID: process.env.AWS_S3_ACCESS_KEY_ID,
-  AWS_S3_SECRET_ACCESS_KEY: process.env.AWS_S3_SECRET_ACCESS_KEY,
-  AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+  AWS_S3_REGION_APP: process.env.AWS_S3_REGION_APP,
+  AWS_S3_ACCESS_KEY_ID_APP: process.env.AWS_S3_ACCESS_KEY_ID_APP,
+  AWS_S3_SECRET_ACCESS_KEY_APP: process.env.AWS_S3_SECRET_ACCESS_KEY_APP,
+  AWS_S3_BUCKET_APP: process.env.AWS_S3_BUCKET_APP,
+  REDIS_URL: process.env.REDIS_URL,
+  REDIS_PREFIX: process.env.REDIS_PREFIX?.trim() || 'vonova:app',
 });

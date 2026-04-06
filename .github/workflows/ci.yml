@@ -1,0 +1,57 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "services/**"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "services/**"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - app
+          - lms
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  validate-env-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure env examples exist
+        run: |
+          test -f services/api-gateway/.env.example
+          test -f services/app/.env.example
+          test -f services/lms/.env.example

@@ -17,6 +17,9 @@ import {
   SKILL_LEVEL_VALUES,
 } from './interfaces/roadmap.interface';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  buildSafeExternalUrl,
+} from '../../common/security/ssrf-protection.util';
 
 @Injectable()
 export class RoadmapService {
@@ -24,6 +27,7 @@ export class RoadmapService {
   private readonly PYTHON_SERVICE_URL: string;
   private readonly FALLBACK_PYTHON_SERVICE_URL: string | undefined;
   private readonly DEFAULT_TIMEOUT = 300_000; // 5 minutes
+  private readonly allowedOutboundHosts: string[];
 
   constructor(
     private readonly roadmapRepository: RoadmapRepository,
@@ -53,6 +57,12 @@ export class RoadmapService {
         `Fallback Python service URL configured: ${this.FALLBACK_PYTHON_SERVICE_URL}`,
       );
     }
+    this.allowedOutboundHosts = (
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') || ''
+    )
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean);
   }
 
   async generateRoadmap(
@@ -298,7 +308,11 @@ export class RoadmapService {
     endpoint: string,
     data: object,
   ): Promise<Record<string, unknown>> {
-    const url = `${this.PYTHON_SERVICE_URL}${endpoint}`;
+    const url = buildSafeExternalUrl(
+      this.PYTHON_SERVICE_URL,
+      endpoint,
+      this.allowedOutboundHosts,
+    );
     try {
       this.logger.log(`Calling Python service: ${url}`);
       const response = await fetch(url, {
@@ -338,7 +352,11 @@ export class RoadmapService {
 
       if (this.FALLBACK_PYTHON_SERVICE_URL) {
         try {
-          const fallbackUrl = `${this.FALLBACK_PYTHON_SERVICE_URL}${endpoint}`;
+          const fallbackUrl = buildSafeExternalUrl(
+            this.FALLBACK_PYTHON_SERVICE_URL,
+            endpoint,
+            this.allowedOutboundHosts,
+          );
           this.logger.warn(
             `Retrying roadmap AI call against fallback: ${fallbackUrl}`,
           );
@@ -546,7 +564,11 @@ export class RoadmapService {
     message: string;
     endpoint: string;
   }> {
-    const endpoint = `${this.PYTHON_SERVICE_URL}/health`;
+    const endpoint = buildSafeExternalUrl(
+      this.PYTHON_SERVICE_URL,
+      '/health',
+      this.allowedOutboundHosts,
+    );
     this.logger.log(`Testing AI service connection: ${endpoint}`);
 
     try {

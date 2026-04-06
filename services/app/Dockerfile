@@ -1,8 +1,7 @@
-# Use Node.js LTS and install pnpm
+# Use Node.js LTS and pnpm
 FROM node:20-alpine
 
-# Install pnpm
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Set working directory
 WORKDIR /app
@@ -27,9 +26,7 @@ RUN pnpm prune --prod
 RUN addgroup --system --gid 1001 nodejs && \
   adduser --system --uid 1001 nestjs
 
-# Set proper permissions
-RUN chown -R nestjs:nodejs /app
 USER nestjs
 
-# Start the microservice (NATS only, no HTTP port)
-CMD ["pnpm", "run", "start:prod"]
+# Start the microservice (NATS + optional HTTP app from main.ts)
+CMD ["node", "dist/main.js"]

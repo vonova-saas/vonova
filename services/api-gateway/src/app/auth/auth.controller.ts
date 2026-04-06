@@ -177,7 +177,7 @@ export class AuthGatewayController {
       httpOnly: true,
       secure: configuration().NODE_ENV === 'production',
       sameSite: configuration().NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60, // 1 hour
+      maxAge: 1000 * 60 * 15, // 15 minutes
       path: '/',
     });
 
@@ -345,7 +345,7 @@ export class AuthGatewayController {
       httpOnly: true,
       secure: configuration().NODE_ENV === 'production',
       sameSite: configuration().NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60, // 1 hour
+      maxAge: 1000 * 60 * 15, // 15 minutes
       path: '/',
     });
 
@@ -408,7 +408,7 @@ export class AuthGatewayController {
       httpOnly: true,
       secure: configuration().NODE_ENV === 'production',
       sameSite: configuration().NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60, // 1 hour
+      maxAge: 1000 * 60 * 15, // 15 minutes
       path: '/',
     });
 
@@ -694,7 +694,7 @@ export class AuthGatewayController {
       httpOnly: true,
       secure: configuration().NODE_ENV === 'production',
       sameSite: configuration().NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60, // 1 hour
+      maxAge: 1000 * 60 * 15, // 15 minutes
       path: '/',
     });
 
@@ -710,8 +710,6 @@ export class AuthGatewayController {
       message: 'OAuth login successful',
       data: {
         user: result.user,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
       },
     };
   }
@@ -768,7 +766,7 @@ export class AuthGatewayController {
       httpOnly: true,
       secure: configuration().NODE_ENV === 'production',
       sameSite: configuration().NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60, // 1 hour
+      maxAge: 1000 * 60 * 15, // 15 minutes
       path: '/',
     });
 

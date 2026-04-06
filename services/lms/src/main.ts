@@ -7,14 +7,9 @@ import { AllExceptionsFilter } from './common/filters/rpc-exception.filter';
 
 async function bootstrap() {
   const config = configuration();
-  let natsUrl = config.NATS_URL || 'nats://localhost:4222';
-  if (
-    !natsUrl ||
-    typeof natsUrl !== 'string' ||
-    natsUrl.trim() === '' ||
-    !natsUrl.startsWith('nats://')
-  ) {
-    natsUrl = 'nats://localhost:4222';
+  const natsUrl = config.NATS_URL?.trim();
+  if (!natsUrl) {
+    throw new Error('NATS_URL is required in .env');
   }
 
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -24,6 +19,11 @@ async function bootstrap() {
       options: {
         servers: [natsUrl],
         queue: 'vonova-lms-queue',
+        ...(config.NATS_USER &&
+          config.NATS_PASSWORD && {
+          user: config.NATS_USER,
+          pass: config.NATS_PASSWORD,
+        }),
       },
     },
   );
@@ -42,7 +42,7 @@ async function bootstrap() {
   console.log('\n--- Vonova LMS (LMS + LMS-AI) ---');
   console.log(`NATS: ${natsUrl}`);
   console.log(`Queue: vonova-lms-queue (one request → one instance)`);
-  console.log(`Env:  ${config.NODE_ENV ?? 'development'}`);
+  console.log(`Env:  ${config.NODE_ENV}`);
   console.log(
     'Handlers: courses, quizzes, library, assignments, enroll, progress',
   );

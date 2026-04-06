@@ -25,6 +25,10 @@ import {
 } from './interfaces/pdf-summary.interface';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
+import {
+  assertSafeExternalUrl,
+  buildSafeExternalUrl,
+} from '../../common/security/ssrf-protection.util';
 
 /** In-memory lock keyed by fileHash:userId so concurrent uploads of the same file by the same user are serialized. */
 const uploadLocks = new Map<string, Promise<void>>();
@@ -35,6 +39,7 @@ export class PdfSummaryService {
   private readonly PYTHON_SERVICE_URL: string;
   private readonly FALLBACK_PYTHON_SERVICE_URL: string | undefined;
   private readonly DEFAULT_TIMEOUT = 300000; // 5 minutes
+  private readonly allowedOutboundHosts: string[];
 
   constructor(
     private readonly pdfSummaryRepository: PdfSummaryRepository,
@@ -74,6 +79,12 @@ export class PdfSummaryService {
         `Fallback Python service URL configured: ${this.FALLBACK_PYTHON_SERVICE_URL}`,
       );
     }
+    this.allowedOutboundHosts = (
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') || ''
+    )
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean);
   }
 
   /**
@@ -640,8 +651,12 @@ export class PdfSummaryService {
     // Call AI service GET /summarize with session_id
     try {
       // Ensure PYTHON_SERVICE_URL is clean and valid
-      const baseUrl = this.PYTHON_SERVICE_URL.trim().replace(/\/+$/, ''); // Remove trailing slashes
-      const endpoint = `${baseUrl}/summarize?session_id=${encodeURIComponent(cleanSessionId)}`;
+      const baseUrl = buildSafeExternalUrl(
+        this.PYTHON_SERVICE_URL,
+        '/summarize',
+        this.allowedOutboundHosts,
+      );
+      const endpoint = `${baseUrl}?session_id=${encodeURIComponent(cleanSessionId)}`;
 
       // Validate URL before making request
       try {
@@ -835,7 +850,11 @@ export class PdfSummaryService {
 
       // 1. Delete from Python service first
       try {
-        const deleteEndpoint = `${this.PYTHON_SERVICE_URL}/session/${sessionId}`;
+        const deleteEndpoint = buildSafeExternalUrl(
+          this.PYTHON_SERVICE_URL,
+          `/session/${sessionId}`,
+          this.allowedOutboundHosts,
+        );
         this.logger.log(
           `Deleting session from Python service: ${deleteEndpoint}`,
         );
@@ -935,6 +954,7 @@ export class PdfSummaryService {
   ): Promise<any> {
     try {
       let response: Response;
+      assertSafeExternalUrl(endpoint, this.allowedOutboundHosts);
 
       if (fileContent && filename) {
         // Try different approach: send Buffer directly with proper headers
@@ -1237,7 +1257,11 @@ export class PdfSummaryService {
       }
     }
 
-    const endpoint = `${this.PYTHON_SERVICE_URL}/voice/ask`;
+    const endpoint = buildSafeExternalUrl(
+      this.PYTHON_SERVICE_URL,
+      '/voice/ask',
+      this.allowedOutboundHosts,
+    );
     const cleanSessionId = sessionId.trim();
     const formData = new FormData();
     formData.append('session_id', cleanSessionId);
@@ -2112,7 +2136,11 @@ export class PdfSummaryService {
     message: string;
     endpoint: string;
   }> {
-    const endpoint = `${this.PYTHON_SERVICE_URL}/health`;
+    const endpoint = buildSafeExternalUrl(
+      this.PYTHON_SERVICE_URL,
+      '/health',
+      this.allowedOutboundHosts,
+    );
     try {
       const res = await fetch(endpoint, {
         method: 'GET',

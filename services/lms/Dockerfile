@@ -28,7 +28,6 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
-RUN chown -R nestjs:nodejs /app
 USER nestjs
 
 # NATS microservice only (no HTTP port)

@@ -1,34 +1,37 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 
+interface HealthResponse {
+  status?: string;
+  service?: string;
+  version: string;
+  timestamp: string;
+}
+
 @Controller()
 export class AppController {
-  @MessagePattern({ cmd: 'getLmsHealth' })
-  getHealth(): object {
+  private baseResponse(): Pick<HealthResponse, 'version' | 'timestamp'> {
     return {
-      status: 'Healthy!',
-      service: 'API Gateway Service',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  @MessagePattern({ cmd: 'getLmsHealth' })
+  getHealth(): HealthResponse {
+    return {
+      status: 'Healthy!',
+      service: 'LMS Service',
+      ...this.baseResponse(),
     };
   }
 
   @MessagePattern({ cmd: 'getLmsAiHealth' })
-  getLmsAiHealth(): object {
+  getLmsAiHealth(): HealthResponse {
     return {
-      status: 'ok',
-      service: 'LMS-AI (embedded in LMS)',
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @MessagePattern({ cmd: 'getLmsAiInfo' })
-  getLmsAiInfo(): object {
-    return {
-      name: 'LMS-AI',
-      description: 'Roadmap & PDF Summary AI (embedded in Vonova LMS)',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
+      status: 'Healthy!',
+      service: 'LMS-AI Service',
+      ...this.baseResponse(),
     };
   }
 }

@@ -32,15 +32,15 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
     }),
     MongooseModule.forRootAsync({
       useFactory: (configService: ConfigService) => {
-        const local = configService.get<string>('MONGO_URI_LOCAL');
-        const remote = configService.get<string>('MONGO_URI_REMOTE');
-        // Use LOCAL only if it's not the Docker hostname (reachable when running outside Docker)
-        const uri =
-          local &&
-          !local.includes('mongodb://database:') &&
-          !local.includes('mongodb://database/')
-            ? local
-            : remote || local || 'mongodb://localhost:27017/';
+        const local = configService.get<string>('MONGO_URI_LOCAL_LMS');
+        const remote = configService.get<string>('MONGO_URI_REMOTE_LMS');
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        const uri = nodeEnv === 'development' ? local : remote;
+        if (!uri || uri.trim() === '') {
+          throw new Error(
+            'MongoDB URI is missing. Set MONGO_URI_LOCAL_LMS (development) or MONGO_URI_REMOTE_LMS in .env',
+          );
+        }
         return { uri };
       },
       inject: [ConfigService],

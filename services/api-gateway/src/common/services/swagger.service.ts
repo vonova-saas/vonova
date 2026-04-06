@@ -13,17 +13,23 @@ export class SwaggerService {
     private readonly loggerService: LoggerService,
   ) {}
 
-  createSwaggerDocument(app: INestApplication) {
+  private getSwaggerServers() {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
-    const localServer =
-      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
-      `http://localhost:${this.configService.get('PORT')}`;
-    const productionServer =
-      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
-      'http://localhost:4000';
-    if (!productionServer) {
-      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
+    const localServer = this.configService.get<string>('SWAGGER_SERVER_LOCAL');
+    const productionServer = this.configService.get<string>(
+      'SWAGGER_SERVER_PRODUCTION',
+    );
+    if (!localServer || !productionServer) {
+      throw new Error(
+        'SWAGGER_SERVER_LOCAL and SWAGGER_SERVER_PRODUCTION must be set in .env',
+      );
     }
+    return { isProduction, localServer, productionServer };
+  }
+
+  createSwaggerDocument() {
+    const { isProduction, localServer, productionServer } =
+      this.getSwaggerServers();
 
     let swaggerConfig = new DocumentBuilder()
       .setTitle('Vonova API Gateway')
@@ -41,6 +47,7 @@ export class SwaggerService {
       )
       .setLicense('CC-BY-4.0', 'https://creativecommons.org/licenses/by/4.0/')
       .addTag('Gateway', 'API Gateway')
+      .addTag('Admin', 'Admin Service')
       .addTag('Authentication', 'Authentication')
       .addTag('Account Management', 'Account management')
       .addTag('Settings Management', 'Settings management')
@@ -121,7 +128,7 @@ export class SwaggerService {
   }
 
   setupSwagger(app: INestApplication) {
-    const config = this.createSwaggerDocument(app);
+    const config = this.createSwaggerDocument();
     const document = SwaggerModule.createDocument(app, config);
 
     // Swagger UI options
@@ -148,7 +155,7 @@ export class SwaggerService {
       this.configService.get('SWAGGER_PASSWORD')
     ) {
       app.use(
-        '/api-docs',
+        '/api/v1/docs',
         expressBasicAuth({
           users: {
             [this.configService.get('SWAGGER_USER') as string]:
@@ -160,22 +167,12 @@ export class SwaggerService {
       );
     }
 
-    SwaggerModule.setup('api-docs', app, document, swaggerOptions);
+    SwaggerModule.setup('api/v1/docs', app, document, swaggerOptions);
 
-    const isProduction = this.configService.get('NODE_ENV') === 'production';
-    const localServer =
-      this.configService.get<string>('SWAGGER_SERVER_LOCAL') ||
-      `http://localhost:${this.configService.get('PORT')}`;
-    const productionServer =
-      this.configService.get<string>('SWAGGER_SERVER_PRODUCTION') ||
-      'http://localhost:4000';
-    if (!productionServer) {
-      throw new Error('SWAGGER_SERVER_PRODUCTION is not set');
-    }
+    const { isProduction, localServer, productionServer } =
+      this.getSwaggerServers();
 
-    const swaggerBaseUrl = isProduction
-      ? `${productionServer}/api-docs`
-      : `${localServer}/api-docs`;
+    const swaggerBaseUrl = isProduction ? productionServer : localServer;
 
     this.loggerService.log(`📚 Swagger docs available at ${swaggerBaseUrl}`);
     if (

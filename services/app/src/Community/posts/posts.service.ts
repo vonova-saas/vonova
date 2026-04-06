@@ -201,8 +201,13 @@ export class PostsService {
     post.sharesCount++;
     await post.save();
 
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      throw new NotFoundErr('FRONTEND_URL is required in .env');
+    }
+
     // Generate shareable link
-    const shareableLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/posts/${postId}`;
+    const shareableLink = `${frontendUrl}/posts/${postId}`;
 
     return {
       shareableLink,

@@ -10,13 +10,13 @@ export class S3Service {
   private readonly bucketName: string;
 
   constructor(private readonly configService: ConfigService) {
-    const region = process.env.AWS_S3_REGION;
-    const accessKeyId = process.env.AWS_S3_ACCESS_KEY_ID;         
-    const secretAccessKey = process.env.AWS_S3_SECRET_ACCESS_KEY; 
+    const region = process.env.AWS_S3_REGION_APP;
+    const accessKeyId = process.env.AWS_S3_ACCESS_KEY_ID_APP;
+    const secretAccessKey = process.env.AWS_S3_SECRET_ACCESS_KEY_APP;
 
     if (!region || !accessKeyId || !secretAccessKey) {
       throw new Error(
-        'Missing AWS configuration. Please check AWS_S3_REGION, AWS_S3_ACCESS_KEY_ID, and AWS_S3_SECRET_ACCESS_KEY environment variables.',
+        'Missing AWS configuration. Please check AWS_S3_REGION_APP, AWS_S3_ACCESS_KEY_ID_APP, and AWS_S3_SECRET_ACCESS_KEY_APP environment variables.',
       );
     }
 
@@ -28,9 +28,9 @@ export class S3Service {
       },
     });
 
-    const bucketName = process.env.AWS_S3_BUCKET; 
+    const bucketName = process.env.AWS_S3_BUCKET_APP;
     if (!bucketName) {
-      throw new Error('Missing AWS_S3_BUCKET configuration');
+      throw new Error('Missing AWS_S3_BUCKET_APP configuration');
     }
     this.bucketName = bucketName;
   }

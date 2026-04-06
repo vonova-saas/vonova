@@ -1,10 +1,19 @@
+# =============================================================================
 # Node.js
+# =============================================================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
 
+# =============================================================================
 # Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -14,74 +23,89 @@ env/
 venv/
 ENV/
 *.pkl
+.Python
 
+# =============================================================================
 # Rust
+# =============================================================================
 target/
-Cargo.lock
+# NOTE: Cargo.lock should be committed for binaries, ignored for libraries
+# Cargo.lock
 
+# =============================================================================
 # Go
+# =============================================================================
 bin/
 *.exe
 *.test
 *.out
-*.log
 
-# Log files
-*.log
-.log/
-.logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
+# =============================================================================
 # Build outputs
+# =============================================================================
 dist/
 build/
 .out/
 .next/
+.nuxt/
 coverage/
 *.coverage
 .nyc_output/
+packages/**/dist/
+packages/**/build/
 
 # Compiled Electron
 apps/desktop-recorder/out/
 apps/desktop-recorder/build/
 
-# Env files
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+.log/
+.logs/
+
+# =============================================================================
+# Environment files — CRITICAL: protect secrets across the entire monorepo
+# =============================================================================
+# Root level
 .env
+.env.*
 .env.local
-.env.*.local
 
-# Docker
-*.pid
-docker-compose.override.yml
+# All nested services and packages (covers services/api-gateway/.env etc.)
+**/.env
+**/.env.*
+**/.env.local
 
-# Generated assets
-packages/**/dist/
-packages/**/build/
+# Explicitly allow example files
+!.env.example
+!**/.env.example
 
-# Temporary files
+# =============================================================================
+# Generated / temporary
+# =============================================================================
 *.tmp
 *.swp
 *.swo
 *.swn
-*.env
+temp/
+tasks/
+.cache/
 
-# IDE / Editor settings
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
+# =============================================================================
+# IDE / Editor
+# =============================================================================
+.vscode/
 !.vscode/extensions.json
+!.vscode/settings.json
 *.sublime-workspace
+.idea/
 
-# Monorepo
+# =============================================================================
+# Monorepo tools
+# =============================================================================
 turbo/
 nx/
-cache/
-
-# Temporary folders
-tasks/
-temp/
-.vscode/
+.turbo/
+.nx/

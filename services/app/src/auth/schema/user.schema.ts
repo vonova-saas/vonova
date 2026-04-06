@@ -11,19 +11,19 @@ import { Role } from '../enums/role.enum';
 
 export type UserDocument = HydratedDocument<User>;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, strict: true })
 export class User {
   @Prop({ required: true })
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({ required: true, unique: true, lowercase: true, trim: true, index: true })
   @IsNotEmpty()
   @IsString()
   email: string;
 
-  @Prop({ select: true })
+  @Prop({ select: false })
   @IsString()
   password?: string;
 

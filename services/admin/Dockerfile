@@ -1,24 +1,43 @@
-# Use the official Bun image
-FROM oven/bun:1.1.13
+FROM node:18-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files first for layer caching
-COPY package.json bun.lock ./
+# Copy package files
+COPY package.json ./
 
-# Install dependencies (including devDependencies for TypeScript)
-RUN bun install
+# Install pnpm
+RUN npm install -g pnpm
 
-# Copy all source files
-COPY src/ ./src/
-COPY tsconfig.json ./
+# Install dependencies (dev deps needed for Nest build)
+RUN pnpm install
 
-# Build the TypeScript project
-RUN bun run build && cp ./package.json ./dist/
+# Copy source code
+COPY . .
 
-# Expose the port your app runs on
-EXPOSE 4002
+# Build the application
+RUN pnpm run build
 
-# Start the compiled application
-CMD ["bun", "run", "start"]
+# Keep only production dependencies for runtime image
+RUN pnpm prune --prod
+
+# Production stage
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+# Create non-root user
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node dist/main.js health || exit 1
+
+# Start the application (NATS microservice)
+CMD ["node", "dist/main.js"]

@@ -4,7 +4,7 @@ import { HydratedDocument } from 'mongoose';
 
 export type PasswordResetDocument = HydratedDocument<PasswordReset>;
 
-@Schema({ timestamps: true, expires: 600 })
+@Schema({ timestamps: true })
 export class PasswordReset {
   @Prop({ required: true, lowercase: true, trim: true })
   @IsString()
@@ -20,7 +20,6 @@ export class PasswordReset {
   @Prop({
     required: true,
     default: () => new Date(Date.now() + 15 * 60 * 1000),
-    index: { expireAfterSeconds: 0 },
   })
   expiresAt: Date;
 

@@ -14,11 +14,14 @@ export interface JwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly configService: ConfigService) {
+    const jwtSecret = configService.get<string>('JWT.JWT_ACCESS_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT.JWT_ACCESS_SECRET is required in .env');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>('JWT_ACCESS_SECRET') ?? 'changeme-access',
+      secretOrKey: jwtSecret,
     });
   }
 

@@ -6,6 +6,7 @@ import { SwaggerService } from './common/services/swagger.service';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
 import configuration from './common/config/configuration';
 
@@ -18,7 +19,22 @@ async function bootstrap() {
   });
 
   // Security
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+    }),
+  );
 
   // CORS configuration
   const rawOrigins = configuration().CORS_ORIGIN;
@@ -38,7 +54,11 @@ async function bootstrap() {
       );
 
   app.enableCors({
-    origin: origins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (origins.includes(origin)) return callback(null, true);
+      return callback(new Error('Origin not allowed by CORS'));
+    },
     credentials: true,
     methods: configuration().CORS_METHODS?.split(',') || [
       'GET',
@@ -57,6 +77,25 @@ async function bootstrap() {
 
   // Cookie parser
   app.use(cookieParser());
+
+  app.use(
+    rateLimit({
+      windowMs: 60 * 1000,
+      limit: 100,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
+
+  app.use(
+    '/api/v1/auth',
+    rateLimit({
+      windowMs: 60 * 1000,
+      limit: 5,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
 
   // Global validation pipe with detailed error messages
   app.useGlobalPipes(
@@ -102,14 +141,17 @@ async function bootstrap() {
   const swaggerService = app.get(SwaggerService);
   swaggerService.setupSwagger(app);
 
-  const port = configuration().PORT ?? 4000;
+  const port = configuration().PORT;
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('PORT is required and must be a valid number in .env');
+  }
   await app.listen(port);
 }
 
 bootstrap().catch((err: NodeJS.ErrnoException) => {
   if (err?.code === 'EADDRINUSE') {
     console.error(
-      `\nPort ${configuration().PORT ?? 4000} is already in use. Stop the other API Gateway process (or close its terminal) and try again.\n`,
+      `\nPort ${configuration().PORT} is already in use. Stop the other API Gateway process (or close its terminal) and try again.\n`,
     );
   } else {
     console.error('Bootstrap failed:', err);

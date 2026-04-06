@@ -1,8 +1,7 @@
-# Use Node.js LTS and install pnpm
+# Use Node.js LTS and pnpm
 FROM node:20-alpine
 
-# Install pnpm
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Set working directory
 WORKDIR /app
@@ -25,14 +24,14 @@ RUN pnpm prune --prod
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
-  adduser --system --uid 1001 nestjs
+  adduser --system --uid 1001 nestjs && \
+  mkdir -p /app/logs && \
+  chown -R nestjs:nodejs /app/logs
 
-# Set proper permissions
-RUN chown -R nestjs:nodejs /app
 USER nestjs
 
 # Expose the port
 EXPOSE 4000
 
 # Start the application
-CMD ["pnpm", "run", "start:prod"]
+CMD ["node", "dist/main.js"]

@@ -24,21 +24,15 @@ export class S3Service {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    const accessKeyId =
-      this.configService.get<string>('env.awsAccessKeyId') ||
-      this.configService.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey =
-      this.configService.get<string>('env.awsSecretAccessKey') ||
-      this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-    this.region =
-      this.configService.get<string>('env.awsRegion') ||
-      this.configService.get<string>('AWS_REGION') ||
-      'eu-north-1';
+    const accessKeyId = this.configService.get<string>(
+      'AWS_ACCESS_KEY_ID_LMS_AI',
+    );
+    const secretAccessKey = this.configService.get<string>(
+      'AWS_SECRET_ACCESS_KEY_LMS_AI',
+    );
+    this.region = this.configService.get<string>('AWS_REGION_LMS_AI') ?? '';
     this.bucketName =
-      this.configService.get<string>('AWS_S3_BUCKET_LMS_AI') ||
-      this.configService.get<string>('env.awsS3Bucket') ||
-      this.configService.get<string>('AWS_S3_BUCKET') ||
-      'cv-pdf-1234567890';
+      this.configService.get<string>('AWS_S3_BUCKET_LMS_AI') ?? '';
 
     if (!accessKeyId || !secretAccessKey) {
       this.logger.warn('AWS credentials not configured. S3 uploads will fail.');
@@ -108,7 +102,9 @@ export class S3Service {
     expiresInSeconds?: number,
   ): Promise<string> {
     const defaultExpires = (() => {
-      const raw = this.configService.get<string>('AWS_S3_PRESIGN_EXPIRES');
+      const raw = this.configService.get<string>(
+        'AWS_S3_PRESIGN_EXPIRES_LMS_AI',
+      );
       const parsed = raw ? Number(raw) : NaN;
       return Number.isFinite(parsed) && parsed > 0 ? parsed : 3600;
     })();

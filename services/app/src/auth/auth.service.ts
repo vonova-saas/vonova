@@ -10,6 +10,7 @@ import { RpcException } from '@nestjs/microservices';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createHash } from 'crypto';
 import configuration from '../common/config/configuration';
 import type { UploadedFile } from '../common/interfaces/file.interface';
 import { WaitlistService } from '../waitlist/waitlist.service';
@@ -41,6 +42,7 @@ import {
 import { ProviderEnum } from './enums/provider.enum';
 import { Role } from './enums/role.enum';
 import { NotificationService } from '../notification/notification.service';
+import { TokenBlacklistService } from './token-blacklist.service';
 
 @Injectable()
 export class AuthService {
@@ -59,31 +61,76 @@ export class AuthService {
     @Inject(forwardRef(() => WaitlistService))
     private readonly waitlistService: WaitlistService,
     private readonly notificationService: NotificationService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   // ========== Helpers ==========
 
-  private signAccessToken(userId: string, role: Role | string) {
-    return this.jwtService.sign({ userId, role });
+  private requireConfig(value: string | undefined, name: string): string {
+    const normalized = value?.trim();
+    if (!normalized) {
+      throw new Error(`${name} is required in .env`);
+    }
+    return normalized;
   }
 
-  private signRefreshToken(userId: string, role: Role | string) {
+  private signAccessToken(userId: string, role: Role | string) {
+    const accessExpiresIn = this.requireConfig(
+      configuration().JWT.JWT_ACCESS_EXPIRES_IN,
+      'JWT_ACCESS_EXPIRES_IN',
+    );
     return this.jwtService.sign(
-      { userId, role, type: 'refresh' },
+      { userId, role },
       {
-        secret:
-          configuration().JWT.JWT_REFRESH_SECRET ||
-          'fallback-refresh-secret-key',
-        expiresIn: (configuration().JWT.JWT_REFRESH_EXPIRES_IN || '7d') as any,
+        expiresIn: accessExpiresIn as any,
       },
     );
+  }
+
+  private signRefreshToken(userId: string, role: Role | string, jti: string) {
+    const refreshSecret = this.requireConfig(
+      configuration().JWT.JWT_REFRESH_SECRET,
+      'JWT_REFRESH_SECRET',
+    );
+    const refreshExpiresIn = this.requireConfig(
+      configuration().JWT.JWT_REFRESH_EXPIRES_IN,
+      'JWT_REFRESH_EXPIRES_IN',
+    );
+    return this.jwtService.sign(
+      { userId, role, type: 'refresh', jti },
+      {
+        secret: refreshSecret,
+        expiresIn: refreshExpiresIn as any,
+      },
+    );
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private emailExactCaseInsensitive(email: string): RegExp {
+    return new RegExp(`^${this.escapeRegex(this.normalizeEmail(email))}$`, 'i');
+  }
+
+  private getRefreshExpiry(): Date {
+    return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
 
   // ========== Register Flow Services ==========
 
   async register(dto: RegisterDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
     const existing = await this.userModel
-      .findOne({ email: dto.email.toLowerCase() })
+      .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
       .exec();
     if (existing) {
       throw new RpcException({
@@ -95,7 +142,7 @@ export class AuthService {
 
     const user = new this.userModel({
       name: dto.name,
-      email: dto.email,
+      email: normalizedEmail,
       password: dto.password,
       role: Role.PENDING,
       isVerified: false,
@@ -106,7 +153,7 @@ export class AuthService {
     const account = new this.accountModel({
       userId: user._id,
       provider: ProviderEnum.EMAIL,
-      providerId: dto.email,
+      providerId: normalizedEmail,
     });
     await account.save();
 
@@ -115,13 +162,13 @@ export class AuthService {
     ).toString();
 
     await this.emailVerificationModel.create({
-      email: dto.email,
+      email: normalizedEmail,
       verificationCode,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
     await this.notificationService.sendEmailVerification({
-      email: dto.email,
+      email: normalizedEmail,
       name: dto.name,
       code: verificationCode,
     });
@@ -132,8 +179,9 @@ export class AuthService {
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
     const user = await this.userModel
-      .findOne({ email: dto.email.toLowerCase() })
+      .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
       .exec();
     if (!user) {
       throw new RpcException({
@@ -144,7 +192,7 @@ export class AuthService {
     }
 
     const record = await this.emailVerificationModel.findOne({
-      email: dto.email,
+      email: this.emailExactCaseInsensitive(normalizedEmail),
       verificationCode: dto.code,
       used: false,
       expiresAt: { $gt: new Date() },
@@ -168,8 +216,12 @@ export class AuthService {
   }
 
   async welcomeEmail(dto: WelcomeEmailDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
     const account = await this.accountModel
-      .findOne({ provider: ProviderEnum.EMAIL, providerId: dto.email })
+      .findOne({
+        provider: ProviderEnum.EMAIL,
+        providerId: this.emailExactCaseInsensitive(normalizedEmail),
+      })
       .exec();
     if (!account) {
       throw new RpcException({
@@ -208,7 +260,7 @@ export class AuthService {
     if (dto.couponCode?.trim()) {
       try {
         const validationResult = await this.waitlistService.checkCouponCode({
-          email: dto.email,
+          email: normalizedEmail,
           couponCode: dto.couponCode.trim(),
         });
 
@@ -219,7 +271,7 @@ export class AuthService {
           ); // 3 months
 
           await this.waitlistService.markPromoCodeAsUsed(
-            dto.email,
+            normalizedEmail,
             dto.couponCode.trim(),
           );
         }
@@ -235,19 +287,24 @@ export class AuthService {
 
     const userAgent = dto.userAgent ?? 'unknown';
     const accessToken = this.signAccessToken(String(user._id), user.role);
-    const refreshToken = this.signRefreshToken(String(user._id), user.role);
+    const jti = uuidv4();
+    const refreshToken = this.signRefreshToken(
+      String(user._id),
+      user.role,
+      jti,
+    );
 
     await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
     await this.refreshTokenModel.create({
       userId: user._id,
-      tokenHash: refreshToken,
-      jti: `${user._id.toString()}-${Date.now()}`,
+      tokenHash: this.hashToken(refreshToken),
+      jti,
       deviceHash: userAgent,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: this.getRefreshExpiry(),
     });
 
     await this.notificationService.sendWelcomeEmail({
-      email: dto.email,
+      email: normalizedEmail,
       name: user.name,
     });
 
@@ -272,10 +329,10 @@ export class AuthService {
         : dto.file.buffer;
 
     if (
-      !configuration().AWS_S3_REGION ||
-      !configuration().AWS_S3_ACCESS_KEY_ID ||
-      !configuration().AWS_S3_SECRET_ACCESS_KEY ||
-      !configuration().AWS_S3_BUCKET
+      !configuration().AWS_S3_REGION_APP ||
+      !configuration().AWS_S3_ACCESS_KEY_ID_APP ||
+      !configuration().AWS_S3_SECRET_ACCESS_KEY_APP ||
+      !configuration().AWS_S3_BUCKET_APP
     ) {
       throw new RpcException({
         statusCode: 500,
@@ -294,10 +351,10 @@ export class AuthService {
     }
 
     const s3 = new S3Client({
-      region: configuration().AWS_S3_REGION!,
+      region: configuration().AWS_S3_REGION_APP!,
       credentials: {
-        accessKeyId: configuration().AWS_S3_ACCESS_KEY_ID!,
-        secretAccessKey: configuration().AWS_S3_SECRET_ACCESS_KEY!,
+        accessKeyId: configuration().AWS_S3_ACCESS_KEY_ID_APP!,
+        secretAccessKey: configuration().AWS_S3_SECRET_ACCESS_KEY_APP!,
       },
     });
 
@@ -308,14 +365,14 @@ export class AuthService {
 
     await s3.send(
       new PutObjectCommand({
-        Bucket: configuration().AWS_S3_BUCKET!,
+        Bucket: configuration().AWS_S3_BUCKET_APP!,
         Key: key,
         Body: fileBuffer,
         ContentType: dto.file.mimetype || 'application/octet-stream',
       }),
     );
 
-    const url = `https://${configuration().AWS_S3_BUCKET}.s3.${configuration().AWS_S3_REGION}.amazonaws.com/${key}`;
+    const url = `https://${configuration().AWS_S3_BUCKET_APP}.s3.${configuration().AWS_S3_REGION_APP}.amazonaws.com/${key}`;
 
     user.profilePictureUrl = url;
     await user.save();
@@ -403,16 +460,20 @@ export class AuthService {
     const deviceHash = userAgent; // Simplified device hash
 
     const accessToken = this.signAccessToken(String(user._id), user.role);
-    const refreshToken = this.signRefreshToken(String(user._id), user.role);
+    const refreshToken = this.signRefreshToken(
+      String(user._id),
+      user.role,
+      jti,
+    );
 
     await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
 
     await this.refreshTokenModel.create({
       userId: user._id,
-      tokenHash: refreshToken,
+      tokenHash: this.hashToken(refreshToken),
       jti,
       deviceHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: this.getRefreshExpiry(),
     });
 
     return {
@@ -520,16 +581,20 @@ export class AuthService {
     const deviceHash = userAgent; // Simplified device hash
 
     const accessToken = this.signAccessToken(String(user._id), user.role);
-    const refreshToken = this.signRefreshToken(String(user._id), user.role);
+    const refreshToken = this.signRefreshToken(
+      String(user._id),
+      user.role,
+      jti,
+    );
 
     await this.refreshTokenModel.deleteMany({ userId: user._id, deviceHash });
 
     await this.refreshTokenModel.create({
       userId: user._id,
-      tokenHash: refreshToken,
+      tokenHash: this.hashToken(refreshToken),
       jti,
       deviceHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: this.getRefreshExpiry(),
     });
 
     await this.notificationService.sendWelcomeEmail({
@@ -555,29 +620,9 @@ export class AuthService {
   // ========== Login & Tokens ==========
 
   async login(dto: LoginDto) {
-    const account = await this.accountModel
-      .findOne({ provider: ProviderEnum.EMAIL, providerId: dto.email })
-      .exec();
-    if (!account) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found for the given account',
-        error: 'Not Found',
-      });
-    }
-
-    const user = await this.userModel.findById(account.userId).exec();
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found for the given account',
-        error: 'Not Found',
-      });
-    }
-
-    // Secure password comparison using bcrypt (see UserSchema.comparePassword)
+    const normalizedEmail = this.normalizeEmail(dto.email);
     const userWithPassword = await this.userModel
-      .findById(account.userId)
+      .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
       .select('+password')
       .exec();
 
@@ -586,6 +631,14 @@ export class AuthService {
         statusCode: 404,
         message: 'User not found for the given account',
         error: 'Not Found',
+      });
+    }
+
+    if (!userWithPassword.password) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'This account does not support password login',
+        error: 'Bad Request',
       });
     }
 
@@ -600,7 +653,7 @@ export class AuthService {
       });
     }
 
-    if (!user.isVerified) {
+    if (!userWithPassword.isVerified) {
       throw new RpcException({
         statusCode: 400,
         message: 'You should verify your email first',
@@ -615,9 +668,11 @@ export class AuthService {
       String(userWithPassword._id),
       userWithPassword.role,
     );
+    const jti = uuidv4();
     const refreshToken = this.signRefreshToken(
       String(userWithPassword._id),
       userWithPassword.role,
+      jti,
     );
 
     await this.refreshTokenModel
@@ -625,11 +680,30 @@ export class AuthService {
       .exec();
     await this.refreshTokenModel.create({
       userId: userWithPassword._id,
-      tokenHash: refreshToken,
-      jti: `${userWithPassword._id.toString()}-${Date.now()}`,
+      tokenHash: this.hashToken(refreshToken),
+      jti,
       deviceHash: dto.userAgent,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: this.getRefreshExpiry(),
     });
+
+    // Best-effort account link repair for legacy records.
+    const existingEmailAccount = await this.accountModel
+      .findOne({
+        provider: ProviderEnum.EMAIL,
+        userId: userWithPassword._id,
+      })
+      .exec();
+    if (!existingEmailAccount) {
+      try {
+        await this.accountModel.create({
+          provider: ProviderEnum.EMAIL,
+          providerId: normalizedEmail,
+          userId: userWithPassword._id,
+        });
+      } catch {
+        // Non-blocking: login should succeed even if account link repair fails.
+      }
+    }
 
     return {
       message: 'User logged in successfully',
@@ -653,11 +727,35 @@ export class AuthService {
       const payload = this.jwtService.verify<{
         userId: string;
         role: string;
+        jti: string;
+        type: string;
+        exp?: number;
       }>(token, {
-        secret:
-          configuration().JWT.JWT_REFRESH_SECRET ||
-          'fallback-refresh-secret-key',
+        secret: this.requireConfig(
+          configuration().JWT.JWT_REFRESH_SECRET,
+          'JWT_REFRESH_SECRET',
+        ),
       });
+
+      if (payload.type !== 'refresh' || !payload.jti) {
+        throw new Error('Malformed refresh token');
+      }
+      if (await this.tokenBlacklistService.has(token)) {
+        throw new Error('Token is blacklisted');
+      }
+
+      const tokenHash = this.hashToken(token);
+      const storedToken = await this.refreshTokenModel
+        .findOne({
+          userId: payload.userId,
+          tokenHash,
+          jti: payload.jti,
+          revokedAt: null,
+        })
+        .exec();
+      if (!storedToken) {
+        throw new Error('Refresh token not found');
+      }
 
       const user = await this.userModel.findById(payload.userId).exec();
       if (!user) {
@@ -669,15 +767,27 @@ export class AuthService {
       }
 
       const accessToken = this.signAccessToken(String(user._id), user.role);
-      const refreshToken = this.signRefreshToken(String(user._id), user.role);
+      const nextJti = uuidv4();
+      const refreshToken = this.signRefreshToken(
+        String(user._id),
+        user.role,
+        nextJti,
+      );
 
-      await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
+      storedToken.revokedAt = new Date();
+      storedToken.revokedReason = 'rotated';
+      await storedToken.save();
+
+      if (payload.exp) {
+        await this.tokenBlacklistService.add(token, payload.exp);
+      }
       await this.refreshTokenModel.create({
         userId: user._id,
-        tokenHash: refreshToken,
-        jti: `${user._id.toString()}-${Date.now()}`,
-        deviceHash: 'unknown',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        tokenHash: this.hashToken(refreshToken),
+        rotatedFromTokenHash: tokenHash,
+        jti: nextJti,
+        deviceHash: storedToken.deviceHash,
+        expiresAt: this.getRefreshExpiry(),
       });
 
       return {
@@ -695,8 +805,17 @@ export class AuthService {
   }
 
   async logout(token: string) {
-    // Invalidate the given refresh token by deleting matching record
-    await this.refreshTokenModel.deleteOne({ tokenHash: token }).exec();
+    const decoded = this.jwtService.decode<{ exp?: number }>(token);
+    const tokenHash = this.hashToken(token);
+    await this.refreshTokenModel
+      .updateOne(
+        { tokenHash, revokedAt: null },
+        { revokedAt: new Date(), revokedReason: 'logout' },
+      )
+      .exec();
+    if (decoded?.exp) {
+      await this.tokenBlacklistService.add(token, decoded.exp);
+    }
     return { message: 'Logged out successfully' };
   }
 
@@ -750,7 +869,10 @@ export class AuthService {
   // ========== Password Reset ==========
 
   async requestResetPassword(dto: RequestResetPasswordDto) {
-    const user = await this.userModel.findOne({ email: dto.email }).exec();
+    const normalizedEmail = this.normalizeEmail(dto.email);
+    const user = await this.userModel
+      .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
+      .exec();
     if (!user) {
       throw new RpcException({
         statusCode: 404,
@@ -761,15 +883,17 @@ export class AuthService {
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await this.passwordResetModel.deleteMany({ email: dto.email }).exec();
+    await this.passwordResetModel
+      .deleteMany({ email: this.emailExactCaseInsensitive(normalizedEmail) })
+      .exec();
     await this.passwordResetModel.create({
-      email: dto.email,
+      email: normalizedEmail,
       resetCode,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
     await this.notificationService.sendPasswordResetCode({
-      email: dto.email,
+      email: normalizedEmail,
       code: resetCode,
     });
 

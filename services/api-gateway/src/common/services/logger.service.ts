@@ -91,8 +91,12 @@ export class LoggerService implements NestLoggerService {
     }
 
     // Create logger instance
+    const logLevel = process.env.LOG_LEVEL;
+    if (!logLevel) {
+      throw new Error('LOG_LEVEL is required in .env');
+    }
     this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
+      level: logLevel,
       format: logFormat,
       transports,
       exceptionHandlers: [
