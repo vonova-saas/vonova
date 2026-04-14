@@ -18,6 +18,17 @@ async function bootstrap() {
     // logger: loggerService,
   });
 
+  // Railway/proxy deployments send X-Forwarded-* headers.
+  // trust proxy must be enabled so rate-limit can identify real client IPs.
+  const trustProxyConfig = configuration().TRUST_PROXY;
+  const shouldTrustProxy =
+    typeof trustProxyConfig === 'string'
+      ? trustProxyConfig.toLowerCase() === 'true'
+      : configuration().NODE_ENV === 'production';
+  if (shouldTrustProxy) {
+    app.set('trust proxy', 1);
+  }
+
   // Security
   app.use(
     helmet({

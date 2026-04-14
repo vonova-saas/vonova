@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { ClientProxy } from '@nestjs/microservices';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -54,41 +55,40 @@ describe('AppController', () => {
   });
 
   describe('getAppHealth', () => {
-    it('should call NATS client with correct parameters', () => {
+    it('should call NATS client with correct parameters', async () => {
       const mockResponse = of({ status: 'ok' });
       mockNatsClient.send.mockReturnValue(mockResponse);
 
-      const result = appController.getAppHealth();
+      const result = await appController.getAppHealth();
 
       expect(mockNatsClient.send).toHaveBeenCalledWith(
         { cmd: 'getAppHealth' },
         {},
       );
-      expect(result).toBe(mockResponse);
+      expect(result).toEqual({ status: 'ok' });
     });
 
-    it('should handle NATS client errors gracefully', () => {
-      const mockError = new Error('NATS connection failed');
-      mockNatsClient.send.mockImplementation(() => {
-        throw mockError;
-      });
+    it('should handle NATS client errors gracefully', async () => {
+      mockNatsClient.send.mockReturnValue(
+        throwError(() => new Error('NATS connection failed')),
+      );
 
-      expect(() => appController.getAppHealth()).toThrow(
-        'NATS connection failed',
+      await expect(appController.getAppHealth()).rejects.toThrow(
+        ServiceUnavailableException,
       );
     });
 
-    it('should return observable from NATS client', () => {
+    it('should resolve response from NATS client observable', async () => {
       const mockObservable = of({ status: 'ok' });
       mockNatsClient.send.mockReturnValue(mockObservable);
 
-      const result = appController.getAppHealth();
+      const result = await appController.getAppHealth();
 
       expect(mockNatsClient.send).toHaveBeenCalledWith(
         { cmd: 'getAppHealth' },
         {},
       );
-      expect(result).toBe(mockObservable);
+      expect(result).toEqual({ status: 'ok' });
     });
   });
 

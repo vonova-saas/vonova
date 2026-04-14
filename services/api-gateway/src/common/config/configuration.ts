@@ -37,6 +37,7 @@ export default () => ({
   CORS_SECURITY_HEADERS: process.env.CORS_SECURITY_HEADERS,
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
   ENABLE_CSRF: process.env.ENABLE_CSRF,
+  TRUST_PROXY: process.env.TRUST_PROXY,
   NATS_USER: process.env.NATS_USER,
   NATS_PASSWORD: process.env.NATS_PASSWORD,
 });
