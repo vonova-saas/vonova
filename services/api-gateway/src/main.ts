@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 // import { LoggerService } from './common/services/logger.service';
@@ -14,7 +15,7 @@ async function bootstrap() {
   // Initialize logger first to create logs directory
   // const loggerService = new LoggerService();
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // logger: loggerService,
   });
 

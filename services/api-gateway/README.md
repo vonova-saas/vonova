@@ -49,7 +49,7 @@ Key vars:
 
 ```bash
 npm install
-npm run start:dev
+pnpm run start:dev
 ```
 
 Production:

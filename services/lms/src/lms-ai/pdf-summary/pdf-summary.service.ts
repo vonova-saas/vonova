@@ -52,10 +52,13 @@ export class PdfSummaryService {
     // Prefer env; default to 127.0.0.1 to avoid IPv6 (::1) resolution issues with localhost
     let primary =
       this.configService.get<string>('PDF_SUMMARY_AI_SERVICE_URL') ||
+      this.configService.get<string>('PDF_SUMMARY_AI_SERVICE_URL_LMS_AI') ||
       'http://127.0.0.1:5015';
-    let fallback = this.configService.get<string>(
-      'FALLBACK_PDF_SUMMARY_AI_SERVICE_URL',
-    );
+    let fallback =
+      this.configService.get<string>('FALLBACK_PDF_SUMMARY_AI_SERVICE_URL') ||
+      this.configService.get<string>(
+        'FALLBACK_PDF_SUMMARY_AI_SERVICE_URL_LMS_AI',
+      );
 
     // Clean up URLs - handle cases where env var might contain multiple URLs or extra characters
     primary = this.cleanUrl(primary);
@@ -67,8 +70,8 @@ export class PdfSummaryService {
       .replace('https://localhost', 'https://127.0.0.1');
     this.FALLBACK_PYTHON_SERVICE_URL = fallback
       ? fallback
-        .replace('http://localhost', 'http://127.0.0.1')
-        .replace('https://localhost', 'https://127.0.0.1')
+          .replace('http://localhost', 'http://127.0.0.1')
+          .replace('https://localhost', 'https://127.0.0.1')
       : undefined;
 
     this.logger.log(
@@ -80,7 +83,9 @@ export class PdfSummaryService {
       );
     }
     this.allowedOutboundHosts = (
-      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') || ''
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') ||
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS_LMS_AI') ||
+      ''
     )
       .split(',')
       .map((h) => h.trim().toLowerCase())
@@ -165,11 +170,15 @@ export class PdfSummaryService {
             answerStr,
           );
         if (is429 || isAiError) {
-          const statusCode = is429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE;
+          const statusCode = is429
+            ? HttpStatus.TOO_MANY_REQUESTS
+            : HttpStatus.SERVICE_UNAVAILABLE;
           const message = is429
             ? 'AI rate limit exceeded. Please wait a moment and retry.'
             : 'The AI service returned an error. Please try again.';
-          this.logger.warn(`AI error in chat answer (${statusCode}): ${answerStr.slice(0, 200)}`);
+          this.logger.warn(
+            `AI error in chat answer (${statusCode}): ${answerStr.slice(0, 200)}`,
+          );
           throw new RpcException({
             statusCode,
             message,
@@ -250,8 +259,8 @@ export class PdfSummaryService {
           // Provide helpful message about re-uploading
           throw new BadRequestException(
             `Session expired in AI service (7-day TTL). Your PDF data is safely stored. ` +
-            `To continue chatting, please re-upload the same PDF file. ` +
-            `The system will recognize it and restore the session.`,
+              `To continue chatting, please re-upload the same PDF file. ` +
+              `The system will recognize it and restore the session.`,
           );
         }
       }
@@ -302,7 +311,9 @@ export class PdfSummaryService {
       let fileContent: Buffer;
       const rawBuffer = (request.file as any).buffer;
 
-      this.logger.debug(`Raw buffer type: ${typeof rawBuffer}, isBuffer: ${Buffer.isBuffer(rawBuffer)}`);
+      this.logger.debug(
+        `Raw buffer type: ${typeof rawBuffer}, isBuffer: ${Buffer.isBuffer(rawBuffer)}`,
+      );
 
       if (Buffer.isBuffer(rawBuffer)) {
         fileContent = rawBuffer;
@@ -313,7 +324,11 @@ export class PdfSummaryService {
         Array.isArray(rawBuffer.data)
       ) {
         fileContent = Buffer.from(rawBuffer.data);
-      } else if (rawBuffer && typeof rawBuffer === 'object' && Array.isArray((rawBuffer as any).data)) {
+      } else if (
+        rawBuffer &&
+        typeof rawBuffer === 'object' &&
+        Array.isArray((rawBuffer as any).data)
+      ) {
         // Handle case where it's just { data: [...] } without type: 'Buffer'
         fileContent = Buffer.from((rawBuffer as any).data);
       } else {
@@ -321,7 +336,7 @@ export class PdfSummaryService {
           type: typeof rawBuffer,
           hasBuffer: !!rawBuffer,
           keys: rawBuffer ? Object.keys(rawBuffer) : [],
-          rawBuffer: rawBuffer
+          rawBuffer: rawBuffer,
         });
         throw new BadRequestException('Invalid file buffer received');
       }
@@ -1055,9 +1070,8 @@ export class PdfSummaryService {
           })();
 
           // Check if session exists in database (may have expired in AI service after some time)
-          const dbSummary = await this.pdfSummaryRepository.findBySessionId(
-            sessionIdFromData,
-          );
+          const dbSummary =
+            await this.pdfSummaryRepository.findBySessionId(sessionIdFromData);
 
           if (dbSummary) {
             const createdAt =
@@ -1119,8 +1133,8 @@ export class PdfSummaryService {
       if (responseData.status === false) {
         throw new Error(
           responseData.error ||
-          responseData.detail ||
-          'Python service returned error',
+            responseData.detail ||
+            'Python service returned error',
         );
       }
 
@@ -1248,7 +1262,9 @@ export class PdfSummaryService {
         idempotencyKey.trim(),
       );
       if (!claimed) {
-        const cached = await this.waitForVoiceAskCompleted(idempotencyKey.trim());
+        const cached = await this.waitForVoiceAskCompleted(
+          idempotencyKey.trim(),
+        );
         if (cached?.response) {
           return cached.response as Awaited<
             ReturnType<PdfSummaryService['voiceAsk']>
@@ -1270,9 +1286,7 @@ export class PdfSummaryService {
     const safeName = filename?.trim() || `audio.${ext}`;
 
     const userIdSegment =
-      userId && String(userId).trim()
-        ? String(userId).trim()
-        : 'anonymous';
+      userId && String(userId).trim() ? String(userId).trim() : 'anonymous';
     const voicePrefix = `voice/pdf-summary/${userIdSegment}/${cleanSessionId}`;
 
     formData.append(
@@ -1339,7 +1353,8 @@ export class PdfSummaryService {
         `${voicePrefix}/user`,
       );
       try {
-        userAudioS3Url = await this.s3Service.getPresignedGetUrl(userAudioS3Key);
+        userAudioS3Url =
+          await this.s3Service.getPresignedGetUrl(userAudioS3Key);
       } catch {
         userAudioS3Url = this.s3Service.getFileUrl(userAudioS3Key);
       }
@@ -1377,19 +1392,19 @@ export class PdfSummaryService {
 
     let audioRecord:
       | {
-        audioId: string;
-        session_id: string;
-        user_id?: string;
-        user_audio_s3_key?: string;
-        user_audio_s3_url?: string;
-        user_audio_mime_type?: string;
-        ai_audio_s3_key?: string;
-        ai_audio_s3_url?: string;
-        ai_audio_content_type?: string;
-        detected_language?: string;
-        created_at?: Date;
-        updated_at?: Date;
-      }
+          audioId: string;
+          session_id: string;
+          user_id?: string;
+          user_audio_s3_key?: string;
+          user_audio_s3_url?: string;
+          user_audio_mime_type?: string;
+          ai_audio_s3_key?: string;
+          ai_audio_s3_url?: string;
+          ai_audio_content_type?: string;
+          detected_language?: string;
+          created_at?: Date;
+          updated_at?: Date;
+        }
       | undefined;
     try {
       const created = await this.pdfSummaryAudioRepository.create({
@@ -1435,9 +1450,14 @@ export class PdfSummaryService {
     };
     if (idempotencyKey?.trim()) {
       await this.voiceAskIdempotencyRepository
-        .setCompleted(idempotencyKey.trim(), result as unknown as Record<string, unknown>)
+        .setCompleted(
+          idempotencyKey.trim(),
+          result as unknown as Record<string, unknown>,
+        )
         .catch((err) => {
-          this.logger.warn(`Failed to set voice-ask idempotency completed: ${err instanceof Error ? err.message : String(err)}`);
+          this.logger.warn(
+            `Failed to set voice-ask idempotency completed: ${err instanceof Error ? err.message : String(err)}`,
+          );
         });
     }
     return result;
@@ -1473,7 +1493,10 @@ export class PdfSummaryService {
   private generateFileHash(content: Buffer): string {
     // Ensure content is a Buffer
     if (!Buffer.isBuffer(content)) {
-      this.logger.error(`generateFileHash received non-Buffer content: ${typeof content}`, content);
+      this.logger.error(
+        `generateFileHash received non-Buffer content: ${typeof content}`,
+        content,
+      );
 
       // Try to convert if it's an object with Buffer-like structure
       if (content && typeof content === 'object') {
@@ -1494,13 +1517,19 @@ export class PdfSummaryService {
           // Handle Array
           else if (Array.isArray(contentObj)) {
             content = Buffer.from(contentObj);
-          }
-          else {
-            throw new Error(`Expected Buffer but received ${typeof content} with keys: ${Object.keys(contentObj)}`);
+          } else {
+            throw new Error(
+              `Expected Buffer but received ${typeof content} with keys: ${Object.keys(contentObj)}`,
+            );
           }
         } catch (conversionError) {
-          this.logger.error(`Failed to convert content to Buffer:`, conversionError);
-          throw new Error(`Expected Buffer but received ${typeof content}: ${conversionError instanceof Error ? conversionError.message : 'Unknown conversion error'}`);
+          this.logger.error(
+            `Failed to convert content to Buffer:`,
+            conversionError,
+          );
+          throw new Error(
+            `Expected Buffer but received ${typeof content}: ${conversionError instanceof Error ? conversionError.message : 'Unknown conversion error'}`,
+          );
         }
       } else if (typeof content === 'string') {
         // Convert string to Buffer
@@ -1512,7 +1541,9 @@ export class PdfSummaryService {
 
     // Double-check we have a Buffer before proceeding
     if (!Buffer.isBuffer(content)) {
-      throw new Error(`Failed to convert content to Buffer, final type: ${typeof content}`);
+      throw new Error(
+        `Failed to convert content to Buffer, final type: ${typeof content}`,
+      );
     }
 
     return crypto.createHash('sha256').update(content).digest('hex');
@@ -1543,7 +1574,9 @@ export class PdfSummaryService {
     language?: string,
   ): Promise<IPDFSummaryData> {
     const normalizedUserId =
-      userId !== undefined && userId !== null ? String(userId).trim() : undefined;
+      userId !== undefined && userId !== null
+        ? String(userId).trim()
+        : undefined;
     const summaryData = {
       summaryId: uuidv4(),
       session_id: sessionId,
@@ -1665,7 +1698,9 @@ export class PdfSummaryService {
     const trimmedUserId = userId.trim();
     const docs = await this.pdfSummaryRepository.findByUserId(trimmedUserId);
     const sessionIds = docs.map((d) => d.session_id);
-    let audioDocs: Awaited<ReturnType<PdfSummaryAudioRepository['findBySessionIds']>> = [];
+    let audioDocs: Awaited<
+      ReturnType<PdfSummaryAudioRepository['findBySessionIds']>
+    > = [];
     try {
       const [audioByUser, audioBySessions] = await Promise.all([
         this.pdfSummaryAudioRepository.findByUserId(trimmedUserId),
@@ -1832,11 +1867,11 @@ export class PdfSummaryService {
         const chat_history =
           chatResult.status === 'fulfilled'
             ? {
-              chats: chatResult.value.chats,
-              total: chatResult.value.total,
-              page: chatResult.value.page,
-              totalPages: chatResult.value.totalPages,
-            }
+                chats: chatResult.value.chats,
+                total: chatResult.value.total,
+                page: chatResult.value.page,
+                totalPages: chatResult.value.totalPages,
+              }
             : undefined;
         let full_summary: IPDFSummaryResponse | undefined = undefined;
         let full_summary_error: string | undefined;

@@ -17,9 +17,7 @@ import {
   SKILL_LEVEL_VALUES,
 } from './interfaces/roadmap.interface';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  buildSafeExternalUrl,
-} from '../../common/security/ssrf-protection.util';
+import { buildSafeExternalUrl } from '../../common/security/ssrf-protection.util';
 
 @Injectable()
 export class RoadmapService {
@@ -35,9 +33,12 @@ export class RoadmapService {
     private readonly configService: ConfigService,
   ) {
     const primary =
-      this.configService.get('ROADMAP_AI_SERVICE_URL') ||
+      this.configService.get<string>('ROADMAP_AI_SERVICE_URL') ||
+      this.configService.get<string>('ROADMAP_AI_SERVICE_URL_LMS_AI') ||
       'http://127.0.0.1:5000';
-    const fallback = this.configService.get('FALLBACK_ROADMAP_AI_SERVICE_URL');
+    const fallback =
+      this.configService.get<string>('FALLBACK_ROADMAP_AI_SERVICE_URL') ||
+      this.configService.get<string>('FALLBACK_ROADMAP_AI_SERVICE_URL_LMS_AI');
 
     // Normalize localhost -> 127.0.0.1 to avoid IPv6 (::1) issues on Windows/Postman
     this.PYTHON_SERVICE_URL = primary
@@ -45,8 +46,8 @@ export class RoadmapService {
       .replace('https://localhost', 'https://127.0.0.1');
     this.FALLBACK_PYTHON_SERVICE_URL = fallback
       ? fallback
-        .replace('http://localhost', 'http://127.0.0.1')
-        .replace('https://localhost', 'https://127.0.0.1')
+          .replace('http://localhost', 'http://127.0.0.1')
+          .replace('https://localhost', 'https://127.0.0.1')
       : undefined;
 
     this.logger.log(
@@ -58,7 +59,9 @@ export class RoadmapService {
       );
     }
     this.allowedOutboundHosts = (
-      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') || ''
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS') ||
+      this.configService.get<string>('AI_SERVICE_ALLOWED_HOSTS_LMS_AI') ||
+      ''
     )
       .split(',')
       .map((h) => h.trim().toLowerCase())
@@ -284,9 +287,9 @@ export class RoadmapService {
 
     return similar.length > 0
       ? {
-        ...similar[0].toObject(),
-        userId: similar[0].userId.toString(),
-      }
+          ...similar[0].toObject(),
+          userId: similar[0].userId.toString(),
+        }
       : null;
   }
 

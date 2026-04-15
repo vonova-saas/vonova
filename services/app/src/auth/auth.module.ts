@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
@@ -19,7 +20,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { NotificationModule } from '../notification/notification.module';
 import { WaitlistModule } from '../waitlist/waitlist.module';
-import configuration from '../common/config/configuration';
 
 @Module({
   imports: [
@@ -30,21 +30,25 @@ import configuration from '../common/config/configuration';
       { name: EmailVerification.name, schema: EmailVerificationSchema },
       { name: PasswordReset.name, schema: PasswordResetSchema },
     ]),
-    (() => {
-      const accessSecret = configuration().JWT.JWT_ACCESS_SECRET;
-      const accessExpiresIn = configuration().JWT.JWT_ACCESS_EXPIRES_IN;
-      if (!accessSecret || !accessExpiresIn) {
-        throw new Error(
-          'JWT_ACCESS_SECRET and JWT_ACCESS_EXPIRES_IN are required in .env',
-        );
-      }
-      return JwtModule.register({
-        secret: accessSecret,
-        signOptions: {
-          expiresIn: accessExpiresIn as any,
-        },
-      });
-    })(),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const accessSecret = config.get<string>('JWT.JWT_ACCESS_SECRET');
+        const accessExpiresIn = config.get<string>('JWT.JWT_ACCESS_EXPIRES_IN');
+        if (!accessSecret || !accessExpiresIn) {
+          throw new Error(
+            'JWT_ACCESS_SECRET and JWT_ACCESS_EXPIRES_IN are required in .env',
+          );
+        }
+        return {
+          secret: accessSecret,
+          signOptions: {
+            expiresIn: accessExpiresIn as any,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     NotificationModule,
     WaitlistModule,
   ],
