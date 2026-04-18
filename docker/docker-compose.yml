@@ -53,6 +53,11 @@ services:
       NATS_PASSWORD: ${NATS_PASSWORD:-}
       MONGO_URI_LOCAL_ADMIN: ${MONGO_URI_LOCAL_ADMIN:-}
       MONGO_DB_NAME_ADMIN: ${MONGO_DB_NAME_ADMIN:-}
+      email_1: ${email_1:-}
+      email_2: ${email_2:-}
+      email_3: ${email_3:-}
+      temp_password: ${temp_password:-}
+      seed_admins_on_boot: ${seed_admins_on_boot:-}
     networks:
       - private_net
       - public_net
