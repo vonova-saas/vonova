@@ -13,8 +13,8 @@ export class S3ConfigService {
 
   private resolveBucket(): string | undefined {
     return (
-      trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
       trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
+      trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
       trimEnv(process.env.AWS_S3_BUCKET) ||
       trimEnv(process.env.S3_BUCKET)
     );
@@ -22,10 +22,10 @@ export class S3ConfigService {
 
   private resolveRegion(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_REGION_LMS) ||
       trimEnv(process.env.AWS_S3_REGION) ||
       trimEnv(process.env.AWS_REGION_LMS_AI) ||
       trimEnv(process.env.AWS_S3_REGION_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_REGION_LMS) ||
       trimEnv(process.env.S3_REGION_LMS_AI) ||
       trimEnv(process.env.AWS_REGION) ||
       trimEnv(process.env.AWS_DEFAULT_REGION)
@@ -34,10 +34,10 @@ export class S3ConfigService {
 
   private resolveAccessKeyId(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS) ||
       trimEnv(process.env.AWS_S3_ACCESS_KEY_ID) ||
       trimEnv(process.env.AWS_ACCESS_KEY_ID_LMS_AI) ||
       trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS) ||
       trimEnv(process.env.S3_ACCESS_KEY_ID_LMS_AI) ||
       trimEnv(process.env.AWS_ACCESS_KEY_ID)
     );
@@ -45,10 +45,10 @@ export class S3ConfigService {
 
   private resolveSecretAccessKey(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS) ||
       trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY) ||
       trimEnv(process.env.AWS_SECRET_ACCESS_KEY_LMS_AI) ||
       trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS) ||
       trimEnv(process.env.S3_SECRET_ACCESS_KEY_LMS_AI) ||
       trimEnv(process.env.AWS_SECRET_ACCESS_KEY)
     );

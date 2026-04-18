@@ -4,6 +4,7 @@ import { S3Service } from '../../common/utils/storage/s3.service';
 import {
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -22,16 +23,25 @@ export class GuideService {
     private readonly libraryAssetModel: Model<LibraryAssetDocument>,
   ) {}
 
-  async createGuideService(payload: Partial<GuideDocument>) {
-    const guide = await this.guideModel.create(payload);
+  async createGuideService(payload: Partial<GuideDocument>, userId: string) {
+    const guideData = {
+      ...payload,
+      createdBy: userId,
+    };
+    const guide = await this.guideModel.create(guideData);
     if (!guide) throw new BadRequestException('Guide not created');
     return guide;
   }
 
-  async publishGuideService(id: string, status: 'PUBLISHED' | 'ARCHIVED') {
+  async publishGuideService(id: string, dto: any, userId: string) {
     const guide = await this.guideModel.findById(id);
     if (!guide) throw new NotFoundException('Guide not found');
-    guide.status = status;
+    if (guide.createdBy.toString() !== userId)
+      throw new ForbiddenException(
+        'You are not authorized to publish this guide',
+      );
+    
+    guide.status = dto.status;
     await guide.save();
     return guide;
   }
@@ -120,9 +130,13 @@ export class GuideService {
     };
   }
 
-  async updateGuideService(id: string, dto: UpdateGuideDto) {
+  async updateGuideService(id: string, dto: UpdateGuideDto, userId: string) {
     const guide = await this.guideModel.findById(id);
     if (!guide) throw new NotFoundException('Guide not found');
+    if (guide.createdBy.toString() !== userId)
+      throw new ForbiddenException(
+        'You are not authorized to update this guide',
+      );
 
     if (dto.title) guide.title = dto.title;
     if (dto.slug) guide.slug = dto.slug;
@@ -154,9 +168,14 @@ export class GuideService {
     return guide;
   }
 
-  async deleteGuideService(id: string) {
+  async deleteGuideService(id: string, userId: string) {
     const guide = await this.guideModel.findById(id);
     if (!guide) throw new NotFoundException('Guide not found');
+    if (guide.createdBy.toString() !== userId)
+      throw new ForbiddenException(
+        'You are not authorized to delete this guide',
+      );
+    
     await guide.deleteOne();
     return { message: 'Guide deleted successfully' };
   }

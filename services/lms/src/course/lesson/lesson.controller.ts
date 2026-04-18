@@ -142,4 +142,26 @@ export class LessonController {
 
     return this.lessonService.getLesson(lessonId, courseId);
   }
+
+  @MessagePattern({ cmd: 'lesson.asset.create' })
+  async createAssetRecord(
+    @Payload() data: { 
+      courseId: string;
+      chapterId: string;
+      lessonId: string;
+      metadata: any;
+      user?: { id?: string; sub?: string } 
+    },
+  ) {
+    const { courseId, chapterId, lessonId, metadata, user } = data;
+    if (!courseId || !chapterId || !lessonId) {
+      throw new Error('courseId, chapterId, and lessonId are required');
+    }
+
+    // Extract userId from multiple possible sources
+    const extractedUserId = user?.id || user?.sub;
+    if (!extractedUserId) throw new Error('User identification is required');
+
+    return this.lessonService.createAssetRecord(courseId, chapterId, lessonId, extractedUserId, metadata);
+  }
 }

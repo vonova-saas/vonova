@@ -126,11 +126,12 @@ export class CreateCourseDto {
   @IsString()
   language?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pricing information for the course',
     type: CoursePriceDto,
   })
-  price: CoursePriceDto;
+  @IsOptional()
+  price?: CoursePriceDto;
 }
 
 export class UpdateCourseDto extends CreateCourseDto {

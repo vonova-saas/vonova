@@ -1,6 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { PresignDto, CompleteDto } from './dto/upload.dto';
+import { CompleteDto } from './dto/upload.dto';
+
+export interface FileUploadRequest {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
+export interface AssetMetadata {
+  originalFileName: string;
+  mimeType: string;
+  size: number;
+  objectKey: string;
+  fileUrl: string;
+}
 
 @Injectable()
 export class UploadGatewayService {
@@ -9,21 +24,43 @@ export class UploadGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  presignFile(
+  createAssetRecord(
     itemType: string,
     itemId: string,
-    ownerId: string,
-    dto: PresignDto,
+    userId: string,
+    metadata: AssetMetadata,
   ) {
     return this.client.send(
-      { cmd: 'library.upload.presign' },
+      { cmd: 'library.upload.createAsset' },
       {
         itemType,
         itemId,
-        ownerId,
-        fileName: dto.fileName,
-        mimeType: dto.mimeType,
-        size: dto.size,
+        metadata,
+        user: { id: userId },
+      },
+    );
+  }
+
+  uploadFile(
+    itemType: string,
+    itemId: string,
+    userId: string,
+    file: Express.Multer.File,
+  ) {
+    const uploadData: FileUploadRequest = {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      buffer: file.buffer,
+    };
+
+    return this.client.send(
+      { cmd: 'library.upload.direct' },
+      {
+        itemType,
+        itemId,
+        file: uploadData,
+        user: { id: userId },
       },
     );
   }
@@ -31,7 +68,7 @@ export class UploadGatewayService {
   completeUpload(
     itemType: string,
     itemId: string,
-    ownerId: string,
+    userId: string,
     dto: CompleteDto,
   ) {
     return this.client.send(
@@ -39,9 +76,9 @@ export class UploadGatewayService {
       {
         itemType,
         itemId,
-        ownerId,
         assetId: dto.assetId,
         objectKey: dto.objectKey,
+        user: { id: userId },
       },
     );
   }

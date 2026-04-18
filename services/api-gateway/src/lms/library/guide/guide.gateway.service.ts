@@ -13,8 +13,8 @@ export class GuideGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  createGuide(dto: CreateGuideDto) {
-    return this.client.send({ cmd: 'library.guides.create' }, { dto });
+  createGuide(dto: CreateGuideDto, userId: string) {
+    return this.client.send({ cmd: 'library.guides.create' }, { dto, userId });
   }
 
   listGuides(query: any) {
@@ -33,15 +33,15 @@ export class GuideGatewayService {
     return this.client.send({ cmd: 'library.guides.getBySlug' }, { slug });
   }
 
-  updateGuide(id: string, dto: UpdateGuideDto) {
-    return this.client.send({ cmd: 'library.guides.update' }, { id, dto });
+  updateGuide(id: string, dto: UpdateGuideDto, userId: string) {
+    return this.client.send({ cmd: 'library.guides.update' }, { id, dto, userId });
   }
 
-  publishGuide(id: string, dto: PublishGuideDto) {
-    return this.client.send({ cmd: 'library.guides.publish' }, { id, dto });
+  publishGuide(id: string, dto: PublishGuideDto, userId: string) {
+    return this.client.send({ cmd: 'library.guides.publish' }, { id, dto, userId });
   }
 
-  deleteGuide(id: string) {
-    return this.client.send({ cmd: 'library.guides.delete' }, { id });
+  deleteGuide(id: string, userId: string) {
+    return this.client.send({ cmd: 'library.guides.delete' }, { id, userId });
   }
 }

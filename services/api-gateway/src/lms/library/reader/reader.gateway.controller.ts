@@ -69,11 +69,16 @@ export class ReaderGatewayController {
   })
   @Get('books/:bookId/content')
   async getBookContent(@Param('bookId') bookId: string, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     const data = await firstValueFrom(
       this.readerService.getBookContent(bookId, userId),
     );
-    return { message: 'Book content', data };
+    return { message: 'Book content retrieved successfully', data };
   }
 
   @ApiOperation({
@@ -252,11 +257,16 @@ export class ReaderGatewayController {
     @Body() dto: UpdateReaderBookProgressDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     const doc = await firstValueFrom(
       this.readerService.updateBookProgress(bookId, userId, dto),
     );
-    return { message: 'Progress updated', data: doc };
+    return { message: 'Book progress updated successfully', data: doc };
   }
 
   @ApiOperation({
@@ -317,10 +327,15 @@ export class ReaderGatewayController {
     @Param('bookId') bookId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     const data = await firstValueFrom(
       this.readerService.getMyBookProgress(bookId, userId),
     );
-    return { message: 'My progress', data };
+    return { message: 'Book progress retrieved successfully', data };
   }
 }

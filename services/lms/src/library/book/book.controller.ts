@@ -14,13 +14,27 @@ export class BookController {
   constructor(private readonly bookService: BookService) {}
 
   @MessagePattern({ cmd: 'book.create' })
-  createBook(@Payload() body: CreateBookDto) {
-    return this.bookService.createBookService(body, 'USER_ID'); // replace with Auth later
+  createBook(@Payload() data: { dto: CreateBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { dto, userId, user } = data;
+    if (!dto) throw new Error('dto is required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
+
+    return this.bookService.createBookService(dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'book.publish' })
-  publishBook(@Payload('id') id: string, @Payload('dto') body: PublishBookDto) {
-    return this.bookService.publishBookService(id, body, 'USER_ID'); // replace with Auth later
+  publishBook(@Payload() data: { id: string; dto: PublishBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, dto, userId, user } = data;
+    if (!id || !dto) throw new Error('id and dto are required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
+
+    return this.bookService.publishBookService(id, dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'book.getAll' })
@@ -40,20 +54,38 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.update' })
-  updateBook(@Payload('id') id: string, @Payload('dto') body: UpdateBookDto) {
-    return this.bookService.updateBookService(id, body, 'USER_ID'); // replace with Auth later
+  updateBook(@Payload() data: { id: string; dto: UpdateBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, dto, userId, user } = data;
+    if (!id || !dto) throw new Error('id and dto are required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
+
+    return this.bookService.updateBookService(id, dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'book.updateProgress' })
-  updateBookProgress(
-    @Payload('bookId') bookId: string,
-    @Payload('body') body: UpdateProgressDto,
-  ) {
-    return this.bookService.updateBookProgressService(bookId, 'USER_ID', body); // replace with Auth later
+  updateBookProgress(@Payload() data: { bookId: string; userId?: string; user?: { id?: string; sub?: string; _id?: string }; body: UpdateProgressDto }) {
+    const { bookId, userId, user, body } = data;
+    if (!bookId || !body) throw new Error('bookId and body are required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
+
+    return this.bookService.updateBookProgressService(bookId, createdBy, body);
   }
 
   @MessagePattern({ cmd: 'book.delete' })
-  deleteBook(@Payload('id') id: string) {
-    return this.bookService.deleteBookService(id, 'USER_ID'); // replace with Auth later
+  deleteBook(@Payload() data: { id: string; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, userId, user } = data;
+    if (!id) throw new Error('id is required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
+
+    return this.bookService.deleteBookService(id, createdBy);
   }
 }

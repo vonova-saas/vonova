@@ -110,7 +110,12 @@ export class PresentationGatewayController {
   })
   @Post('createPresentation')
   async create(@Body() dto: CreatePresentationDto, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.presentationService.create(dto, userId));
   }
 
@@ -161,7 +166,12 @@ export class PresentationGatewayController {
     @Body() dto: UpdatePresentationDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.presentationService.update(id, dto, userId));
   }
 
@@ -209,7 +219,12 @@ export class PresentationGatewayController {
     @Body() dto: PublishPresentationDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.presentationService.publish(id, dto, userId));
   }
 
@@ -250,7 +265,12 @@ export class PresentationGatewayController {
     @Param('presentationId') presentationId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(
       this.presentationService.delete(presentationId, userId),
     );

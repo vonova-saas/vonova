@@ -1,7 +1,30 @@
-import { IsString, IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export enum ItemType {
+  BOOK = 'BOOK',
+  GUIDE = 'GUIDE',
+  PRESENTATION = 'PRESENTATION',
+}
+
 export class PresignDto {
+  @ApiProperty({
+    description: 'Type of item (BOOK, GUIDE, or PRESENTATION)',
+    enum: ItemType,
+    example: ItemType.BOOK,
+  })
+  @IsEnum(ItemType)
+  @IsNotEmpty()
+  itemType: ItemType;
+
+  @ApiProperty({
+    description: 'The unique identifier of the item',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsString()
+  @IsNotEmpty()
+  itemId: string;
+
   @ApiProperty({
     description: 'Original filename of the file being uploaded',
     example: 'javascript-guide.pdf',

@@ -29,8 +29,9 @@ export class S3Service {
 
   private resolveBucket(): string | undefined {
     return (
-      trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
       trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
+      trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
+      trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
       trimEnv(process.env.AWS_S3_BUCKET) ||
       trimEnv(process.env.S3_BUCKET)
     );
@@ -150,6 +151,70 @@ export class S3Service {
     fileName: string,
   ): string {
     const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `courses/${courseId}/lessons/${lessonId}/${Date.now()}_${sanitized}`;
+    return `course/${courseId}/lessons/${lessonId}/${Date.now()}_${sanitized}`;
+  }
+
+  generateCourseObjectKey(
+    courseId: string,
+    lessonId: string,
+    fileName: string,
+  ): string {
+    const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `course/${courseId}/lessons/${lessonId}/${Date.now()}_${sanitized}`;
+  }
+
+  generateLibraryObjectKey(
+    itemType: string,
+    itemId: string,
+    fileName: string,
+  ): string {
+    const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `library/${itemType.toLowerCase()}/${itemId}/${Date.now()}_${sanitized}`;
+  }
+
+  async uploadFileToLibrary(
+    objectKey: string,
+    fileBuffer: Buffer,
+    contentType: string,
+  ): Promise<{ location: string }> {
+    const { client, bucket } = this.ensureClient();
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      Body: fileBuffer,
+      ContentType: contentType,
+    });
+    
+    await client.send(command);
+    return { location: `https://${bucket}.s3.amazonaws.com/${objectKey}` };
+  }
+
+  async getPresignedPutUrlForLibrary(
+    objectKey: string,
+    contentType: string,
+    expiresInSeconds = this.presignExpiresInSeconds,
+  ): Promise<string> {
+    const { client, bucket } = this.ensureClient();
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      ContentType: contentType,
+    });
+    return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+  }
+
+  async headObjectExistsInLibrary(objectKey: string): Promise<boolean> {
+    const { client, bucket } = this.ensureClient();
+    try {
+      await client.send(
+        new HeadObjectCommand({
+          Bucket: bucket,
+          Key: objectKey,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

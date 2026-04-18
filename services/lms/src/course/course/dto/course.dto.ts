@@ -59,7 +59,8 @@ export class CreateCourseDto {
   @IsString()
   language?: string;
 
-  price: CoursePriceDto;
+  @IsOptional()
+  price?: CoursePriceDto;
 }
 
 export class UpdateCourseDto extends CreateCourseDto {

@@ -29,6 +29,129 @@ export class UploadService {
     private readonly presModel: Model<Presentation>,
   ) {}
 
+  async createAssetRecord(
+    itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
+    itemId: string,
+    ownerId: string,
+    fileName: string,
+    mimeType: string,
+    size: number,
+    objectKey: string,
+    fileUrl: string,
+  ) {
+    const { model } = await this.ensureOwner(itemType, itemId, ownerId);
+
+    // Create asset record with S3 URL
+    const asset = await this.assetModel.create({
+      ownerId,
+      itemType,
+      itemId: model._id,
+      objectKey,
+      originalFileName: fileName,
+      mimeType,
+      size,
+      status: 'UPLOADED',
+      provider: 'S3',
+      urls: { 
+        sourceUrl: fileUrl,
+        streamUrl: fileUrl,
+      },
+    });
+
+    // Link file to item
+    if (itemType === 'BOOK')
+      await this.bookModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
+    if (itemType === 'GUIDE')
+      await this.guideModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
+    if (itemType === 'PRESENTATION')
+      await this.presModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+      });
+
+    return { 
+      assetId: asset.id, 
+      itemId,
+      objectKey,
+      fileName,
+      size,
+      mimeType,
+      fileUrl,
+    };
+  }
+
+  async directUpload(
+    itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
+    itemId: string,
+    ownerId: string,
+    fileName: string,
+    mimeType: string,
+    size: number,
+    fileBuffer: Buffer,
+  ) {
+    const { model } = await this.ensureOwner(itemType, itemId, ownerId);
+
+    const objectKey = this.s3Service.generateLibraryObjectKey(
+      itemType.toLowerCase(),
+      itemId,
+      fileName,
+    );
+
+    // Upload file directly to S3
+    const uploadResult = await this.s3Service.uploadFileToLibrary(
+      objectKey,
+      fileBuffer,
+      mimeType,
+    );
+
+    const asset = await this.assetModel.create({
+      ownerId,
+      itemType,
+      itemId: model._id,
+      objectKey,
+      originalFileName: fileName,
+      mimeType,
+      size,
+      status: 'UPLOADED',
+      provider: 'S3',
+      urls: { 
+        sourceUrl: uploadResult.location,
+        streamUrl: uploadResult.location,
+      },
+    });
+
+    // Link file to item and store the AWS S3 URL
+    const fileUrl = uploadResult.location;
+    if (itemType === 'BOOK')
+      await this.bookModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+        fileUrl: fileUrl,
+      });
+    if (itemType === 'GUIDE')
+      await this.guideModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+        fileUrl: fileUrl,
+      });
+    if (itemType === 'PRESENTATION')
+      await this.presModel.findByIdAndUpdate(itemId, {
+        fileAssetId: asset._id,
+        fileUrl: fileUrl,
+      });
+
+    return { 
+      assetId: asset.id, 
+      itemId,
+      objectKey,
+      fileName,
+      size,
+      mimeType,
+      location: uploadResult.location,
+    };
+  }
+
   async presignFile(
     itemType: 'BOOK' | 'GUIDE' | 'PRESENTATION',
     itemId: string,
@@ -39,12 +162,12 @@ export class UploadService {
   ) {
     const { model } = await this.ensureOwner(itemType, itemId, ownerId);
 
-    const objectKey = this.s3Service.generateObjectKey(
-      itemId,
+    const objectKey = this.s3Service.generateLibraryObjectKey(
+      itemType.toLowerCase(),
       itemId,
       fileName,
     );
-    const uploadUrl = await this.s3Service.getPresignedPutUrl(
+    const uploadUrl = await this.s3Service.getPresignedPutUrlForLibrary(
       objectKey,
       mimeType,
     );
@@ -74,7 +197,7 @@ export class UploadService {
   ) {
     await this.ensureOwner(itemType, itemId, ownerId);
 
-    const exists = await this.s3Service.headObjectExists(objectKey);
+    const exists = await this.s3Service.headObjectExistsInLibrary(objectKey);
     if (!exists)
       throw new NotFoundException('Uploaded file not found in bucket');
 
@@ -85,18 +208,22 @@ export class UploadService {
     asset.urls.streamUrl = asset.urls.sourceUrl;
     await asset.save();
 
-    // Link file to item
+    // Link file to item and store the AWS S3 URL
+    const fileUrl = asset.urls.sourceUrl;
     if (itemType === 'BOOK')
       await this.bookModel.findByIdAndUpdate(itemId, {
         fileAssetId: asset._id,
+        fileUrl: fileUrl,
       });
     if (itemType === 'GUIDE')
       await this.guideModel.findByIdAndUpdate(itemId, {
         fileAssetId: asset._id,
+        fileUrl: fileUrl,
       });
     if (itemType === 'PRESENTATION')
       await this.presModel.findByIdAndUpdate(itemId, {
         fileAssetId: asset._id,
+        fileUrl: fileUrl,
       });
 
     return { assetId: asset.id, itemId };

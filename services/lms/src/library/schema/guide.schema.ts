@@ -28,8 +28,8 @@ export class GuideMetrics {
 
 @Schema({ timestamps: true })
 export class Guide {
-  // @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  // createdBy: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: Types.ObjectId;
 
   @Prop({ required: true, trim: true, unique: true, index: true })
   title: string;

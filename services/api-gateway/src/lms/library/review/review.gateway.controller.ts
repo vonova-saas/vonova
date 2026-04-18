@@ -94,7 +94,12 @@ export class ReviewGatewayController {
     @Body() dto: CreateOrUpdateReviewDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     const review = await firstValueFrom(
       this.reviewService.createOrUpdateReview(itemType, itemId, userId, dto),
     );
@@ -261,7 +266,12 @@ export class ReviewGatewayController {
     @Param('itemId') itemId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     const review = await firstValueFrom(
       this.reviewService.getMyReview(itemType, itemId, userId),
     );
