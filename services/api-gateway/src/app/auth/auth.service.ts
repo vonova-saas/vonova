@@ -93,4 +93,12 @@ export class AuthGatewayService {
   logoutAll(accessToken: string) {
     return this.client.send({ cmd: 'logoutAll' }, { accessToken });
   }
+
+  adminResetPassword(payload: {
+    accessToken: string;
+    oldPassword: string;
+    newPassword: string;
+  }) {
+    return this.client.send({ cmd: 'adminResetPassword' }, payload);
+  }
 }

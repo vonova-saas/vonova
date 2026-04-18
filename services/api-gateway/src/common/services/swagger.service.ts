@@ -49,6 +49,7 @@ export class SwaggerService {
       .addTag('Gateway', 'API Gateway')
       .addTag('Admin', 'Admin Service')
       .addTag('Authentication', 'Authentication')
+      .addTag('Onboarding', 'Role-specific onboarding after welcome')
       .addTag('Account Management', 'Account management')
       .addTag('Settings Management', 'Settings management')
       .addTag('Billing Management', 'Billing management')

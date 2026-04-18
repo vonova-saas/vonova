@@ -3,11 +3,15 @@ import { MessagePattern, EventPattern, Payload } from '@nestjs/microservices';
 import { AdminService } from './admin.service';
 import { UserRole } from './dto/admin.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { AdminUsersService } from '../admin-users/admin-users.service';
 
 @ApiTags('Admin')
 @Controller()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) { }
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly adminUsersService: AdminUsersService,
+  ) {}
 
   @MessagePattern({ cmd: 'admin.health.check' })
   async handleHealthCheck(@Payload() data: any) {
@@ -27,9 +31,17 @@ export class AdminController {
   }
 
   @MessagePattern({ cmd: 'admin.account.getUsers' })
-  async handleGetUsers(@Payload() data: { page?: number; limit?: number; role?: UserRole; search?: string }) {
+  async handleGetUsers(
+    @Payload()
+    data: {
+      page?: number;
+      limit?: number;
+      role?: UserRole | string;
+      search?: string;
+    },
+  ) {
     try {
-      const result = await this.adminService.getAllUsers(data);
+      const result = await this.adminUsersService.getAllUsersWithPresence(data);
       return {
         success: true,
         data: result,

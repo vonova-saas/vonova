@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
@@ -53,17 +54,17 @@ async function bootstrap() {
   const parsedOrigins =
     rawOrigins != null && rawOrigins.trim() !== ''
       ? rawOrigins
-        .split(',')
-        .map((o) => o.trim().replace(/^"|"$/g, ''))
-        .filter((o) => o.length > 0)
+          .split(',')
+          .map((o) => o.trim().replace(/^"|"$/g, ''))
+          .filter((o) => o.length > 0)
       : [];
 
   const origins =
     parsedOrigins.length > 0
       ? parsedOrigins
       : [configuration().FRONTEND_ORIGIN].filter(
-        (o): o is string => typeof o === 'string' && o.length > 0,
-      );
+          (o): o is string => typeof o === 'string' && o.length > 0,
+        );
 
   app.enableCors({
     origin: (origin, callback) => {

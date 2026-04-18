@@ -5,6 +5,7 @@ import { User, UserDocument } from './schemas/user.schema';
 import { UserRole } from './dto/admin.dto';
 import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { DB_ADMIN_ROLE } from '../common/utils/admin-role-mapping.util';
 
 @Injectable()
 export class AdminService {
@@ -21,64 +22,6 @@ export class AdminService {
         queue: 'auth_queue',
       },
     });
-  }
-
-  async getAllUsers(params: {
-    page?: number;
-    limit?: number;
-    role?: UserRole;
-    isActive?: boolean;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }) {
-    const {
-      page = 1,
-      limit = 10,
-      role,
-      isActive,
-      search,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = params;
-
-    const skip = (page - 1) * limit;
-    
-    // Build filter query
-    const filter: any = {};
-    if (role) filter.role = role;
-    if (isActive !== undefined) filter.isActive = isActive;
-    
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { bio: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Build sort query
-    const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-    const [users, total] = await Promise.all([
-      this.userModel.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .select('-__v'),
-      this.userModel.countDocuments(filter)
-    ]);
-
-    return {
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    };
   }
 
   async getUserById(userId: string) {
@@ -126,7 +69,7 @@ export class AdminService {
   ) {
     // Verify admin permissions
     const admin = await this.userModel.findOne({ _id: adminUserId });
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin || admin.role !== DB_ADMIN_ROLE) {
       throw new ForbiddenException("Admin access required");
     }
 
@@ -183,7 +126,7 @@ export class AdminService {
     isActive: boolean
   ) {
     const admin = await this.userModel.findOne({ _id: adminUserId });
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin || admin.role !== DB_ADMIN_ROLE) {
       throw new ForbiddenException("Admin access required");
     }
 
@@ -209,7 +152,7 @@ export class AdminService {
   async deleteUserById(adminUserId: string, targetUserId: string) {
     // Ensure the requester is an admin
     const admin = await this.userModel.findOne({ _id: adminUserId });
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin || admin.role !== DB_ADMIN_ROLE) {
       throw new ForbiddenException("Admin access required");
     }
 
@@ -263,7 +206,7 @@ export class AdminService {
 
   async getInstructorStatistics() {
     const instructors = await this.userModel.find({ 
-      role: UserRole.INSTRUCTOR,
+      role: 'INSTRUCTOR_USER',
       isActive: true 
     });
 
@@ -287,7 +230,7 @@ export class AdminService {
 
   async getStudentStatistics() {
     const students = await this.userModel.find({ 
-      role: UserRole.STUDENT,
+      role: 'STUDENT_USER',
       isActive: true 
     });
 

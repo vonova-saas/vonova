@@ -14,6 +14,7 @@ import { EmailVerification } from './schema/emailVerification.schema';
 import { PasswordReset } from './schema/passwordReset.schema';
 import { WaitlistService } from '../waitlist/waitlist.service';
 import { NotificationService } from '../notification/notification.service';
+import { TokenBlacklistService } from './token-blacklist.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -60,6 +61,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtServiceMock },
         { provide: WaitlistService, useValue: waitlistServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: TokenBlacklistService, useValue: {} },
       ],
     }).compile();
 

@@ -20,6 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { NotificationModule } from '../notification/notification.module';
 import { WaitlistModule } from '../waitlist/waitlist.module';
+import { StorageModule } from '../common/storage/storage.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { WaitlistModule } from '../waitlist/waitlist.module';
     }),
     NotificationModule,
     WaitlistModule,
+    StorageModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, TokenBlacklistService],

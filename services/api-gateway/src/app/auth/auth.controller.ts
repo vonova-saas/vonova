@@ -12,6 +12,7 @@ import {
   Req,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -21,6 +22,7 @@ import {
   ApiConsumes,
   ApiBody,
   ApiCookieAuth,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import type { Response, Request } from 'express';
 import { AuthGatewayService } from './auth.service';
@@ -38,7 +40,9 @@ import { OAuthWelcomeDto } from './dto/oauth-welcome.dto';
 import configuration from '../../common/config/configuration';
 import { firstValueFrom } from 'rxjs';
 import type { UploadedFile as CustomUploadedFile } from '../../common/interfaces/file.interface';
-
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminResetPasswordBodyDto } from './dto/admin-reset-password.dto';
+import { extractAccessTokenFromRequest } from '../../common/utils/extract-access-token';
 @ApiTags('Authentication')
 @ApiCookieAuth()
 @Controller('api/v1/auth')
@@ -134,7 +138,7 @@ export class AuthGatewayController {
           type: 'object',
           properties: {
             userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
-            userRole: { type: 'string', example: 'STUDENT' },
+            userRole: { type: 'string', example: 'STUDENT_USER' },
           },
         },
       },
@@ -307,7 +311,7 @@ export class AuthGatewayController {
                 _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
                 email: { type: 'string', example: 'john.doe@example.com' },
                 name: { type: 'string', example: 'John Doe' },
-                role: { type: 'string', example: 'STUDENT' },
+                role: { type: 'string', example: 'STUDENT_USER' },
               },
             },
           },
@@ -431,7 +435,7 @@ export class AuthGatewayController {
         _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
         email: { type: 'string', example: 'john.doe@example.com' },
         name: { type: 'string', example: 'John Doe' },
-        role: { type: 'string', example: 'STUDENT' },
+        role: { type: 'string', example: 'STUDENT_USER' },
         avatarUrl: {
           type: 'string',
           example: 'https://example.com/avatar.jpg',
@@ -454,6 +458,41 @@ export class AuthGatewayController {
       throw new BadRequestException('Access token cookie is required');
     }
     return this.authService.currentUser(accessToken);
+  }
+
+  @ApiOperation({
+    summary: 'Administrator mandatory password change',
+    description:
+      'Validates the current password, sets a new one, and clears `mustChangePassword`. ' +
+      'Send the same access token as other protected routes: `accessToken` cookie **or** `Authorization: Bearer <jwt>`. ' +
+      'After success, sign in again (refresh tokens are cleared). ' +
+      'This route is exempt from the `mustChangePassword` JWT guard block.',
+  })
+  @ApiBody({ type: AdminResetPasswordBodyDto })
+  @ApiResponse({ status: 200, description: 'Password updated' })
+  @ApiResponse({ status: 400, description: 'Wrong old password or weak new password' })
+  @ApiResponse({ status: 401, description: 'Invalid access token' })
+  @ApiResponse({ status: 403, description: 'Not an allowlisted admin' })
+  @ApiBearerAuth()
+  @Post('admin/reset-password')
+  @UseGuards(JwtAuthGuard)
+  async adminResetPassword(
+    @Req() request: Request,
+    @Body() body: AdminResetPasswordBodyDto,
+  ) {
+    const accessToken = extractAccessTokenFromRequest(request);
+    if (!accessToken) {
+      throw new BadRequestException(
+        'Access token required: set accessToken cookie or Authorization: Bearer <jwt>',
+      );
+    }
+    return firstValueFrom(
+      this.authService.adminResetPassword({
+        accessToken,
+        oldPassword: body.oldPassword,
+        newPassword: body.newPassword,
+      }),
+    );
   }
 
   @ApiOperation({
@@ -614,7 +653,7 @@ export class AuthGatewayController {
                     },
                     email: { type: 'string', example: 'john.doe@gmail.com' },
                     name: { type: 'string', example: 'John Doe' },
-                    role: { type: 'string', example: 'STUDENT' },
+                    role: { type: 'string', example: 'STUDENT_USER' },
                   },
                 },
                 accessToken: {
@@ -733,7 +772,7 @@ export class AuthGatewayController {
           type: 'object',
           properties: {
             userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
-            userRole: { type: 'string', example: 'STUDENT' },
+            userRole: { type: 'string', example: 'STUDENT_USER' },
             username: { type: 'string', example: 'johndoe123' },
           },
         },

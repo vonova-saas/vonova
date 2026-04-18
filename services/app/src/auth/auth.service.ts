@@ -41,8 +41,12 @@ import {
 } from './schema/passwordReset.schema';
 import { ProviderEnum } from './enums/provider.enum';
 import { Role } from './enums/role.enum';
+import { UserAccountStatus } from './enums/user-account-status.enum';
+import { ApproveInstructorDto } from './dto/approve-instructor.dto';
+import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
 import { NotificationService } from '../notification/notification.service';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { isPredefinedAdminEmail } from '../common/admin/admin-allowlist';
 
 @Injectable()
 export class AuthService {
@@ -125,10 +129,66 @@ export class AuthService {
     return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
 
+  /** Rejects tokens/sessions for users marked ADMIN without an allowlisted email. */
+  private enforceAdminEmailAllowlist(
+    user: Pick<UserDocument, 'email' | 'role'>,
+  ): void {
+    if (user.role !== Role.ADMIN) return;
+    if (!isPredefinedAdminEmail(user.email)) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'This account is not authorized as an administrator',
+        error: 'Forbidden',
+      });
+    }
+  }
+
+  private assertCanAuthenticate(user: UserDocument) {
+    if (user.role === Role.ADMIN) {
+      this.enforceAdminEmailAllowlist(user);
+      return;
+    }
+    if (user.onboardingCompleted === false) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Complete onboarding first',
+        error: 'Forbidden',
+      });
+    }
+    const accountStatus = user.status ?? UserAccountStatus.ACTIVE;
+    if (
+      user.role === Role.INSTRUCTOR_USER &&
+      accountStatus === UserAccountStatus.PENDING
+    ) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Your account is under review',
+        error: 'Forbidden',
+      });
+    }
+    if (
+      user.role === Role.INSTRUCTOR_USER &&
+      accountStatus === UserAccountStatus.REJECTED
+    ) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Your instructor application was not approved',
+        error: 'Forbidden',
+      });
+    }
+  }
+
   // ========== Register Flow Services ==========
 
   async register(dto: RegisterDto) {
     const normalizedEmail = this.normalizeEmail(dto.email);
+    if (isPredefinedAdminEmail(normalizedEmail)) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'This email is reserved for platform administration',
+        error: 'Forbidden',
+      });
+    }
     const existing = await this.userModel
       .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
       .exec();
@@ -147,6 +207,7 @@ export class AuthService {
       role: Role.PENDING,
       isVerified: false,
       isActive: true,
+      onboardingCompleted: false,
     });
     await user.save();
 
@@ -278,6 +339,14 @@ export class AuthService {
       } catch {
         // Invalid or expired promo: do not block welcome; continue without applying coupon
       }
+    }
+
+    if (String(dto.role).trim().toUpperCase() === Role.ADMIN) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Administrator role cannot be assigned through this flow',
+        error: 'Forbidden',
+      });
     }
 
     user.role = dto.role as Role;
@@ -417,6 +486,15 @@ export class AuthService {
     const { providerId, provider, displayName, email, picture, userAgent } =
       dto;
 
+    if (email && isPredefinedAdminEmail(email)) {
+      throw new RpcException({
+        statusCode: 403,
+        message:
+          'This email is reserved for platform administration; use email and password to sign in',
+        error: 'Forbidden',
+      });
+    }
+
     // First, check if user exists by email
     let user = await this.userModel.findOne({ email });
     let isNewUser = false;
@@ -429,6 +507,7 @@ export class AuthService {
         profilePictureUrl: picture || null,
         role: Role.PENDING,
         isVerified: true, // Google users are always verified
+        onboardingCompleted: false,
       });
       await user.save();
 
@@ -452,8 +531,19 @@ export class AuthService {
       };
     }
 
+    if (isPredefinedAdminEmail(user.email)) {
+      throw new RpcException({
+        statusCode: 403,
+        message:
+          'Administrator accounts must sign in with email and password',
+        error: 'Forbidden',
+      });
+    }
+
     user.lastLogin = new Date();
     await user.save();
+
+    this.assertCanAuthenticate(user);
 
     // Create access Token and refresh Token
     const jti = uuidv4();
@@ -525,17 +615,9 @@ export class AuthService {
       });
     }
 
-    // Validate role
+    // Validate role (ADMIN is never self-assigned)
     const validRoles = [Role.STUDENT_USER, Role.INSTRUCTOR_USER];
-    if (!validRoles.includes(role as any)) {
-      throw new RpcException({
-        statusCode: 400,
-        message: 'Invalid role',
-        error: 'Bad Request',
-      });
-    }
-
-    if (!Object.values(Role).includes(role as any)) {
+    if (!validRoles.includes(role as Role)) {
       throw new RpcException({
         statusCode: 400,
         message: 'Invalid role',
@@ -621,10 +703,17 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const normalizedEmail = this.normalizeEmail(dto.email);
-    const userWithPassword = await this.userModel
-      .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
+    // Exact match on normalized email (User.email is stored lowercased); regex fallback for legacy rows
+    let userWithPassword = await this.userModel
+      .findOne({ email: normalizedEmail })
       .select('+password')
       .exec();
+    if (!userWithPassword) {
+      userWithPassword = await this.userModel
+        .findOne({ email: this.emailExactCaseInsensitive(normalizedEmail) })
+        .select('+password')
+        .exec();
+    }
 
     if (!userWithPassword) {
       throw new RpcException({
@@ -660,6 +749,8 @@ export class AuthService {
         error: 'Bad Request',
       });
     }
+
+    this.assertCanAuthenticate(userWithPassword);
 
     userWithPassword.lastLogin = new Date();
     await userWithPassword.save();
@@ -715,6 +806,7 @@ export class AuthService {
           role: userWithPassword.role,
           isActive: userWithPassword.isActive,
           isVerified: userWithPassword.isVerified,
+          mustChangePassword: userWithPassword.mustChangePassword === true,
         },
         accessToken,
         refreshToken,
@@ -765,6 +857,8 @@ export class AuthService {
           error: 'Unauthorized',
         });
       }
+
+      this.assertCanAuthenticate(user);
 
       const accessToken = this.signAccessToken(String(user._id), user.role);
       const nextJti = uuidv4();
@@ -837,6 +931,111 @@ export class AuthService {
     }
   }
 
+  async approveInstructor(dto: ApproveInstructorDto) {
+    const user = await this.userModel.findById(dto.instructorId).exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
+    if (user.role !== Role.INSTRUCTOR_USER) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'User is not an instructor',
+        error: 'Bad Request',
+      });
+    }
+    if (user.status !== UserAccountStatus.PENDING) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Instructor is not pending approval',
+        error: 'Bad Request',
+      });
+    }
+    user.status = UserAccountStatus.ACTIVE;
+    await user.save();
+    return {
+      message: 'Instructor approved successfully',
+      data: {
+        userId: user._id,
+        status: user.status,
+      },
+    };
+  }
+
+  async rejectInstructor(dto: ApproveInstructorDto) {
+    const user = await this.userModel.findById(dto.instructorId).exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
+    if (user.role !== Role.INSTRUCTOR_USER) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'User is not an instructor',
+        error: 'Bad Request',
+      });
+    }
+    if (user.status !== UserAccountStatus.PENDING) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Instructor is not pending approval',
+        error: 'Bad Request',
+      });
+    }
+    user.status = UserAccountStatus.REJECTED;
+    await user.save();
+    return {
+      message: 'Instructor application rejected',
+      data: {
+        userId: user._id,
+        status: user.status,
+      },
+    };
+  }
+
+  async listPendingInstructors() {
+    const rows = await this.userModel
+      .find({
+        role: Role.INSTRUCTOR_USER,
+        status: UserAccountStatus.PENDING,
+        onboardingCompleted: true,
+      })
+      .select('-password -couponCode')
+      .sort({ updatedAt: -1 })
+      .lean()
+      .exec();
+
+    const instructors = rows.map((u) => ({
+      user: {
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        profilePictureUrl: u.profilePictureUrl,
+        role: u.role,
+        status: u.status,
+        onboardingCompleted: u.onboardingCompleted,
+        isVerified: u.isVerified,
+        isActive: u.isActive,
+        bio: u.bio,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+      },
+      onboarding: u.onboarding ?? {},
+      cvUrl: u.cvUrl ?? null,
+    }));
+
+    return {
+      message: 'Pending instructors retrieved',
+      data: { instructors },
+    };
+  }
+
   async getCurrentUser(accessToken: string) {
     try {
       const payload = this.jwtService.verify<{ userId: string; role: string }>(
@@ -853,17 +1052,80 @@ export class AuthService {
           error: 'Not Found',
         });
       }
+      this.enforceAdminEmailAllowlist(user);
       return {
         message: 'Current user fetched successfully',
         user,
       };
     } catch (e) {
+      if (e instanceof RpcException) {
+        throw e;
+      }
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid access token',
         error: 'Unauthorized',
       });
     }
+  }
+
+  async adminResetPassword(accessToken: string, dto: AdminResetPasswordDto) {
+    let payload: { userId: string; role: string };
+    try {
+      payload = this.jwtService.verify<{ userId: string; role: string }>(
+        accessToken,
+      );
+    } catch {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid access token',
+        error: 'Unauthorized',
+      });
+    }
+
+    const user = await this.userModel
+      .findById(payload.userId)
+      .select('+password')
+      .exec();
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
+    if (user.role !== Role.ADMIN) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Only administrators may use this endpoint',
+        error: 'Forbidden',
+      });
+    }
+    this.enforceAdminEmailAllowlist(user);
+
+    const isMatch = await (user as any).comparePassword(dto.oldPassword);
+    if (!isMatch) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Current password is incorrect',
+        error: 'Bad Request',
+      });
+    }
+    if (dto.oldPassword === dto.newPassword) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'New password must differ from the current password',
+        error: 'Bad Request',
+      });
+    }
+
+    user.password = dto.newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+
+    await this.refreshTokenModel.deleteMany({ userId: user._id }).exec();
+
+    return { message: 'Password updated successfully; sign in again with your new password' };
   }
 
   // ========== Password Reset ==========

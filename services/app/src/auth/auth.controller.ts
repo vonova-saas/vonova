@@ -13,6 +13,8 @@ import { CheckCouponDto } from './dto/check-coupon.dto';
 import { UploadProfilePictureDto } from './dto/upload-profile-picture.dto';
 import { OAuthGoogleLoginDto } from './dto/oauth-google-login.dto';
 import { OAuthWelcomeDto } from './dto/oauth-welcome.dto';
+import { ApproveInstructorDto } from './dto/approve-instructor.dto';
+import { AdminResetPasswordRpcDto } from './dto/admin-reset-password-rpc.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -60,6 +62,21 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @MessagePattern({ cmd: 'approveInstructor' })
+  approveInstructor(@Payload() dto: ApproveInstructorDto) {
+    return this.authService.approveInstructor(dto);
+  }
+
+  @MessagePattern({ cmd: 'rejectInstructor' })
+  rejectInstructor(@Payload() dto: ApproveInstructorDto) {
+    return this.authService.rejectInstructor(dto);
+  }
+
+  @MessagePattern({ cmd: 'listPendingInstructors' })
+  listPendingInstructors() {
+    return this.authService.listPendingInstructors();
+  }
+
   @MessagePattern({ cmd: 'refreshToken' })
   refreshToken(@Payload() token: string) {
     return this.authService.refreshToken(token);
@@ -78,6 +95,15 @@ export class AuthController {
   @MessagePattern({ cmd: 'currentUser' })
   getCurrentUser(@Payload() accessToken: string) {
     return this.authService.getCurrentUser(accessToken);
+  }
+
+  @MessagePattern({ cmd: 'adminResetPassword' })
+  adminResetPassword(@Payload() payload: AdminResetPasswordRpcDto) {
+    const { accessToken, oldPassword, newPassword } = payload;
+    return this.authService.adminResetPassword(accessToken, {
+      oldPassword,
+      newPassword,
+    });
   }
 
   @MessagePattern({ cmd: 'requestResetPassword' })

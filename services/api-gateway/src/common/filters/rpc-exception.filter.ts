@@ -6,10 +6,22 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
 import { Response } from 'express';
 import type { Request } from 'express';
 
+type ResolvedRpcPayload = {
+  statusCode: number;
+  message: string;
+  error: string;
+};
+
+/**
+ * Maps NATS / ClientProxy failures to HTTP responses.
+ *
+ * `instanceof RpcException` is unreliable when the gateway bundles a different
+ * copy of `@nestjs/microservices` than the app microservice — the thrown value
+ * is still shaped like RpcException (`error` payload + optional `getError()`).
+ */
 @Catch()
 export class RpcExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(RpcExceptionFilter.name);
@@ -23,17 +35,7 @@ export class RpcExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let error = 'Error';
 
-    if (exception instanceof RpcException) {
-      const err = exception.getError() as Record<string, unknown> | string;
-      if (typeof err === 'object' && err !== null && err.statusCode != null) {
-        statusCode = Number(err.statusCode);
-        message =
-          typeof err.message === 'string' ? err.message : message;
-        error = (typeof err.error === 'string' ? err.error : error) as string;
-      } else {
-        message = typeof err === 'string' ? err : message;
-      }
-    } else if (exception instanceof HttpException) {
+    if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null && 'message' in res) {
@@ -50,7 +52,6 @@ export class RpcExceptionFilter implements ExceptionFilter {
           : (r.message ?? message);
         error = r.error ?? 'Error';
 
-        // If we have validation details, format the message properly
         if (r.details && Array.isArray(r.details)) {
           const validationError = r.details[0];
           if (validationError?.constraints) {
@@ -58,7 +59,8 @@ export class RpcExceptionFilter implements ExceptionFilter {
             const constraintMessages = Object.values(constraints);
             if (constraintMessages.length > 0) {
               const firstMessage = constraintMessages[0];
-              message = typeof firstMessage === 'string' ? firstMessage : message;
+              message =
+                typeof firstMessage === 'string' ? firstMessage : message;
             }
           }
         }
@@ -66,28 +68,37 @@ export class RpcExceptionFilter implements ExceptionFilter {
         message = typeof res === 'string' ? res : message;
       }
     } else {
-      const ex = exception as Record<string, unknown>;
-      if (ex?.statusCode != null) {
-        statusCode = ex.statusCode as number;
-        message =
-          typeof ex.message === 'string'
-            ? ex.message
-            : ((ex.message as string) ?? message);
-        error = (ex.error as string) ?? error;
-      } else if (ex?.details && typeof ex.details === 'object') {
-        const d = ex.details as Record<string, unknown>;
-        statusCode =
-          (d.statusCode as number) ?? HttpStatus.INTERNAL_SERVER_ERROR;
-        message = (d.message as string) ?? message;
-        error = (d.error as string) ?? error;
-      } else if (ex?.message !== undefined && ex?.message !== null) {
-        message =
-          typeof ex.message === 'string'
-            ? ex.message
-            : typeof ex.message === 'object'
-              ? JSON.stringify(ex.message)
-              : String(ex.message);
-        error = (ex.error as string) ?? error;
+      const micro = this.tryResolveMicroserviceHttpPayload(exception);
+      if (micro && this.isValidHttpStatus(micro.statusCode)) {
+        statusCode = micro.statusCode;
+        message = micro.message;
+        error = micro.error;
+      } else {
+        const ex = exception as Record<string, unknown>;
+        if (ex?.statusCode != null) {
+          statusCode = ex.statusCode as number;
+          message =
+            typeof ex.message === 'string'
+              ? ex.message
+              : ((ex.message as string) ?? message);
+          error = (ex.error as string) ?? error;
+        } else if (ex?.details && typeof ex.details === 'object') {
+          const d = ex.details as Record<string, unknown>;
+          statusCode =
+            (d.statusCode as number) ?? HttpStatus.INTERNAL_SERVER_ERROR;
+          message = (d.message as string) ?? message;
+          error = (d.error as string) ?? error;
+        } else if (ex?.message !== undefined && ex?.message !== null) {
+          const m = ex.message;
+          if (typeof m === 'string') {
+            message = m;
+          } else if (typeof m === 'object') {
+            message = JSON.stringify(m);
+          } else {
+            message = `${m as number | boolean | bigint}`;
+          }
+          error = typeof ex.error === 'string' ? ex.error : error;
+        }
       }
     }
 
@@ -108,5 +119,76 @@ export class RpcExceptionFilter implements ExceptionFilter {
       error,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  private isValidHttpStatus(code: number): boolean {
+    return Number.isFinite(code) && code >= 400 && code <= 599;
+  }
+
+  private tryResolveMicroserviceHttpPayload(
+    exception: unknown,
+  ): ResolvedRpcPayload | null {
+    if (!exception || typeof exception !== 'object') {
+      return null;
+    }
+    const ex = exception as Record<string, unknown>;
+
+    // RpcException stores the constructor argument on `.error` (flat or wrapped).
+    const errProp = ex.error;
+    if (errProp && typeof errProp === 'object' && !Array.isArray(errProp)) {
+      const fromErr = this.pickPayloadFromRpcBody(errProp);
+      if (fromErr) return fromErr;
+    }
+
+    if (typeof ex.getError === 'function') {
+      const fromGet = this.pickPayloadFromRpcBody(
+        (ex as { getError: () => unknown }).getError(),
+      );
+      if (fromGet) return fromGet;
+    }
+
+    const responseProp = ex.response;
+    if (responseProp && typeof responseProp === 'object') {
+      const fromResp = this.pickPayloadFromRpcBody(responseProp);
+      if (fromResp) return fromResp;
+    }
+
+    return this.pickPayloadFromRpcBody(exception);
+  }
+
+  private pickPayloadFromRpcBody(body: unknown): ResolvedRpcPayload | null {
+    if (body == null || typeof body !== 'object') {
+      return null;
+    }
+    const o = body as Record<string, unknown>;
+    const inner = o.error;
+    if (
+      inner &&
+      typeof inner === 'object' &&
+      !Array.isArray(inner) &&
+      this.hasStatusCode(inner)
+    ) {
+      return this.recordToPayload(inner as Record<string, unknown>);
+    }
+    if (this.hasStatusCode(o)) {
+      return this.recordToPayload(o);
+    }
+    return null;
+  }
+
+  private hasStatusCode(obj: object): boolean {
+    return (
+      'statusCode' in obj &&
+      (obj as { statusCode?: unknown }).statusCode != null
+    );
+  }
+
+  private recordToPayload(o: Record<string, unknown>): ResolvedRpcPayload {
+    return {
+      statusCode: Number(o.statusCode),
+      message:
+        typeof o.message === 'string' ? o.message : 'Internal server error',
+      error: typeof o.error === 'string' ? o.error : 'Error',
+    };
   }
 }

@@ -12,6 +12,12 @@ export const ADMIN_PATTERNS = {
   GET_STATISTICS_USERS: 'admin.get.statistics.users',
   GET_STATISTICS_INSTRUCTORS: 'admin.get.statistics.instructors',
   GET_STATISTICS_STUDENTS: 'admin.get.statistics.students',
+  ACTIVITY_TOUCH: 'admin.activity.touch',
+  EVENT_LOG: 'admin.event.log',
+  SUPPORT_CREATE: 'admin.support.create',
+  SUPPORT_REPLY: 'admin.support.reply',
+  NOTIFICATIONS_LIST: 'admin.notifications.list',
+  NOTIFICATION_INSTRUCTOR_APPLICATION: 'admin.notification.instructorApplication',
 } as const;
 
 export const USER_ROLES = {

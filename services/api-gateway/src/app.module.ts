@@ -15,6 +15,7 @@ import { BillingGatewayModule } from './app/billing/billing.module';
 import { SupportGatewayModule } from './app/support/support.module';
 import { FeedbackGatewayModule } from './app/feedback/feedback.module';
 import { AuthGatewayModule } from './app/auth/auth.module';
+import { OnboardingGatewayModule } from './app/onboarding/onboarding.gateway.module';
 import { RoadmapGatewayModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryGatewayModule } from './lms-ai/pdf-summary/pdf-summary.module';
 import { FaviconController } from './common/controllers/favicon.controller';
@@ -49,6 +50,7 @@ import { AdminGatewayModule } from './admin/admin.module';
     //* App Services
     WaitlistGatewayModule,
     AuthGatewayModule,
+    OnboardingGatewayModule,
     SettingsGatewayModule,
     AccountGatewayModule,
     BillingGatewayModule,

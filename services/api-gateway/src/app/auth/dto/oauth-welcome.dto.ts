@@ -22,7 +22,7 @@ export class OAuthWelcomeDto {
 
   @ApiProperty({
     description: "User's role in the system",
-    example: 'STUDENT',
+    example: 'STUDENT_USER',
     type: String,
   })
   @IsString()

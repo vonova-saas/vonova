@@ -5,6 +5,8 @@ import configuration from './common/config/configuration';
 import { MongooseModule } from '@nestjs/mongoose';
 import { getMongoConfigApp } from './common/config/mongo.config';
 import { AuthModule } from './auth/auth.module';
+import { OnboardingModule } from './auth/onboarding/onboarding.module';
+import { AdminSeedModule } from './admin-seed/admin-seed.module';
 import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
 import { BillingModule } from './billing/billing.module';
@@ -27,6 +29,8 @@ import { WaitlistModule } from './waitlist/waitlist.module';
     }),
     //? App Models
     AuthModule,
+    AdminSeedModule,
+    OnboardingModule,
     WaitlistModule,
     SettingsModule,
     AccountModule,

@@ -1,5 +1,7 @@
 export default () => ({
   //? =========== Backend Configuration ===========
+  /** When true, {@link AdminSeederService} upserts predefined admin users on app startup. */
+  SEED_ADMINS_ON_BOOT: process.env.SEED_ADMINS_ON_BOOT === 'true',
   NATS_URL: process.env.NATS_URL,
   NATS_USER: process.env.NATS_USER,
   NATS_PASSWORD: process.env.NATS_PASSWORD,
@@ -32,6 +34,16 @@ export default () => ({
   AWS_S3_ACCESS_KEY_ID_APP: process.env.AWS_S3_ACCESS_KEY_ID_APP,
   AWS_S3_SECRET_ACCESS_KEY_APP: process.env.AWS_S3_SECRET_ACCESS_KEY_APP,
   AWS_S3_BUCKET_APP: process.env.AWS_S3_BUCKET_APP,
+
+  AWS_S3_REGION_CV_INSTRUCTOR_UPLOADS:
+    process.env.AWS_S3_REGION_CV_INSTRUCTOR_UPLOADS,
+  AWS_S3_ACCESS_KEY_ID_CV_INSTRUCTOR_UPLOADS:
+    process.env.AWS_S3_ACCESS_KEY_ID_CV_INSTRUCTOR_UPLOADS,
+  AWS_S3_SECRET_ACCESS_KEY_CV_INSTRUCTOR_UPLOADS:
+    process.env.AWS_S3_SECRET_ACCESS_KEY_CV_INSTRUCTOR_UPLOADS,
+  AWS_S3_BUCKET_CV_INSTRUCTOR_UPLOADS:
+    process.env.AWS_S3_BUCKET_CV_INSTRUCTOR_UPLOADS,
+
   REDIS_URL: process.env.REDIS_URL,
   REDIS_PREFIX: process.env.REDIS_PREFIX?.trim() || 'vonova:app',
 });

@@ -9,6 +9,9 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,18 +19,28 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AccountGatewayService } from './account.service';
+import { AuthGatewayService } from '../auth/auth.service';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import type { UploadedFile as CustomUploadedFile } from '../../common/interfaces/file.interface';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 @ApiTags('Account Management')
 @ApiBearerAuth()
 @Controller('api/v1/account')
 @UseGuards(JwtAuthGuard)
 export class AccountGatewayController {
-  constructor(private readonly accountService: AccountGatewayService) {}
+  constructor(
+    private readonly accountService: AccountGatewayService,
+    private readonly authService: AuthGatewayService,
+  ) {}
 
   @ApiOperation({
     summary: 'Get user account information',
@@ -90,7 +103,30 @@ export class AccountGatewayController {
   @ApiOperation({
     summary: 'Update user account information',
     description:
-      'Updates the account details for a specific user. Users can only update their own account information. All fields are optional.',
+      'Updates profile fields using multipart/form-data. Optional `file` is the new profile image: it is uploaded to S3 (replacing the previous avatar) the same way as POST /api/v1/auth/upload-profile-picture. Email and avatar URL strings are not accepted.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    required: true,
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'John Doe' },
+        bio: {
+          type: 'string',
+          example:
+            'Software developer passionate about creating innovative solutions.',
+        },
+        dateOfBirth: { type: 'string', example: '1990-01-01' },
+        address: { type: 'string', example: '123 Main St, City, Country' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Optional image file. Stored in S3; replaces the existing profile picture.',
+        },
+      },
+    },
   })
   @ApiParam({
     name: 'userId',
@@ -136,12 +172,15 @@ export class AccountGatewayController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Invalid input data',
+    description:
+      'Bad request - Invalid input data or forbidden fields (email/avatarUrl)',
   })
   @Put('user/:userId')
+  @UseInterceptors(FileInterceptor('file'))
   async update(
     @Param('userId') userId: string,
-    @Body() updateAccountDto: UpdateAccountDto,
+    @Body() body: Record<string, unknown>,
+    @UploadedFile() file: CustomUploadedFile | undefined,
     @Request() req: any,
   ) {
     // Authorization: User can only update their own account
@@ -150,6 +189,52 @@ export class AccountGatewayController {
         'Access denied: You can only update your own account',
       );
     }
-    return firstValueFrom(this.accountService.update(userId, updateAccountDto));
+    if (Object.prototype.hasOwnProperty.call(body, 'email')) {
+      throw new BadRequestException(
+        'Email cannot be updated from this endpoint',
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'avatarUrl')) {
+      throw new BadRequestException(
+        'Profile picture URL cannot be set here. Send an image as the `file` field or use POST /api/v1/auth/upload-profile-picture',
+      );
+    }
+
+    const updateAccountDto = plainToInstance(UpdateAccountDto, {
+      name: body.name,
+      bio: body.bio,
+      dateOfBirth: body.dateOfBirth,
+      address: body.address,
+    });
+    const errors = await validate(updateAccountDto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
+    const hasTextField =
+      updateAccountDto.name !== undefined ||
+      updateAccountDto.bio !== undefined ||
+      updateAccountDto.dateOfBirth !== undefined ||
+      updateAccountDto.address !== undefined;
+
+    if (file) {
+      await firstValueFrom(
+        this.authService.uploadProfilePicture({ userId, file }),
+      );
+    }
+
+    if (hasTextField) {
+      return firstValueFrom(
+        this.accountService.update(userId, updateAccountDto),
+      );
+    }
+
+    if (file) {
+      return firstValueFrom(this.accountService.findOne(userId));
+    }
+
+    throw new BadRequestException(
+      'Provide at least one of: name, bio, dateOfBirth, address, or file (profile image)',
+    );
   }
 }

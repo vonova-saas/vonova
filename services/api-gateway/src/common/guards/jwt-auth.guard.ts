@@ -6,6 +6,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -13,6 +14,7 @@ import { AuthGatewayService } from '../../app/auth/auth.service';
 import { firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { extractAccessTokenFromRequest } from '../utils/extract-access-token';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -31,7 +33,7 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromCookie(request);
+    const token = extractAccessTokenFromRequest(request);
 
     if (!token) {
       this.logger.warn('Access token is required');
@@ -57,10 +59,24 @@ export class JwtAuthGuard implements CanActivate {
 
       // Attach user payload to request for use in controllers
       request.user = userResponse.user;
+
+      const u = userResponse.user as { mustChangePassword?: boolean };
+      if (
+        u?.mustChangePassword === true &&
+        !this.isMustChangePasswordExemptRequest(request)
+      ) {
+        throw new ForbiddenException(
+          'PASSWORD_CHANGE_REQUIRED: Change your password using POST /api/v1/auth/admin/reset-password before continuing.',
+        );
+      }
+
       this.logger.log(`User authenticated: ${request.user.email}`);
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      if (error instanceof ForbiddenException) {
         throw error;
       }
       this.logger.error('Authentication error:', error.message);
@@ -68,7 +84,17 @@ export class JwtAuthGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromCookie(request: any): string | undefined {
-    return request.cookies?.accessToken;
+  /** Lets admins complete mandatory password change while holding a valid JWT. */
+  private isMustChangePasswordExemptRequest(request: {
+    method?: string;
+    originalUrl?: string;
+    url?: string;
+  }): boolean {
+    const method = (request.method ?? '').toUpperCase();
+    const path = request.originalUrl ?? request.url ?? '';
+    return (
+      method === 'POST' && path.includes('/api/v1/auth/admin/reset-password')
+    );
   }
+
 }

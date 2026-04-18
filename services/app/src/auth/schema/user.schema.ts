@@ -8,6 +8,8 @@ import * as bcrypt from 'bcryptjs';
 import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import { Role } from '../enums/role.enum';
+import { UserAccountStatus } from '../enums/user-account-status.enum';
+import { UserOnboarding, UserOnboardingSchema } from './onboarding.schema';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -71,6 +73,32 @@ export class User {
   @Prop({ type: String, maxlength: 500, default: null })
   @IsString()
   address?: string;
+
+  @Prop({ default: false })
+  @IsBoolean()
+  onboardingCompleted: boolean;
+
+  @Prop({
+    type: String,
+    enum: UserAccountStatus,
+    default: UserAccountStatus.ACTIVE,
+  })
+  status: UserAccountStatus;
+
+  /**
+   * When true, JWT-protected routes (except admin password change) return 403 until
+   * the user completes POST /api/v1/auth/admin/reset-password.
+   */
+  @Prop({ default: false })
+  @IsBoolean()
+  mustChangePassword: boolean;
+
+  @Prop({ type: String, default: null })
+  @IsString()
+  cvUrl: string | null;
+
+  @Prop({ type: UserOnboardingSchema, default: {} })
+  onboarding?: UserOnboarding;
 
   @Prop()
   createdAt: Date;
