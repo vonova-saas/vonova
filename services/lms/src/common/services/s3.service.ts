@@ -32,6 +32,7 @@ export class S3Service {
     );
     this.region = this.configService.get<string>('AWS_REGION_LMS_AI') ?? '';
     this.bucketName =
+      this.configService.get<string>('AWS_S3_BUCKET_LMS') ?? 
       this.configService.get<string>('AWS_S3_BUCKET_LMS_AI') ?? '';
 
     if (!accessKeyId || !secretAccessKey) {

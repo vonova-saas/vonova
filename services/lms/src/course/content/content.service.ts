@@ -110,4 +110,63 @@ export class ContentService {
       },
     };
   }
+
+  async createAssetRecord(
+    courseId: string,
+    contentType: string,
+    contentId: string,
+    instructorId: string,
+    metadata: any,
+  ) {
+    // Verify the instructor has access to the course
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Verify the content exists and belongs to the course
+    let content;
+    switch (contentType.toLowerCase()) {
+      case 'lesson':
+        content = await this.lessonModel.findOne({ _id: contentId, courseId });
+        break;
+      case 'chapter':
+        content = await this.chapterModel.findOne({ _id: contentId, courseId });
+        break;
+      case 'course':
+        content = course; // Course itself
+        break;
+      default:
+        throw new Error(`Invalid content type: ${contentType}`);
+    }
+
+    if (!content) {
+      throw new NotFoundException(`${contentType} not found in course`);
+    }
+
+    // Create asset record
+    const asset = new this.assetModel({
+      courseId,
+      contentType: contentType.toUpperCase(),
+      contentId,
+      instructorId,
+      originalFileName: metadata.originalFileName,
+      mimeType: metadata.mimeType,
+      size: metadata.size,
+      objectKey: metadata.objectKey,
+      fileUrl: metadata.fileUrl,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+    });
+
+    const savedAsset = await asset.save();
+
+    return {
+      assetId: String(savedAsset._id),
+      contentId,
+      objectKey: metadata.objectKey,
+      fileName: metadata.originalFileName,
+      size: metadata.size,
+      mimeType: metadata.mimeType,
+      fileUrl: metadata.fileUrl,
+    };
+  }
 }

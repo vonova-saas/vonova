@@ -26,6 +26,9 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { LessonGatewayService } from './lesson.gateway.service';
 import {
   CreateLessonDto,
@@ -44,6 +47,14 @@ import { Readable } from 'stream';
 @UseGuards(JwtAuthGuard)
 export class LessonGatewayController {
   constructor(private readonly lessonService: LessonGatewayService) {}
+
+  private readonly s3Client = new S3Client({
+    region: process.env.AWS_S3_REGION_LMS,
+    credentials: {
+      accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
+      secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
+    },
+  });
 
   @ApiOperation({
     summary: 'Create new lesson',
@@ -382,13 +393,15 @@ export class LessonGatewayController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Only course owner can upload videos',
+    description: 'Forbidden - Only INSTRUCTOR_USER role can upload videos',
   })
   @ApiResponse({
     status: 404,
     description: 'Course or lesson not found',
   })
   @Post(':chapterId/:lessonId/video/upload-direct')
+  @UseGuards(RolesGuard)
+  @Roles(Role.INSTRUCTOR_USER)
   @UseInterceptors(FileInterceptor('video'))
   async uploadVideoDirectly(
     @Param('courseId') courseId: string,
@@ -422,7 +435,7 @@ export class LessonGatewayController {
     }
 
     try {
-      const awsRegion = process.env.AWS_S3_REGION;
+      const awsRegion = process.env.AWS_S3_REGION_LMS;
       if (!awsRegion) {
         throw new Error('AWS_S3_REGION is required in .env');
       }
@@ -435,14 +448,14 @@ export class LessonGatewayController {
       const s3Client = new S3Client({
         region: awsRegion,
         credentials: {
-          accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY!,
+          accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
+          secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
         },
       });
 
       // Generate object key with chapterId included
-      const objectKey = `${userId}/courses/${courseId}/chapters/${lesson.chapterId}/lessons/${lessonId}/${uuidv4()}-${file.originalname}`;
-      const bucketName = process.env.AWS_S3_BUCKET!;
+      const objectKey = `courses/${userId}/${courseId}/chapters/${lesson.chapterId}/lessons/${lessonId}/${uuidv4()}-${file.originalname}`;
+      const bucketName = process.env.AWS_S3_BUCKET_LMS;
 
       console.log('Uploading to S3:', { bucketName, objectKey, fileSize: file.size });
 
@@ -496,5 +509,143 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     return firstValueFrom(this.lessonService.getLesson(lessonId, courseId));
+  }
+
+  @ApiOperation({
+    summary: 'Upload file to lesson',
+    description: 'Uploads a file directly to AWS S3 storage for lesson content. Only INSTRUCTOR_USER role can upload files.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'File to upload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'The file to upload (PDF, DOC, PPT, images, etc.)',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'The unique identifier of the course',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiParam({
+    name: 'chapterId',
+    description: 'The unique identifier of the chapter',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiParam({
+    name: 'lessonId',
+    description: 'The unique identifier of the lesson',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'File uploaded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'File uploaded successfully' },
+        fileUrl: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/lesson/file.pdf' },
+        objectKey: { type: 'string', example: 'lesson/file.pdf' },
+        size: { type: 'number', example: 5242880 },
+        assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid file or parameters',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only INSTRUCTOR_USER role can upload files',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course, chapter, or lesson not found',
+  })
+  @Post(':chapterId/:lessonId/upload')
+  @UseGuards(RolesGuard)
+  @Roles(Role.INSTRUCTOR_USER)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @Param('courseId') courseId: string,
+    @Param('chapterId') chapterId: string,
+    @Param('lessonId') lessonId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
+    const instructorId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
+    
+    if (!instructorId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    if (!file) {
+      throw new Error('File is required');
+    }
+
+    try {
+      // Generate unique object key
+      const fileExtension = file.originalname.split('.').pop();
+      const uniqueId = uuidv4();
+      const objectKey = `courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/${uniqueId}-${file.originalname}`;
+      
+      // Upload directly to S3
+      const bucketName = process.env.AWS_S3_BUCKET_LMS;
+      const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: objectKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+
+      await this.s3Client.send(command);
+      console.log('S3 upload successful:', objectKey);
+
+      // Create asset record via LMS service (only metadata)
+      const result = await firstValueFrom(
+        this.lessonService.createAssetRecord(
+          courseId,
+          chapterId,
+          lessonId,
+          instructorId,
+          {
+            originalFileName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            objectKey,
+            fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
+          }
+        ),
+      ) as { assetId: string; lessonId: string; objectKey: string; fileName: string; size: number; mimeType: string; fileUrl: string };
+
+      const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
+
+      return {
+        message: 'File uploaded successfully',
+        fileUrl,
+        objectKey,
+        size: file.size,
+        assetId: result.assetId,
+      };
+    } catch (error) {
+      console.error('File upload error:', error);
+      if (error.message.includes('credential')) {
+        throw new Error('AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.');
+      }
+      throw new Error(`Failed to upload file: ${error.message}`);
+    }
   }
 }

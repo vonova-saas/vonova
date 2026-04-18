@@ -103,8 +103,14 @@ export class GuideGatewayController {
     description: 'Unauthorized - JWT token is required',
   })
   @Post()
-  async createGuide(@Body() dto: CreateGuideDto, @Request() _req: any) {
-    return firstValueFrom(this.guideService.createGuide(dto));
+  async createGuide(@Body() dto: CreateGuideDto, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    return firstValueFrom(this.guideService.createGuide(dto, userId));
   }
 
   @ApiOperation({
@@ -461,9 +467,15 @@ export class GuideGatewayController {
   async updateGuide(
     @Param('id') id: string,
     @Body() dto: UpdateGuideDto,
-    @Request() _req: any,
+    @Request() req: any,
   ) {
-    return firstValueFrom(this.guideService.updateGuide(id, dto));
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    return firstValueFrom(this.guideService.updateGuide(id, dto, userId));
   }
 
   @ApiOperation({
@@ -508,9 +520,15 @@ export class GuideGatewayController {
   async publishGuide(
     @Param('id') id: string,
     @Body() dto: PublishGuideDto,
-    @Request() _req: any,
+    @Request() req: any,
   ) {
-    return firstValueFrom(this.guideService.publishGuide(id, dto));
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    return firstValueFrom(this.guideService.publishGuide(id, dto, userId));
   }
 
   @ApiOperation({
@@ -546,7 +564,13 @@ export class GuideGatewayController {
     description: 'Guide not found',
   })
   @Delete(':id')
-  async deleteGuide(@Param('id') id: string, @Request() _req: any) {
-    return firstValueFrom(this.guideService.deleteGuide(id));
+  async deleteGuide(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
+    return firstValueFrom(this.guideService.deleteGuide(id, userId));
   }
 }

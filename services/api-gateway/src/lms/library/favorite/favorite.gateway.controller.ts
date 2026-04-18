@@ -78,7 +78,12 @@ export class FavoriteGatewayController {
     @Param('itemId') itemId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(
       this.favoriteService.toggleFavorite(itemType, itemId, userId),
     );
@@ -124,7 +129,12 @@ export class FavoriteGatewayController {
   })
   @Get('me')
   async getMyFavorites(@Request() req: any) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.favoriteService.getMyFavorites(userId));
   }
 }

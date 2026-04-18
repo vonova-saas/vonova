@@ -12,11 +12,15 @@ export class GuideController {
   constructor(private readonly guideService: GuideService) {}
 
   @MessagePattern({ cmd: 'library.guides.create' })
-  async createGuide(@Payload() data: { dto: CreateGuideDto }) {
-    const { dto } = data;
+  async createGuide(@Payload() data: { dto: CreateGuideDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { dto, userId, user } = data;
     if (!dto) throw new Error('dto is required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
 
-    return this.guideService.createGuideService(dto);
+    return this.guideService.createGuideService(dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'library.guides.getAll' })
@@ -63,26 +67,38 @@ export class GuideController {
   }
 
   @MessagePattern({ cmd: 'library.guides.update' })
-  async updateGuide(@Payload() data: { id: string; dto: UpdateGuideDto }) {
-    const { id, dto } = data;
+  async updateGuide(@Payload() data: { id: string; dto: UpdateGuideDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, dto, userId, user } = data;
     if (!id || !dto) throw new Error('id and dto are required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
 
-    return this.guideService.updateGuideService(id, dto);
+    return this.guideService.updateGuideService(id, dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'library.guides.publish' })
-  async publishGuide(@Payload() data: { id: string; dto: PublishGuideDto }) {
-    const { id, dto } = data;
+  async publishGuide(@Payload() data: { id: string; dto: PublishGuideDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, dto, userId, user } = data;
     if (!id || !dto) throw new Error('id and dto are required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
 
-    return this.guideService.publishGuideService(id, dto.status);
+    return this.guideService.publishGuideService(id, dto, createdBy);
   }
 
   @MessagePattern({ cmd: 'library.guides.delete' })
-  async deleteGuide(@Payload() data: { id: string }) {
-    const { id } = data;
+  async deleteGuide(@Payload() data: { id: string; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+    const { id, userId, user } = data;
     if (!id) throw new Error('id is required');
+    
+    // Extract userId from multiple possible sources
+    const createdBy = userId || user?.id || user?.sub || user?._id;
+    if (!createdBy) throw new Error('User identification is required');
 
-    return this.guideService.deleteGuideService(id);
+    return this.guideService.deleteGuideService(id, createdBy);
   }
 }

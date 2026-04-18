@@ -6,6 +6,14 @@ import {
   ReorderLessonDto,
 } from './dto/lesson.dto';
 
+export interface AssetMetadata {
+  originalFileName: string;
+  mimeType: string;
+  size: number;
+  objectKey: string;
+  fileUrl: string;
+}
+
 @Injectable()
 export class LessonGatewayService {
   constructor(
@@ -92,5 +100,24 @@ export class LessonGatewayService {
 
   getLesson(lessonId: string, courseId: string) {
     return this.client.send({ cmd: 'app.courses.lessons.get' }, { lessonId, courseId });
+  }
+
+  createAssetRecord(
+    courseId: string,
+    chapterId: string,
+    lessonId: string,
+    instructorId: string,
+    metadata: AssetMetadata,
+  ) {
+    return this.client.send(
+      { cmd: 'lesson.asset.create' },
+      {
+        courseId,
+        chapterId,
+        lessonId,
+        metadata,
+        user: { id: instructorId },
+      },
+    );
   }
 }

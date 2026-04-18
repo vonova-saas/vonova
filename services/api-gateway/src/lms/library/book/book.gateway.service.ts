@@ -16,7 +16,7 @@ export class BookGatewayService {
   ) {}
 
   createBook(dto: CreateBookDto, userId: string) {
-    return this.client.send({ cmd: 'book.create' }, { ...dto, userId });
+    return this.client.send({ cmd: 'book.create' }, { dto, userId });
   }
 
   publishBook(id: string, dto: PublishBookDto, userId: string) {
@@ -50,7 +50,7 @@ export class BookGatewayService {
   ) {
     return this.client.send(
       { cmd: 'book.updateProgress' },
-      { bookId, userId, ...body },
+      { bookId, userId, body },
     );
   }
 

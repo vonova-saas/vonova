@@ -110,7 +110,12 @@ export class BookGatewayController {
   })
   @Post('createBook')
   async createBook(@Body() dto: CreateBookDto, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.bookService.createBook(dto, userId));
   }
 
@@ -158,7 +163,12 @@ export class BookGatewayController {
     @Body() dto: PublishBookDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.bookService.publishBook(id, dto, userId));
   }
 
@@ -474,7 +484,12 @@ export class BookGatewayController {
     @Body() dto: UpdateBookDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.bookService.updateBook(id, dto, userId));
   }
 
@@ -524,7 +539,12 @@ export class BookGatewayController {
     @Body() body: UpdateBookProgressDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(
       this.bookService.updateBookProgress(bookId, userId, body),
     );
@@ -564,7 +584,12 @@ export class BookGatewayController {
   })
   @Delete(':id')
   async deleteBook(@Param('id') id: string, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
+    
     return firstValueFrom(this.bookService.deleteBook(id, userId));
   }
 }

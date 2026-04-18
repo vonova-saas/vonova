@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import { Chapter, ChapterDocument } from '../chapter/schema/chapter.schema';
 import { Course, CourseDocument } from '../course/schema/course.schema';
 import { Lesson, LessonDocument } from './schema/lesson.schema';
+import { Asset, AssetDocument } from '../content/schema/asset.schema';
 import {
   CreateLessonDto,
   ReorderLessonDto,
@@ -26,6 +27,7 @@ export class LessonService {
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(Chapter.name) private chapterModel: Model<ChapterDocument>,
+    @InjectModel(Asset.name) private assetModel: Model<AssetDocument>,
     private readonly s3ConfigService: S3ConfigService,
   ) {}
 
@@ -256,6 +258,56 @@ export class LessonService {
     return {
       message: 'Lesson retrieved successfully',
       lesson: lessonResponse,
+    };
+  }
+
+  async createAssetRecord(
+    courseId: string,
+    chapterId: string,
+    lessonId: string,
+    instructorId: string,
+    metadata: any,
+  ) {
+    // Verify the instructor has access to the course
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Verify the chapter exists and belongs to the course
+    const chapter = await this.chapterModel.findOne({ _id: chapterId, courseId });
+    if (!chapter) throw new NotFoundException('Chapter not found in course');
+
+    // Verify the lesson exists and belongs to the chapter
+    const lesson = await this.lessonModel.findOne({ _id: lessonId, chapterId, courseId });
+    if (!lesson) throw new NotFoundException('Lesson not found in chapter');
+
+    // Create asset record
+    const asset = new this.assetModel({
+      courseId: new Types.ObjectId(courseId),
+      lessonId: new Types.ObjectId(lessonId),
+      ownerId: new Types.ObjectId(instructorId),
+      createdBy: new Types.ObjectId(instructorId),
+      provider: 'S3',
+      objectKey: metadata.objectKey,
+      originalFileName: metadata.originalFileName,
+      mimeType: metadata.mimeType,
+      size: metadata.size,
+      status: 'UPLOADED',
+      urls: {
+        sourceUrl: metadata.fileUrl,
+      },
+      createdAt: new Date(),
+    });
+
+    const savedAsset = await asset.save();
+
+    return {
+      assetId: String(savedAsset._id),
+      lessonId,
+      objectKey: metadata.objectKey,
+      fileName: metadata.originalFileName,
+      size: metadata.size,
+      mimeType: metadata.mimeType,
+      fileUrl: metadata.fileUrl,
     };
   }
 }

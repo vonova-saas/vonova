@@ -1,6 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
+export interface AssetMetadata {
+  originalFileName: string;
+  mimeType: string;
+  size: number;
+  objectKey: string;
+  fileUrl: string;
+}
+
 @Injectable()
 export class ContentGatewayService {
   constructor(
@@ -19,6 +27,25 @@ export class ContentGatewayService {
     return this.client.send(
       { cmd: 'app.courses.content.getLesson' },
       { courseId, lessonId, userId, user: { id: userId } },
+    );
+  }
+
+  createAssetRecord(
+    courseId: string,
+    contentType: string,
+    contentId: string,
+    instructorId: string,
+    metadata: AssetMetadata,
+  ) {
+    return this.client.send(
+      { cmd: 'course.content.createAsset' },
+      {
+        courseId,
+        contentType,
+        contentId,
+        metadata,
+        user: { id: instructorId },
+      },
     );
   }
 }
