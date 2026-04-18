@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -10,9 +6,9 @@ import {
   AdminSupportTicketDocument,
   AdminSupportType,
 } from './schemas/admin-support-ticket.schema';
-import { AdminNotificationsService } from '../admin-notifications/admin-notifications.service';
-import { User, UserDocument } from '../admin/schemas/user.schema';
-import { DB_ADMIN_ROLE } from '../common/utils/admin-role-mapping.util';
+import { User, UserDocument } from '../auth/schema/user.schema';
+import { Role } from '../auth/enums/role.enum';
+import { AdminNotificationsService } from './admin-notifications.service';
 
 @Injectable()
 export class AdminSupportService {
@@ -44,7 +40,7 @@ export class AdminSupportService {
 
   async reply(adminUserId: string, ticketId: string, adminReply: string) {
     const admin = await this.userModel.findById(adminUserId);
-    if (!admin || admin.role !== DB_ADMIN_ROLE) {
+    if (!admin || admin.role !== Role.ADMIN) {
       throw new ForbiddenException('Admin access required');
     }
 

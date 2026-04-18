@@ -9,6 +9,3 @@ export function mapQueryRoleToDbRole(
   if (u === 'ADMIN') return 'ADMIN';
   return undefined;
 }
-
-/** DB role for permission checks (User.role in admin DB). */
-export const DB_ADMIN_ROLE = 'ADMIN' as const;

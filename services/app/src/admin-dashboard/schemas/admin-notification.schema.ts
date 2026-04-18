@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
 export type AdminNotificationDocument = AdminNotification & Document;
-
 export type AdminNotificationType = 'NEW_SUPPORT' | 'INSTRUCTOR_APPLICATION';
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })

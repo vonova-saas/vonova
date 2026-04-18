@@ -13,6 +13,7 @@ import { BillingModule } from './billing/billing.module';
 import { SupportModule } from './support/support.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 // import { PostsModule } from './Community/posts/posts.module';
 // import { ArticlesModule } from './Community/articles/articles.module';
 // import { ChatbotModule } from './chatbot/chatbot.module';
@@ -38,6 +39,7 @@ import { WaitlistModule } from './waitlist/waitlist.module';
     //? Customer Support Modules
     SupportModule,
     FeedbackModule,
+    AdminDashboardModule,
     // PostsModule,
     // ArticlesModule,
     // ChatbotModule,

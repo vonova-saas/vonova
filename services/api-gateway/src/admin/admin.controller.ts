@@ -57,7 +57,7 @@ export class AdminGatewayController {
   @ApiOperation({
     summary: 'List users',
     description:
-      'Returns paginated users from the admin service with optional filters. Each user includes `lastSeenAt` and `isOnline` (true when last activity was within 2 minutes). Role query accepts short or DB forms, e.g. `STUDENT` / `STUDENT_USER`, `INSTRUCTOR` / `INSTRUCTOR_USER`.',
+      'Returns paginated users from the admin service with optional filters. Each user includes `lastSeenAt` and `isOnline` (true when last activity was within 2 minutes). Role query accepts short or DB forms, e.g. `STUDENT_USER`, `INSTRUCTOR_USER`.',
   })
   @ApiQuery({
     name: 'page',
@@ -76,9 +76,9 @@ export class AdminGatewayController {
   @ApiQuery({
     name: 'role',
     required: false,
-    example: 'INSTRUCTOR',
+    example: 'INSTRUCTOR_USER',
     description:
-      'Filter by role: `STUDENT`, `INSTRUCTOR`, `STUDENT_USER`, `INSTRUCTOR_USER`, or `ADMIN`',
+      'Filter by role: `STUDENT_USER`, `INSTRUCTOR_USER`, or `ADMIN`',
   })
   @ApiQuery({
     name: 'search',

@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User, UserDocument } from '../admin/schemas/user.schema';
-import { AdminActivityService } from '../admin-activity/admin-activity.service';
-import { mapQueryRoleToDbRole } from '../common/utils/admin-role-mapping.util';
-import { computeIsOnline } from '../common/utils/presence.util';
+import { User, UserDocument } from '../auth/schema/user.schema';
+import { AdminActivityService } from './admin-activity.service';
+import { mapQueryRoleToDbRole } from './utils/admin-role-mapping.util';
+import { computeIsOnline } from './utils/presence.util';
 
 @Injectable()
 export class AdminUsersService {
@@ -60,9 +60,7 @@ export class AdminUsersService {
     const usersOut = users.map((u) => {
       const id = String(u._id);
       const act = activityMap.get(id);
-      const lastSeenAt = act?.lastSeenAt
-        ? new Date(act.lastSeenAt)
-        : undefined;
+      const lastSeenAt = act?.lastSeenAt ? new Date(act.lastSeenAt) : undefined;
       const { password: _pw, ...rest } = u as Record<string, unknown> & {
         password?: string;
       };
@@ -83,5 +81,36 @@ export class AdminUsersService {
         pages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.userModel.findById(userId).select('-__v').lean();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const activityMap = await this.activityService.findByUserIds([
+      user._id as Types.ObjectId,
+    ]);
+    const act = activityMap.get(String(user._id));
+    const lastSeenAt = act?.lastSeenAt ? new Date(act.lastSeenAt) : null;
+    const { password: _pw, ...rest } = user as Record<string, unknown> & {
+      password?: string;
+    };
+    void _pw;
+    return {
+      ...rest,
+      lastSeenAt,
+      isOnline: computeIsOnline(lastSeenAt),
+    };
+  }
+
+  async updateUserStatus(userId: string, isActive: boolean) {
+    const user = await this.userModel
+      .findByIdAndUpdate(userId, { $set: { isActive } }, { new: true })
+      .lean();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return { updated: true, userId: String(user._id), isActive: user.isActive };
   }
 }
