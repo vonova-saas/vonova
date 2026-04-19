@@ -12,6 +12,7 @@ import {
   requestResetPasswordType,
   resetPasswordType,
   welcomeUserOAuthGoogleType,
+  studentOnboardingType,
 } from "@/types/api/app/auth/auth.type";
 
 //? ************* Email Flow API Services *************
@@ -104,5 +105,24 @@ export const logoutFromAllDevicesMutationFn = async (): Promise<{ message: strin
 // ============== User API Services ==============
 export const getCurrentUserQueryFn = async (): Promise<currentUserResponseType> => {
   const response = await API.get("/auth/current-User");
+  return response.data;
+};
+
+// ============== Onboarding API Services ==============
+export const studentOnboardingMutationFn = async (
+  data: studentOnboardingType
+): Promise<{ message: string }> => {
+  const response = await API.post("/auth/onboarding/student", data);
+  return response.data;
+};
+
+export const instructorOnboardingMutationFn = async (
+  data: FormData
+): Promise<{ message: string }> => {
+  const response = await API.post("/auth/onboarding/instructor", data, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };

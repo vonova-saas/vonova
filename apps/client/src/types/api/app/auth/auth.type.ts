@@ -15,7 +15,9 @@ export type verifyEmailType = {
 export type welcomeUserType = {
   email: string;
   role: string;
+  couponCode?: string;
   knowAboutUs: string;
+  userAgent?: string;
 };
 
 export type welcomeUserResponseType = {
@@ -93,4 +95,22 @@ export type currentUserResponseType = {
     createdAt: string,
     updatedAt: string,
   }
+};
+
+// ============= Onboarding Types =============
+export type studentOnboardingType = {
+  track: string;
+  level: string;
+  goal: string;
+  experience: string;
+  timeCommitment: string;
+};
+
+export type instructorOnboardingType = {
+  track: string;
+  experienceYears: number;
+  bio: string;
+  teachingStyle: string;
+  motivation: string;
+  cv: File;
 };

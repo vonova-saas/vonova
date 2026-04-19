@@ -5,22 +5,28 @@ import Image from "next/image";
 import { RegisterForm } from "@/components/site/auth/register-flow/forms/register-form";
 import { VerifyEmailForm } from "@/components/site/auth/register-flow/forms/verify-email-form";
 import { WelcomeForm } from "@/components/site/auth/register-flow/forms/welcome-form";
+import { OnboardingForm } from "@/components/site/auth/register-flow/forms/onboarding-form";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 export function RegisterFlowLayout() {
-  // 1 = Register, 2 = Verify Email, 3 = Welcome
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // 1 = Register, 2 = Verify Email, 3 = Welcome, 4 = Onboarding
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [email, setEmail] = useState<string>("");
+  const [role, setRole] = useState<string>("");
 
   // Hydrate email from session storage if it exists (supports refresh without losing context)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedEmail = sessionStorage.getItem("verifyEmail");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (storedEmail) setEmail(storedEmail);
       const storedStep = sessionStorage.getItem("registerStep");
       if (storedStep === "2") setStep(2);
       if (storedStep === "3") setStep(3);
+      if (storedStep === "4") setStep(4);
+      const storedRole = sessionStorage.getItem("registerRole");
+      if (storedRole) setRole(storedRole);
     }
   }, []);
 
@@ -75,6 +81,10 @@ export function RegisterFlowLayout() {
                 <div className={`flex h-6 w-6 items-center justify-center rounded-full ${step === 3 ? stepClasses.activeNum : stepClasses.mutedNum}`}>3</div>
                 <p className="text-sm md:text-[13px] font-medium">Welcome to Vonova</p>
               </div>
+              <div className={`flex items-center gap-2.5 rounded-xl px-3 py-2 ${step === 4 ? stepClasses.active : stepClasses.muted}`}>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${step === 4 ? stepClasses.activeNum : stepClasses.mutedNum}`}>4</div>
+                <p className="text-sm md:text-[13px] font-medium">Complete Profile</p>
+              </div>
             </div>
           </div>
         </div>
@@ -101,7 +111,20 @@ export function RegisterFlowLayout() {
               }}
             />
           )}
-          {step === 3 && <WelcomeForm />}
+          {step === 3 && (
+            <WelcomeForm
+              email={email}
+              onSuccess={({ role: r }) => {
+                setRole(r);
+                setStep(4);
+                if (typeof window !== "undefined") {
+                  sessionStorage.setItem("registerStep", "4");
+                  sessionStorage.setItem("registerRole", r);
+                }
+              }}
+            />
+          )}
+          {step === 4 && <OnboardingForm email={email} role={role} />}
         </div>
       </div>
     </div>
