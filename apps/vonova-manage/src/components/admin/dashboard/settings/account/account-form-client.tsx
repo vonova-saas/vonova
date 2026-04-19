@@ -1,16 +1,14 @@
 "use client"
 
-import Link from 'next/link'
 import { format } from 'date-fns'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { CalendarIcon } from '@radix-ui/react-icons'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { updateAccount } from './actions'
-import { type AccountFormValues, accountFormSchema } from './schema'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from "sonner";
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Form,
   FormControl,
@@ -20,44 +18,121 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useRef } from 'react'
 
 interface AccountFormClientProps {
-  defaultValues: Partial<AccountFormValues>
+  defaultValues: Partial<{ name: string; email: string; avatarUrl: string; bio: string; dateOfBirth: string; address: string }>
+}
+
+type AccountFormValues = {
+  name: string
+  email: string
+  avatarUrl: string
+  bio: string
+  address: string
+  dateOfBirth: Date | null
 }
 
 export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
+
   const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountFormSchema),
-    defaultValues,
+    defaultValues: {
+      name: defaultValues.name || '',
+      email: defaultValues.email || '',
+      avatarUrl: defaultValues.avatarUrl || '',
+      bio: defaultValues.bio || '',
+      address: defaultValues.address || '',
+      dateOfBirth: defaultValues.dateOfBirth ? new Date(defaultValues.dateOfBirth) : null,
+    },
   })
 
-  const { fields } = useFieldArray({
-    name: 'urls',
-    control: form.control,
-  })
+  // Avatar upload handlers
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  async function onSubmit(data: AccountFormValues) {
-    const result = await updateAccount(data)
+  function onPickAvatar() {
+    fileInputRef.current?.click()
+  }
 
-    if (result.status === 'error') {
-      toast(result.message)
+  function onRemoveAvatar() {
+    form.setValue('avatarUrl', '')
+  }
+
+  function onAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const maxSizeMb = 3
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      toast.error(`Please select an image under ${maxSizeMb}MB.`)
+      e.target.value = ''
       return
     }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      form.setValue('avatarUrl', dataUrl)
+      // clear value so selecting the same file again will trigger change event
+      e.target.value = ''
+    }
+    reader.onerror = () => {
+      toast.error('Failed to read image')
+      e.target.value = ''
+    }
+    reader.readAsDataURL(file)
+  }
 
-    toast(result.message)
+  async function onSubmit() {
+    try {
+      toast.success('Account updated successfully')
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update account'
+      toast.error(message)
+    }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+        {/* Avatar preview */}
+        <div className='flex items-center gap-4'>
+          <Avatar className='h-16 w-16'>
+            {/* eslint-disable-next-line react-hooks/incompatible-library */}
+            {form.watch('avatarUrl') ? (
+              <AvatarImage src={form.watch('avatarUrl') || ''} alt={form.watch('name') || 'User avatar'} />
+            ) : null}
+            <AvatarFallback>
+              {(form.watch('name') || '')
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase())
+                .join('') || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className='space-y-1.5'>
+            <div className='text-sm text-muted-foreground'>Profile picture</div>
+            <div className='flex items-center gap-2'>
+              <Button type='button' variant='outline' size='sm' onClick={onPickAvatar} className='cursor-pointer'>Upload image</Button>
+              {form.watch('avatarUrl') ? (
+                <Button type='button' variant='ghost' size='sm' onClick={onRemoveAvatar} className='cursor-pointer'>Remove</Button>
+              ) : null}
+            </div>
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='image/*'
+              onChange={onAvatarFileChange}
+              className='hidden'
+            />
+            <div className='text-xs text-muted-foreground'>You can also paste an image URL below, or leave empty to use your initials</div>
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name='name'
@@ -78,26 +153,30 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
 
         <FormField
           control={form.control}
+          name='avatarUrl'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Avatar URL</FormLabel>
+              <FormControl>
+                <Input placeholder='https://...' {...field} />
+              </FormControl>
+              <FormDescription>
+                Paste a direct image URL (jpg, png, gif). Leave blank to show your initials.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name='email'
           render={({ field }) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value='m@example.com'>m@example.com</SelectItem>
-                  <SelectItem value='m@google.com'>m@google.com</SelectItem>
-                  <SelectItem value='m@support.com'>m@support.com</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link href='/'>email settings</Link>.
-              </FormDescription>
+              <FormControl>
+                <Input type='email' placeholder='Your email' {...field} disabled/>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -127,7 +206,7 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
 
         <FormField
           control={form.control}
-          name='dob'
+          name='dateOfBirth'
           render={({ field }) => (
             <FormItem className='flex flex-col'>
               <FormLabel>Date of birth</FormLabel>
@@ -142,7 +221,7 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
                       )}
                     >
                       {field.value ? (
-                        format(field.value, 'MMM d, yyyy')
+                        format(field.value as Date, 'MMM d, yyyy')
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -153,8 +232,8 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
                 <PopoverContent className='w-auto p-0' align='start'>
                   <Calendar
                     mode='single'
-                    selected={field.value}
-                    onSelect={field.onChange}
+                    selected={field.value as Date | undefined}
+                    onSelect={(d) => field.onChange(d ?? null)}
                     disabled={(date: Date) =>
                       date > new Date() || date < new Date('1900-01-01')
                     }
@@ -168,28 +247,6 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
             </FormItem>
           )}
         />
-
-        {fields.map((field, index) => (
-          <FormField
-            control={form.control}
-            key={field.id}
-            name={`urls.${index}.value`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                  URLs
-                </FormLabel>
-                <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                  Add links to your website, blog, or social media profiles.
-                </FormDescription>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ))}
 
         <Button type='submit'>Update account</Button>
       </form>

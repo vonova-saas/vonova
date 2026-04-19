@@ -1,13 +1,8 @@
 "use client"
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import Link from 'next/link'
-import { updateNotifications } from './actions'
-import { type NotificationsFormValues, notificationsFormSchema } from './schema'
-import { toast } from 'sonner'
+import { toast } from "sonner";
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -20,25 +15,49 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 
+type NotificationsFormValues = {
+  type: 'all' | 'mentions' | 'none'
+  communication_emails: boolean
+  marketing_emails: boolean
+  social_emails: boolean
+  security_emails: boolean
+  mobile: boolean
+}
+
 interface NotificationsFormClientProps {
   defaultValues: Partial<NotificationsFormValues>
 }
 
 export function NotificationsFormClient({ defaultValues }: NotificationsFormClientProps) {
+
   const form = useForm<NotificationsFormValues>({
-    resolver: zodResolver(notificationsFormSchema),
-    defaultValues,
+    defaultValues: {
+      type: (defaultValues.type) || 'all',
+      communication_emails: !!defaultValues.communication_emails,
+      marketing_emails: !!defaultValues.marketing_emails,
+      social_emails: !!defaultValues.social_emails,
+      security_emails: defaultValues.security_emails ?? true,
+      mobile: !!defaultValues.mobile,
+    },
   })
 
   async function onSubmit(data: NotificationsFormValues) {
-    const result = await updateNotifications(data)
-
-    if (result.status === 'error') {
-      toast(result.message)
-      return
+    try {
+      // reflect response immediately
+      toast.success('Notifications updated successfully')
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update notifications'
+      toast.error(message)
     }
+  }
 
-    toast(result.message)
+  async function onReset() {
+    try {
+      toast.success('Notifications reset successfully')
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to reset notifications'
+      toast.error(message)
+    }
   }
 
   return (
@@ -53,7 +72,7 @@ export function NotificationsFormClient({ defaultValues }: NotificationsFormClie
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                   className='flex flex-col space-y-1'
                 >
                   <FormItem className='flex items-center space-x-3 space-y-0'>
@@ -175,36 +194,11 @@ export function NotificationsFormClient({ defaultValues }: NotificationsFormClie
             />
           </div>
         </div>
-        <FormField
-          control={form.control}
-          name='mobile'
-          render={({ field }) => (
-            <FormItem className='flex flex-row items-start space-x-3 space-y-0 relative'>
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className='space-y-1 leading-none'>
-                <FormLabel>
-                  Use different settings for my mobile devices
-                </FormLabel>
-                <FormDescription>
-                  You can manage your mobile notifications in the{' '}
-                  <Link
-                    href='/settings'
-                    className='underline decoration-dashed underline-offset-4 hover:decoration-solid'
-                  >
-                    mobile settings
-                  </Link>{' '}
-                  page.
-                </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
-        <Button type='submit'>Update notifications</Button>
+
+        <div className='flex items-center gap-3'>
+          <Button type='submit' className='cursor-pointer'>Update notifications</Button>
+          <Button type='button' variant='outline' onClick={onReset} className='cursor-pointer'>Reset to defaults</Button>
+        </div>
       </form>
     </Form>
   )

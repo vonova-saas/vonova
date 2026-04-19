@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle, Info, Zap } from "lucide-react";

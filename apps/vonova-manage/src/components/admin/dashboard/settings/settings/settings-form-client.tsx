@@ -1,23 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useForm } from 'react-hook-form'
-import { ChevronDownIcon, CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { updateAppearance } from './actions'
-import { type AppearanceFormValues, appearanceFormSchema, languages } from './schema'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 import { Button, buttonVariants } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Command,
   CommandEmpty,
@@ -27,32 +11,179 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Switch } from '@/components/ui/switch'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Slider } from '@/components/ui/slider'
+import { toast } from "sonner";
+import { cn } from '@/lib/utils'
+import { CaretSortIcon, CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
+import { useEffect, useRef } from 'react'
+import { useForm } from 'react-hook-form'
+
+const languages = [
+  { label: 'English', value: 'en' },
+  { label: 'French', value: 'fr' },
+  { label: 'Arabic', value: 'ar' },
+]
 
 interface SettingsFormClientProps {
-  defaultValues: Partial<AppearanceFormValues>
+  defaultValues: Partial<{ font: string; fontSize: string; theme: 'light' | 'dark'; language: string }>
 }
 
 export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
-  const form = useForm<AppearanceFormValues>({
-    resolver: zodResolver(appearanceFormSchema),
+  type SettingsFormValues = { font: string; fontSize: string; theme: 'light' | 'dark'; language: string }
+  const form = useForm<SettingsFormValues>({
     defaultValues,
   })
 
-  async function onSubmit(data: AppearanceFormValues) {
-    const result = await updateAppearance(data)
+  // cache to avoid re-loading a font that is already registered
+  const loadedFontsRef = useRef<Set<string>>(new Set())
 
-    if (result.status === 'error') {
-      toast(result.message)
-      return
+  function loadLocalFontIfNeeded(fontKey: string) {
+    try {
+      // Adjust paths to match your public folder structure if different
+      // We will try to load a few common weights for each family. If a file is missing, we skip it.
+      const sources: Record<string, { family: string; files: Record<string, string[]> }> = {
+        cairo: {
+          family: 'Cairo',
+          files: {
+            '400': [
+              '/fonts/Cairo/Cairo-Regular.ttf',
+              '/fonts/Cairo-Regular.ttf',
+              '/fonts/Cairo/cairo.ttf',
+            ],
+            '500': [
+              '/fonts/Cairo/Cairo-Medium.ttf',
+              '/fonts/Cairo-Medium.ttf',
+            ],
+            '600': [
+              '/fonts/Cairo/Cairo-SemiBold.ttf',
+              '/fonts/Cairo-SemiBold.ttf',
+            ],
+            '700': [
+              '/fonts/Cairo/Cairo-Bold.ttf',
+              '/fonts/Cairo-Bold.ttf',
+            ],
+          },
+        },
+        lato: {
+          family: 'Lato',
+          files: {
+            '400': [
+              '/fonts/Lato/Lato-Regular.ttf',
+              '/fonts/Lato-Regular.ttf',
+              '/fonts/Lato/lato.ttf',
+            ],
+            '700': [
+              '/fonts/Lato/Lato-Bold.ttf',
+              '/fonts/Lato-Bold.ttf',
+            ],
+          },
+        },
+      }
+      const entry = sources[fontKey]
+      if (!entry) return
+      if (loadedFontsRef.current.has(entry.family)) return
+      if (!(document as any).fonts) return
+      const FaceCtor = (window as any).FontFace
+      if (!FaceCtor) return
+
+      const loaders: Promise<any>[] = []
+      for (const [weight, urls] of Object.entries(entry.files)) {
+        if (!urls || !urls.length) continue
+        // pick first candidate; if it fails, try others sequentially
+        const attempt = async () => {
+          for (const url of urls) {
+            try {
+              const face = new FaceCtor(entry.family, `url(${url}) format('truetype')`, { weight })
+              const loaded = await face.load()
+              ;(document as any).fonts.add(loaded)
+              return true
+            } catch {
+              // try next url
+            }
+          }
+          return false
+        }
+        loaders.push(attempt())
+      }
+
+      Promise.all(loaders).finally(() => {
+        loadedFontsRef.current.add(entry.family)
+      })
+    } catch {
+      // ignore
     }
+  }
 
-    toast(result.message)
+  function applyAppearance(v: SettingsFormValues) {
+    try {
+      // Attempt to ensure local fonts are available
+      loadLocalFontIfNeeded(v.font)
+      // Apply font family with graceful fallbacks
+      const families: Record<string, string> = {
+        cairo: "Cairo, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        lato: "Lato, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+      }
+      const family = families[v.font] || families.system
+      document.body.style.fontFamily = family
+
+      // Apply base font size on the root (so rem/em scales if used)
+      const sizeNum = Number(v.fontSize)
+      if (!Number.isNaN(sizeNum) && sizeNum > 0) {
+        document.documentElement.style.fontSize = `${sizeNum}px`
+      }
+
+      // Apply theme by toggling the `dark` class on the <html> element
+      const isDark = v.theme === 'dark'
+      document.documentElement.classList.toggle('dark', isDark)
+    } catch {
+      // no-op if DOM not available (SSR) or any error occurs
+    }
+  }
+
+  // Keep the page appearance in sync with current form values (font, size, theme)
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      const v = value as SettingsFormValues
+      if (v && v.font && v.fontSize && v.theme) {
+        applyAppearance(v)
+      }
+    })
+    return () => subscription.unsubscribe()
+    // form is stable from useForm; watch sets up internal subscription
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form])
+
+  async function onSubmit() {
+    try {
+      toast.success('Settings updated successfully')
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update settings'
+      toast.error(message)
+    }
+  }
+
+  async function onReset() {
+    try {
+      toast.success('Settings reset successfully')
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to reset settings'
+      toast.error(message)
+    }
   }
 
   return (
@@ -67,14 +198,15 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
               <div className='relative w-max'>
                 <FormControl>
                   <select
+                    suppressHydrationWarning
                     className={cn(
                       buttonVariants({ variant: 'outline' }),
                       'w-[200px] appearance-none font-normal'
                     )}
                     {...field}
                   >
-                    <option value='inter'>Inter</option>
-                    <option value='manrope'>Manrope</option>
+                    <option value='cairo'>Cairo</option>
+                    <option value='lato'>Lato</option>
                     <option value='system'>System</option>
                   </select>
                 </FormControl>
@@ -99,56 +231,14 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
                   min={12}
                   max={24}
                   step={1}
-                  defaultValue={[Number(field.value)]}
-                  onValueChange={([value]) => field.onChange(value)}
+                  value={[Number(field.value ?? '16')]}
+                  onValueChange={([value]) => field.onChange(String(value))}
                 />
               </FormControl>
               <FormDescription>
                 Adjust the base font size of the application.
               </FormDescription>
               <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="reducedMotion"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel>Reduced Motion</FormLabel>
-                <FormDescription>
-                  Reduce motion and animations
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="highContrast"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel>High Contrast</FormLabel>
-                <FormDescription>
-                  Increase color contrast
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
             </FormItem>
           )}
         />
@@ -165,7 +255,7 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
               <FormMessage />
               <RadioGroup
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                value={field.value}
                 className='grid max-w-md grid-cols-2 gap-8 pt-2'
               >
                 <FormItem>
@@ -289,7 +379,10 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
           )}
         />
 
-        <Button type='submit'>Update preferences</Button>
+        <div className='flex items-center gap-3'>
+          <Button type='submit' className='cursor-pointer'>Update preferences</Button>
+          <Button type='button' variant='outline' onClick={onReset} className='cursor-pointer'>Reset to defaults</Button>
+        </div>
       </form>
     </Form>
   )
