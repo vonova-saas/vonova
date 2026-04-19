@@ -37,7 +37,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     height={24} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Onyx Tap</span>
+                  <span className="truncate font-medium">Vonova</span>
                   <span className="truncate text-xs">
                     {
                       sidebarNavData.roles[

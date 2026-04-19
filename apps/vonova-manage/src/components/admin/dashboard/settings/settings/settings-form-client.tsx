@@ -5,7 +5,7 @@ import { ChevronDownIcon, CaretSortIcon, CheckIcon } from '@radix-ui/react-icons
 import { zodResolver } from '@hookform/resolvers/zod'
 import { updateAppearance } from './actions'
 import { type AppearanceFormValues, appearanceFormSchema, languages } from './schema'
-import { cn } from '@/utils/functions'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {

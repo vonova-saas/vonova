@@ -1,11 +1,9 @@
 import {
   Bell,
-  BookOpen,
   Combine,
   Gauge,
   LifeBuoy,
   MonitorCog,
-  Send,
   Settings2,
   ShieldCheck,
   User,
@@ -23,62 +21,52 @@ export const sidebarNavData = {
   adminDeveloper: [
     {
       title: "System Overview",
-      url: "/:adminId",
+      url: "/admin/:adminId",
       icon: MonitorCog,
       isActive: true,
     },
     {
       title: "Logging & Monitoring",
-      url: "/:adminId/logging-monitoring",
+      url: "/admin/:adminId/logging-monitoring",
       icon: Combine
     },
     {
       title: "Security Logs",
-      url: "/:adminId/security-logs",
+      url: "/admin/:adminId/security-logs",
       icon: ShieldCheck
     },
     {
       title: "Performance Metrics",
-      url: "/:adminId/performance-metrics",
+      url: "/admin/:adminId/performance-metrics",
       icon: Gauge
     },
   ],
   adminWebsiteOperations: [
     {
       title: "User Management",
-      url: "/:adminId/user-management",
+      url: "/admin/:adminId/user-management",
       icon: User
     },
     {
-      title: "Reports",
-      url: "/:adminId/reports",
-      icon: BookOpen
-    },
-    {
       title: "Support Management",
-      url: "/:adminId/support-management",
+      url: "/admin/:adminId/support-management",
       icon: LifeBuoy
-    },
-    {
-      title: "Feedback Management",
-      url: "/:adminId/feedback-management",
-      icon: Send
     },
   ],
   app: [
     {
       title: "Settings",
-      url: "/:adminId/settings",
+      url: "/admin/:adminId/settings",
       icon: Settings2,
     },
     {
       title: "Account",
-      url: "/:adminId/settings/account",
+      url: "/admin/:adminId/settings/account",
       icon: User,
     },
     {
       title: "Notifications",
-      url: "/:adminId/settings/notifications",
+      url: "/admin/:adminId/settings/notifications",
       icon: Bell,
     },
   ],
