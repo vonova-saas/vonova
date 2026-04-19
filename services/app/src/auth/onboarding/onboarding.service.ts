@@ -6,42 +6,16 @@ import { firstValueFrom } from 'rxjs';
 import { User, UserDocument } from '../schema/user.schema';
 import { Role } from '../enums/role.enum';
 import { UserAccountStatus } from '../enums/user-account-status.enum';
-import { InstructorCvS3Service } from '../../common/storage/instructor-cv-s3.service';
 import { SubmitStudentOnboardingDto } from '../dto/student-onboarding.dto';
 import { SubmitInstructorOnboardingDto } from '../dto/instructor-onboarding.dto';
 
 @Injectable()
 export class OnboardingService {
-  private static readonly CV_MAX_BYTES = 5 * 1024 * 1024;
-  private static readonly CV_ALLOWED_MIMES = new Set([
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ]);
-
   constructor(
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
-    private readonly instructorCvS3Service: InstructorCvS3Service,
     @Inject('NATS_OUTBOUND') private readonly natsClient: ClientProxy,
   ) {}
-
-  private assertInstructorCvFileMeta(file: {
-    mimetype?: string;
-    originalname?: string;
-  }) {
-    const ext = (file.originalname?.split('.').pop() || '').toLowerCase();
-    const extOk = ['pdf', 'doc', 'docx'].includes(ext);
-    const mime = (file.mimetype || '').toLowerCase();
-    const mimeOk = OnboardingService.CV_ALLOWED_MIMES.has(mime);
-    if (!extOk && !mimeOk) {
-      throw new RpcException({
-        statusCode: 400,
-        message: 'CV must be a PDF, DOC, or DOCX file',
-        error: 'Bad Request',
-      });
-    }
-  }
 
   private async loadUserForOnboarding(userId: string): Promise<UserDocument> {
     const user = await this.userModel.findById(userId).exec();
@@ -120,50 +94,7 @@ export class OnboardingService {
       });
     }
 
-    if (!dto.file?.buffer || !dto.file.originalname) {
-      throw new RpcException({
-        statusCode: 400,
-        message: 'CV file is required',
-        error: 'Bad Request',
-      });
-    }
-
-    this.assertInstructorCvFileMeta({
-      mimetype: dto.file.mimetype,
-      originalname: dto.file.originalname,
-    });
-
-    const rawBuffer = dto.file.buffer;
-    const buffer =
-      typeof rawBuffer === 'string'
-        ? Buffer.from(rawBuffer, 'base64')
-        : Buffer.isBuffer(rawBuffer)
-          ? rawBuffer
-          : Buffer.from(String(rawBuffer), 'base64');
-
-    if (buffer.length > OnboardingService.CV_MAX_BYTES) {
-      throw new RpcException({
-        statusCode: 400,
-        message: 'CV file must not exceed 5MB',
-        error: 'Bad Request',
-      });
-    }
-
-    let cvUrl: string;
-    try {
-      cvUrl = await this.instructorCvS3Service.uploadCv({
-        userId: String(user._id),
-        buffer,
-        contentType: dto.file.mimetype || 'application/octet-stream',
-        originalName: dto.file.originalname,
-      });
-    } catch {
-      throw new RpcException({
-        statusCode: 500,
-        message: 'Failed to upload CV to storage',
-        error: 'Internal Server Error',
-      });
-    }
+    const cvUrl = dto.cvUrl.trim();
 
     user.onboarding = {
       ...user.onboarding,

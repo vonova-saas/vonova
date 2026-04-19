@@ -32,7 +32,7 @@ export class S3Service {
     );
     this.region = this.configService.get<string>('AWS_REGION_LMS_AI') ?? '';
     this.bucketName =
-      this.configService.get<string>('AWS_S3_BUCKET_LMS') ?? 
+      this.configService.get<string>('AWS_S3_BUCKET_LMS') ??
       this.configService.get<string>('AWS_S3_BUCKET_LMS_AI') ?? '';
 
     if (!accessKeyId || !secretAccessKey) {
@@ -57,6 +57,7 @@ export class S3Service {
     fileName: string,
     contentType: string = 'application/pdf',
     folder?: string,
+    bucketName?: string,
   ): Promise<string> {
     try {
       const timestamp = Date.now();
@@ -66,13 +67,15 @@ export class S3Service {
         ? `${folder}/${uniqueFileName}`
         : `pdfs/${uniqueFileName}`;
 
+      const targetBucket = bucketName || this.bucketName;
+
       this.logger.log(
-        `Uploading file to S3: ${s3Key} (${fileBuffer.length} bytes)`,
+        `Uploading file to S3: ${s3Key} (${fileBuffer.length} bytes) to bucket: ${targetBucket}`,
       );
 
       await this.s3Client.send(
         new PutObjectCommand({
-          Bucket: this.bucketName,
+          Bucket: targetBucket,
           Key: s3Key,
           Body: fileBuffer,
           ContentType: contentType,
@@ -94,8 +97,9 @@ export class S3Service {
     }
   }
 
-  getFileUrl(s3Key: string): string {
-    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+  getFileUrl(s3Key: string, bucketName?: string): string {
+    const targetBucket = bucketName || this.bucketName;
+    return `https://${targetBucket}.s3.${this.region}.amazonaws.com/${s3Key}`;
   }
 
   async getPresignedGetUrl(
@@ -123,15 +127,18 @@ export class S3Service {
     });
   }
 
-  async deleteFile(s3Key: string): Promise<boolean> {
+  async deleteFile(s3Key: string, bucketName?: string): Promise<boolean> {
     try {
       if (!s3Key) {
         this.logger.warn('No S3 key provided for deletion');
         return false;
       }
-      this.logger.log(`Deleting file from S3: ${s3Key}`);
+      const targetBucket = bucketName || this.bucketName;
+      this.logger.log(
+        `Deleting file from S3: ${s3Key} from bucket: ${targetBucket}`,
+      );
       await this.s3Client.send(
-        new DeleteObjectCommand({ Bucket: this.bucketName, Key: s3Key }),
+        new DeleteObjectCommand({ Bucket: targetBucket, Key: s3Key }),
       );
       this.logger.log(`File deleted successfully from S3: ${s3Key}`);
       return true;

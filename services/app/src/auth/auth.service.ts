@@ -66,7 +66,7 @@ export class AuthService {
     private readonly waitlistService: WaitlistService,
     private readonly notificationService: NotificationService,
     private readonly tokenBlacklistService: TokenBlacklistService,
-  ) {}
+  ) { }
 
   // ========== Helpers ==========
 

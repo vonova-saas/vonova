@@ -70,8 +70,8 @@ export class PdfSummaryService {
       .replace('https://localhost', 'https://127.0.0.1');
     this.FALLBACK_PYTHON_SERVICE_URL = fallback
       ? fallback
-          .replace('http://localhost', 'http://127.0.0.1')
-          .replace('https://localhost', 'https://127.0.0.1')
+        .replace('http://localhost', 'http://127.0.0.1')
+        .replace('https://localhost', 'https://127.0.0.1')
       : undefined;
 
     this.logger.log(
@@ -259,8 +259,8 @@ export class PdfSummaryService {
           // Provide helpful message about re-uploading
           throw new BadRequestException(
             `Session expired in AI service (7-day TTL). Your PDF data is safely stored. ` +
-              `To continue chatting, please re-upload the same PDF file. ` +
-              `The system will recognize it and restore the session.`,
+            `To continue chatting, please re-upload the same PDF file. ` +
+            `The system will recognize it and restore the session.`,
           );
         }
       }
@@ -514,13 +514,15 @@ export class PdfSummaryService {
 
       // Only on AI success: upload to S3 and save to DB.
       this.logger.log(`Uploading PDF file to S3: ${filename}`);
+      const aiBucket = this.configService.get<string>('AWS_S3_BUCKET_LMS_AI');
       const s3Key = await this.s3Service.uploadFile(
         fileContent,
         filename,
         'application/pdf',
         'pdfs',
+        aiBucket,
       );
-      const s3Url = this.s3Service.getFileUrl(s3Key);
+      const s3Url = this.s3Service.getFileUrl(s3Key, aiBucket);
       this.logger.log(`PDF file uploaded to S3: ${s3Key}`);
 
       // Save basic summary data to database
@@ -759,14 +761,14 @@ export class PdfSummaryService {
             if (ageMs !== undefined && ageMs > sevenDaysMs) {
               throw new BadRequestException(
                 'Session expired in AI service after 7 days. Your PDF summary is still stored, but the live AI ' +
-                  'session was cleaned up. Please try requesting the summary again, or re-upload the PDF if the ' +
-                  'problem persists.',
+                'session was cleaned up. Please try requesting the summary again, or re-upload the PDF if the ' +
+                'problem persists.',
               );
             }
 
             throw new BadRequestException(
               'AI session for this PDF is currently unavailable in the AI service, but your summary data is stored. ' +
-                'Please try again in a moment. If the problem continues, re-uploading the PDF will create a fresh session.',
+              'Please try again in a moment. If the problem continues, re-uploading the PDF will create a fresh session.',
             );
           }
 
@@ -910,7 +912,8 @@ export class PdfSummaryService {
       // 4. Delete S3 file if s3_key is stored
       if (session.s3_key) {
         try {
-          const s3Deleted = await this.s3Service.deleteFile(session.s3_key);
+          const aiBucket = this.configService.get<string>('AWS_S3_BUCKET_LMS_AI');
+          const s3Deleted = await this.s3Service.deleteFile(session.s3_key, aiBucket);
           this.logger.log(
             `S3 file deletion ${s3Deleted ? 'succeeded' : 'failed'}: ${session.s3_key}`,
           );
@@ -1085,13 +1088,13 @@ export class PdfSummaryService {
             if (ageMs !== undefined && ageMs > sevenDaysMs) {
               throw new BadRequestException(
                 'Session expired in AI service after 7 days. Your PDF data is still stored, ' +
-                  'but the live AI session was cleaned up. You can retry, or re-upload the PDF if the issue persists.',
+                'but the live AI session was cleaned up. You can retry, or re-upload the PDF if the issue persists.',
               );
             }
 
             throw new BadRequestException(
               'AI session for this PDF is currently unavailable in the AI service, but your data is stored. ' +
-                'Please try again shortly. If the issue continues, re-uploading the PDF will create a fresh session.',
+              'Please try again shortly. If the issue continues, re-uploading the PDF will create a fresh session.',
             );
           }
 
@@ -1133,8 +1136,8 @@ export class PdfSummaryService {
       if (responseData.status === false) {
         throw new Error(
           responseData.error ||
-            responseData.detail ||
-            'Python service returned error',
+          responseData.detail ||
+          'Python service returned error',
         );
       }
 
@@ -1318,8 +1321,8 @@ export class PdfSummaryService {
         if (dbSummary) {
           throw new BadRequestException(
             'Voice session expired in AI service. Your PDF is still stored, ' +
-              'but voice chat needs an active AI session. Please re-upload the PDF to recreate the session, ' +
-              `then use the new session_id for voice: ${cleanSessionId}.`,
+            'but voice chat needs an active AI session. Please re-upload the PDF to recreate the session, ' +
+            `then use the new session_id for voice: ${cleanSessionId}.`,
           );
         }
         throw new BadRequestException(
@@ -1346,17 +1349,19 @@ export class PdfSummaryService {
     let userAudioS3Key: string | undefined;
     let userAudioS3Url: string | undefined;
     try {
+      const aiBucket = this.configService.get<string>('AWS_S3_BUCKET_LMS_AI');
       userAudioS3Key = await this.s3Service.uploadFile(
         audioBuffer,
         safeName,
         mimeType,
         `${voicePrefix}/user`,
+        aiBucket,
       );
       try {
         userAudioS3Url =
           await this.s3Service.getPresignedGetUrl(userAudioS3Key);
       } catch {
-        userAudioS3Url = this.s3Service.getFileUrl(userAudioS3Key);
+        userAudioS3Url = this.s3Service.getFileUrl(userAudioS3Key, aiBucket);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -1374,16 +1379,18 @@ export class PdfSummaryService {
             ? 'webm'
             : 'mp3';
       const aiFilename = `ai.${aiExt}`;
+      const aiBucket = this.configService.get<string>('AWS_S3_BUCKET_LMS_AI');
       aiAudioS3Key = await this.s3Service.uploadFile(
         aiAudioBuffer,
         aiFilename,
         contentType,
         `${voicePrefix}/ai`,
+        aiBucket,
       );
       try {
         aiAudioS3Url = await this.s3Service.getPresignedGetUrl(aiAudioS3Key);
       } catch {
-        aiAudioS3Url = this.s3Service.getFileUrl(aiAudioS3Key);
+        aiAudioS3Url = this.s3Service.getFileUrl(aiAudioS3Key, aiBucket);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -1392,19 +1399,19 @@ export class PdfSummaryService {
 
     let audioRecord:
       | {
-          audioId: string;
-          session_id: string;
-          user_id?: string;
-          user_audio_s3_key?: string;
-          user_audio_s3_url?: string;
-          user_audio_mime_type?: string;
-          ai_audio_s3_key?: string;
-          ai_audio_s3_url?: string;
-          ai_audio_content_type?: string;
-          detected_language?: string;
-          created_at?: Date;
-          updated_at?: Date;
-        }
+        audioId: string;
+        session_id: string;
+        user_id?: string;
+        user_audio_s3_key?: string;
+        user_audio_s3_url?: string;
+        user_audio_mime_type?: string;
+        ai_audio_s3_key?: string;
+        ai_audio_s3_url?: string;
+        ai_audio_content_type?: string;
+        detected_language?: string;
+        created_at?: Date;
+        updated_at?: Date;
+      }
       | undefined;
     try {
       const created = await this.pdfSummaryAudioRepository.create({
@@ -1867,11 +1874,11 @@ export class PdfSummaryService {
         const chat_history =
           chatResult.status === 'fulfilled'
             ? {
-                chats: chatResult.value.chats,
-                total: chatResult.value.total,
-                page: chatResult.value.page,
-                totalPages: chatResult.value.totalPages,
-              }
+              chats: chatResult.value.chats,
+              total: chatResult.value.total,
+              page: chatResult.value.page,
+              totalPages: chatResult.value.totalPages,
+            }
             : undefined;
         let full_summary: IPDFSummaryResponse | undefined = undefined;
         let full_summary_error: string | undefined;

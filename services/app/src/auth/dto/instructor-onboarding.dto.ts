@@ -3,24 +3,12 @@ import {
   IsInt,
   IsMongoId,
   IsNotEmpty,
-  IsOptional,
   IsString,
+  IsUrl,
   Min,
-  ValidateNested,
 } from 'class-validator';
 
-export class RpcInstructorCvFileDto {
-  @IsString()
-  originalname: string;
-
-  @IsOptional()
-  @IsString()
-  mimetype?: string;
-
-  @IsString()
-  buffer: string;
-}
-
+/** CV is uploaded to S3 by the API gateway; this RPC only receives the resulting HTTPS URL. */
 export class SubmitInstructorOnboardingDto {
   @IsMongoId()
   userId: string;
@@ -46,7 +34,7 @@ export class SubmitInstructorOnboardingDto {
   @IsNotEmpty()
   motivation: string;
 
-  @ValidateNested()
-  @Type(() => RpcInstructorCvFileDto)
-  file: RpcInstructorCvFileDto;
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsNotEmpty()
+  cvUrl: string;
 }
