@@ -14,7 +14,7 @@ This service is part of the Vonova AI Learning Platform.
 
 The application follows a modular AI micro-service design:
 
--   Single FastAPI entrypoint → `app.py`
+-   Single FastAPI entrypoint → `main.py`
 -   Each AI capability implemented as an independent module
 -   Multi-agent orchestration for article generation
 -   Session-based document intelligence for PDF processing
@@ -77,6 +77,16 @@ document - Session-based memory - Context-aware answers - Voice Q&A (speech-to-t
 Endpoints: - POST `/upload` - GET `/summarize` - POST `/ask` - POST `/voice/ask` - DELETE
 `/session/{session_id}`
 
+------------------------------------------------------------------------
+
+## 5) AI Problem Solving Coach
+
+Intelligent coding coach that provides hints and solutions for programming problems.
+
+Capabilities: - Error analysis for failing test cases - Strategic hint generation - Complete solution generation - Multi-language support (English/Arabic) - Programming language detection
+
+Endpoints: - POST `/generate/hint` - POST `/generate/solution`
+
 
 ## Prerequisites
 
@@ -111,7 +121,7 @@ pip install -r requirements.txt
 
 ## Configuration (environment variables)
 
-Create a `.env` file or set environment variables before running. The app expects these names (used in `app.py`):
+Create a `.env` file or set environment variables before running. The app expects these names (used in `main.py`):
 
 ```env
 # LLM / API keys (required)
@@ -131,7 +141,7 @@ CORS_ALLOW_METHODS=GET,POST
 CORS_ALLOW_HEADERS=*
 ```
 
-Note: `app.py` reads these exact variable names — keep them consistent.
+Note: `main.py` reads these exact variable names — keep them consistent.
 
 ## Run the app
 
@@ -140,7 +150,7 @@ Start with uvicorn (examples for Windows env variables shown):
 ```
 cd Generative_Ai
 
-uvicorn app:app --reload --port 5010
+uvicorn main:app --reload --port 5010
 ```
 
 The API will be available at `http://{AI_SERVICE_HOST}:{AI_SERVICE_PORT}`.
@@ -154,6 +164,8 @@ The API will be available at `http://{AI_SERVICE_HOST}:{AI_SERVICE_PORT}`.
 - `GET /summarize` — `session_id` and optional `summary_type`
 - `POST /ask` — supports form data or JSON with `session_id` and `question`
 - `POST /voice/ask` — multipart form with `audio` file and `session_id` for voice Q&A
+- `POST /generate/hint` — error analysis and hint generation for coding problems
+- `POST /generate/solution` — complete solution generation for coding problems
 - `DELETE /session/{session_id}` — remove a stored session
 - `GET /health` — simple health check
 - `GET /docs` — interactive Swagger UI
@@ -243,7 +255,7 @@ Response: { "status": "healthy", "service": "Agents_api" }
 
 ```
 Generative_Ai/
-├── app.py                          # Unified FastAPI application
+├── main.py                         # Unified FastAPI application
 ├── requirements.txt                # Consolidated pinned dependencies
 ├── README.md                       # This file
 ├── dockerfile                      # Docker container configuration
@@ -276,14 +288,25 @@ Generative_Ai/
 │   ├── llm/                        # LLM integration
 │   ├── model/                      # Data models (note: model, not models)
 │   └── utils/                      # Utility functions
-└── AI_Roadmap_Generator/           # roadmap service code
-    ├── llm/                        # LLM integration
-    ├── models/                     # Data models
-    └── services/                   # Business logic
+├── AI_Roadmap_Generator/           # roadmap service code
+│   ├── llm/                        # LLM integration
+│   ├── models/                     # Data models
+│   └── services/                   # Business logic
+└── AI_Problem_Solving_Coach/       # problem solving coach code
+    ├── agents/                     # AI agents
+    │   ├── gemini_client.py        # Gemini AI client wrapper
+    │   └── Prompts/
+    │       ├── __init__.py
+    │       └── hint_prompt.py       # Prompt templates for AI
+    ├── models/                     # Data models and schemas
+    │   └── hint_schema.py           # Pydantic request/response models
+    ├── services/                   # Business logic layer
+    │   └── hint_service.py         # Core hint generation logic
+    └── README.md                   # Service-specific documentation
 ```
 
 ## Troubleshooting
 
-- If the app fails on startup: ensure `COHERE_API_KEY`, `CO_API_KEY`, and `GEMINI_API_KEY` are set — `app.py` raises on missing LLM keys.
+- If the app fails on startup: ensure `COHERE_API_KEY`, `CO_API_KEY`, and `GEMINI_API_KEY` are set — `main.py` raises on missing LLM keys.
 - If uploads fail: confirm `PyMuPDF` (`fitz`) is installed and the uploaded file is a PDF.
 - If CORS or host/port behavior is unexpected: verify `CORS_ORIGINS`, `AI_SERVICE_HOST`, and `AI_SERVICE_PORT`.

@@ -31,6 +31,9 @@ from AI_PDF_Summary_QA.services.Tts_service import synthesize_speech
 from AI_PDF_Summary_QA.helpers.utils import SUPPORTED_AUDIO_TYPES, resolve_audio_format
 from AI_PDF_Summary_QA.helpers.prompts import get_voice_instruction_prompt
 
+from AI_Problem_Solving_Coach.models.hint_schema import ErrorHintRequest, SolutionRequest, HintResponse, SolutionResponse
+from AI_Problem_Solving_Coach.services.hint_service import HintService
+
 from Config.config import validate_environment, setup_app_logger
 from Config.middleware import setup_cors_middleware
 
@@ -63,6 +66,8 @@ setup_cors_middleware(app)
 agent_manager = AgentManager()
 
 generator = RoadmapGenerator(effective_api_key)
+
+hint_service = HintService()
 
 # Roadmap Endpoint
 @app.post("/generate-roadmap", tags=["Roadmap"])
@@ -283,6 +288,32 @@ async def voice_ask(
     except Exception as e:
         logger.error(f"Voice ask error: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal error occurred.")
+
+# Problem Solving Coach Endpoints
+@app.post("/generate/hint", response_model=HintResponse, tags=["Problem Solving Coach"])
+async def get_error_hint(request: ErrorHintRequest):
+    try:
+        return hint_service.get_testcase_hint(
+            request.problem,
+            request.submit_code,
+            request.testcase_fail,
+            request.testCases,
+            request.language_hint
+        )
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate/solution", response_model=SolutionResponse, tags=["Problem Solving Coach"])
+async def generate_solution(request: SolutionRequest):
+    try:
+        return hint_service.generate_solution(
+            request.problem,
+            request.language,
+            request.testCases,
+            request.language_explanation
+        )
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Health Endpoint
 @app.get("/health")
