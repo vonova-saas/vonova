@@ -1,7 +1,4 @@
-export default function StudentIdLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
-/*"use client";
+"use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -21,5 +18,4 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
   }, [authData?.user?._id, params?.studentId, router]);
 
   return <>{children}</>;
-}*/
-
+}

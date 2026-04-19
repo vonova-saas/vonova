@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 import { useUserId } from "@/hooks";
@@ -8,6 +9,14 @@ import { Button } from "@/components/ui/button";
 import { FileText, MessageSquare, Clock, ArrowRight } from "lucide-react";
 import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
 
+// Define session type for consistency
+type Session = {
+  session_id: string;
+  filename: string;
+  created_at: string;
+  status: string;
+};
+
 interface LastPDFChatsProps {
   onChat: (pdfId: string) => void;
 }
@@ -15,14 +24,64 @@ interface LastPDFChatsProps {
 export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
   const rawId = useUserId();
   const studentId = rawId && rawId !== "undefined" ? rawId : "";
+  const [localSessions, setLocalSessions] = useState<any[]>([]);
 
-  const { data, isLoading } = useQuery<GetSessionsResponse>({
+  const { data, isLoading, error } = useQuery<GetSessionsResponse>({
     queryKey: ["pdf-sessions"],
     queryFn: getSessionsQueryFn,
     enabled: !!studentId,
   });
 
-  const sessions = data?.sessions || [];
+  // Load local sessions on client only to avoid SSR/CSR text mismatches.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = JSON.parse(localStorage.getItem("pdf_sessions") || "[]");
+      setLocalSessions(stored);
+    } catch (err) {
+      console.error("Failed to read localStorage sessions:", err);
+      setLocalSessions([]);
+    }
+  }, []);
+
+  // Get sessions by merging API results with localStorage and removing duplicates
+  const getSessionData = () => {
+    const allSessions: Session[] = [];
+    const sessionIds = new Set<string>();
+    
+    // Add API sessions - new format returns data array directly from getSessionsQueryFn
+    if (data?.data && Array.isArray(data.data)) {
+      data.data.forEach((session: any) => {
+        if (!sessionIds.has(session.session_id)) {
+          allSessions.push({
+            session_id: session.session_id,
+            filename: session.filename,
+            created_at: session.created_at,
+            status: session.status || "ready"
+          });
+          sessionIds.add(session.session_id);
+        }
+      });
+    }
+    
+    // Add localStorage sessions (loaded after mount) and merge with API results
+    localSessions.forEach((session: any) => {
+      if (!sessionIds.has(session.session_id)) {
+        allSessions.push({
+          session_id: session.session_id,
+          filename: session.filename || session.file_name, // Handle both field names
+          created_at: session.created_at,
+          status: session.status || "ready",
+        });
+        sessionIds.add(session.session_id);
+      }
+    });
+    
+    // Sort by created_at descending (newest first)
+    return allSessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  };
+
+  const sessions = getSessionData();
 
   const handleViewAll = () => {
     if (!studentId) return;
@@ -63,7 +122,7 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sessions.map((session) => (
+        {sessions.map((session: Session) => (
           <Card
             key={session.session_id}
             className="group hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"
@@ -80,7 +139,7 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-sm font-semibold truncate">
-                      {session.file_name}
+                      {session.filename}
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">

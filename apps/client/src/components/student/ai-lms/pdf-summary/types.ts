@@ -16,7 +16,12 @@ export type PDFMessage = {
   from: 'user' | 'assistant';
   timestamp: Date;
   pdfId?: string;
-  type: 'text' | 'summary' | 'question' | 'error';
+  type: 'text' | 'summary' | 'question' | 'error' | 'voice';
+  // For recorded voice notes (user side)
+  audioUrl?: string;
+  audioDurationSec?: number;
+  // For AI voice playback (client-side TTS)
+  ttsText?: string;
 };
 
 export type PDFSummary = {

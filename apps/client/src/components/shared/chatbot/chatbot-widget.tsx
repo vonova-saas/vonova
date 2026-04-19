@@ -3,6 +3,7 @@ import { Home, MessageSquare, HelpCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useMemo, useState, useEffect } from "react";
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { ChatRequestType, ChatResponseType } from "@/types/api/ai/chatbot/chatbot.type";
 import { sendChatMessageMutationFn } from "@/services/ai/chatbot/chatbot.api";
 
@@ -15,15 +16,16 @@ import ChatView from "./tabs/chat-view";
 import ChatbotLauncher from "./launcher-button";
 
 const TAB_META = {
-  home:     { icon: Home,          title: "Home"     },
+  home: { icon: Home, title: "Home" },
   messages: { icon: MessageSquare, title: "Messages" },
-  help:     { icon: HelpCircle,    title: "Help"     },
+  help: { icon: HelpCircle, title: "Help" },
 } as const;
 
 export default function ChatbotWidget() {
-  const [open, setOpen]                             = useState(false);
-  const [tab, setTab]                               = useState<ChatTab>("home");
-  const [conversations, setConversations]           = useState<Conversation[]>(seedConversations);
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<ChatTab>("home");
+  const [conversations, setConversations] = useState<Conversation[]>(seedConversations);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
   // Reset to Home every time widget opens
@@ -34,7 +36,7 @@ export default function ChatbotWidget() {
     }
   }, [open]);
 
-  
+
   useEffect(() => {
     if (!activeConversation) return;
     const msgs = activeConversation.messages;
@@ -85,7 +87,7 @@ export default function ChatbotWidget() {
       const request: ChatRequestType = { message: text, lang: "en" };
       const response: ChatResponseType = await sendChatMessageMutationFn(request);
       console.log("FULL RESPONSE:", response);
-        console.log("REPLY:", response.reply);
+      console.log("REPLY:", response.reply);
       const botMsg: ChatMessage = {
         id: `msg-bot-${Date.now()}`,
         sender: "bot",
@@ -93,7 +95,7 @@ export default function ChatbotWidget() {
         timestamp: new Date().toISOString(),
         image: response.image,
       };
-        
+
       // Replace loading bubble with real response
       const updateWithResponse = (c: Conversation): Conversation =>
         c.id === convId
@@ -123,6 +125,9 @@ export default function ChatbotWidget() {
   };
 
   const TabIcon = TAB_META[tab].icon;
+
+  const isPdfIndividualChat = /\/pdf-summary\/[^/]+$/.test(pathname || "");
+  if (isPdfIndividualChat) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[60]">
@@ -164,9 +169,9 @@ export default function ChatbotWidget() {
             ) : (
               <>
                 <div className="flex-1 overflow-hidden">
-                  {tab === "home"     && <HomeTab latest={latest} onStart={startConversation} onOpenConversation={openConversation} />}
+                  {tab === "home" && <HomeTab latest={latest} onStart={startConversation} onOpenConversation={openConversation} />}
                   {tab === "messages" && <MessagesTab conversations={conversations} onOpenConversation={openConversation} />}
-                  {tab === "help"     && <HelpTab faqs={faqs} />}
+                  {tab === "help" && <HelpTab faqs={faqs} />}
                 </div>
                 <BottomNav value={tab} onChange={setTab} />
               </>

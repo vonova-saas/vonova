@@ -5,7 +5,7 @@ import { baseURL } from "./base-url";
 const options = {
   baseURL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 120000,
 };
 
 const API = axios.create(options);
@@ -15,6 +15,9 @@ API.interceptors.response.use(
     return response;
   },
   async (error) => {
+    if (!error.response) {
+      return Promise.reject(error);
+    }
     const { data, status } = error.response;
     if (data === "Unauthorized" && status === 401) {
       window.location.href = "/";
