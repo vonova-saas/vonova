@@ -65,7 +65,7 @@ export const welcomeUserOAuthGoogleMutationFn = async (
 
 // ============== Refresh Token controllers ==============
 export const refreshTokenMutationFn = async () => {
-  const response = await API.get("/auth/refresh");
+  const response = await API.post("/auth/refresh-token");
   return response.data;
 };
 
@@ -104,7 +104,7 @@ export const logoutFromAllDevicesMutationFn = async (): Promise<{ message: strin
 
 // ============== User API Services ==============
 export const getCurrentUserQueryFn = async (): Promise<currentUserResponseType> => {
-  const response = await API.get("/auth/current-User");
+  const response = await API.get("/auth/current-user");
   return response.data;
 };
 

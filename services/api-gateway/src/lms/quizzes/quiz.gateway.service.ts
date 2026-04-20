@@ -25,6 +25,10 @@ export class QuizGatewayService {
     return this.client.send({ cmd: 'quiz.getAll' }, { userId });
   }
 
+  getAllQuizzesForStudents() {
+    return this.client.send({ cmd: 'quiz.getAllForStudents' }, {});
+  }
+
   getQuizById(quizId: string) {
     return this.client.send({ cmd: 'quiz.getById' }, { quizId });
   }

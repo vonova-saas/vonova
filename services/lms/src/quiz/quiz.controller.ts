@@ -33,6 +33,11 @@ export class QuizController {
     return this.quizService.getAllQuizzes(userId);
   }
 
+  @MessagePattern({ cmd: 'quiz.getAllForStudents' })
+  getAllQuizzesForStudents() {
+    return this.quizService.getAllQuizzesForStudents();
+  }
+
   @MessagePattern({ cmd: 'quiz.getById' })
   getQuiz(@Payload('quizId') quizId: string) {
     return this.quizService.getQuizById(quizId);

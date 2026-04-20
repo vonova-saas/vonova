@@ -9,6 +9,13 @@ const options = {
 };
 
 const API = axios.create(options);
+let isRefreshing = false;
+let refreshPromise: Promise<unknown> | null = null;
+
+const isMissingAccessTokenCookieError = (status: number, data: unknown) => {
+  const message = (data as { message?: string })?.message ?? "";
+  return status === 400 && message.toLowerCase().includes("access token cookie is required");
+};
 
 API.interceptors.response.use(
   (response) => {
@@ -19,8 +26,36 @@ API.interceptors.response.use(
       return Promise.reject(error);
     }
     const { data, status } = error.response;
-    if (data === "Unauthorized" && status === 401) {
-      window.location.href = "/";
+    const originalRequest = error.config as (typeof error.config & { _retry?: boolean });
+    const requestUrl = originalRequest?.url ?? "";
+    const isAuthRefreshRequest = requestUrl.includes("/auth/refresh-token");
+    const isAuthLoginRequest = requestUrl.includes("/auth/login");
+
+    const shouldAttemptRefresh = status === 401 || isMissingAccessTokenCookieError(status, data);
+
+    if (shouldAttemptRefresh && originalRequest && !originalRequest._retry && !isAuthRefreshRequest && !isAuthLoginRequest) {
+      originalRequest._retry = true;
+
+      try {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          refreshPromise = API.post("/auth/refresh-token")
+            .then((response) => response.data)
+            .finally(() => {
+              isRefreshing = false;
+              refreshPromise = null;
+            });
+        }
+
+        await refreshPromise;
+        return API(originalRequest);
+      } catch (refreshError) {
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
+
+        return Promise.reject(refreshError);
+      }
     }
 
     const customError: CustomError = {

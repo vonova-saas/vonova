@@ -47,7 +47,7 @@ import { extractAccessTokenFromRequest } from '../../common/utils/extract-access
 @ApiCookieAuth()
 @Controller('api/v1/auth')
 export class AuthGatewayController {
-  constructor(private readonly authService: AuthGatewayService) {}
+  constructor(private readonly authService: AuthGatewayService) { }
 
   // Register Flow
   @ApiOperation({

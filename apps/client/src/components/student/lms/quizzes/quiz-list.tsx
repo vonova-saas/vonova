@@ -76,7 +76,7 @@ export default function QuizList({ quizzes }: QuizListProps) {
                 )}
               </div>
               <Link
-                href={`/${userId}/quizzes/${quiz._id}`}
+                href={`/student/${userId}/quizzes/${quiz._id}`}
                 className="w-full mt-4"
               >
                 <Button className="w-full cursor-pointer">Attempt Now</Button>

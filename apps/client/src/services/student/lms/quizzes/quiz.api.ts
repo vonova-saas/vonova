@@ -107,8 +107,18 @@ export const getInstructorQuizzesMutationFn = async (
 // ========== Student — browse & take quizzes ==========
 
 export const getAllQuizzesMutationFn = async (): Promise<getAllQuizzesTypeResponse> => {
-  const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}/getAllQuizzes`);
-  return response.data;
+  try {
+    const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}`);
+    return response.data;
+  } catch (error: unknown) {
+    // Backward-compatibility for older deployed gateways that still expose the legacy path.
+    const status = (error as { response?: { status?: number } })?.response?.status;
+    if (status === 404) {
+      const legacyResponse = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}/getAllQuizzes`);
+      return legacyResponse.data;
+    }
+    throw error;
+  }
 };
 
 /** Single quiz by its id — uses `/quiz/:quizId` so it is not confused with “all quizzes for user”. */

@@ -115,6 +115,18 @@ export class QuizGatewayController {
   }
 
   /**
+   * Get all quizzes visible to students.
+   */
+  @ApiOperation({
+    summary: 'Get all quizzes for students',
+    description: 'Retrieves all quizzes regardless of creator.',
+  })
+  @Get()
+  async getAllQuizzesForStudents() {
+    return firstValueFrom(this.quizService.getAllQuizzesForStudents());
+  }
+
+  /**
    * Get all quizzes for a user (creator / instructor id in path)
    * @param userId - The ID of the user whose quizzes to retrieve
    * @returns Promise<Quiz[]> - Array of user's quizzes
