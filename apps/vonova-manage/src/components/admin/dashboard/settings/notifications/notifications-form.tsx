@@ -1,12 +1,15 @@
-import { getNotifications } from './actions'
+"use client"
 import { NotificationsFormClient } from './notifications-form-client'
 
-export default async function NotificationsForm() {
-  const result = await getNotifications()
-  
-  if (result.status === 'error') {
-    throw new Error(result.message)
-  }
+export default function NotificationsForm() {
+  const defaults = {
+    type: 'all',
+    communication_emails: false,
+    marketing_emails: false,
+    social_emails: false,
+    security_emails: true,
+    mobile: false,
+  } as const
 
-  return <NotificationsFormClient defaultValues={result.data} />
+  return <NotificationsFormClient defaultValues={defaults} />
 }

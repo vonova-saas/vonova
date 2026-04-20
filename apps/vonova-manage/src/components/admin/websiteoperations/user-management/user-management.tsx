@@ -12,7 +12,7 @@ import { UserActivityLog } from "@/components/admin/websiteoperations/user-manag
 import { UserForm } from "@/components/admin/websiteoperations/user-management/users/user-form"
 import { UserStatistics } from "./overview/user-statistics"
 import { UserActivityTimeline, mockTimelineEvents } from "./overview/user-activity-timeline"
-import { useToast } from "@/hooks"
+import { useToast } from "@/hooks/use-toast"
 import { User } from "./types"
 import { mockUsers, mockActivities } from "./data/mock-data"
 

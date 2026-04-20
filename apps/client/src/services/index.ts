@@ -13,7 +13,9 @@ import {
   resetPasswordMutationFn,
   logoutMutationFn,
   logoutFromAllDevicesMutationFn,
-  getCurrentUserQueryFn
+  getCurrentUserQueryFn,
+  studentOnboardingMutationFn,
+  instructorOnboardingMutationFn,
 } from "./app/auth/auth.api";
 
 //? ************* Settings *************
@@ -43,6 +45,8 @@ export {
   logoutMutationFn,
   logoutFromAllDevicesMutationFn,
   getCurrentUserQueryFn,
+  studentOnboardingMutationFn,
+  instructorOnboardingMutationFn,
   //? settings api services
   //? account api services
   //? billing api services

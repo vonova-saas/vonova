@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogFilter, LogSource } from "../types";
-import { cn } from "@/utils/functions";
+import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
 const logLevels = [

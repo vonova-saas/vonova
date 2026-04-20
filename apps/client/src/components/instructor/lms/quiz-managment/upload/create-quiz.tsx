@@ -5,8 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, CheckCircle, Component as ComponentIcon, BookOpen } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, CheckCircle, Component as ComponentIcon, BookOpen, Sparkles, Loader2 } from "lucide-react";
 import { createNewQuizMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { generateQuizWithAIMutationFn } from "@/services/instructor/lms/quiz-generation/ai-quiz.api";
 import { useAuthContext } from "@/context/app/auth/auth-context";
 import type { QuizType, Question, createQuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 
@@ -23,10 +38,25 @@ export function CreateQuiz() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // AI Generation states
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiLevel, setAiLevel] = useState<"easy" | "medium" | "hard">("medium");
+  const [aiTotalQuestions, setAiTotalQuestions] = useState<number>(10);
+  const [aiMcQuestions, setAiMcQuestions] = useState<number>(5);
+  const [aiTfQuestions, setAiTfQuestions] = useState<number>(5);
+  const [generatingAI, setGeneratingAI] = useState(false);
+
   const canSave = useMemo(() => {
     if (!title.trim() || !topic.trim() || !noOfQuestions.trim()) return false;
     if (!questions.length) return false;
-    return questions.every((q) => q.text.trim() && q.options.length >= 2 && q.options.every((o) => o.text.trim()));
+    return questions.every((q) => {
+      const text = typeof q.text === 'string' ? q.text : String(q.text ?? '');
+      return text.trim() && q.options.length >= 2 && q.options.every((o) => {
+        const optText = typeof o.text === 'string' ? o.text : String(o.text ?? '');
+        return optText.trim();
+      });
+    });
   }, [title, topic, noOfQuestions, questions]);
 
   const addQuestion = () => {
@@ -62,11 +92,11 @@ export function CreateQuiz() {
     try {
       setSaving(true);
       setError(null);
-      
+
       if (!userId) {
         throw new Error("User not authenticated");
       }
-      
+
       const payload: Omit<QuizType, "_id"> = {
         title: title.trim(),
         description: description.trim(),
@@ -93,6 +123,15 @@ export function CreateQuiz() {
         <div className="flex items-center gap-3 mb-6">
           <h1 className="text-4xl font-bold leading-tight">Create Quiz</h1>
           <ComponentIcon className="w-7 h-7 text-primary animate-pulse" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAIGenerator(true)}
+            className="ml-auto cursor-pointer bg-primary/10 hover:bg-primary/20 border-primary/30"
+          >
+            <Sparkles className="w-4 h-4 mr-2 text-primary" />
+            <span className="text-primary font-medium">Generate with AI</span>
+          </Button>
         </div>
 
         {/* Hero-like summary card */}
@@ -210,6 +249,198 @@ export function CreateQuiz() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Generator Dialog */}
+      <Dialog open={showAIGenerator} onOpenChange={setShowAIGenerator}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Generate Quiz with AI
+            </DialogTitle>
+            <DialogDescription>
+              Let AI generate quiz questions based on your topic and preferences.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {error && <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">{error}</div>}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Topic</label>
+              <Input
+                placeholder="e.g., JavaScript Basics, World History..."
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Difficulty Level</label>
+              <Select value={aiLevel} onValueChange={(v) => setAiLevel(v as "easy" | "medium" | "hard")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Total</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={aiTotalQuestions}
+                  onChange={(e) => setAiTotalQuestions(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">MC Questions</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={50}
+                  value={aiMcQuestions}
+                  onChange={(e) => setAiMcQuestions(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">T/F Questions</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={50}
+                  value={aiTfQuestions}
+                  onChange={(e) => setAiTfQuestions(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Note: MC (Multiple Choice) + T/F (True/False) should equal Total questions.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowAIGenerator(false)} disabled={generatingAI} className="cursor-pointer">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAIGenerate}
+              disabled={!aiTopic.trim() || generatingAI || aiMcQuestions + aiTfQuestions !== aiTotalQuestions}
+              className="cursor-pointer"
+            >
+              {generatingAI ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Quiz
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
+  async function handleAIGenerate() {
+    try {
+      setGeneratingAI(true);
+      setError(null);
+
+      const response = await generateQuizWithAIMutationFn({
+        topic: aiTopic.trim(),
+        total_questions: aiTotalQuestions,
+        mc_questions: aiMcQuestions,
+        tf_questions: aiTfQuestions,
+        level: aiLevel,
+      });
+
+      // Populate the form with AI-generated data
+      setTitle(`Quiz on ${response.topic}`);
+      setTopic(response.topic);
+      setNoOfQuestions(String(response.total_questions));
+      setDescription(`AI-generated ${aiLevel} level quiz about ${response.topic}.`);
+
+      // Convert AI questions to the Question type format
+      // Parse the rich question objects from AI API
+      const parsedQuestions: Question[] = response.questions.map((qItem, index) => {
+        const qid = `ai-q${Date.now()}-${index}`;
+
+        // Handle the AI response format with question, options, correct_answer
+        if (qItem && typeof qItem === 'object') {
+          const qData = qItem as {
+            type?: string;
+            question?: string;
+            options?: string[];
+            correct_answer?: string
+          };
+
+          const questionText = qData.question ?? 'Untitled Question';
+          const qType = qData.type ?? 'mc';
+          const correctAnswer = qData.correct_answer ?? 'A';
+
+          let options: { id: string; text: string }[] = [];
+          let correctOptionId: string;
+
+          if (qType === 'tf') {
+            // True/False question
+            options = [
+              { id: `${qid}-a`, text: "True" },
+              { id: `${qid}-b`, text: "False" },
+            ];
+            // correct_answer is "True" or "False" for TF questions
+            correctOptionId = correctAnswer.toLowerCase() === 'true' ? `${qid}-a` : `${qid}-b`;
+          } else {
+            // Multiple Choice question
+            // Parse options like "A: Server-side rendering" -> extract text after ": "
+            const rawOptions = qData.options ?? ['A: Option A', 'B: Option B', 'C: Option C', 'D: Option D'];
+            options = rawOptions.map((opt, idx) => {
+              const letter = String.fromCharCode(97 + idx); // a, b, c, d...
+              // Extract text after ": " if present, otherwise use full text
+              const text = opt.includes(': ') ? opt.split(': ').slice(1).join(': ') : opt;
+              return { id: `${qid}-${letter}`, text };
+            });
+            // correct_answer is "A", "B", "C", "D" for MC questions
+            const correctLetter = correctAnswer.toLowerCase();
+            correctOptionId = `${qid}-${correctLetter}`;
+          }
+
+          return {
+            id: qid,
+            text: questionText,
+            options,
+            correctOptionId,
+          };
+        }
+
+        // Fallback for string format (shouldn't happen with current API)
+        return {
+          id: qid,
+          text: String(qItem ?? ''),
+          options: [
+            { id: `${qid}-a`, text: "Option A" },
+            { id: `${qid}-b`, text: "Option B" },
+            { id: `${qid}-c`, text: "Option C" },
+            { id: `${qid}-d`, text: "Option D" },
+          ],
+          correctOptionId: `${qid}-a`,
+        };
+      });
+
+      setQuestions(parsedQuestions);
+      setShowAIGenerator(false);
+    } catch (e: unknown) {
+      let msg = "Failed to generate quiz with AI";
+      if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;
+      setError(msg);
+    } finally {
+      setGeneratingAI(false);
+    }
+  }
 }

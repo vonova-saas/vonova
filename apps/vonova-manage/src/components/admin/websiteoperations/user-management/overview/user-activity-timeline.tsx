@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Clock, User, Settings, ShoppingCart, MessageSquare, AlertTriangle } from 'lucide-react'
-import { cn } from '@/utils/functions'
+import { cn } from '@/lib/utils'
 import { TimelineEvent } from '../types'
 import Image from 'next/image'
 

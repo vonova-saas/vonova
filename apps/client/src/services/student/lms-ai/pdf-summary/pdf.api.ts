@@ -17,12 +17,10 @@ export const uploadPDFMutationFn = async (
 ): Promise<UploadPDFResponse> => {
   const formData = new FormData();
   formData.append("file", data.file);
-  formData.append("user_id", data.user_id);
-  if (data.language)
-    formData.append("language", data.language);
 
   const response = await API.post("/pdf-summary/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    withCredentials: true,
   });
   return response.data;
 };
@@ -31,7 +29,10 @@ export const uploadPDFMutationFn = async (
 export const chatWithPDFMutationFn = async (
   data: ChatRequest
 ): Promise<ChatResponse> => {
-  const response = await API.post("/pdf-summary/chat", data);
+  const response = await API.post(`/pdf-summary/chat?session_id=${data.session_id}`, {
+    question: data.question,
+    ...(data.context_length && { context_length: data.context_length })
+  });
   return response.data;
 };
 
@@ -66,5 +67,13 @@ export const deleteSessionMutationFn = async (
 
 export const getSessionsQueryFn = async (): Promise<GetSessionsResponse> => {
   const response = await API.get("/pdf-summary/sessions");
+  return response.data;
+};
+
+// ============== Get Full Session ==============
+export const getSessionFullQueryFn = async (
+  sessionId: string
+): Promise<any> => {
+  const response = await API.get(`/pdf-summary/session/${sessionId}/full`);
   return response.data;
 };

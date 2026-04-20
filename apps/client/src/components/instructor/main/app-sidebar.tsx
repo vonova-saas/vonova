@@ -23,6 +23,21 @@ import { NavSubMain } from "./nav-sub-main";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userId = useUserId();
 
+  const lmsManagementItems = sidebarNavData.lmsManagement.map((item) => ({
+    ...item,
+    url: item.url.replace(":instructorId", userId || ""),
+  }));
+
+  const lmsToolsItems = sidebarNavData.lmsTools.map((item) => ({
+    ...item,
+    url: item.url.replace(":instructorId", userId || ""),
+  }));
+
+  const appItems = sidebarNavData.app.map((item) => ({
+    ...item,
+    url: item.url.replace(":instructorId", userId || ""),
+  }));
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -53,9 +68,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={sidebarNavData.lmsManagement}/>
-        <NavSubMain items={sidebarNavData.lmsTools} title="LMS Tools" />
-        <NavSubMain items={sidebarNavData.app} title="App" />
+        <NavMain items={lmsManagementItems} />
+        <NavSubMain items={lmsToolsItems} title="LMS Tools" />
+        <NavSubMain items={appItems} title="App" />
       </SidebarContent>
       <SidebarFooter>
         <NavInstructor instructor={sidebarNavData.instructorData} />

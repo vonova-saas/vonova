@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { LogEntry, LogFilter } from "../types";
-import { cn } from "@/utils/functions";
+import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Card } from "@/components/ui/card";
 

@@ -1,9 +1,5 @@
 // ============== Upload Types ==============
 export type UploadPDFRequest = {
-  user_id: string;
-  auto_summarize?: boolean;
-  summary_type?: string;
-  language?: string;
   file: File;
 };
 
@@ -20,7 +16,6 @@ export type UploadPDFResponse = {
 export type ChatRequest = {
   session_id: string;
   question: string;
-  user_id: string;
   context_length?: number;
 };
 
@@ -63,9 +58,10 @@ export type DeleteSessionResponse = {
 };
 // ============== Sessions List Types ==============
 export type GetSessionsResponse = {
-  sessions: {
+  success: boolean;
+  data: {
     session_id: string;
-    file_name: string;
+    filename: string;
     created_at: string;
     status: string;
   }[];

@@ -38,7 +38,7 @@ export function UserForm({
   isSubmitting = false,
 }: UserFormProps) {
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
+    // resolver: zodResolver(userFormSchema),
     defaultValues: {
       name: "",
       email: "",

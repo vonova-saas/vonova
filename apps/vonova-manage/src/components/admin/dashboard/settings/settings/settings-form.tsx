@@ -1,4 +1,4 @@
-import { getAppearance } from './actions'
+"use client"
 import { SettingsFormClient } from './settings-form-client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,26 +31,17 @@ function SettingsFormSkeleton() {
   )
 }
 
-export default async function SettingsForm() {
-  const result = await getAppearance()
-  
-  if (result.status === 'error') {
-    // Handle error state with a user-friendly message
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <h3 className="text-lg font-medium mb-2">Failed to load settings</h3>
-          <p className="text-muted-foreground">
-            {result.message}. Please try again later.
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
+export default function SettingsForm() {
+  const defaults = {
+    font: 'cairo',
+    fontSize: '16',
+    theme: 'light',
+    language: 'en',
+  } as const
 
   return (
     <Suspense fallback={<SettingsFormSkeleton />}>
-      <SettingsFormClient defaultValues={result.data} />
+      <SettingsFormClient defaultValues={defaults} />
     </Suspense>
   )
 }

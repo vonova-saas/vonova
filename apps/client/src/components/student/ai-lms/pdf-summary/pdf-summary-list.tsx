@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,9 +23,11 @@ import {
   BarChart3,
 } from "lucide-react";
 import { PDFFile } from "./types";
-//import { mockPDFFiles } from "./fake-data";
 import PDFSummaryCard from "./pdf-summary-card";
 import useStudentId from "@/hooks/student/use-student-id";
+import { getChatHistoryQueryFn, getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
+import { jsPDF } from "jspdf";
 
 interface PDFSummaryListProps {
   pdfs?: PDFFile[];
@@ -37,17 +40,13 @@ interface PDFSummaryListProps {
 }
 
 export default function PDFSummaryList({
-  pdfs = [],
+  pdfs: propPdfs = [],
   studentId,
-  onChat = (pdfId: string) => {
-    window.location.href = `/student/${studentId}/pdf-summary/${pdfId}`;
-  },
+  onChat,
   onDelete = (pdfId: string) => {
     console.log("Delete PDF:", pdfId);
   },
-  onDownload = (pdfId: string) => {
-    console.log("Download PDF:", pdfId);
-  },
+  onDownload: onDownloadProp,
   onRename = (pdfId: string, newName: string) => {
     console.log("Rename PDF:", pdfId, "to", newName);
   },
@@ -59,21 +58,173 @@ export default function PDFSummaryList({
   const [statusFilter, setStatusFilter] = useState("All");
   const [topicFilter, setTopicFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [localSessions, setLocalSessions] = useState<any[]>([]);
 
   const router = useRouter();
+  const currentStudentId = useStudentId();
+
+  // Default onChat implementation if not provided
+  const handleChat = onChat || ((pdfId: string) => {
+    window.location.href = `/student/${currentStudentId}/pdf-summary/${pdfId}`;
+  });
+
+  // Fetch sessions with localStorage fallback
+  const { data: sessionsData, isLoading } = useQuery<GetSessionsResponse>({
+    queryKey: ["pdf-sessions"],
+    queryFn: getSessionsQueryFn,
+    enabled: !!currentStudentId,
+  });
+
+  // Read localStorage only on the client after mount to avoid SSR/CSR hydration mismatches.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = JSON.parse(localStorage.getItem("pdf_sessions") || "[]");
+      setLocalSessions(stored);
+    } catch (err) {
+      console.error("Failed to read localStorage sessions:", err);
+      setLocalSessions([]);
+    }
+  }, []);
+
+  // Convert sessions to PDFFile format with localStorage fallback
+  const pdfs = useMemo(() => {
+    // If props have PDFs, use those (for backward compatibility)
+    if (propPdfs && propPdfs.length > 0) {
+      return propPdfs;
+    }
+
+    // Get sessions from API or localStorage fallback (loaded on client after mount)
+    let sessions: any[] = [];
+    const apiSessions = Array.isArray((sessionsData as any)?.data)
+      ? (sessionsData as any).data
+      : Array.isArray(sessionsData)
+        ? (sessionsData as any)
+        : [];
+
+    if (apiSessions.length > 0) {
+      sessions = apiSessions;
+    } else if (localSessions.length > 0) {
+      sessions = localSessions.map((session: any) => ({
+        session_id: session.session_id,
+        file_name: session.file_name || session.filename,
+        file_size: session.file_size ?? session.fileSize ?? session.size ?? 0,
+        page_count: session.page_count ?? session.pages ?? session.pageCount ?? 0,
+        created_at: session.created_at,
+        status: session.status || "ready",
+      }));
+    }
+
+    // Convert sessions to PDFFile format
+    return sessions.map((session: any) => ({
+      id: session.session_id,
+      name: session.file_name || session.filename || "PDF Document",
+      size: Number(session.file_size ?? session.fileSize ?? session.size ?? 0) || 0,
+      uploadedAt: new Date(session.created_at),
+      status: session.status || "ready",
+      pages: Number(session.pages ?? session.page_count ?? session.pageCount ?? 0) || 0,
+      topics: [], // Not available in session data
+      lastAccessed: new Date(session.created_at),
+    }));
+  }, [propPdfs, sessionsData, localSessions]);
+
+  const internalDownloadChatPdf = async (sessionId: string) => {
+    // Download the chat history for this session as a PDF.
+    try {
+      const historyData = await getChatHistoryQueryFn(sessionId);
+      const hd: any = historyData as any;
+
+      let records: any[] = [];
+      if (hd?.messages && Array.isArray(hd.messages)) records = hd.messages;
+      else if (hd?.data?.messages && Array.isArray(hd.data.messages)) records = hd.data.messages;
+      else if (hd?.data?.chats && Array.isArray(hd.data.chats)) records = hd.data.chats;
+
+      const normalizeText = (value: any) => {
+        if (typeof value === "string") return value;
+        if (value == null) return "";
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
+      };
+
+      const lines: string[] = [];
+      records.forEach((r: any) => {
+        const role = r?.role || r?.sender || r?.from;
+        if (role === "user" || role === "assistant") {
+          const content = normalizeText(
+            r?.content ?? r?.message ?? r?.text ?? r?.value ?? "",
+          ).trim();
+          if (!content) return;
+          const label = role === "user" ? "You" : "AI";
+          lines.push(`${label}: ${content}`);
+          return;
+        }
+
+        const q = normalizeText(r?.question ?? r?.prompt ?? r?.user_question ?? r?.q).trim();
+        const a = normalizeText(r?.answer ?? r?.response ?? r?.assistant_answer ?? r?.a).trim();
+        if (q) lines.push(`You: ${q}`);
+        if (a) lines.push(`AI: ${a}`);
+      });
+
+      const session = pdfs.find((p) => p.id === sessionId);
+      const fileNameBase = (session?.name || sessionId).replace(/[\\/:*?"<>|]+/g, "_");
+      const generatedAt = new Date().toLocaleString();
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const margin = 48;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const maxWidth = pageWidth - margin * 2;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(`Chat History`, margin, 64);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`Session: ${sessionId}`, margin, 84);
+      doc.text(`Generated: ${generatedAt}`, margin, 100);
+
+      doc.setFontSize(11);
+      let y = 132;
+      const lineHeight = 16;
+      const bottom = doc.internal.pageSize.getHeight() - margin;
+
+      const safeLines = lines.length ? lines : ["No chat messages found for this session."];
+      safeLines.forEach((l) => {
+        const wrapped = doc.splitTextToSize(l, maxWidth);
+        wrapped.forEach((w: string) => {
+          if (y > bottom) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.text(w, margin, y);
+          y += lineHeight;
+        });
+        y += 6;
+      });
+
+      doc.save(`${fileNameBase}-chat.pdf`);
+    } catch (err) {
+      console.error("Failed to download chat history PDF:", err);
+      alert("Failed to download chat history. Please try again.");
+    }
+  };
+
+  const onDownload = onDownloadProp ?? internalDownloadChatPdf;
 
   // Get unique topics from all PDFs
   const allTopics = useMemo(() => {
     const topics = new Set<string>();
-    pdfs.forEach((pdf) => {
-      pdf.topics.forEach((topic) => topics.add(topic));
+    pdfs.forEach((pdf: PDFFile) => {
+      pdf.topics.forEach((topic: string) => topics.add(topic));
     });
     return Array.from(topics).sort();
   }, [pdfs]);
 
   // Filter PDFs based on search and filters
   const filteredPDFs = useMemo(() => {
-    return pdfs.filter((pdf) => {
+    return pdfs.filter((pdf: PDFFile) => {
       const matchesSearch = pdf.name
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -89,10 +240,10 @@ export default function PDFSummaryList({
   // Calculate stats
   const stats = useMemo(() => {
     const total = pdfs.length;
-    const ready = pdfs.filter((pdf) => pdf.status === "ready").length;
-    const processing = pdfs.filter((pdf) => pdf.status === "processing").length;
-    const totalSize = pdfs.reduce((sum, pdf) => sum + pdf.size, 0);
-    const totalPages = pdfs.reduce((sum, pdf) => sum + pdf.pages, 0);
+    const ready = pdfs.filter((pdf: PDFFile) => pdf.status === "ready").length;
+    const processing = pdfs.filter((pdf: PDFFile) => pdf.status === "processing").length;
+    const totalSize = pdfs.reduce((sum: number, pdf: PDFFile) => sum + pdf.size, 0);
+    const totalPages = pdfs.reduce((sum: number, pdf: PDFFile) => sum + pdf.pages, 0);
 
     return { total, ready, processing, totalSize, totalPages };
   }, [pdfs]);
@@ -113,34 +264,29 @@ export default function PDFSummaryList({
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div className="flex items-center gap-6">
               <div className="bg-primary/10 text-primary rounded-2xl p-6 flex items-center justify-center shadow-lg border border-primary/10">
-                <BarChart3 className="w-10 h-10" />
+                <FileText className="w-10 h-10" />
               </div>
               <div className="space-y-3">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-5xl font-bold text-primary drop-shadow-sm">
-                    {stats.total}
-                  </span>
-                  <span className="text-lg font-medium text-muted-foreground">
-                    PDF Files
-                  </span>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="w-5 h-5 text-primary" />
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold border border-green-200">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    {stats.ready} Ready
+                <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap max-w-full">
+                  <div className="text-base font-semibold line-clamp-1 truncate block">
+                    {pdfs.length} PDF Files
                   </div>
-                  <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-200">
+                  {/* Temporarily commented out as requested */}
+                  {/* <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-200">
                     <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                     {stats.processing} Processing
-                  </div>
-                  <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold border border-blue-200">
+                  </div> */}
+                  {/* <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold border border-blue-200">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     {formatTotalSize(stats.totalSize)} Total Size
-                  </div>
-                  <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold border border-purple-200">
+                  </div> */}
+                  {/* <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold border border-purple-200">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     {stats.totalPages} Total Pages
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -259,11 +405,11 @@ export default function PDFSummaryList({
               : "space-y-4"
           }
         >
-          {filteredPDFs.map((pdf) => (
+          {filteredPDFs.map((pdf: PDFFile) => (
             <PDFSummaryCard
               key={pdf.id}
               pdf={pdf}
-              onChat={onChat}
+              onChat={handleChat}
               onDelete={onDelete}
               onDownload={onDownload}
               onRename={onRename}

@@ -1,12 +1,16 @@
-import { getAccount } from './actions'
+"use client"
 import { AccountFormClient } from './account-form-client'
 
-export default async function AccountForm() {
-  const result = await getAccount()
-  
-  if (result.status === 'error') {
-    throw new Error(result.message)
-  }
+export default function AccountForm() {
+  // Sane defaults; the client will fetch actual data on mount
+  const defaults = {
+    name: '',
+    email: '',
+    avatarUrl: '',
+    bio: '',
+    dateOfBirth: '',
+    address: '',
+  } as const
 
-  return <AccountFormClient defaultValues={result.data} />
+  return <AccountFormClient defaultValues={defaults} />
 }

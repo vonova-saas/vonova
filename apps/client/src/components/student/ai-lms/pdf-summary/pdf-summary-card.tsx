@@ -91,21 +91,23 @@ export default function PDFSummaryCard({
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileText className="w-5 h-5 text-primary" />
             </div>
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold truncate">
+            <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap max-w-full">
+              <CardTitle className="text-base font-semibold line-clamp-1 truncate block">
                 {pdf.name}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge
+                {/* Temporarily commented out as requested */}
+                {/* <Badge
                   variant="outline"
                   className={`text-xs ${getStatusColor(pdf.status)}`}
                 >
                   {getStatusIcon(pdf.status)}
                   <span className="ml-1 capitalize">{pdf.status}</span>
-                </Badge>
-                <span className="text-xs text-muted-foreground">
+                </Badge> */}
+                {/* Temporarily commented out as requested */}
+                {/* <span className="text-xs text-muted-foreground">
                   {pdf.pages} pages
-                </span>
+                </span> */}
               </div>
             </div>
           </div>
@@ -142,11 +144,11 @@ export default function PDFSummaryCard({
 
       <CardContent className="pt-0">
         <div className="space-y-3">
-          {/* File Info */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          {/* Temporarily commented out as requested */}
+          {/* <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{formatFileSize(pdf.size)}</span>
             <span>{formatDate(pdf.uploadedAt)}</span>
-          </div>
+          </div> */}
 
           {/* Topics */}
           {pdf.topics.length > 0 && (
@@ -172,7 +174,7 @@ export default function PDFSummaryCard({
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Restore Chat button as requested */}
           <div className="flex gap-2 pt-2">
             <Button
               onClick={() => onChat(pdf.id)}

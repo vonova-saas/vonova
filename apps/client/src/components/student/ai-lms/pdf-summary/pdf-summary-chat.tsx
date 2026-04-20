@@ -1,14 +1,12 @@
 "use client";
 import { toast } from "sonner";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useUserId } from "@/hooks";
 import { useDropzone } from "react-dropzone";
 import {
   AIInput,
   AIInputTextarea,
   AIInputToolbar,
-  AIInputTools,
-  AIInputButton,
   AIInputSubmit,
 } from "@/components/ui/ai/ai-components/input";
 import {
@@ -25,7 +23,6 @@ import {
 } from "@/components/ui/ai/ai-components/branch";
 import {
   TrashIcon,
-  PlusIcon,
   FileText,
   Upload,
   SendIcon,
@@ -38,6 +35,11 @@ import {
   AlertCircle,
   Loader2,
   Bot,
+  Mic,
+  Play,
+  Pause,
+  Volume2,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,13 +61,14 @@ import { PDFFile, PDFMessage, UploadProgress } from "./types";
 import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
-import { uploadPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { uploadPDFMutationFn, chatWithPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 
 interface PDFSummaryChatProps {
   initialPDF?: PDFFile | null;
   initialMessages?: PDFMessage[];
   isIndividualChat?: boolean;
   studentId?: string;
+  onClearChatHistory?: () => void;
 }
 
 const fakeResponses = [
@@ -89,9 +92,15 @@ export default function PDFSummaryChat({
   initialMessages = [],
   isIndividualChat = false,
   studentId: propStudentId,
+  onClearChatHistory,
 }: PDFSummaryChatProps) {
-    const rawId = useUserId();
-    const studentId = rawId && rawId !== "undefined" ? rawId : "";
+  const rawId = useUserId();
+  const studentId =
+    (propStudentId && propStudentId !== "undefined" ? propStudentId : "") ||
+    (rawId && rawId !== "undefined" ? rawId : "") ||
+    (typeof window !== "undefined"
+      ? window.location.pathname.split("/")[2] || ""
+      : "");
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<PDFMessage[]>(initialMessages);
   const [status, setStatus] = useState<
@@ -104,16 +113,61 @@ export default function PDFSummaryChat({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [showDetailButton, setShowDetailButton] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<BlobPart[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [pendingVoiceUrl, setPendingVoiceUrl] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const speechRecognitionRef = useRef<any>(null);
+  const sendVoiceAfterStopRef = useRef(false);
+  const discardVoiceRef = useRef(false);
+  const conversationContainerRef = useRef<HTMLDivElement>(null);
+  const [isPlayingVoice, setIsPlayingVoice] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [waveformData, setWaveformData] = useState<number[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
    //const studentId = useUserId() || "";
+
+  // Keep local state in sync with parent when viewing a specific PDF chat.
+  useEffect(() => {
+    if (isIndividualChat) {
+      setCurrentPDF(initialPDF || null);
+      setMessages(initialMessages);
+    }
+  }, [isIndividualChat, initialPDF, initialMessages]);
+
+  // Show detail button if there's exactly one assistant message from initial props
+  useEffect(() => {
+    if (isIndividualChat) {
+      const assistantMessages = (initialMessages || []).filter(
+        (m) => m.from === "assistant" && !!(m.content || "").trim(),
+      );
+      // Show after the first assistant response (the auto brief summary).
+      setShowDetailButton(assistantMessages.length === 1);
+      return;
+    }
+
+    if (initialMessages && initialMessages.length > 0) {
+      const assistantMessages = initialMessages.filter(
+        (m) => m.from === "assistant" && !!(m.content || "").trim(),
+      );
+      if (assistantMessages.length === 1) {
+        setShowDetailButton(true);
+      }
+    }
+  }, [initialMessages, isIndividualChat]);
 
   const generateFakeResponse = () => {
     const responseIndex = Math.floor(Math.random() * fakeResponses.length);
     return fakeResponses[responseIndex];
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isRecording) return;
     if (!text.trim()) return;
 
     const userMessage: PDFMessage = {
@@ -126,19 +180,25 @@ export default function PDFSummaryChat({
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const messageText = text;
     setText("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
     setStatus("submitted");
     setIsTyping(true);
+    setShowDetailButton(false); // Hide button when user sends new message
 
-    setTimeout(() => {
+    try {
       setStatus("streaming");
-      const aiResponseData = generateFakeResponse();
+      const response = await chatWithPDFMutationFn({
+        session_id: currentPDF?.id || "",
+        question: messageText,
+      });
+      
       const aiMessage: PDFMessage = {
         id: (Date.now() + 1).toString(),
-        content: aiResponseData.content,
+        content: response.answer || "I apologize, but I couldn't process your request at the moment.",
         from: "assistant",
         timestamp: new Date(),
         pdfId: currentPDF?.id,
@@ -147,7 +207,240 @@ export default function PDFSummaryChat({
       setMessages((prev) => [...prev, aiMessage]);
       setStatus("ready");
       setIsTyping(false);
-    }, 2000);
+      
+      // Show detail button after first assistant response if this is the first exchange
+      if (messages.filter(m => m.from === "assistant").length === 0) {
+        setShowDetailButton(true);
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Check for AWS/S3 configuration errors
+const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.data?.message || (error as any)?.toString();      if (uploadErrorMessage && (uploadErrorMessage.includes('AWS Access Key') || uploadErrorMessage.includes('S3') || uploadErrorMessage.includes('credentials') || uploadErrorMessage.includes('Failed to upload file to S3'))) {
+        alert('Server Error: Storage configuration (S3) is invalid. Please contact the backend team.');
+      } else {
+        alert('Upload failed. Please try again.');
+      }
+      const errorMessage: PDFMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "I apologize, but I encountered an error while processing your request. Please try again.",
+        from: "assistant",
+        timestamp: new Date(),
+        pdfId: currentPDF?.id,
+        type: "summary",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setStatus("ready");
+      setIsTyping(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      if (isTyping) return;
+      if (isRecording) return;
+
+      // Clean up any previous pending voice URL
+      if (pendingVoiceUrl) {
+        URL.revokeObjectURL(pendingVoiceUrl);
+        setPendingVoiceUrl(null);
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        // Stop all tracks
+        stream.getTracks().forEach((t) => t.stop());
+
+        if (discardVoiceRef.current) {
+          discardVoiceRef.current = false;
+          setPendingVoiceUrl(null);
+          setVoiceTranscript("");
+          sendVoiceAfterStopRef.current = false;
+          return;
+        }
+
+        const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        setPendingVoiceUrl(url);
+        
+        // Initialize audio element for playback
+        if (audioRef.current) {
+          audioRef.current.src = url;
+        }
+        
+        if (sendVoiceAfterStopRef.current) {
+          sendVoiceAfterStopRef.current = false;
+          setTimeout(() => {
+            void sendRecordedVoice(url);
+          }, 0);
+        }
+      };
+
+      recorder.start();
+      setRecordingSeconds(0);
+      setIsRecording(true);
+      setVoiceTranscript("");
+
+      const Recognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (Recognition) {
+        const recognition = new Recognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+        recognition.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          setVoiceTranscript(transcript.trim());
+        };
+        recognition.start();
+        speechRecognitionRef.current = recognition;
+      }
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+      alert("Microphone permission is required to record voice.");
+    }
+  };
+
+  const stopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    if (recorder.state === "inactive") return;
+    recorder.stop();
+    setIsRecording(false);
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      speechRecognitionRef.current = null;
+    }
+  };
+
+  const sendRecordedVoice = async (forcedUrl?: string) => {
+    const audioUrl = forcedUrl || pendingVoiceUrl;
+    if (!audioUrl) return;
+    if (!currentPDF?.id) return;
+    const normalizedTranscript =
+      voiceTranscript.trim() || "Please process my voice message about this PDF.";
+
+    const voiceMessage: PDFMessage = {
+      id: Date.now().toString(),
+      content: normalizedTranscript,
+      from: "user",
+      timestamp: new Date(),
+      pdfId: currentPDF.id,
+      type: "voice",
+      audioUrl,
+    };
+
+    setMessages((prev) => [...prev, voiceMessage]);
+    setStatus("submitted");
+    setIsTyping(true);
+
+    // Immediately clear the voice review state after sending
+    setPendingVoiceUrl(null);
+    setVoiceTranscript("");
+    setIsPlayingVoice(false);
+
+    try {
+      setStatus("streaming");
+      const response = await chatWithPDFMutationFn({
+        session_id: currentPDF.id,
+        question: normalizedTranscript,
+      });
+
+      const aiMessage: PDFMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "", // Hide text content for voice responses
+        from: "assistant",
+        timestamp: new Date(),
+        pdfId: currentPDF.id,
+        type: "voice",
+        ttsText: response.answer || "I received your voice message and processed it successfully.",
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setStatus("ready");
+    } catch (error) {
+      console.error("Failed to process voice message:", error);
+      const aiError: PDFMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "I couldn't process your voice request right now. Please try again.",
+        from: "assistant",
+        timestamp: new Date(),
+        pdfId: currentPDF.id,
+        type: "error",
+      };
+      setMessages((prev) => [...prev, aiError]);
+      setStatus("error");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const discardCurrentVoice = () => {
+    if (
+      isRecording &&
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      discardVoiceRef.current = true;
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+    if (pendingVoiceUrl) {
+      URL.revokeObjectURL(pendingVoiceUrl);
+      setPendingVoiceUrl(null);
+    }
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      speechRecognitionRef.current = null;
+    }
+    setVoiceTranscript("");
+  };
+
+  useEffect(() => {
+    if (!isRecording) return;
+    const t = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [isRecording]);
+
+  useEffect(() => {
+    const host = conversationContainerRef.current;
+    if (!host) return;
+    const scrollable = host.querySelector('[role="log"]') as HTMLElement | null;
+    if (!scrollable) return;
+    requestAnimationFrame(() => {
+      scrollable.scrollTo({ top: scrollable.scrollHeight, behavior: "smooth" });
+    });
+  }, [messages, isTyping]);
+
+  const handleSummarizeInDetail = () => {
+    const detailMessage = "Please provide a detailed summary of this PDF";
+    setText(detailMessage);
+    setShowDetailButton(false);
+    
+    // Auto-submit the detail request
+    setTimeout(() => {
+      const formEvent = new Event('submit', { cancelable: true }) as any;
+      formEvent.preventDefault = () => {};
+      if (textareaRef.current?.form) {
+        textareaRef.current.form.requestSubmit();
+      }
+    }, 100);
   };
 
   const handleChat = (pdfId: string) => {
@@ -219,33 +512,32 @@ export default function PDFSummaryChat({
     accept: {
       "application/pdf": [".pdf"],
     },
-    maxSize: 5 * 1024 * 1024,
+    maxSize: 2 * 1024 * 1024,
     multiple: true,
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
     onDropRejected: () => {
-      alert("File too large. Maximum size is 5MB.");
+      alert("File too large for server limits (Max 2MB)");
     },
   });
     
   const handleFileUpload = async (files: File[]) => {
   const file = files[0];
   if (!file) return;
+  
+  // Strict 2MB frontend check
+  if (file.size > 2 * 1024 * 1024) {
+    alert("File too large for server limits (Max 2MB)");
+    return;
+  }
 
-  const currentStudentId = studentId ||
-    window.location.pathname.split('/')[2];
-
-  if (!currentStudentId || currentStudentId === 'undefined') {
+  const currentStudentId = studentId;
+  if (!currentStudentId || currentStudentId === "undefined") {
     alert("Please refresh the page and try again.");
     return;
   }
 
   const fileId = `${file.name}-${Date.now()}`;
-    if (!studentId) {
-      //toast.error("Session expired. Please refresh the page.");
-      alert("Session expired. Please refresh the page.");
-      return;
-    }
     setUploadProgress([{
       fileId,
       fileName: file.name,
@@ -261,11 +553,8 @@ export default function PDFSummaryChat({
 
       console.log("studentId before upload:", studentId);
     const response = await uploadPDFMutationFn({
-    file,
-    user_id: currentStudentId,
-    auto_summarize: true,
-    language: "en",
-  });
+      file,
+    });
 
       setUploadProgress(prev =>
         prev.map(p => p.fileId === fileId
@@ -274,9 +563,11 @@ export default function PDFSummaryChat({
         )
       );
 
-      setTimeout(() => {
-        setShowUploadModal(false);
-        setUploadProgress([]);
+      setShowUploadModal(false);
+      setUploadProgress([]);
+      
+      // Force state refresh to show new file in View All/Recent Chats
+      window.location.href = `/student/${currentStudentId}/pdf-summary`;
         
         // Store session in localStorage
         const existingSessions = JSON.parse(
@@ -292,13 +583,12 @@ export default function PDFSummaryChat({
           JSON.stringify(existingSessions.slice(0, 10))
         );
         
-        if (studentId && response?.session_id) {
-          window.location.href = `/student/${studentId}/pdf-summary/${response.session_id}`;
+        if (currentStudentId && response?.session_id) {
+          window.location.href = `/student/${currentStudentId}/pdf-summary/${response.session_id}?fresh=1`;
         }
-      }, 2000);
 
     } catch (err) {
-      console.error("Upload failed:", err);
+      console.error("Upload failed:", (err as any)?.response?.data || (err as any)?.message || err);
       setUploadProgress(prev =>
         prev.map(p => p.fileId === fileId
           ? { ...p, status: "error", error: "Upload failed, please try again" }
@@ -346,7 +636,7 @@ export default function PDFSummaryChat({
   if (isIndividualChat && currentPDF) {
     return (
       <div
-        className="h-full w-full flex flex-col overflow-hidden relative"
+        className="h-screen w-full flex flex-col overflow-hidden relative"
         style={{
           backgroundImage:
             "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
@@ -354,7 +644,7 @@ export default function PDFSummaryChat({
         }}
       >
         {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 z-10">
+        <div className="sticky top-0 z-[100] flex items-center justify-between p-4 border-b bg-background flex-shrink-0">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -395,6 +685,12 @@ export default function PDFSummaryChat({
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
                 </DropdownMenuItem>
+                {onClearChatHistory && (
+                  <DropdownMenuItem onClick={onClearChatHistory}>
+                    <TrashIcon className="w-4 h-4 mr-2" />
+                    Clear Chat History
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => handleDelete(currentPDF.id)}
                   className="text-red-600"
@@ -408,7 +704,7 @@ export default function PDFSummaryChat({
         </div>
 
         {/* Chat Messages */}
-        <div className="h-[calc(100vh-280px)] overflow-hidden">
+        <div ref={conversationContainerRef} className="flex-1 overflow-y-auto min-h-0">
           <AIConversation className="h-full">
             <AIConversationContent>
               {messages.length === 0 ? (
@@ -457,6 +753,25 @@ export default function PDFSummaryChat({
                           currentPDFName={currentPDF?.name}
                         />
                       ))}
+                      {/* Summarize in Detail Button */}
+                      {showDetailButton && !isTyping && messages.filter(m => m.from === "assistant").length === 1 && (
+                        <div className="flex w-full justify-start mb-4">
+                          <div className="flex items-end mr-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-blue-200">
+                              <Bot className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                          <div className="max-w-[75%] mr-12">
+                            <Button
+                              onClick={handleSummarizeInDetail}
+                              variant="outline"
+                              className="rounded-2xl px-4 py-2 text-sm border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                            >
+                              Summarize in Detail
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       {/* Typing indicator */}
                       {isTyping && (
                         <div className="flex w-full justify-start mb-4">
@@ -499,43 +814,148 @@ export default function PDFSummaryChat({
         </div>
 
         {/* Chat Input */}
-        <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg flex flex-col-reverse items-stretch p-4 gap-0">
+        <div className="sticky bottom-2 z-[100] left-0 right-0 border-t bg-background shadow-lg flex flex-col-reverse items-stretch p-3 gap-0 mx-4">
           <AIInput onSubmit={handleSubmit} className="border shadow-sm w-full">
-            <AIInputTextarea
-              onChange={(e) => setText(e.target.value)}
-              value={text}
-              placeholder={`Ask about ${currentPDF.name}...`}
-              disabled={isTyping}
-              className="min-h-[60px] max-h-[120px] resize-none w-full"
-              style={{ overflowY: "auto" }}
-              ref={textareaRef}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  const form = e.currentTarget.form;
-                  if (form) form.requestSubmit();
-                }
-              }}
-            />
+            {(isRecording || pendingVoiceUrl) ? (
+              <div className="min-h-[60px] w-full flex items-center px-4 py-3">
+                {isRecording ? (
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-muted-foreground">Recording… {recordingSeconds}s</span>
+                    </div>
+                    {/* Waveform Animation */}
+                    <div className="flex-1 h-8 flex items-center justify-center gap-1">
+                      {Array.from({ length: 20 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 bg-primary rounded-full animate-pulse"
+                          style={{
+                            height: `${Math.random() * 100}%`,
+                            animationDelay: `${i * 0.05}s`,
+                            animationDuration: '0.5s'
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      Voice note ready to send
+                    </div>
+                    {/* Hide transcript during review state */}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <AIInputTextarea
+                onChange={(e) => setText(e.target.value)}
+                value={text}
+                placeholder={`Ask about ${currentPDF.name}...`}
+                disabled={isTyping}
+                className="min-h-[60px] max-h-[120px] resize-none w-full"
+                style={{ overflowY: "auto" }}
+                ref={textareaRef}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    const form = e.currentTarget.form;
+                    if (form) form.requestSubmit();
+                  }
+                }}
+              />
+            )}
             <AIInputToolbar>
-              <AIInputTools>
-                <AIInputButton
-                  disabled={isTyping}
-                  className="hover:bg-accent/50"
-                >
-                  <PlusIcon size={16} />
-                </AIInputButton>
-              </AIInputTools>
+              {(isRecording || pendingVoiceUrl) && (
+                <>
+                  {isRecording && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={isTyping}
+                      onClick={stopRecording}
+                      className="mr-1"
+                    >
+                      <Square size={16} />
+                    </Button>
+                  )}
+                  {pendingVoiceUrl && !isRecording && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={isTyping}
+                      onClick={() => {
+                        if (audioRef.current) {
+                          if (isPlayingVoice) {
+                            audioRef.current.pause();
+                            setIsPlayingVoice(false);
+                          } else {
+                            audioRef.current.play();
+                            setIsPlayingVoice(true);
+                          }
+                        }
+                      }}
+                      className="mr-1"
+                    >
+                      {isPlayingVoice ? <Pause size={16} /> : <Play size={16} />}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={isTyping}
+                    onClick={discardCurrentVoice}
+                    className="mr-2"
+                  >
+                    <TrashIcon size={16} />
+                  </Button>
+                </>
+              )}
               <AIInputSubmit
-                disabled={!text.trim() || isTyping}
+                disabled={isTyping}
                 status={status}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground mr-1"
+                onClick={(e) => {
+                  if (isRecording) {
+                    e.preventDefault();
+                    sendVoiceAfterStopRef.current = true;
+                    stopRecording();
+                    return;
+                  }
+                  if (pendingVoiceUrl) {
+                    e.preventDefault();
+                    void sendRecordedVoice();
+                    return;
+                  }
+                  if (!text.trim()) {
+                    e.preventDefault();
+                    startRecording();
+                  }
+                }}
               >
-                <SendIcon size={16} />
+                {text.trim() || isRecording || pendingVoiceUrl ? (
+                  <SendIcon size={16} />
+                ) : (
+                  <Mic size={16} />
+                )}
               </AIInputSubmit>
             </AIInputToolbar>
           </AIInput>
         </div>
+
+        {/* Hidden Audio Element for Voice Playback */}
+        {pendingVoiceUrl && (
+          <audio
+            ref={audioRef}
+            src={pendingVoiceUrl}
+            onEnded={() => setIsPlayingVoice(false)}
+            onError={() => setIsPlayingVoice(false)}
+          />
+        )}
       </div>
     );
   }
