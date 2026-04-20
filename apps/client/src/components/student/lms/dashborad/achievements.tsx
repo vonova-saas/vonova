@@ -121,7 +121,7 @@ const weeksData = generateWeeks();
 
 export default function Achievements() {
   return (
-    <Card className="border-2 backdrop-blur-sm shadow-lg">
+    <Card className="border border-border/60 bg-card/70 backdrop-blur-sm shadow-lg rounded-2xl">
       <CardTitle className="text-xl font-semibold mb-4 px-6 pt-6">
         Achievements & Streaks
       </CardTitle>
@@ -135,7 +135,7 @@ export default function Achievements() {
             {mockAchievements.map((ach, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-lg px-4 py-2 shadow border border-gray-200 dark:border-gray-800"
+                className="flex items-center gap-3 rounded-xl px-4 py-2.5 shadow border border-border/50 bg-muted/40"
               >
                 {ach.icon}
                 <div>
@@ -173,8 +173,8 @@ export default function Achievements() {
             </div>
           </div>
           {/* Heatmap Grid */}
-          <div>
-            <div className="inline-block">
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-max">
               {/* Month labels */}
               <div className="flex gap-1 mb-2 ml-8">
                 {MONTHS.map((month, monthIndex) => {
@@ -195,7 +195,7 @@ export default function Achievements() {
               </div>
 
               {/* Main grid */}
-              <div className="flex gap-1">
+              <div className="flex gap-1 rounded-xl border border-border/50 bg-background/40 p-3">
                 {/* Day labels */}
                 <div className="flex flex-col gap-1 mr-2">
                   {DAYS_OF_WEEK.map((day) => (

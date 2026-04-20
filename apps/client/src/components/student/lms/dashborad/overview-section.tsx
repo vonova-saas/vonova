@@ -9,8 +9,6 @@ import {
   TrendingDown,
   Play,
   Plus,
-  Trophy,
-  Clock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,23 +102,6 @@ const pieData = [
   { name: "Community", value: 5, color: "#f59e42" },
 ];
 
-const achievements = [
-  {
-    id: 1,
-    title: "Quiz Master",
-    description: "Completed 10 quizzes",
-    icon: Trophy,
-    color: "text-yellow-500",
-  },
-  {
-    id: 2,
-    title: "7-Day Streak",
-    description: "Learning streak",
-    icon: Clock,
-    color: "text-green-500",
-  },
-];
-
 const quickActions = [
   { title: "Continue Learning", icon: Play, href: "/dashboard/courses" },
   { title: "Start New Quiz", icon: Plus, href: "/dashboard/quizzes" },
@@ -129,42 +110,10 @@ const quickActions = [
 
 export default function OverviewSection() {
   const [isLoading] = useState(false);
-  const [studentName] = useState("Ahmed"); // Mock student name
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1. Personalized Welcome Message */}
-      <Card className="border-2 backdrop-blur-sm shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-primary mb-2">
-                Welcome back, {studentName}! 👋
-              </h2>
-              <p className="text-muted-foreground">
-                Here&apos;s your learning snapshot for this week. Keep up the
-                great work!
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {achievements.slice(0, 2).map((achievement) => {
-                const Icon = achievement.icon;
-                return (
-                  <div
-                    key={achievement.id}
-                    className={`${achievement.color} bg-primary/10 rounded-full p-3 flex items-center justify-center`}
-                    title={achievement.description}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 2. Stat Cards with Trend Indicators */}
+      {/* 1. Stat Cards with Trend Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {mockStats.map((stat) => {
           const Icon = stat.icon;
@@ -205,7 +154,7 @@ export default function OverviewSection() {
         })}
       </div>
 
-      {/* 3. Quick Actions */}
+      {/* 2. Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {quickActions.map((action) => {
           const Icon = action.icon;
@@ -225,7 +174,7 @@ export default function OverviewSection() {
         })}
       </div>
 
-      {/* 4. Analytics Section */}
+      {/* 3. Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Line Chart */}
         <Card className="col-span-2 border-2 backdrop-blur-sm shadow-lg">
@@ -327,7 +276,7 @@ export default function OverviewSection() {
         </Card>
       </div>
 
-      {/* 5. Bar Chart */}
+      {/* 4. Bar Chart */}
       <Card className="border-2 backdrop-blur-sm shadow-lg">
         <div className="pb-4 px-6 pt-6">
           <div className="text-primary font-semibold text-lg">
@@ -365,7 +314,7 @@ export default function OverviewSection() {
         </CardContent>
       </Card>
 
-      {/* 6. Loading State with Skeletons (Hidden by default, can be toggled) */}
+      {/* 5. Loading State with Skeletons (Hidden by default, can be toggled) */}
       {isLoading && (
         <div className="flex flex-col gap-6">
           {/* Welcome Card Skeleton */}
