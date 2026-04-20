@@ -7,7 +7,7 @@ export const userFormSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  role: z.enum(["admin", "moderator", "user"], {
+  role: z.enum(["admin", "student", "instructor"], {
     message: "Please select a role.",
   }),
   status: z.enum(["active", "inactive", "suspended"], {

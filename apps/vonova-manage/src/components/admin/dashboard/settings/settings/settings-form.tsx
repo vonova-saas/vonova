@@ -35,7 +35,6 @@ export default function SettingsForm() {
   const defaults = {
     font: 'cairo',
     fontSize: '16',
-    theme: 'light',
     language: 'en',
   } as const
 

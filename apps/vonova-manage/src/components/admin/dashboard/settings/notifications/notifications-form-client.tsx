@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/form'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
+import { useEffect, useMemo } from 'react'
+import { getNotificationMutationFn, updateNotificationMutationFn, resetNotificationMutationFn } from '@/services/app/notification.api'
+import { useAuthContext } from '@/context/auth/auth-context'
 
 type NotificationsFormValues = {
   type: 'all' | 'mentions' | 'none'
@@ -29,6 +32,12 @@ interface NotificationsFormClientProps {
 }
 
 export function NotificationsFormClient({ defaultValues }: NotificationsFormClientProps) {
+  const { user } = useAuthContext()
+  const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
+    if (user?._id) return user._id
+    return ''
+  }, [user?._id])
 
   const form = useForm<NotificationsFormValues>({
     defaultValues: {
@@ -41,10 +50,53 @@ export function NotificationsFormClient({ defaultValues }: NotificationsFormClie
     },
   })
 
+  // Load notification settings on mount/by userId
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        if (!userId) return
+        const res = await getNotificationMutationFn(userId)
+        if (!mounted) return
+        form.reset({
+          type: (res.data.notifyMe as NotificationsFormValues['type']) || 'all',
+          communication_emails: !!res.data.communicationEmails,
+          marketing_emails: !!res.data.marketingEmails,
+          social_emails: !!res.data.socialEmails,
+          security_emails: !!res.data.securityEmails,
+          mobile: false,
+        })
+      } catch {
+        // keep defaults
+      }
+    })()
+    return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
+
   async function onSubmit(data: NotificationsFormValues) {
+    if (!userId) {
+      toast.error('Missing user id in URL')
+      return
+    }
     try {
+      const res = await updateNotificationMutationFn(userId, {
+        notifyMe: data.type,
+        communicationEmails: data.communication_emails,
+        marketingEmails: data.marketing_emails,
+        socialEmails: data.social_emails,
+        securityEmails: data.security_emails,
+      })
       // reflect response immediately
-      toast.success('Notifications updated successfully')
+      form.reset({
+        type: (res.data.notifyMe as NotificationsFormValues['type']) || 'all',
+        communication_emails: !!res.data.communicationEmails,
+        marketing_emails: !!res.data.marketingEmails,
+        social_emails: !!res.data.socialEmails,
+        security_emails: !!res.data.securityEmails,
+        mobile: form.getValues('mobile'),
+      })
+      toast.success(res.message)
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update notifications'
       toast.error(message)
@@ -52,14 +104,27 @@ export function NotificationsFormClient({ defaultValues }: NotificationsFormClie
   }
 
   async function onReset() {
+    if (!userId) {
+      toast.error('Missing user id in URL')
+      return
+    }
     try {
-      toast.success('Notifications reset successfully')
+      const res = await resetNotificationMutationFn(userId)
+      form.reset({
+        type: (res.data.notifyMe as NotificationsFormValues['type']) || 'all',
+        communication_emails: !!res.data.communicationEmails,
+        marketing_emails: !!res.data.marketingEmails,
+        social_emails: !!res.data.socialEmails,
+        security_emails: !!res.data.securityEmails,
+        mobile: false,
+      })
+      toast.success(res.message)
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to reset notifications'
       toast.error(message)
     }
   }
-
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>

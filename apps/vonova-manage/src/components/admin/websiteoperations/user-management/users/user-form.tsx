@@ -1,4 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
@@ -42,7 +41,7 @@ export function UserForm({
     defaultValues: {
       name: "",
       email: "",
-      role: "user",
+      role: "admin",
       status: "active",
       ...defaultValues,
     },
@@ -95,8 +94,8 @@ export function UserForm({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="moderator">Moderator</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="instructor">Instructor</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

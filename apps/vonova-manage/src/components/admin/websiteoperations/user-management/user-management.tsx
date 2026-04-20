@@ -4,17 +4,21 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LayoutDashboard, Search, Users, UserPlus, Filter, Download, Upload, Settings } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LayoutDashboard, Search, Users, UserPlus, Filter, Download, Upload, Settings, ChevronLeft, ChevronRight, ArrowLeft, Power, PowerOff, Loader2, Mail, Shield, Activity, Calendar, User, GraduationCap } from "lucide-react"
 import { UserTable } from "@/components/admin/websiteoperations/user-management/users/user-table"
-import { UserDetails } from "@/components/admin/websiteoperations/user-management/users/user-details"
 import { UserActivityLog } from "@/components/admin/websiteoperations/user-management/users/user-activity-log"
+import { PendingInstructors } from "@/components/admin/websiteoperations/user-management/instructors/pending-instructors"
 import { UserForm } from "@/components/admin/websiteoperations/user-management/users/user-form"
 import { UserStatistics } from "./overview/user-statistics"
 import { UserActivityTimeline, mockTimelineEvents } from "./overview/user-activity-timeline"
 import { useToast } from "@/hooks/use-toast"
-import { User } from "./types"
-import { mockUsers, mockActivities } from "./data/mock-data"
+import { User as UserType } from "./types"
+import { mockActivities } from "./data/mock-data"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getUsersQueryFn, getUserQueryFn, updateUserStatusMutationFn } from "@/services"
+import { AdminUser } from "@/types/api/admin/admin.type"
 
 // Mock data for statistics
 const mockUserActivity = Array.from({ length: 30 }, (_, i) => ({
@@ -29,34 +33,113 @@ const mockRoleDistribution = [
   { id: 'user', label: 'Users', value: 60, color: '#10b981' },
 ]
 
+// Helper function to map API role to form role
+const mapApiRoleToFormRole = (apiRole: string): UserType['role'] => {
+  const roleMap: Record<string, UserType['role']> = {
+    'ADMIN': 'admin',
+    'STUDENT_USER': 'student',
+    'INSTRUCTOR_USER': 'instructor',
+    'PENDING': 'student',
+  }
+  return roleMap[apiRole] || 'student'
+}
+
+// Helper function to map AdminUser to User format
+const mapAdminUserToUser = (adminUser: AdminUser): UserType => ({
+  id: adminUser._id,
+  name: adminUser.name,
+  email: adminUser.email,
+  role: mapApiRoleToFormRole(adminUser.role),
+  status: adminUser.isActive ? 'active' : 'inactive',
+  lastActive: adminUser.lastSeenAt ? new Date(adminUser.lastSeenAt).toLocaleString() : 'Never',
+  joinedDate: new Date(adminUser.createdAt).toLocaleDateString(),
+})
+
+// Helper function to format role for display
+const formatRole = (role: string) => {
+  return role.charAt(0).toUpperCase() + role.slice(1)
+}
+
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>(mockUsers)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
+  const [page, setPage] = useState(1)
+  const [limit] = useState(20)
+  const [roleFilter] = useState<string>('')
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Fetch users list from API
+  const { data: usersData, isLoading, error } = useQuery({
+    queryKey: ['adminUsers', page, limit, roleFilter, searchQuery],
+    queryFn: () => getUsersQueryFn({
+      page,
+      limit,
+      role: roleFilter || undefined,
+      search: searchQuery || undefined,
+    }),
+    placeholderData: (previousData) => previousData,
+  })
+
+  // Fetch single user details when selected
+  const { data: userDetailData, isLoading: isLoadingUserDetail } = useQuery({
+    queryKey: ['adminUser', selectedUserId],
+    queryFn: () => getUserQueryFn(selectedUserId!),
+    enabled: !!selectedUserId && !isCreating && !isEditing,
+  })
+
+  // Update user status mutation (suspend/restore)
+  const updateStatusMutation = useMutation({
+    mutationFn: updateUserStatusMutationFn,
+    onSuccess: (data, variables) => {
+      const action = variables.isActive ? 'activated' : 'suspended'
+      toast({
+        title: `User ${action}`,
+        description: `The user has been ${action} successfully.`,
+      })
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] })
+      queryClient.invalidateQueries({ queryKey: ['adminUser', variables.userId] })
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update user status. Please try again.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const users = usersData?.data.users.map(mapAdminUserToUser) || []
+  const pagination = usersData?.data.pagination
+
+  // Get detailed user data
+  const selectedUserDetail = userDetailData?.data
+    ? mapAdminUserToUser(userDetailData.data)
+    : null
+
+  const handleViewUser = (user: UserType) => {
+    setSelectedUserId(user.id)
+    setIsCreating(false)
+    setIsEditing(false)
+  }
 
   const handleCreateUser = () => {
     setIsCreating(true)
-    setSelectedUser(null)
+    setSelectedUserId(null)
   }
 
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user)
+  const handleEditUser = (user: UserType) => {
+    setSelectedUserId(user.id)
     setIsEditing(true)
   }
 
   const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId))
-    if (selectedUser?.id === userId) {
-      setSelectedUser(null)
+    if (selectedUserId === userId) {
+      setSelectedUserId(null)
     }
     toast({
       title: "User deleted",
@@ -64,33 +147,32 @@ export default function UserManagement() {
     })
   }
 
+  const handleToggleUserStatus = (userId: string, currentStatus: boolean) => {
+    updateStatusMutation.mutate({
+      userId,
+      isActive: !currentStatus,
+    })
+  }
+
+  const handleBackToList = () => {
+    setSelectedUserId(null)
+    setIsCreating(false)
+    setIsEditing(false)
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSaveUser = (data: any) => {
     if (isCreating) {
-      const newUser: User = {
-        ...data,
-        id: Math.random().toString(36).substr(2, 9),
-        lastActive: 'Just now',
-        joinedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-        totalOrders: 0,
-        totalSpent: 0
-      }
-      setUsers([...users, newUser])
-      setSelectedUser(newUser)
       toast({
         title: "User created",
         description: `Successfully created user ${data.name}`,
       })
-    } else if (selectedUser) {
-      const updatedUsers = users.map(user =>
-        user.id === selectedUser.id ? { ...user, ...data } : user
-      )
-      setUsers(updatedUsers)
-      setSelectedUser({ ...selectedUser, ...data })
+    } else if (selectedUserId) {
       toast({
         title: "User updated",
         description: `Successfully updated ${data.name}'s profile`,
       })
+      queryClient.invalidateQueries({ queryKey: ['adminUser', selectedUserId] })
     }
 
     setIsCreating(false)
@@ -100,6 +182,11 @@ export default function UserManagement() {
   const handleCancel = () => {
     setIsCreating(false)
     setIsEditing(false)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setPage(1) // Reset to first page on search
   }
 
   return (
@@ -129,24 +216,24 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-4"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList>
             <TabsTrigger value="overview" className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4"/>
+              <LayoutDashboard className="h-4 w-4" />
               Overview
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Roles & Permissions
+            <TabsTrigger value="instructors" className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Pending Instructors
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center space-x-2">
@@ -157,7 +244,7 @@ export default function UserManagement() {
                 placeholder={activeTab === 'users' ? 'Search users...' : 'Search...'}
                 className="w-full bg-background pl-8"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
             <Button variant="outline" size="icon">
@@ -169,11 +256,11 @@ export default function UserManagement() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
-          <UserStatistics 
+          <UserStatistics
             userActivity={mockUserActivity}
             roleDistribution={mockRoleDistribution}
           />
-          
+
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="md:col-span-2">
               <CardHeader>
@@ -183,7 +270,7 @@ export default function UserManagement() {
                 <UserActivityTimeline events={mockTimelineEvents} />
               </CardContent>
             </Card>
-            
+
             <div className="space-y-4">
               <Card>
                 <CardHeader>
@@ -208,7 +295,7 @@ export default function UserManagement() {
                   </Button>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>System Status</CardTitle>
@@ -231,7 +318,7 @@ export default function UserManagement() {
             </div>
           </div>
         </TabsContent>
-        
+
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
           {isCreating || isEditing ? (
@@ -242,7 +329,7 @@ export default function UserManagement() {
                 </CardHeader>
                 <CardContent>
                   <UserForm
-                    defaultValues={selectedUser || undefined}
+                    defaultValues={selectedUserDetail || undefined}
                     onSubmit={handleSaveUser}
                     onCancel={handleCancel}
                   />
@@ -262,92 +349,223 @@ export default function UserManagement() {
                 </Card>
               </div>
             </div>
-          ) : selectedUser ? (
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="md:col-span-2 space-y-4">
-                <UserDetails
-                  user={selectedUser}
-                  onEdit={() => handleEditUser(selectedUser)}
-                />
-                <UserActivityLog
-                  activities={mockActivities}
-                  className="md:col-span-2"
-                />
-              </div>
-              <div className="space-y-4">
+          ) : selectedUserId ? (
+            <div className="space-y-4">
+              {/* Back Button */}
+              <Button variant="outline" onClick={handleBackToList} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Users
+              </Button>
+
+              {isLoadingUserDetail ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : selectedUserDetail ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {/* Main User Info */}
+                  <div className="md:col-span-2 space-y-4">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <div>
+                          <CardTitle className="text-2xl font-bold">User Details</CardTitle>
+                          <CardDescription>View and manage user information</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditUser(selectedUserDetail)}>
+                            Edit User
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6 pt-4">
+                        {/* User Header */}
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary">
+                            <User className="h-8 w-8" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">{selectedUserDetail.name}</h3>
+                            <p className="text-sm text-muted-foreground">{selectedUserDetail.email}</p>
+                          </div>
+                        </div>
+
+                        {/* User Info Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Shield className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Role</span>
+                            </div>
+                            <Badge variant="outline">{formatRole(selectedUserDetail.role)}</Badge>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Activity className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Status</span>
+                            </div>
+                            <Badge variant={selectedUserDetail.status === 'active' ? 'default' : selectedUserDetail.status === 'suspended' ? 'destructive' : 'secondary'}>
+                              {selectedUserDetail.status.charAt(0).toUpperCase() + selectedUserDetail.status.slice(1)}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Last Active</span>
+                            </div>
+                            <p className="text-sm">{selectedUserDetail.lastActive}</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Member Since</span>
+                            </div>
+                            <p className="text-sm">{selectedUserDetail.joinedDate}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <UserActivityLog
+                      activities={mockActivities}
+                      className="md:col-span-2"
+                    />
+                  </div>
+
+                  {/* Sidebar Actions */}
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Quick Actions</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Button variant="outline" className="w-full justify-start">
+                          <Mail className="mr-2 h-4 w-4" />
+                          Send Message
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          Reset Password
+                        </Button>
+
+                        {/* Suspend/Activate Button */}
+                        {updateStatusMutation.isPending ? (
+                          <Button variant="outline" className="w-full justify-start" disabled>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Updating...
+                          </Button>
+                        ) : userDetailData?.data?.isActive ? (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-destructive hover:text-destructive"
+                            onClick={() => handleToggleUserStatus(selectedUserId, true)}
+                          >
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            Suspend Account
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-green-600 hover:text-green-600"
+                            onClick={() => handleToggleUserStatus(selectedUserId, false)}
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            Activate Account
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Account Status</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Verified</span>
+                          <Badge variant={userDetailData?.data?.isVerified ? 'default' : 'secondary'}>
+                            {userDetailData?.data?.isVerified ? 'Yes' : 'No'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Active</span>
+                          <Badge variant={userDetailData?.data?.isActive ? 'default' : 'destructive'}>
+                            {userDetailData?.data?.isActive ? 'Yes' : 'No'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Online</span>
+                          <Badge variant={userDetailData?.data?.isOnline ? 'default' : 'secondary'}>
+                            {userDetailData?.data?.isOnline ? 'Yes' : 'No'}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              ) : (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start">
-                      Send Message
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">User not found</p>
+                    <Button variant="outline" onClick={handleBackToList} className="mt-4">
+                      Back to Users
                     </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Reset Password
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      View Orders
-                    </Button>
-                    {selectedUser.status === 'suspended' ? (
-                      <Button variant="outline" className="w-full justify-start text-green-600">
-                        Activate Account
-                      </Button>
-                    ) : (
-                      <Button variant="outline" className="w-full justify-start text-destructive">
-                        Suspend Account
-                      </Button>
-                    )}
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Permissions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Configure detailed permissions for this user.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
-              <UserTable
-                users={filteredUsers}
-                onEdit={handleEditUser}
-                onDelete={handleDeleteUser}
-                onCreate={handleCreateUser}
-              />
+              {isLoading && <p className="text-center py-4">Loading users...</p>}
+              {error && <p className="text-center py-4 text-red-500">Failed to load users. Please try again.</p>}
+              {!isLoading && !error && (
+                <>
+                  <UserTable
+                    users={users}
+                    onView={handleViewUser}
+                    onEdit={handleEditUser}
+                    onDelete={handleDeleteUser}
+                    onCreate={handleCreateUser}
+                  />
+                  {/* Pagination */}
+                  {pagination && pagination.pages > 1 && (
+                    <div className="flex items-center justify-between px-2 py-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {(pagination.page - 1) * pagination.limit + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPage(page - 1)}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm">
+                          Page {pagination.page} of {pagination.pages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPage(page + 1)}
+                          disabled={page === pagination.pages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </TabsContent>
-        
-        {/* Roles & Permissions Tab */}
-        <TabsContent value="roles" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Roles & Permissions</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Manage user roles and their associated permissions.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="p-6 text-center">
-                  <h3 className="text-lg font-medium">Roles Management</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Coming soon. This section will allow you to manage user roles and permissions.
-                  </p>
-                  <Button className="mt-4">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure Roles
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
+        {/* Pending Instructors Tab */}
+        <TabsContent value="instructors" className="space-y-4">
+          <PendingInstructors />
         </TabsContent>
       </Tabs>
     </div>
