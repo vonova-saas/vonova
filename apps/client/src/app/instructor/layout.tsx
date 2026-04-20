@@ -155,7 +155,11 @@ export default function InstructorDashboardLayout({ children }: Props) {
                             : `/instructor/${crumbSegments.slice(0, index + 1).join("/")}`;
                           const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                           const isLast = index === crumbSegments.length - 1;
-                          const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+                          // Avoid SSR/client branch on `window` — only narrow crumbs after mount (matches server first paint).
+                          const isMobile =
+                            mounted &&
+                            typeof window !== "undefined" &&
+                            window.innerWidth < 768;
 
                           if (isMobile && !isLast && crumbSegments.length > 1) {
                             return null;
@@ -180,23 +184,8 @@ export default function InstructorDashboardLayout({ children }: Props) {
                       </BreadcrumbList>
                     </Breadcrumb>
                   </div>
-                  {/* Right: Icons */}
+                  {/* Right: defer interactive buttons until after mount (stable SSR HTML; avoids extension `fdprocessedid` hydration mismatches). */}
                   <div className="flex items-center gap-3">
-                    {/* Search Bar */}
-                    <button
-                      type="button"
-                      className="flex items-center bg-muted rounded-lg border border-border px-4 py-2 w-56 cursor-pointer text-muted-foreground text-sm gap-2 relative hover:bg-muted/80 transition"
-                      onClick={() => setOpen(true)}
-                      aria-label="Open search"
-                    >
-                      <SearchIcon className="w-4 h-4 text-muted-foreground" />
-                      <span className="flex-1 text-left text-muted-foreground">
-                        Search
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                        Ctrl K
-                      </span>
-                    </button>
                     <CommandDialog open={open} onOpenChange={setOpen}>
                       <CommandInput
                         placeholder="Search..."
@@ -224,40 +213,65 @@ export default function InstructorDashboardLayout({ children }: Props) {
                         )}
                       </CommandList>
                     </CommandDialog>
-                    {/* Theme Toggle */}
-                    <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Toggle theme"
-                      type="button"
-                      onClick={() =>
-                        setTheme(theme === "dark" ? "light" : "dark")
-                      }
-                    >
-                      {!mounted ? null : theme === "dark" ? (
-                        <Sun className="w-5 h-5" />
-                      ) : (
-                        <Moon className="w-5 h-5" />
-                      )}
-                    </button>
-                    {/* Notification Icon */}
-                    <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Notifications"
-                      type="button"
-                    >
-                      <Bell className="w-5 h-5" />
-                    </button>
-                    {/* Chat/Menu Icon */}
-                    <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Chat"
-                      type="button"
-                      onClick={() => setChatOpen(true)}
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                    </button>
-                    {/* Right Sidebar Trigger */}
-                    <RightSidebarTrigger />
+                    {!mounted ? (
+                      <div
+                        className="flex items-center gap-3"
+                        aria-hidden
+                      >
+                        <div className="h-9 w-56 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="flex items-center bg-muted rounded-lg border border-border px-4 py-2 w-56 cursor-pointer text-muted-foreground text-sm gap-2 relative hover:bg-muted/80 transition"
+                          onClick={() => setOpen(true)}
+                          aria-label="Open search"
+                        >
+                          <SearchIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="flex-1 text-left text-muted-foreground">
+                            Search
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            Ctrl K
+                          </span>
+                        </button>
+                        <button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Toggle theme"
+                          type="button"
+                          onClick={() =>
+                            setTheme(theme === "dark" ? "light" : "dark")
+                          }
+                        >
+                          {theme === "dark" ? (
+                            <Sun className="w-5 h-5" />
+                          ) : (
+                            <Moon className="w-5 h-5" />
+                          )}
+                        </button>
+                        <button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Notifications"
+                          type="button"
+                        >
+                          <Bell className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Chat"
+                          type="button"
+                          onClick={() => setChatOpen(true)}
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </button>
+                        <RightSidebarTrigger />
+                      </>
+                    )}
                   </div>
                 </div>
               </header>

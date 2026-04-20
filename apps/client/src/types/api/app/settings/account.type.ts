@@ -14,12 +14,15 @@ export type getAccountResponseType = {
   }
 }
 
-export type updateAccountType = {
+/** Fields for PUT /account/user/:userId as multipart/form-data (see API gateway). */
+export type updateAccountMultipartPayload = {
   name: string;
-  avatarUrl: string;
   bio: string;
-  dateOfBirth: string;
   address: string;
+  /** ISO date as `yyyy-MM-dd`; omit when clearing is not supported client-side */
+  dateOfBirth?: string;
+  /** Optional image; uploaded to S3 as the profile picture */
+  file?: File | null;
 }
 
 export type updateAccountResponseType = {

@@ -126,3 +126,15 @@ export const instructorOnboardingMutationFn = async (
   });
   return response.data;
 };
+
+/** Multipart upload to S3 via auth service; returns public image URL (same as stored `profilePictureUrl`). */
+export const uploadProfilePictureMutationFn = async (
+  userId: string,
+  file: File,
+): Promise<{ message: string; url?: string }> => {
+  const fd = new FormData();
+  fd.append("userId", userId);
+  fd.append("file", file);
+  const response = await API.post("/auth/upload-profile-picture", fd);
+  return response.data;
+};

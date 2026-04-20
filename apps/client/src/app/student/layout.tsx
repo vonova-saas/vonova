@@ -167,7 +167,10 @@ export default function DashboardLayout({ children }: Props) {
                         : `/student/${crumbSegments.slice(0, index + 1).join("/")}`;
                       const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                       const isLast = index === crumbSegments.length - 1;
-                      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+                      const isMobile =
+                        mounted &&
+                        typeof window !== "undefined" &&
+                        window.innerWidth < 768;
 
                       if (isMobile && !isLast && crumbSegments.length > 1) {
                         return null;
@@ -192,23 +195,7 @@ export default function DashboardLayout({ children }: Props) {
                   </BreadcrumbList>
                     </Breadcrumb>
                   </div>
-                  {/* Right: Icons */}
                   <div className="flex items-center gap-3">
-                    {/* Search Bar */}
-                    <Button
-                      type="button"
-                      className="flex items-center bg-muted rounded-lg border border-border px-4 py-2 w-56 cursor-pointer text-muted-foreground text-sm gap-2 relative hover:bg-muted/80 transition"
-                      onClick={() => setOpen(true)}
-                      aria-label="Open search"
-                    >
-                      <SearchIcon className="w-4 h-4 text-muted-foreground" />
-                      <span className="flex-1 text-left text-muted-foreground">
-                        Search
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                        Ctrl K
-                      </span>
-                    </Button>
                     <CommandDialog open={open} onOpenChange={setOpen}>
                       <CommandInput
                         placeholder="Search..."
@@ -236,40 +223,62 @@ export default function DashboardLayout({ children }: Props) {
                         )}
                       </CommandList>
                     </CommandDialog>
-                    {/* Theme Toggle */}
-                    <Button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Toggle theme"
-                      type="button"
-                      onClick={() =>
-                        setTheme(theme === "dark" ? "light" : "dark")
-                      }
-                    >
-                      {!mounted ? null : theme === "dark" ? (
-                        <Sun className="w-5 h-5" />
-                      ) : (
-                        <Moon className="w-5 h-5" />
-                      )}
-                    </Button>
-                    {/* Notification Icon */}
-                    <Button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Notifications"
-                      type="button"
-                    >
-                      <Bell className="w-5 h-5" />
-                    </Button>
-                    {/* Chat/Menu Icon */}
-                    <Button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Chat"
-                      type="button"
-                      onClick={() => setChatOpen(true)}
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                    </Button>
-                    {/* Right Sidebar Trigger */}
-                    <RightSidebarTrigger />
+                    {!mounted ? (
+                      <div className="flex items-center gap-3" aria-hidden>
+                        <div className="h-9 w-56 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          className="flex items-center bg-muted rounded-lg border border-border px-4 py-2 w-56 cursor-pointer text-muted-foreground text-sm gap-2 relative hover:bg-muted/80 transition"
+                          onClick={() => setOpen(true)}
+                          aria-label="Open search"
+                        >
+                          <SearchIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="flex-1 text-left text-muted-foreground">
+                            Search
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            Ctrl K
+                          </span>
+                        </Button>
+                        <Button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Toggle theme"
+                          type="button"
+                          onClick={() =>
+                            setTheme(theme === "dark" ? "light" : "dark")
+                          }
+                        >
+                          {theme === "dark" ? (
+                            <Sun className="w-5 h-5" />
+                          ) : (
+                            <Moon className="w-5 h-5" />
+                          )}
+                        </Button>
+                        <Button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Notifications"
+                          type="button"
+                        >
+                          <Bell className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          className="p-2 rounded hover:bg-muted transition-colors"
+                          aria-label="Chat"
+                          type="button"
+                          onClick={() => setChatOpen(true)}
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </Button>
+                        <RightSidebarTrigger />
+                      </>
+                    )}
                   </div>
                 </div>
               </header>

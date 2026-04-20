@@ -1,5 +1,9 @@
 import API from "@/services/axios-client";
-import { getAccountResponseType, updateAccountResponseType, updateAccountType } from "@/types/api/app/settings/account.type";
+import {
+  getAccountResponseType,
+  updateAccountMultipartPayload,
+  updateAccountResponseType,
+} from "@/types/api/app/settings/account.type";
 
 export const getAccountMutationFn = async (
   userId: string
@@ -10,9 +14,19 @@ export const getAccountMutationFn = async (
 
 export const updateAccountMutationFn = async (
   userId: string,
-  data: updateAccountType
+  data: updateAccountMultipartPayload
 ): Promise<updateAccountResponseType> => {
-  const response = await API.put(`/account/user/${userId}`, data);
+  const fd = new FormData();
+  fd.append("name", data.name);
+  fd.append("bio", data.bio);
+  fd.append("address", data.address);
+  if (data.dateOfBirth) {
+    fd.append("dateOfBirth", data.dateOfBirth);
+  }
+  if (data.file) {
+    fd.append("file", data.file);
+  }
+  const response = await API.put(`/account/user/${userId}`, fd);
   return response.data;
 };
 

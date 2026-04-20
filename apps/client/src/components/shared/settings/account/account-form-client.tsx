@@ -1,14 +1,11 @@
 "use client"
 
-import { format } from 'date-fns'
-import { useForm } from 'react-hook-form'
-import { CalendarIcon } from '@radix-ui/react-icons'
-import { cn } from '@/utils/functions'
-import { toast } from "sonner";
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { format } from "date-fns"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Form,
   FormControl,
@@ -17,63 +14,119 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
+} from "@/components/ui/form"
+import { Textarea } from "@/components/ui/textarea"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Textarea } from '@/components/ui/textarea'
-import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { getAccountMutationFn, updateAccountMutationFn } from '@/services/app/settings/account.api'
-import { useAuthContext } from '@/context/app/auth/auth-context'
+  getAccountMutationFn,
+  updateAccountMutationFn,
+} from "@/services/app/settings/account.api"
+import { useAuthContext } from "@/context/app/auth/auth-context"
 
 interface AccountFormClientProps {
-  defaultValues: Partial<{ name: string; email: string; avatarUrl: string; bio: string; dateOfBirth: string; address: string }>
+  defaultValues: Partial<{
+    name: string
+    email: string
+    bio: string
+    dateOfBirth: string
+    address: string
+  }>
 }
 
 type AccountFormValues = {
   name: string
   email: string
-  avatarUrl: string
   bio: string
   address: string
   dateOfBirth: Date | null
 }
 
+function formatDateInputValue(value: Date | null): string {
+  if (!value || Number.isNaN(value.getTime())) return ""
+  const y = value.getFullYear()
+  const m = String(value.getMonth() + 1).padStart(2, "0")
+  const d = String(value.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+/** Only pass URLs the browser can load; invalid strings avoid a broken <img> request. */
+function isDisplayableImageSrc(src: string): boolean {
+  const s = src.trim()
+  if (!s) return false
+  return (
+    s.startsWith("https://") ||
+    s.startsWith("http://") ||
+    s.startsWith("blob:") ||
+    s.startsWith("data:image/")
+  )
+}
+
+/**
+ * S3 objects often block hotlinked browser requests (Referer / ACL). Load via same-origin proxy.
+ * Blob/data URLs and non-S3 https stay as-is.
+ */
+function avatarImgSrcForDisplay(url: string): string {
+  const s = url.trim()
+  if (!s || s.startsWith("blob:") || s.startsWith("data:")) return s
+  try {
+    const u = new URL(s)
+    if (
+      u.protocol === "https:" &&
+      u.hostname.toLowerCase().endsWith(".amazonaws.com") &&
+      u.hostname.toLowerCase().includes(".s3.")
+    ) {
+      return `/api/avatar?url=${encodeURIComponent(s)}`
+    }
+  } catch {
+    return s
+  }
+  return s
+}
+
 export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
-  const pathname = usePathname()
   const { user } = useAuthContext()
   const userId = useMemo(() => {
-    // Always use the authenticated user's ID if available
     if (user?._id) return user._id
-    return ''
+    return ""
   }, [user?._id])
 
   const form = useForm<AccountFormValues>({
     defaultValues: {
-      name: defaultValues.name || '',
-      email: defaultValues.email || '',
-      avatarUrl: defaultValues.avatarUrl || '',
-      bio: defaultValues.bio || '',
-      address: defaultValues.address || '',
-      dateOfBirth: defaultValues.dateOfBirth ? new Date(defaultValues.dateOfBirth) : null,
+      name: defaultValues.name || "",
+      email: defaultValues.email || "",
+      bio: defaultValues.bio || "",
+      address: defaultValues.address || "",
+      dateOfBirth: defaultValues.dateOfBirth
+        ? new Date(defaultValues.dateOfBirth)
+        : null,
     },
   })
 
-  const queryClient = useQueryClient()
+  /** Last avatar URL from the server (S3). Profile updates use multipart `file` only. */
+  const serverAvatarUrlRef = useRef<string>("")
+  const [avatarPreview, setAvatarPreview] = useState<string>("")
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const blobPreviewRef = useRef<string | null>(null)
 
-  // Avatar upload handlers
+  const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  function revokeBlobPreview() {
+    if (blobPreviewRef.current) {
+      URL.revokeObjectURL(blobPreviewRef.current)
+      blobPreviewRef.current = null
+    }
+  }
 
   function onPickAvatar() {
     fileInputRef.current?.click()
   }
 
   function onRemoveAvatar() {
-    form.setValue('avatarUrl', '')
+    revokeBlobPreview()
+    setPendingAvatarFile(null)
+    setAvatarPreview(serverAvatarUrlRef.current || "")
   }
 
   function onAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -82,24 +135,21 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
     const maxSizeMb = 3
     if (file.size > maxSizeMb * 1024 * 1024) {
       toast.error(`Please select an image under ${maxSizeMb}MB.`)
-      e.target.value = ''
+      e.target.value = ""
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      form.setValue('avatarUrl', dataUrl)
-      // clear value so selecting the same file again will trigger change event
-      e.target.value = ''
-    }
-    reader.onerror = () => {
-      toast.error('Failed to read image')
-      e.target.value = ''
-    }
-    reader.readAsDataURL(file)
+    revokeBlobPreview()
+    const url = URL.createObjectURL(file)
+    blobPreviewRef.current = url
+    setPendingAvatarFile(file)
+    setAvatarPreview(url)
+    e.target.value = ""
   }
 
-  // Load account on mount/by userId
+  useEffect(() => {
+    return () => revokeBlobPreview()
+  }, [])
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -107,122 +157,187 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
         if (!userId) return
         const res = await getAccountMutationFn(userId)
         if (!mounted) return
+        const raw = res.data.avatarUrl
+        const url =
+          raw != null && String(raw).trim() !== "" ? String(raw).trim() : ""
+        serverAvatarUrlRef.current = url
+        setAvatarPreview(url)
+        setPendingAvatarFile(null)
+        revokeBlobPreview()
         form.reset({
-          name: res.data.name || '',
-          email: res.data.email || '',
-          avatarUrl: res.data.avatarUrl || '',
-          bio: res.data.bio || '',
-          address: res.data.address || '',
-          dateOfBirth: res.data.dateOfBirth ? new Date(res.data.dateOfBirth) : null,
+          name: res.data.name || "",
+          email: res.data.email || "",
+          bio: res.data.bio || "",
+          address: res.data.address || "",
+          dateOfBirth: res.data.dateOfBirth
+            ? new Date(res.data.dateOfBirth)
+            : null,
         })
       } catch {
         // keep defaults
       }
     })()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   async function onSubmit(data: AccountFormValues) {
     if (!userId) {
-      toast.error('Missing user id in URL')
+      toast.error("Missing user id")
       return
     }
     try {
+      const fileToUpload = pendingAvatarFile
+      // Gateway PUT runs the same S3 + DB upload as POST /auth/upload-profile-picture when `file`
+      // is present, then applies text fields. One request keeps `avatarUrl` in the response in sync.
       const res = await updateAccountMutationFn(userId, {
         name: data.name,
-        avatarUrl: data.avatarUrl,
         bio: data.bio,
         address: data.address,
-        dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : '',
+        dateOfBirth: data.dateOfBirth
+          ? format(data.dateOfBirth, "yyyy-MM-dd")
+          : undefined,
+        file: fileToUpload ?? undefined,
       })
-      // Reflect response immediately
+
+      const normalizeAvatar = (v: unknown) =>
+        v != null && String(v).trim() !== "" ? String(v).trim() : ""
+      let nextUrl = normalizeAvatar(res.data.avatarUrl)
+      if (!nextUrl && fileToUpload) {
+        try {
+          const fresh = await getAccountMutationFn(userId)
+          nextUrl = normalizeAvatar(fresh.data.avatarUrl)
+        } catch {
+          // ignore
+        }
+      }
+      serverAvatarUrlRef.current = nextUrl
+      revokeBlobPreview()
+      setPendingAvatarFile(null)
+      setAvatarPreview(nextUrl)
       form.reset({
-        name: res.data.name || '',
-        email: res.data.email || '',
-        avatarUrl: res.data.avatarUrl || '',
-        bio: res.data.bio || '',
-        address: res.data.address || '',
-        dateOfBirth: res.data.dateOfBirth ? new Date(res.data.dateOfBirth) : null,
+        name: res.data.name || "",
+        email: res.data.email || "",
+        bio: res.data.bio || "",
+        address: res.data.address || "",
+        dateOfBirth: res.data.dateOfBirth
+          ? new Date(res.data.dateOfBirth)
+          : null,
       })
-      // Update auth user cache so nav reflects new avatar/name immediately
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      queryClient.setQueryData(['authUser'], (prev: any) => {
-        const prevUser = prev?.user ?? {};
+      queryClient.setQueryData(["authUser"], (prev: unknown) => {
+        const p = prev as { user?: Record<string, unknown> } | undefined
+        const prevUser = p?.user ?? {}
         return {
-          ...(prev ?? {}),
+          ...(p ?? {}),
           user: {
             ...prevUser,
             name: res.data.name ?? prevUser.name,
             email: res.data.email ?? prevUser.email,
-            // Many APIs use profilePicture on auth user while account uses avatarUrl
-            profilePicture: res.data.avatarUrl ?? prevUser.profilePicture ?? res.data.avatarUrl,
+            profilePicture:
+              nextUrl ||
+              res.data.avatarUrl ||
+              prevUser.profilePicture,
           },
-        };
+        }
       })
-      // Also revalidate immediately to sync with server
-      await queryClient.invalidateQueries({ queryKey: ['authUser'] })
-      await queryClient.refetchQueries({ queryKey: ['authUser'] })
-      // Notify other parts of the app (e.g., nav) that account data changed
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('account:updated'))
+      await queryClient.invalidateQueries({ queryKey: ["authUser"] })
+      await queryClient.refetchQueries({ queryKey: ["authUser"] })
+      await queryClient.invalidateQueries({ queryKey: ["account", userId] })
+      await queryClient.refetchQueries({ queryKey: ["account", userId] })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("account:updated"))
       }
       toast.success(res.message)
     } catch (error) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update account'
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ||
+        (error as Error)?.message ||
+        "Failed to update account"
       toast.error(message)
     }
   }
 
+  const displayName = form.watch("name")
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
-        {/* Avatar preview */}
-        <div className='flex items-center gap-4'>
-          <Avatar className='h-16 w-16'>
-            {form.watch('avatarUrl') ? (
-              <AvatarImage src={form.watch('avatarUrl') || ''} alt={form.watch('name') || 'User avatar'} />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16">
+            {avatarPreview && isDisplayableImageSrc(avatarPreview) ? (
+              <AvatarImage
+                key={avatarPreview}
+                src={avatarImgSrcForDisplay(avatarPreview)}
+                alt={displayName || "User avatar"}
+                className="object-cover"
+                referrerPolicy="no-referrer"
+              />
             ) : null}
             <AvatarFallback>
-              {(form.watch('name') || '')
-                .split(' ')
+              {displayName
+                .split(" ")
                 .filter(Boolean)
                 .slice(0, 2)
                 .map((p) => p[0]?.toUpperCase())
-                .join('') || '?'}
+                .join("") || "?"}
             </AvatarFallback>
           </Avatar>
-          <div className='space-y-1.5'>
-            <div className='text-sm text-muted-foreground'>Profile picture</div>
-            <div className='flex items-center gap-2'>
-              <Button type='button' variant='outline' size='sm' onClick={onPickAvatar} className='cursor-pointer'>Upload image</Button>
-              {form.watch('avatarUrl') ? (
-                <Button type='button' variant='ghost' size='sm' onClick={onRemoveAvatar} className='cursor-pointer'>Remove</Button>
+          <div className="space-y-1.5">
+            <div className="text-sm text-muted-foreground">Profile picture</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onPickAvatar}
+                className="cursor-pointer"
+              >
+                Upload image
+              </Button>
+              {avatarPreview ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRemoveAvatar}
+                  className="cursor-pointer"
+                >
+                  {pendingAvatarFile ? "Discard new image" : "Reset to saved avatar"}
+                </Button>
               ) : null}
             </div>
             <input
               ref={fileInputRef}
-              type='file'
-              accept='image/*'
+              type="file"
+              accept="image/*"
+              aria-label="Upload profile picture"
+              title="Upload profile picture"
               onChange={onAvatarFileChange}
-              className='hidden'
+              className="hidden"
             />
-            <div className='text-xs text-muted-foreground'>You can also paste an image URL below, or leave empty to use your initials</div>
+            <p className="max-w-md text-xs text-muted-foreground">
+              Choose an image, then click{" "}
+              <strong className="font-medium text-foreground">Update account</strong>
+              . Your photo and other fields are saved together; the avatar uses your account{" "}
+              <code className="rounded bg-muted px-1">avatarUrl</code>.
+            </p>
           </div>
         </div>
 
         <FormField
           control={form.control}
-          name='name'
+          name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder='Your name' {...field} />
+                <Input placeholder="Your name" {...field} />
               </FormControl>
               <FormDescription>
-                This is the name that will be displayed on your profile and in
-                emails.
+                This is the name that will be displayed on your profile and in emails.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -231,30 +346,14 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
 
         <FormField
           control={form.control}
-          name='avatarUrl'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Avatar URL</FormLabel>
-              <FormControl>
-                <Input placeholder='https://...' {...field} />
-              </FormControl>
-              <FormDescription>
-                Paste a direct image URL (jpg, png, gif). Leave blank to show your initials.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name='email'
+          name="email"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type='email' placeholder='Your email' {...field} disabled/>
+                <Input type="email" placeholder="Your email" {...field} disabled />
               </FormControl>
+              <FormDescription>Email cannot be changed from this screen.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -262,20 +361,19 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
 
         <FormField
           control={form.control}
-          name='bio'
+          name="bio"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Bio</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder='Tell us a little bit about yourself'
-                  className='resize-none'
+                  placeholder="Tell us a little bit about yourself"
+                  className="resize-none min-h-[100px]"
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                You can <span>@mention</span> other users and organizations to
-                link to them.
+                A short description shown on your profile (max 500 characters on the server).
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -284,49 +382,65 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
 
         <FormField
           control={form.control}
-          name='dateOfBirth'
+          name="address"
           render={({ field }) => (
-            <FormItem className='flex flex-col'>
-              <FormLabel>Date of birth</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-[240px] pl-3 text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value as Date, 'MMM d, yyyy')
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className='w-auto p-0' align='start'>
-                  <Calendar
-                    mode='single'
-                    selected={field.value as Date | undefined}
-                    onSelect={(d) => field.onChange(d ?? null)}
-                    disabled={(date: Date) =>
-                      date > new Date() || date < new Date('1900-01-01')
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-                Your date of birth is used to calculate your age.
-              </FormDescription>
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl>
+                <Input placeholder="Street, city, country" {...field} />
+              </FormControl>
+              <FormDescription>Your mailing or contact address.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type='submit'>Update account</Button>
+        <FormField
+          control={form.control}
+          name="dateOfBirth"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date of birth</FormLabel>
+              <div className="space-y-2">
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={formatDateInputValue(field.value as Date | null)}
+                    max={formatDateInputValue(new Date())}
+                    min="1900-01-01"
+                    onChange={(e) => {
+                      const next = e.target.value
+                      field.onChange(next ? new Date(`${next}T00:00:00`) : null)
+                    }}
+                    className="h-11 rounded-xl border-2 bg-card/50 px-3 font-medium backdrop-blur-sm"
+                  />
+                </FormControl>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => field.onChange(null)}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => field.onChange(new Date())}
+                  >
+                    Today
+                  </Button>
+                </div>
+              </div>
+              <FormDescription>Stored as YYYY-MM-DD when you save.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit">Update account</Button>
       </form>
     </Form>
   )

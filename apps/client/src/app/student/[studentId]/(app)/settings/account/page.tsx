@@ -5,8 +5,7 @@ export default function SettingsAccount() {
   return (
     <ContentSection
       title='Account'
-      desc='Update your account settings. Set your preferred language and
-            timezone.'
+      desc="Update your name, bio, address, date of birth, and profile photo. Email is read-only here."
     >
       <AccountForm />
     </ContentSection>
