@@ -16,6 +16,11 @@ export const PostSchema = new Schema(
       trim: true,
       maxlength: 2000,
     },
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
+    },
     image: {
       type: String,
       default: null,
@@ -51,12 +56,24 @@ export const PostSchema = new Schema(
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ author: 1, createdAt: -1 });
 
+// Unique index to prevent exact duplicate posts from same user
+PostSchema.index(
+  { author: 1, content: 1 }, 
+  { 
+    unique: true,
+    sparse: true,
+    name: 'unique_user_content',
+    // This will prevent exact duplicates but allow similar content
+  }
+);
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface IPost {
   _id: Types.ObjectId;
   author: Types.ObjectId;
   content: string;
+  tags: string[];
   image: string | null;
   imageKey: string | null;
   likes: Types.ObjectId[];

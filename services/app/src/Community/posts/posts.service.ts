@@ -36,17 +36,27 @@ export class PostsService {
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
   async createPost(userId: string, dto: CreatePostDto) {
-    const post = await this.postModel.create({
-      author: this.toObjectId(userId),
-      content: dto.content,
-      image: dto.image || null,
-      imageKey: dto.imageKey || null,
-    });
+    try {
+      const post = await this.postModel.create({
+        author: this.toObjectId(userId),
+        content: dto.content,
+        tags: dto.tags || [],
+        image: dto.image || null,
+        imageKey: dto.imageKey || null,
+      });
 
-    return this.postModel
-      .findById(post._id)
-      .populate('author', 'name profilePicture role')
-      .lean();
+      return this.postModel
+        .findById(post._id)
+        .populate('author', 'name profilePicture role')
+        .lean();
+    } catch (error: any) {
+      // Handle duplicate key error
+      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
+        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
+        throw new BadRequestException('Duplicate post detected. This post already exists.');
+      }
+      throw error;
+    }
   }
 
   async getAllPosts(page: number, limit: number) {
@@ -125,6 +135,7 @@ export class PostsService {
     }
 
     if (dto.content !== undefined) post.content = dto.content;
+    if (dto.tags !== undefined) post.tags = dto.tags || [];
     if (dto.image !== undefined) post.image = dto.image || null;
     if (dto.imageKey !== undefined) post.imageKey = dto.imageKey || null;
 
@@ -201,9 +212,9 @@ export class PostsService {
     post.sharesCount++;
     await post.save();
 
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl = process.env.FRONTEND_ORIGIN;
     if (!frontendUrl) {
-      throw new NotFoundErr('FRONTEND_URL is required in .env');
+      throw new NotFoundErr('FRONTEND_ORIGIN is required in .env');
     }
 
     // Generate shareable link

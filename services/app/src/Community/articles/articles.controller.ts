@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { QueryArticlesDto } from './dto/query-articles.dto';
 import { S3Service } from '../../common/aws/s3.service';
+import { ArticleDocument } from './schemas/article.schema';
 
 @Controller()
 export class ArticlesController {
   constructor(
+    @InjectModel('Article') private articleModel: Model<ArticleDocument>,
     private readonly articlesService: ArticlesService,
     private readonly s3Service: S3Service,
   ) {}
@@ -94,38 +98,7 @@ export class ArticlesController {
     return { message: 'Articles retrieved successfully', ...result };
   }
 
-  @MessagePattern({ cmd: 'app.community.articles.getCategories' })
-  async getCategories(@Payload() data: { page?: number; limit?: number }) {
-    const { page = 1, limit = 10 } = data || {};
-    const categories = [
-      'architecture',
-      'devops',
-      'backend',
-      'databases',
-      'frontend',
-      'mobile',
-      'ai',
-      'security',
-    ];
-
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedCategories = categories.slice(startIndex, endIndex);
-
-    return {
-      message: 'Categories retrieved successfully',
-      data: paginatedCategories,
-      pagination: {
-        page,
-        limit,
-        total: categories.length,
-        totalPages: Math.ceil(categories.length / limit),
-        hasNext: endIndex < categories.length,
-        hasPrev: page > 1,
-      },
-    };
-  }
-
+  
   @MessagePattern({ cmd: 'app.community.articles.approve' })
   async approveArticle(@Payload() data: { id: string }) {
     const { id } = data;

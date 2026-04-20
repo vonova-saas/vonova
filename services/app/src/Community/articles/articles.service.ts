@@ -133,11 +133,18 @@ export class ArticlesService {
         'architecture',
         'devops',
         'backend',
+        'nestjs',
         'databases',
         'frontend',
         'mobile',
         'ai',
         'security',
+        'typescript',
+        'javascript',
+        'nodejs',
+        'webdev',
+        'api',
+        'microservices',
       ];
       const filteredCategories = categories.filter((cat) =>
         validCategories.includes(cat),
@@ -154,6 +161,8 @@ export class ArticlesService {
 
     if (query.publishedStatus) {
       filter.publishedStatus = query.publishedStatus;
+    } else if (query.status) {
+      filter.publishedStatus = query.status;
     }
 
     // Date range filter

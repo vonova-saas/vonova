@@ -6,8 +6,16 @@ import {
   IsNumber,
   Min,
   ArrayMinSize,
+  IsObject,
 } from 'class-validator';
-import { ContentBlockType } from '../interfaces/content-block.interface';
+
+export enum ContentBlockType {
+  TEXT = 'text',
+  CODE = 'code',
+  IMAGE = 'image',
+  QUOTE = 'quote',
+  LINK = 'link',
+}
 
 export class CreateContentBlockDto {
   @IsEnum(ContentBlockType)
@@ -65,12 +73,14 @@ export class CreateArticleDto {
   @IsString()
   @IsOptional()
   slug?: string;
+
   @IsString()
   description: string;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Article must have at least one content block' })
   contentBlocks: CreateContentBlockDto[];
+
   @IsArray()
   @IsEnum(
     [
@@ -90,7 +100,7 @@ export class CreateArticleDto {
       'api',
       'microservices',
     ],
-    { each: true },
+    { each: true, message: 'Each category must be one of: architecture, devops, backend, nestjs, databases, frontend, mobile, ai, security, typescript, javascript, nodejs, webdev, api, microservices' },
   )
   category: string[];
 
@@ -103,6 +113,7 @@ export class CreateArticleDto {
   coverImageKey?: string;
 
   @IsOptional()
+  @IsObject()
   seoMetadata?: {
     metaTitle?: string;
     metaDescription?: string;

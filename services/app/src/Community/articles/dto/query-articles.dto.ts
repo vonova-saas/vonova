@@ -35,6 +35,10 @@ export class QueryArticlesDto {
   publishedStatus?: 'draft' | 'published' | 'archived';
 
   @IsOptional()
+  @IsEnum(['draft', 'published', 'archived'])
+  status?: 'draft' | 'published' | 'archived';
+
+  @IsOptional()
   @IsString()
   search?: string;
 
