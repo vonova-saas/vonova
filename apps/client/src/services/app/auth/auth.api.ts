@@ -72,14 +72,14 @@ export const refreshTokenMutationFn = async () => {
 export const requestResetPasswordMutationFn = async (
   data: requestResetPasswordType
 ): Promise<{ message: string }> => {
-  const response = await API.post("/auth/request-resetPass", data);
+  const response = await API.post("/auth/request-reset-password", data);
   return response.data;
 };
 
 export const verifyResetPasswordCodeMutationFn = async (
   data: verifyResetPasswordCodeType
 ): Promise<{ message: string }> => {
-  const response = await API.post("/auth/verify-resetPass-code", data);
+  const response = await API.post("/auth/verify-reset-code", data);
   return response.data;
 };
 
