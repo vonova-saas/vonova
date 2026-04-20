@@ -29,6 +29,14 @@ export const PostSchema = new Schema(
       type: String,
       default: null,
     },
+    images: {
+      type: [String],
+      default: null,
+    },
+    imageKeys: {
+      type: [String],
+      default: null,
+    },
     likes: {
       type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
       default: [],
@@ -76,6 +84,8 @@ export interface IPost {
   tags: string[];
   image: string | null;
   imageKey: string | null;
+  images: string[] | null;
+  imageKeys: string[] | null;
   likes: Types.ObjectId[];
   likesCount: number;
   commentsCount: number;

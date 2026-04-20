@@ -131,6 +131,14 @@ export const ArticleSchema = new Schema({
     type: String,
     required: false,
   },
+  images: {
+    type: [String],
+    required: false,
+  },
+  imageKeys: {
+    type: [String],
+    required: false,
+  },
   seoMetadata: {
     metaTitle: String,
     metaDescription: String,
@@ -191,6 +199,8 @@ export interface IArticle {
   publishedStatus: 'draft' | 'published' | 'archived';
   coverImage?: string;
   coverImageKey?: string;
+  images?: string[];
+  imageKeys?: string[];
   seoMetadata?: {
     metaTitle?: string;
     metaDescription?: string;

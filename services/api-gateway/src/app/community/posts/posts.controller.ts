@@ -15,6 +15,7 @@ import {
   UseInterceptors,
   ParseUUIDPipe,
   BadRequestException,
+  UploadedFiles,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,7 +27,7 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type { UploadedFile as CustomUploadedFile } from '../../../common/interfaces/file.interface';
@@ -47,7 +48,7 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Create a new post',
-    description: 'Creates a new post with optional image upload',
+    description: 'Creates a new post with optional single or multiple image uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -61,10 +62,13 @@ export class PostsGatewayController {
           items: { type: 'string' },
           example: ['nestjs', 'typescript', 'webdev'],
         },
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Optional image file for the post',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more image files for the post (max 10 files)',
         },
       },
     },
@@ -92,7 +96,13 @@ export class PostsGatewayController {
                     avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
                   },
                 },
-                image: { type: 'string', example: 'https://example.com/post-image.jpg' },
+                image: { type: 'string', example: 'https://example.com/post-image.jpg', nullable: true },
+                images: { 
+                  type: 'array', 
+                  items: { type: 'string' }, 
+                  example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
+                  nullable: true 
+                },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
@@ -109,10 +119,10 @@ export class PostsGatewayController {
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token is required' })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 10))
   async createPost(
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file: CustomUploadedFile | undefined,
+    @UploadedFiles() files: CustomUploadedFile[] | undefined,
     @Request() req: any,
   ) {
     const createPostDto = plainToInstance(CreatePostDto, {
@@ -126,7 +136,7 @@ export class PostsGatewayController {
     }
 
     return firstValueFrom(
-      this.postsService.createPost(createPostDto, file, req.user._id),
+      this.postsService.createPost(createPostDto, undefined, files, req.user._id),
     );
   }
 
@@ -223,7 +233,13 @@ export class PostsGatewayController {
                     avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
                   },
                 },
-                image: { type: 'string', example: 'https://example.com/post-image.jpg' },
+                image: { type: 'string', example: 'https://example.com/post-image.jpg', nullable: true },
+                images: { 
+                  type: 'array', 
+                  items: { type: 'string' }, 
+                  example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
+                  nullable: true 
+                },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
@@ -245,7 +261,7 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Update a post',
-    description: 'Updates an existing post with optional image upload',
+    description: 'Updates an existing post with optional single or multiple image uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiParam({
@@ -264,10 +280,13 @@ export class PostsGatewayController {
           items: { type: 'string' },
           example: ['nestjs', 'updated'],
         },
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Optional new image file for the post',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more new image files for the post (max 10 files)',
         },
       },
     },
@@ -279,11 +298,11 @@ export class PostsGatewayController {
   @ApiResponse({ status: 404, description: 'Post not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to update this post' })
   @Put(':postId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 10))
   async updatePost(
     @Param('postId') postId: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file: CustomUploadedFile | undefined,
+    @UploadedFiles() files: CustomUploadedFile[] | undefined,
     @Request() req: any,
   ) {
     let tags = body.tags;
@@ -309,7 +328,7 @@ export class PostsGatewayController {
     }
 
     return firstValueFrom(
-      this.postsService.updatePost(postId, updatePostDto, file, req.user._id, req.user.role),
+      this.postsService.updatePost(postId, updatePostDto, undefined, files, req.user._id, req.user.role),
     );
   }
 

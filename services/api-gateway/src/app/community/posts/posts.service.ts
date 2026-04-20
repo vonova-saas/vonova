@@ -12,11 +12,35 @@ export class PostsGatewayService {
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
-  createPost(createPostDto: CreatePostDto, file?: UploadedFile, userId?: string) {
+  createPost(createPostDto: CreatePostDto, file?: UploadedFile, files?: UploadedFile[], userId?: string) {
     console.log(`[POSTS SERVICE] Sending NATS message for user ${userId}:`, createPostDto.content);
+    
+    // Convert single file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+      };
+    }
+    
+    // Convert multiple files buffers to base64 for NATS serialization
+    let processedFiles: UploadedFile[] | undefined = undefined;
+    if (files && files.length > 0) {
+      processedFiles = files.map(file => {
+        if (file && file.buffer) {
+          return {
+            ...file,
+            buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+          };
+        }
+        return file;
+      }).filter(Boolean);
+    }
+    
     return this.client.send(
       { cmd: 'app.community.posts.create' },
-      { userId, dto: createPostDto, image: file },
+      { userId, dto: createPostDto, image: processedFile, images: processedFiles },
     );
   }
 
@@ -41,10 +65,28 @@ export class PostsGatewayService {
     );
   }
 
-  updatePost(postId: string, updatePostDto: UpdatePostDto, file?: UploadedFile, userId?: string, role?: string) {
+  updatePost(postId: string, updatePostDto: UpdatePostDto, file?: UploadedFile, files?: UploadedFile[], userId?: string, role?: string) {
+    // Convert single file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+      };
+    }
+
+    // Convert multiple files buffer to base64 for NATS serialization
+    let processedFiles: UploadedFile[] | undefined = undefined;
+    if (files && files.length > 0) {
+      processedFiles = files.map(file => ({
+        ...file,
+        buffer: file.buffer ? (typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')) : ''
+      }));
+    }
+    
     return this.client.send(
       { cmd: 'app.community.posts.update' },
-      { postId, userId, role, dto: updatePostDto, image: file },
+      { postId, userId, role, dto: updatePostDto, image: processedFile, images: processedFiles },
     );
   }
 
@@ -72,9 +114,18 @@ export class PostsGatewayService {
   // ─── Comments ──────────────────────────────────────────────────────────────
 
   createComment(postId: string, createCommentDto: CreateCommentDto, file?: UploadedFile, userId?: string) {
+    // Convert file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+      };
+    }
+    
     return this.client.send(
       { cmd: 'app.community.comments.create' },
-      { postId, userId, dto: createCommentDto, image: file },
+      { postId, userId, dto: createCommentDto, image: processedFile },
     );
   }
 
@@ -86,9 +137,18 @@ export class PostsGatewayService {
   }
 
   updateComment(commentId: string, updateCommentDto: UpdateCommentDto, file?: UploadedFile, userId?: string, role?: string) {
+    // Convert file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+      };
+    }
+    
     return this.client.send(
       { cmd: 'app.community.comments.update' },
-      { commentId, userId, role, dto: updateCommentDto, image: file },
+      { commentId, userId, role, dto: updateCommentDto, image: processedFile },
     );
   }
 

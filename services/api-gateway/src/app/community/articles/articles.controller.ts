@@ -12,6 +12,7 @@ import {
   UseGuards,
   Request,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   ParseUUIDPipe,
   BadRequestException,
@@ -26,7 +27,7 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type { UploadedFile as CustomUploadedFile } from '../../../common/interfaces/file.interface';
@@ -46,7 +47,7 @@ export class ArticlesGatewayController {
 
   @ApiOperation({
     summary: 'Create a new article',
-    description: 'Creates a new article with optional cover image upload',
+    description: 'Creates a new article with optional single or multiple image uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -88,10 +89,13 @@ export class ArticlesGatewayController {
             keywords: { type: 'array', items: { type: 'string' } },
           },
         },
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Optional cover image file',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more image files for the article (max 10 files)',
         },
       },
     },
@@ -112,7 +116,13 @@ export class ArticlesGatewayController {
             description: { type: 'string', example: 'A comprehensive guide to NestJS framework' },
             contentBlocks: { type: 'array', items: { type: 'object' } },
             category: { type: 'array', items: { type: 'string' } },
-            coverImage: { type: 'string', example: 'https://example.com/cover.jpg' },
+            coverImage: { type: 'string', example: 'https://example.com/cover.jpg', nullable: true },
+            images: { 
+              type: 'array', 
+              items: { type: 'string' }, 
+              example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+              nullable: true 
+            },
             status: { type: 'string', example: 'draft' },
             createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
             updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
@@ -124,10 +134,10 @@ export class ArticlesGatewayController {
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token is required' })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 10))
   async create(
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file: CustomUploadedFile | undefined,
+    @UploadedFiles() files: CustomUploadedFile[] | undefined,
     @Request() req: any,
   ) {
     // Parse JSON strings from multipart form data
@@ -180,7 +190,7 @@ export class ArticlesGatewayController {
     }
 
     return firstValueFrom(
-      this.articlesService.createArticle(createArticleDto, file, req.user._id),
+      this.articlesService.createArticle(createArticleDto, undefined, files, req.user._id),
     );
   }
 
@@ -312,7 +322,7 @@ export class ArticlesGatewayController {
 
   @ApiOperation({
     summary: 'Update an article',
-    description: 'Updates an existing article with optional cover image upload',
+    description: 'Updates an existing article with optional multiple image uploads. If new images are provided, old images will be deleted and replaced.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiParam({
@@ -414,10 +424,13 @@ export class ArticlesGatewayController {
             keywords: ['nestjs', 'typescript', 'backend', 'nodejs', 'microservices', 'architecture']
           }
         },
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Optional new cover image file (JPEG, PNG, WebP)',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more image files for the article (max 10 files). Old images will be deleted and replaced with new ones.',
         },
       },
       required: ['title', 'description', 'contentBlocks', 'category'],
@@ -430,11 +443,11 @@ export class ArticlesGatewayController {
   @ApiResponse({ status: 404, description: 'Article not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to update this article' })
   @Put(':id')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 10))
   async update(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file: CustomUploadedFile | undefined,
+    @UploadedFiles() files: CustomUploadedFile[] | undefined,
     @Request() req: any,
   ) {
     // Parse JSON strings from multipart form data
@@ -480,7 +493,7 @@ export class ArticlesGatewayController {
     }
 
     return firstValueFrom(
-      this.articlesService.updateArticle(id, updateArticleDto, file, req.user._id, req.user.role),
+      this.articlesService.updateArticle(id, updateArticleDto, files, req.user._id, req.user.role),
     );
   }
 
@@ -529,43 +542,4 @@ export class ArticlesGatewayController {
     );
   }
 
-  @ApiOperation({
-    summary: 'Upload cover image for article',
-    description: 'Uploads a new cover image for an existing article',
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiParam({
-    name: 'id',
-    description: 'The unique identifier of the article',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiBody({
-    required: true,
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Cover image file to upload',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Cover image uploaded successfully',
-  })
-  @ApiResponse({ status: 404, description: 'Article not found' })
-  @Put(':id/cover-image')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadCoverImage(
-    @Param('id') id: string,
-    @UploadedFile() file: CustomUploadedFile,
-    @Request() req: any,
-  ) {
-    return firstValueFrom(
-      this.articlesService.uploadCoverImage(id, file, req.user._id, req.user.role),
-    );
   }
-}
