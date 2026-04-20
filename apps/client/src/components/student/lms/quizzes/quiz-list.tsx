@@ -30,15 +30,15 @@ export default function QuizList({ quizzes }: QuizListProps) {
 
       await Promise.allSettled(ids.map(async (id) => {
         try {
-          await fetchAttempts(id);
+          if (userId) await fetchAttempts(id, userId);
         } finally {
           if (!cancelled) setLoadingMap(prev => ({ ...prev, [id]: false }));
         }
       }));
     };
-    if (quizzes.length) run();
+    if (quizzes.length && userId) run();
     return () => { cancelled = true; };
-  }, [quizzes, fetchAttempts]);
+  }, [quizzes, fetchAttempts, userId]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">

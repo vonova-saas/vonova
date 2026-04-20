@@ -1,7 +1,12 @@
+/**
+ * External AI microservice for generating quiz question text.
+ * This is **not** the Vonova LMS quiz CRUD API (`/api/v1/lms/quizzes` in `student/lms/quizzes/quiz.api.ts`).
+ * It does not take instructor/student user ids in the URL — only topic/level/counts in the request body.
+ */
 import axios from "axios";
 import { CustomError } from "@/types/error/custom-error.type";
 
-const AI_QUIZ_API_BASE_URL = process.env.NEXT_PUBLIC_AI_QUIZ_GENERATION_API_BASE || "https://vonova-generative-ai.up.railway.app";
+const AI_QUIZ_API_BASE_URL = process.env.NEXT_PUBLIC_AI_QUIZ_GENERATION_API_BASE;
 
 const aiQuizAPI = axios.create({
   baseURL: AI_QUIZ_API_BASE_URL,

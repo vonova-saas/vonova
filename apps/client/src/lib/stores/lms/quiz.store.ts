@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import useAuth from "@/hooks/app/auth/use-auth";
 import {
   getAllQuizzesMutationFn,
   getQuizByIdMutationFn,
@@ -7,7 +6,7 @@ import {
   updateQuizMutationFn,
   deleteQuizMutationFn,
   getInstructorQuizzesMutationFn,
-  getAttemptsMutationFn,
+  getStudentQuizAttemptsMutationFn,
 } from "@/services/student/lms/quizzes/quiz.api";
 import type {
   QuizType,
@@ -37,7 +36,7 @@ type QuizStore = {
   createQuiz: (payload: createQuizType, userId?: string) => Promise<QuizType | undefined>;
   updateQuiz: (id: string, payload: updateQuizType, userId?: string) => Promise<void>;
   deleteQuiz: (id: string, userId?: string) => Promise<void>;
-  fetchAttempts: (quizId: string) => Promise<AttemptSummary[]>;
+  fetchAttempts: (quizId: string, studentUserId: string) => Promise<AttemptSummary[]>;
   getLatestAttempt: (quizId: string) => AttemptSummary | null;
   clearError: () => void;
 };
@@ -180,9 +179,14 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  fetchAttempts: async (quizId: string) => {
+  fetchAttempts: async (quizId: string, studentUserId: string) => {
     try {
-      const res = await getAttemptsMutationFn(quizId);
+      const sid = studentUserId?.trim();
+      if (!sid) {
+        set({ error: "Student user ID is required to load attempts" });
+        return [];
+      }
+      const res = await getStudentQuizAttemptsMutationFn(sid, quizId);
       const raw = (res as getAttemptsTypeResponse).data as unknown;
       const arr = Array.isArray(raw) ? raw : [raw];
       const attempts: AttemptSummary[] = arr.map((a) => ({

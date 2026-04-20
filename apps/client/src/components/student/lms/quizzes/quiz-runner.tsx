@@ -8,7 +8,8 @@ import QuestionComponent from "./quiz-question";
 import QuizResult from "./quiz-result";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
-import { submitQuizMutationFn, getAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { submitQuizMutationFn, getStudentQuizAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { useUserId } from "@/hooks";
 import { getAttemptsTypeResponse } from "@/types/api/student/lms/quizzes/quiz.type";
 
 function getQuestions(quiz: QuizType): Question[] {
@@ -16,6 +17,7 @@ function getQuestions(quiz: QuizType): Question[] {
 }
 
 export default function QuizRunner({ quiz }: { quiz: QuizType }) {
+  const studentUserId = useUserId();
   const questions = getQuestions(quiz);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
@@ -113,7 +115,11 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
     try {
       setLoadingAttempts(true);
       setAttemptsError(null);
-      const res = await getAttemptsMutationFn(quiz._id);
+      if (!studentUserId) {
+        setAttemptsError("You must be signed in to view attempts.");
+        return;
+      }
+      const res = await getStudentQuizAttemptsMutationFn(studentUserId, quiz._id);
       const data: unknown = (res as { data: unknown }).data;
       let parsed: getAttemptsTypeResponse["data"][] = [];
       if (Array.isArray(data)) {

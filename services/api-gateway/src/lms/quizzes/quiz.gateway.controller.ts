@@ -102,7 +102,20 @@ export class QuizGatewayController {
   }
 
   /**
-   * Get all quizzes for a user
+   * Get a specific quiz by ID (must be registered before `GET /:userId` — same path shape).
+   * Path uses the literal `quiz` segment so it is not mistaken for a creator user id.
+   */
+  @ApiOperation({
+    summary: 'Get quiz by ID',
+    description: 'Retrieves a specific quiz by its ID.',
+  })
+  @Get('/quiz/:quizId')
+  async getQuizById(@Param('quizId') quizId: string) {
+    return firstValueFrom(this.quizService.getQuizById(quizId));
+  }
+
+  /**
+   * Get all quizzes for a user (creator / instructor id in path)
    * @param userId - The ID of the user whose quizzes to retrieve
    * @returns Promise<Quiz[]> - Array of user's quizzes
    */
@@ -113,21 +126,6 @@ export class QuizGatewayController {
   @Get('/:userId')
   async getAllQuizzes(@Param('userId') userId: string) {
     return firstValueFrom(this.quizService.getAllQuizzes(userId));
-  }
-
-  /**
-   * Get a specific quiz by ID
-   * @param userId - The ID of the user requesting the quiz
-   * @param quizId - The ID of the quiz to retrieve
-   * @returns Promise<Quiz> - The requested quiz object
-   */
-  @ApiOperation({
-    summary: 'Get quiz by ID',
-    description: 'Retrieves a specific quiz by its ID.',
-  })
-  @Get('/:quizId')
-  async getQuizById(@Param('quizId') quizId: string) {
-    return firstValueFrom(this.quizService.getQuizById(quizId));
   }
 
   /**

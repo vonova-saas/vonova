@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, CheckCircle, Component as ComponentIcon, BookOpen } from "lucide-react";
 import { useQuizStore } from "@/lib/stores";
 import type { Question } from "@/types/api/student/lms/quizzes/quiz.type";
+import { useAuthContext } from "@/context/app/auth/auth-context";
 
 export default function EditQuizPage() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
+  const { user } = useAuthContext();
+  const instructorId = user?._id;
   const { fetchById, updateQuiz } = useQuizStore();
 
   const [loading, setLoading] = useState(true);
@@ -152,13 +155,21 @@ export default function EditQuizPage() {
     try {
       setSaving(true);
       setError(null);
-      await updateQuiz(id, {
-        title: title.trim(),
-        description: description.trim(),
-        topic: topic.trim(),
-        noOfQuestions: typeof noOfQuestions === "string" ? noOfQuestions.trim() : String(noOfQuestions ?? ""),
-        questions,
-      });
+      if (!instructorId) {
+        setError("You must be signed in to update this quiz.");
+        return;
+      }
+      await updateQuiz(
+        id,
+        {
+          title: title.trim(),
+          description: description.trim(),
+          topic: topic.trim(),
+          noOfQuestions: typeof noOfQuestions === "string" ? noOfQuestions.trim() : String(noOfQuestions ?? ""),
+          questions,
+        },
+        instructorId,
+      );
 
       // ============== (draft) ==============
       try { localStorage.removeItem(draftKey); } catch { }
