@@ -34,13 +34,11 @@ from AI_PDF_Summary_QA.helpers.prompts import get_voice_instruction_prompt
 from AI_Problem_Solving_Coach.models.hint_schema import ErrorHintRequest, SolutionRequest, HintResponse, SolutionResponse
 from AI_Problem_Solving_Coach.services.hint_service import HintService
 
-from Config.config import validate_environment, setup_app_logger
+from Config.config import setup_app_logger
 from Config.middleware import setup_cors_middleware
 
-# Validate environment and setup logger
-effective_api_key = validate_environment()
+# Setup logger
 logger = setup_app_logger()
-logger.info("API key loaded successfully")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,7 +63,7 @@ setup_cors_middleware(app)
 
 agent_manager = AgentManager()
 
-generator = RoadmapGenerator(effective_api_key)
+generator = RoadmapGenerator()
 
 hint_service = HintService()
 

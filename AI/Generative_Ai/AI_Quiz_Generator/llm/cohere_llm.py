@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from AI_Quiz_Generator.utils.translation_utils import process_user_input
 
 load_dotenv()
-api_key = os.getenv('COHERE_API_KEY')
+api_key = os.getenv('COHERE_KEY')
 
 cohere_async_client = cohere.AsyncClient(api_key)
 

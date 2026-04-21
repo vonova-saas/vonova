@@ -1,15 +1,14 @@
 from AI_Roadmap_Generator.models.roadmap_schema import RoadmapData
 from AI_Roadmap_Generator.services.roadmap_formatter import RoadmapFormatter
-import cohere
+from AI_Roadmap_Generator.llm.cohere_llm import CohereAPIClient
 import json
 import re
 
 
 class RoadmapGenerator:
-    def __init__(self, api_key, cohere_model_name='command-r-plus-08-2024'):
-        self.api_key = api_key
+    def __init__(self, cohere_model_name='command-r-plus-08-2024'):
         self.model_name = cohere_model_name
-        self.cohere_client = cohere.ClientV2(api_key=api_key)
+        self.cohere_client = CohereAPIClient(model_name=cohere_model_name)
         self.formatter = RoadmapFormatter()
 
     def generate_roadmap(self, topic, skill_level, duration_weeks):
@@ -59,11 +58,11 @@ class RoadmapGenerator:
         
         roadmap_data = None
         try:
-            response = self.cohere_client.chat(
-                model=self.model_name,
-                messages=[{"role": "user", "content": prompt}]
+            response_text = self.cohere_client.chat_with_model(
+                message=prompt,
+                max_tokens=4000,
+                temperature=0.0
             )
-            response_text = response.message.content[0].text
 
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
@@ -95,7 +94,5 @@ class RoadmapGenerator:
                 except Exception as e:
                     raise ValueError(f"Roadmap failed Pydantic validation: {str(e)}")
 
-        except cohere.CohereError as e:
-            raise RuntimeError(f"Cohere API error: {str(e)}")
         except Exception as e:
             raise RuntimeError(f"Roadmap generation failed: {str(e)}")

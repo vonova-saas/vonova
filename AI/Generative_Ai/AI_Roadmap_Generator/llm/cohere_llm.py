@@ -1,8 +1,17 @@
+import os
+from dotenv import load_dotenv
 import cohere
 
-class CohereAPIClient:
+load_dotenv()
 
-    def __init__(self, api_key, model_name='command-r-plus-08-2024'):
+class CohereAPIClient:
+    def __init__(self, model_name='command-r-plus-08-2024'):
+        load_dotenv()
+
+        api_key = os.getenv('COHERE_API_KEY')
+        if not api_key:
+            raise ValueError("COHERE_API_KEY is not set properly in environment variables")
+
         self.co = cohere.Client(api_key)
         self.model_name = model_name
 
