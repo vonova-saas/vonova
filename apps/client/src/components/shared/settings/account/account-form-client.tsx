@@ -318,12 +318,12 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
               onChange={onAvatarFileChange}
               className="hidden"
             />
-            <p className="max-w-md text-xs text-muted-foreground">
+            {/* <p className="max-w-md text-xs text-muted-foreground">
               Choose an image, then click{" "}
               <strong className="font-medium text-foreground">Update account</strong>
               . Your photo and other fields are saved together; the avatar uses your account{" "}
               <code className="rounded bg-muted px-1">avatarUrl</code>.
-            </p>
+            </p>*/}
           </div>
         </div>
 
