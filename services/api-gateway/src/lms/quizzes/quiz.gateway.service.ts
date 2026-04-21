@@ -13,48 +13,65 @@ export class QuizGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  createQuiz(dto: CreateQuizDto, userId: string) {
-    return this.client.send({ cmd: 'quiz.create' }, { dto, userId });
+  
+  // ===== INSTRUCTOR-SPECIFIC METHODS =====
+
+  createInstructorQuiz(dto: CreateQuizDto, userId: string) {
+    return this.client.send({ cmd: 'quiz.createInstructor' }, { dto, userId });
   }
 
-  updateQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
-    return this.client.send({ cmd: 'quiz.update' }, { quizId, dto, userId });
+  updateInstructorQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
+    return this.client.send({ cmd: 'quiz.updateInstructor' }, { quizId, dto, userId });
   }
 
-  getAllQuizzes(userId: string) {
-    return this.client.send({ cmd: 'quiz.getAll' }, { userId });
+  getInstructorQuizzes(userId: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorQuizzes' }, { userId });
   }
 
-  getAllQuizzesForStudents() {
-    return this.client.send({ cmd: 'quiz.getAllForStudents' }, {});
+  getInstructorQuizById(quizId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorQuizById' }, { quizId, userId });
   }
 
-  getQuizById(quizId: string) {
-    return this.client.send({ cmd: 'quiz.getById' }, { quizId });
+  deleteInstructorQuiz(quizId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.deleteInstructor' }, { quizId, userId });
   }
 
-  deleteQuiz(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.delete' }, { quizId, userId });
+  getInstructorQuizAttempts(quizId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorAttempts' }, { quizId, userId });
   }
 
-  submitQuiz(quizId: string, dto: SubmitQuizAnswersDto) {
+  getInstructorQuizStatistics(quizId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorStatistics' }, { quizId, userId });
+  }
+
+  // ===== STUDENT-SPECIFIC METHODS =====
+
+  getAvailableQuizzesForStudents() {
+    return this.client.send({ cmd: 'quiz.getAvailableForStudents' }, {});
+  }
+
+  getQuizForStudent(quizId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.getQuizForStudent' }, { quizId, userId });
+  }
+
+  submitStudentQuiz(quizId: string, dto: SubmitQuizAnswersDto, userId: string) {
     return this.client.send(
-      { cmd: 'quiz.submit' },
+      { cmd: 'quiz.submitStudent' },
       {
         quizId,
         answers: dto.answers,
+        userId,
       },
     );
   }
 
-  getAttempt(attemptId: string) {
-    return this.client.send({ cmd: 'quiz.getAttempt' }, { attemptId });
+  getStudentAttempt(attemptId: string, userId: string) {
+    return this.client.send({ cmd: 'quiz.getStudentAttempt' }, { attemptId, userId });
   }
 
-  getAttemptsForQuiz(quizId: string, userId: string) {
-    return this.client.send(
-      { cmd: 'quiz.getAttemptsForQuiz' },
-      { quizId, userId },
-    );
+  getStudentQuizAttempts(userId: string) {
+    return this.client.send({ cmd: 'quiz.getStudentAttempts' }, { userId });
   }
-}
+
+  
+  }
