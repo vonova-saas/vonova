@@ -12,7 +12,7 @@ export class PostsGatewayService {
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
-  createPost(createPostDto: CreatePostDto, file?: UploadedFile, files?: UploadedFile[], userId?: string) {
+  createPost(createPostDto: CreatePostDto, file?: UploadedFile, files?: UploadedFile[], videos?: UploadedFile[], userId?: string) {
     console.log(`[POSTS SERVICE] Sending NATS message for user ${userId}:`, createPostDto.content);
     
     // Convert single file buffer to base64 for NATS serialization
@@ -37,10 +37,24 @@ export class PostsGatewayService {
         return file;
       }).filter(Boolean);
     }
+
+    // Convert multiple videos buffers to base64 for NATS serialization
+    let processedVideos: UploadedFile[] | undefined = undefined;
+    if (videos && videos.length > 0) {
+      processedVideos = videos.map(video => {
+        if (video && video.buffer) {
+          return {
+            ...video,
+            buffer: typeof video.buffer === 'string' ? video.buffer : video.buffer.toString('base64')
+          };
+        }
+        return video;
+      }).filter(Boolean);
+    }
     
     return this.client.send(
       { cmd: 'app.community.posts.create' },
-      { userId, dto: createPostDto, image: processedFile, images: processedFiles },
+      { userId, dto: createPostDto, image: processedFile, images: processedFiles, videos: processedVideos },
     );
   }
 
@@ -65,7 +79,7 @@ export class PostsGatewayService {
     );
   }
 
-  updatePost(postId: string, updatePostDto: UpdatePostDto, file?: UploadedFile, files?: UploadedFile[], userId?: string, role?: string) {
+  updatePost(postId: string, updatePostDto: UpdatePostDto, file?: UploadedFile, files?: UploadedFile[], videos?: UploadedFile[], userId?: string, role?: string) {
     // Convert single file buffer to base64 for NATS serialization
     let processedFile: UploadedFile | undefined = undefined;
     if (file && file.buffer) {
@@ -83,10 +97,19 @@ export class PostsGatewayService {
         buffer: file.buffer ? (typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')) : ''
       }));
     }
+
+    // Convert multiple videos buffer to base64 for NATS serialization
+    let processedVideos: UploadedFile[] | undefined = undefined;
+    if (videos && videos.length > 0) {
+      processedVideos = videos.map(video => ({
+        ...video,
+        buffer: video.buffer ? (typeof video.buffer === 'string' ? video.buffer : video.buffer.toString('base64')) : ''
+      }));
+    }
     
     return this.client.send(
       { cmd: 'app.community.posts.update' },
-      { postId, userId, role, dto: updatePostDto, image: processedFile, images: processedFiles },
+      { postId, userId, role, dto: updatePostDto, image: processedFile, images: processedFiles, videos: processedVideos },
     );
   }
 
@@ -104,10 +127,10 @@ export class PostsGatewayService {
     );
   }
 
-  sharePost(postId: string) {
+  sharePost(postId: string, userId?: string, comment?: string) {
     return this.client.send(
       { cmd: 'app.community.posts.share' },
-      { postId },
+      { postId, userId, comment },
     );
   }
 

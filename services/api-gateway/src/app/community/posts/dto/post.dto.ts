@@ -49,3 +49,10 @@ export class UpdateCommentDto {
   @IsOptional()
   imageKey?: string;
 }
+
+export class SharePostDto {
+  @IsString()
+  @IsOptional()
+  @IsNotEmpty({ message: 'Share comment cannot be empty if provided' })
+  comment?: string;
+}

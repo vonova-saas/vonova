@@ -37,6 +37,22 @@ export const PostSchema = new Schema(
       type: [String],
       default: null,
     },
+    video: {
+      type: String,
+      default: null,
+    },
+    videoKey: {
+      type: String,
+      default: null,
+    },
+    videos: {
+      type: [String],
+      default: null,
+    },
+    videoKeys: {
+      type: [String],
+      default: null,
+    },
     likes: {
       type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
       default: [],
@@ -55,6 +71,21 @@ export const PostSchema = new Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    sharedPost: {
+      type: Schema.Types.ObjectId,
+      ref: 'Post',
+      default: null,
+    },
+    shareComment: {
+      type: String,
+      default: null,
+      maxlength: 500,
+    },
+    sharedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
   },
   { timestamps: true },
@@ -86,10 +117,17 @@ export interface IPost {
   imageKey: string | null;
   images: string[] | null;
   imageKeys: string[] | null;
+  video: string | null;
+  videoKey: string | null;
+  videos: string[] | null;
+  videoKeys: string[] | null;
   likes: Types.ObjectId[];
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
+  sharedPost: Types.ObjectId | null;
+  shareComment: string | null;
+  sharedBy: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }

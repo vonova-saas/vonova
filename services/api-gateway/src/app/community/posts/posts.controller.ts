@@ -17,6 +17,7 @@ import {
   BadRequestException,
   UploadedFiles,
 } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -27,14 +28,13 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type { UploadedFile as CustomUploadedFile } from '../../../common/interfaces/file.interface';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PostsGatewayService } from './posts.service';
-import { CreateCommentDto, CreatePostDto, UpdateCommentDto, UpdatePostDto } from './dto/post.dto';
+import { CreateCommentDto, CreatePostDto, UpdateCommentDto, UpdatePostDto, SharePostDto } from './dto/post.dto';
 
 
 @ApiTags('Community Posts')
@@ -48,7 +48,7 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Create a new post',
-    description: 'Creates a new post with optional single or multiple image uploads',
+    description: 'Creates a new post with optional single or multiple image and video uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -69,6 +69,14 @@ export class PostsGatewayController {
             format: 'binary',
           },
           description: 'Optional one or more image files for the post (max 10 files)',
+        },
+        videos: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more video files for the post (max 5 files, 200MB per video)',
         },
       },
     },
@@ -103,6 +111,13 @@ export class PostsGatewayController {
                   example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
                   nullable: true 
                 },
+                video: { type: 'string', example: 'https://example.com/post-video.mp4', nullable: true },
+                videos: { 
+                  type: 'array', 
+                  items: { type: 'string' }, 
+                  example: ['https://example.com/post-video1.mp4', 'https://example.com/post-video2.mp4'],
+                  nullable: true 
+                },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
@@ -119,11 +134,13 @@ export class PostsGatewayController {
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token is required' })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post()
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'files', maxCount: 10 },
+    { name: 'videos', maxCount: 5 }
+  ]))
   async createPost(
     @Body() body: Record<string, unknown>,
-    @UploadedFiles() files: CustomUploadedFile[] | undefined,
-    @Request() req: any,
+    @Request() req: any & { files?: { files?: CustomUploadedFile[], videos?: CustomUploadedFile[] } },
   ) {
     const createPostDto = plainToInstance(CreatePostDto, {
       content: body.content,
@@ -135,8 +152,29 @@ export class PostsGatewayController {
       throw new BadRequestException(errors);
     }
 
+    // Access files and videos from the request when using FileFieldsInterceptor
+    const uploadedFiles = req.files?.files || [];
+    const uploadedVideos = req.files?.videos || [];
+
+    // Separate images from files based on mimetype
+    const images = uploadedFiles.filter(file => 
+      file.mimetype && file.mimetype.startsWith('image/')
+    ) || [];
+    
+    const videos = uploadedVideos.filter(video => 
+      video.mimetype && video.mimetype.startsWith('video/')
+    ) || [];
+
+    // Validate video file sizes (200MB max per video)
+    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    for (const video of videos) {
+      if (video.size > maxSize) {
+        throw new BadRequestException(`Video file ${video.originalname} exceeds maximum size of 200MB`);
+      }
+    }
+
     return firstValueFrom(
-      this.postsService.createPost(createPostDto, undefined, files, req.user._id),
+      this.postsService.createPost(createPostDto, undefined, images, videos, req.user._id),
     );
   }
 
@@ -240,6 +278,13 @@ export class PostsGatewayController {
                   example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
                   nullable: true 
                 },
+                video: { type: 'string', example: 'https://example.com/post-video.mp4', nullable: true },
+                videos: { 
+                  type: 'array', 
+                  items: { type: 'string' }, 
+                  example: ['https://example.com/post-video1.mp4', 'https://example.com/post-video2.mp4'],
+                  nullable: true 
+                },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
@@ -261,7 +306,7 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Update a post',
-    description: 'Updates an existing post with optional single or multiple image uploads',
+    description: 'Updates an existing post with optional single or multiple image and video uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiParam({
@@ -288,6 +333,14 @@ export class PostsGatewayController {
           },
           description: 'Optional one or more new image files for the post (max 10 files)',
         },
+        videos: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Optional one or more new video files for the post (max 5 files, 200MB per video)',
+        },
       },
     },
   })
@@ -298,12 +351,14 @@ export class PostsGatewayController {
   @ApiResponse({ status: 404, description: 'Post not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to update this post' })
   @Put(':postId')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'files', maxCount: 10 },
+    { name: 'videos', maxCount: 5 }
+  ]))
   async updatePost(
     @Param('postId') postId: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFiles() files: CustomUploadedFile[] | undefined,
-    @Request() req: any,
+    @Request() req: any & { files?: { files?: CustomUploadedFile[], videos?: CustomUploadedFile[] } },
   ) {
     let tags = body.tags;
 
@@ -327,8 +382,29 @@ export class PostsGatewayController {
       throw new BadRequestException(errors);
     }
 
+    // Access files and videos from the request when using FileFieldsInterceptor
+    const uploadedFiles = req.files?.files || [];
+    const uploadedVideos = req.files?.videos || [];
+
+    // Separate images from files based on mimetype
+    const images = uploadedFiles.filter(file => 
+      file.mimetype && file.mimetype.startsWith('image/')
+    ) || [];
+    
+    const videos = uploadedVideos.filter(video => 
+      video.mimetype && video.mimetype.startsWith('video/')
+    ) || [];
+
+    // Validate video file sizes (200MB max per video)
+    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    for (const video of videos) {
+      if (video.size > maxSize) {
+        throw new BadRequestException(`Video file ${video.originalname} exceeds maximum size of 200MB`);
+      }
+    }
+
     return firstValueFrom(
-      this.postsService.updatePost(postId, updatePostDto, undefined, files, req.user._id, req.user.role),
+      this.postsService.updatePost(postId, updatePostDto, undefined, images, videos, req.user._id, req.user.role),
     );
   }
 
@@ -388,15 +464,29 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Share a post',
-    description: 'Increments the share count of a post',
+    description: 'Creates a new shared post referencing the original post with optional comment',
   })
   @ApiParam({
     name: 'postId',
-    description: 'The unique identifier of the post',
+    description: 'The unique identifier of the post to share',
     example: '507f1f77bcf86cd799439011',
   })
+  @ApiBody({
+    required: false,
+    schema: {
+      type: 'object',
+      properties: {
+        comment: { 
+          type: 'string', 
+          example: 'Check out this amazing post!',
+          description: 'Optional comment to add when sharing the post',
+          maxLength: 500
+        },
+      },
+    },
+  })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: 'Post shared successfully',
     schema: {
       type: 'object',
@@ -405,16 +495,73 @@ export class PostsGatewayController {
         data: {
           type: 'object',
           properties: {
-            sharesCount: { type: 'number', example: 3 },
+            sharedPost: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '507f1f77bcf86cd799439014' },
+                author: {
+                  type: 'object',
+                  properties: {
+                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    name: { type: 'string', example: 'John Doe' },
+                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                  },
+                },
+                content: { type: 'string', example: 'Check out this amazing post!' },
+                shareComment: { type: 'string', example: 'Check out this amazing post!' },
+                sharedPost: {
+                  type: 'object',
+                  properties: {
+                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    content: { type: 'string', example: 'This is the original post content' },
+                    author: {
+                      type: 'object',
+                      properties: {
+                        _id: { type: 'string', example: '507f1f77bcf86cd799439013' },
+                        name: { type: 'string', example: 'Jane Smith' },
+                        avatarUrl: { type: 'string', example: 'https://example.com/avatar2.jpg' },
+                      },
+                    },
+                  },
+                },
+                sharedBy: {
+                  type: 'object',
+                  properties: {
+                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    name: { type: 'string', example: 'John Doe' },
+                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                  },
+                },
+                createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              },
+            },
+            originalPostSharesCount: { type: 'number', example: 3 },
+            shareableLink: { type: 'string', example: 'http://localhost:3000/posts/507f1f77bcf86cd799439011' },
           },
         },
       },
     },
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post(':postId/share')
-  async sharePost(@Param('postId') postId: string) {
-    return firstValueFrom(this.postsService.sharePost(postId));
+  async sharePost(
+    @Param('postId') postId: string,
+    @Body() body: SharePostDto,
+    @Request() req: any,
+  ) {
+    const sharePostDto = plainToInstance(SharePostDto, {
+      comment: body.comment,
+    });
+
+    const errors = await validate(sharePostDto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
+    return firstValueFrom(
+      this.postsService.sharePost(postId, req.user._id, sharePostDto.comment),
+    );
   }
 
   // ─── Comments ──────────────────────────────────────────────────────────────

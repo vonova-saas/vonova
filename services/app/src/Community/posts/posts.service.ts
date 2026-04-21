@@ -158,7 +158,7 @@ export class PostsService {
       throw new ForbiddenErr('You are not allowed to delete this post');
     }
 
-    // Delete images from S3 if they exist
+    // Delete images and videos from S3 if they exist
     const deletePromises: Promise<boolean>[] = [];
     
     // Delete single image if exists
@@ -170,6 +170,18 @@ export class PostsService {
     if (post.imageKeys && Array.isArray(post.imageKeys)) {
       for (const imageKey of post.imageKeys) {
         deletePromises.push(this.communityS3Service.deleteFile(imageKey));
+      }
+    }
+
+    // Delete single video if exists
+    if (post.videoKey) {
+      deletePromises.push(this.communityS3Service.deleteFile(post.videoKey));
+    }
+    
+    // Delete multiple videos if they exist
+    if (post.videoKeys && Array.isArray(post.videoKeys)) {
+      for (const videoKey of post.videoKeys) {
+        deletePromises.push(this.communityS3Service.deleteFile(videoKey));
       }
     }
     
@@ -325,14 +337,39 @@ export class PostsService {
 
   // ─── Shares ─────────────────────────────────────────────────────────────────
 
-  async sharePost(postId: string) {
-    const post = await this.postModel.findById(this.toObjectId(postId));
+  async sharePost(postId: string, userId: string, shareComment?: string) {
+    const originalPost = await this.postModel.findById(this.toObjectId(postId));
 
-    if (!post) throw new NotFoundErr('Post not found');
+    if (!originalPost) throw new NotFoundErr('Post not found');
 
-    // Increment shares count
-    post.sharesCount++;
-    await post.save();
+    // Increment shares count on original post
+    originalPost.sharesCount++;
+    await originalPost.save();
+
+    // Create a new post as a shared post
+    const sharedPostContent = shareComment || '';
+    
+    const newSharedPost = await this.postModel.create({
+      author: this.toObjectId(userId),
+      content: sharedPostContent,
+      tags: [], // Shared posts don't have tags by default
+      sharedPost: this.toObjectId(postId),
+      sharedBy: this.toObjectId(userId),
+      shareComment: shareComment || null,
+      image: null,
+      imageKey: null,
+      images: null,
+      imageKeys: null,
+    });
+
+    // Return the newly created shared post with full population
+    const result = await this.postModel
+      .findById(newSharedPost._id)
+      .populate('author', 'name profilePicture role')
+      .populate('sharedPost', 'content author image images createdAt')
+      .populate('sharedBy', 'name profilePicture role')
+      .populate('sharedPost.author', 'name profilePicture role')
+      .lean();
 
     const frontendUrl = process.env.FRONTEND_ORIGIN;
     if (!frontendUrl) {
@@ -343,8 +380,9 @@ export class PostsService {
     const shareableLink = `${frontendUrl}/posts/${postId}`;
 
     return {
+      sharedPost: result,
+      originalPostSharesCount: originalPost.sharesCount,
       shareableLink,
-      sharesCount: post.sharesCount,
     };
   }
 
@@ -462,6 +500,116 @@ export class PostsService {
         throw new BadRequestException('Duplicate post detected. This post already exists.');
       }
       throw error;
+    }
+  }
+
+  async createPostWithVideos(
+    userId: string,
+    dto: CreatePostDto,
+    videos: Express.Multer.File[],
+    images?: Express.Multer.File[],
+  ) {
+    try {
+      // Create post first to get postId
+      const post = await this.postModel.create({
+        author: this.toObjectId(userId),
+        content: dto.content,
+        tags: dto.tags || [],
+        images: null,
+        imageKeys: null,
+        videos: null,
+        videoKeys: null,
+      });
+
+      const uploadedImages: string[] = [];
+      const uploadedImageKeys: string[] = [];
+      const uploadedVideos: string[] = [];
+      const uploadedVideoKeys: string[] = [];
+
+      // Upload images to S3 if provided
+      if (images && images.length > 0) {
+        for (const file of images) {
+          try {
+            const uploadResult = await this.communityS3Service.uploadFile(
+              file,
+              'posts',
+              post._id.toString(),
+              userId
+            );
+            uploadedImages.push(uploadResult.url);
+            uploadedImageKeys.push(uploadResult.key);
+          } catch (error) {
+            // Clean up on failure
+            await this.cleanupUploads(uploadedImageKeys, uploadedVideoKeys, post._id.toString());
+            throw new BadRequestException(`Failed to upload post image: ${error.message}`);
+          }
+        }
+      }
+
+      // Upload videos to S3
+      for (const video of videos) {
+        try {
+          const uploadResult = await this.communityS3Service.uploadFile(
+            video,
+            'posts',
+            post._id.toString(),
+            userId
+          );
+          uploadedVideos.push(uploadResult.url);
+          uploadedVideoKeys.push(uploadResult.key);
+        } catch (error) {
+          // Clean up on failure
+          await this.cleanupUploads(uploadedImageKeys, uploadedVideoKeys, post._id.toString());
+          throw new BadRequestException(`Failed to upload post video: ${error.message}`);
+        }
+      }
+
+      // Update post with files info
+      await this.postModel.findByIdAndUpdate(post._id, { 
+        images: uploadedImages.length > 0 ? uploadedImages : null, 
+        imageKeys: uploadedImageKeys.length > 0 ? uploadedImageKeys : null,
+        videos: uploadedVideos.length > 0 ? uploadedVideos : null,
+        videoKeys: uploadedVideoKeys.length > 0 ? uploadedVideoKeys : null,
+      });
+
+      return this.postModel
+        .findById(post._id)
+        .populate('author', 'name profilePicture role')
+        .lean();
+    } catch (error: any) {
+      // Handle duplicate key error
+      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
+        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
+        throw new BadRequestException('Duplicate post detected. This post already exists.');
+      }
+      throw error;
+    }
+  }
+
+  private async cleanupUploads(imageKeys: string[], videoKeys: string[], postId: string) {
+    // Clean up uploaded images
+    for (const key of imageKeys) {
+      try {
+        await this.communityS3Service.deleteFile(key);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded image:', cleanupError);
+      }
+    }
+    
+    // Clean up uploaded videos
+    for (const key of videoKeys) {
+      try {
+        await this.communityS3Service.deleteFile(key);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded video:', cleanupError);
+      }
+    }
+    
+    // Delete the post
+    try {
+      await this.postModel.findByIdAndDelete(postId);
+    } catch (deleteError) {
+      console.error('Failed to delete post during cleanup:', deleteError);
     }
   }
 
@@ -595,5 +743,132 @@ export class PostsService {
       .findById(post._id)
       .populate('author', 'name profilePicture role')
       .lean();
+  }
+
+  async updatePostWithVideos(
+    postId: string,
+    userId: string,
+    role: string,
+    dto: UpdatePostDto,
+    videos: Express.Multer.File[],
+    images?: Express.Multer.File[],
+  ) {
+    const post = await this.postModel.findById(this.toObjectId(postId));
+
+    if (!post) throw new NotFoundErr('Post not found');
+
+    if (!this.isOwnerOrAdmin(post.author.toString(), userId, role)) {
+      throw new ForbiddenErr('You are not allowed to edit this post');
+    }
+
+    let uploadedImages: string[] = [];
+    let uploadedImageKeys: string[] = [];
+    let uploadedVideos: string[] = [];
+    let uploadedVideoKeys: string[] = [];
+    
+    const oldImageKeys = post.imageKeys || [];
+    const oldVideoKeys = post.videoKeys || [];
+
+    // Upload new images if provided
+    if (images && images.length > 0) {
+      for (const file of images) {
+        try {
+          const uploadResult = await this.communityS3Service.uploadFile(
+            file,
+            'posts',
+            postId,
+            userId
+          );
+          uploadedImages.push(uploadResult.url);
+          uploadedImageKeys.push(uploadResult.key);
+        } catch (error) {
+          // Clean up uploaded files on failure
+          await this.cleanupUpdateUploads(uploadedImageKeys, uploadedVideoKeys);
+          throw new BadRequestException(`Failed to upload post image: ${error.message}`);
+        }
+      }
+    }
+
+    // Upload new videos if provided
+    if (videos && videos.length > 0) {
+      for (const video of videos) {
+        try {
+          const uploadResult = await this.communityS3Service.uploadFile(
+            video,
+            'posts',
+            postId,
+            userId
+          );
+          uploadedVideos.push(uploadResult.url);
+          uploadedVideoKeys.push(uploadResult.key);
+        } catch (error) {
+          // Clean up uploaded files on failure
+          await this.cleanupUpdateUploads(uploadedImageKeys, uploadedVideoKeys);
+          throw new BadRequestException(`Failed to upload post video: ${error.message}`);
+        }
+      }
+    }
+
+    // Update post data
+    if (dto.content !== undefined) post.content = dto.content;
+    if (dto.tags !== undefined) post.tags = dto.tags || [];
+    
+    // Replace images if new ones were uploaded
+    if (uploadedImages.length > 0) {
+      post.images = uploadedImages;
+      post.imageKeys = uploadedImageKeys;
+    }
+
+    // Replace videos if new ones were uploaded
+    if (uploadedVideos.length > 0) {
+      post.videos = uploadedVideos;
+      post.videoKeys = uploadedVideoKeys;
+    }
+
+    await post.save();
+
+    // Delete old files from S3 if new ones were uploaded
+    if (oldImageKeys.length > 0 && uploadedImageKeys.length > 0) {
+      const deletePromises = oldImageKeys.map(key => 
+        this.communityS3Service.deleteFile(key).catch(error => 
+          console.error('Failed to delete old image from S3:', error)
+        )
+      );
+      await Promise.allSettled(deletePromises);
+    }
+
+    if (oldVideoKeys.length > 0 && uploadedVideoKeys.length > 0) {
+      const deletePromises = oldVideoKeys.map(key => 
+        this.communityS3Service.deleteFile(key).catch(error => 
+          console.error('Failed to delete old video from S3:', error)
+        )
+      );
+      await Promise.allSettled(deletePromises);
+    }
+
+    return this.postModel
+      .findById(post._id)
+      .populate('author', 'name profilePicture role')
+      .lean();
+  }
+
+  private async cleanupUpdateUploads(imageKeys: string[], videoKeys: string[]) {
+    // Clean up uploaded images
+    for (const key of imageKeys) {
+      try {
+        await this.communityS3Service.deleteFile(key);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded image during update:', cleanupError);
+      }
+    }
+    
+    // Clean up uploaded videos
+    for (const key of videoKeys) {
+      try {
+        await this.communityS3Service.deleteFile(key);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded video during update:', cleanupError);
+      }
+    }
   }
 }
