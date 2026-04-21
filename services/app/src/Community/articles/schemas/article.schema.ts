@@ -12,11 +12,12 @@ const ContentBlockSchema = new Schema({
     type: Number,
     required: true,
   },
-  // Paragraph fields
+  // Text/Paragraph fields
   content: {
     type: String,
     required: function (this: any) {
-      return this.type === ContentBlockType.PARAGRAPH ||
+      return this.type === ContentBlockType.TEXT ||
+        this.type === ContentBlockType.PARAGRAPH ||
         this.type === ContentBlockType.HEADING ||
         this.type === ContentBlockType.QUOTE;
     },
@@ -81,7 +82,7 @@ export const ArticleSchema = new Schema({
   },
   slug: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
     lowercase: true,
     trim: true,
@@ -112,7 +113,7 @@ export const ArticleSchema = new Schema({
   category: {
     type: [String],
     required: true,
-    enum: ['architecture', 'devops', 'backend', 'databases', 'frontend', 'mobile', 'ai', 'security'],
+    enum: ['architecture', 'devops', 'backend', 'nestjs', 'databases', 'frontend', 'mobile', 'ai', 'security', 'typescript', 'javascript', 'nodejs', 'webdev', 'api', 'microservices'],
     index: true,
   },
 
@@ -128,6 +129,14 @@ export const ArticleSchema = new Schema({
   },
   coverImageKey: {
     type: String,
+    required: false,
+  },
+  images: {
+    type: [String],
+    required: false,
+  },
+  imageKeys: {
+    type: [String],
     required: false,
   },
   seoMetadata: {
@@ -190,6 +199,8 @@ export interface IArticle {
   publishedStatus: 'draft' | 'published' | 'archived';
   coverImage?: string;
   coverImageKey?: string;
+  images?: string[];
+  imageKeys?: string[];
   seoMetadata?: {
     metaTitle?: string;
     metaDescription?: string;

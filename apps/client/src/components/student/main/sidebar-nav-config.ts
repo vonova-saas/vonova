@@ -11,7 +11,6 @@ import {
   // TvMinimalPlay,
   Zap,
   LifeBuoy,
-  Send,
   User,
   BrainCog,
   Users,
@@ -94,11 +93,6 @@ export const sidebarNavData = {
       title: "Support",
       url: "/student/:studentId/support",
       icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "/student/:studentId/feedback",
-      icon: Send,
     },
   ],
 };

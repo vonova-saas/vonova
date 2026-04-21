@@ -27,10 +27,13 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Slider } from '@/components/ui/slider'
 import { toast } from "sonner";
+import { getSettingsMutationFn, resetSettingsMutationFn, updateSettingsMutationFn } from '@/services/app/settings.api'
 import { cn } from '@/lib/utils'
 import { CaretSortIcon, CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
-import { useEffect, useRef } from 'react'
+import { useTheme } from 'next-themes'
+import { useEffect, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
+import { useAuthContext } from '@/context/auth/auth-context'
 
 const languages = [
   { label: 'English', value: 'en' },
@@ -39,14 +42,63 @@ const languages = [
 ]
 
 interface SettingsFormClientProps {
-  defaultValues: Partial<{ font: string; fontSize: string; theme: 'light' | 'dark'; language: string }>
+  defaultValues: Partial<{
+    font: string
+    fontSize: string
+    theme: 'light' | 'dark'
+    language: string
+  }>
+}
+
+/** Align with next-themes stored preference before React resolves `useTheme` (avoids forcing light on first paint). */
+function readClientThemePreference(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light'
+  try {
+    const stored = localStorage.getItem('theme')
+    if (stored === 'dark') return 'dark'
+    if (stored === 'light') return 'light'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'
+  } catch {
+    return 'light'
+  }
 }
 
 export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
-  type SettingsFormValues = { font: string; fontSize: string; theme: 'light' | 'dark'; language: string }
+  const { setTheme } = useTheme()
+  const { user } = useAuthContext()
+  const userId = useMemo(() => {
+    // Always use the authenticated user's ID if available
+    if (user?._id) return user._id
+    return ''
+  }, [user?._id])
+
+  type SettingsFormValues = {
+    font: string
+    fontSize: string
+    theme: 'light' | 'dark'
+    language: string
+  }
+
+  const hasParentTheme =
+    defaultValues.theme === 'light' || defaultValues.theme === 'dark'
+
   const form = useForm<SettingsFormValues>({
-    defaultValues,
+    defaultValues: {
+      font: defaultValues.font ?? 'cairo',
+      fontSize: defaultValues.fontSize ?? '16',
+      language: defaultValues.language ?? 'en',
+      theme: hasParentTheme ? defaultValues.theme! : 'light',
+    },
   })
+
+  // Match the theme radio to next-themes / localStorage on first client mount (no hardcoded light).
+  useEffect(() => {
+    if (hasParentTheme) return
+    const t = readClientThemePreference()
+    form.setValue('theme', t, { shouldDirty: false, shouldTouch: false })
+  }, [hasParentTheme, form])
 
   // cache to avoid re-loading a font that is already registered
   const loadedFontsRef = useRef<Set<string>>(new Set())
@@ -128,11 +180,9 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
     }
   }
 
-  function applyAppearance(v: SettingsFormValues) {
+  function applyTypography(v: Pick<SettingsFormValues, 'font' | 'fontSize'>) {
     try {
-      // Attempt to ensure local fonts are available
       loadLocalFontIfNeeded(v.font)
-      // Apply font family with graceful fallbacks
       const families: Record<string, string> = {
         cairo: "Cairo, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
         lato: "Lato, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
@@ -141,45 +191,106 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
       const family = families[v.font] || families.system
       document.body.style.fontFamily = family
 
-      // Apply base font size on the root (so rem/em scales if used)
       const sizeNum = Number(v.fontSize)
       if (!Number.isNaN(sizeNum) && sizeNum > 0) {
         document.documentElement.style.fontSize = `${sizeNum}px`
       }
-
-      // Apply theme by toggling the `dark` class on the <html> element
-      const isDark = v.theme === 'dark'
-      document.documentElement.classList.toggle('dark', isDark)
     } catch {
       // no-op if DOM not available (SSR) or any error occurs
     }
   }
 
-  // Keep the page appearance in sync with current form values (font, size, theme)
+  /** Theme must go through next-themes so it stays in sync with the rest of the app and localStorage. */
+  function applyThemePreference(theme: 'light' | 'dark') {
+    setTheme(theme)
+  }
+
+  function applyAppearance(v: SettingsFormValues) {
+    applyTypography(v)
+    if (v.theme === 'light' || v.theme === 'dark') {
+      applyThemePreference(v.theme)
+    }
+  }
+
+  // Live preview: font + size only. Theme is not applied on every watch tick (that used to force `light` from stale defaults and fought next-themes).
   useEffect(() => {
     const subscription = form.watch((value) => {
       const v = value as SettingsFormValues
-      if (v && v.font && v.fontSize && v.theme) {
-        applyAppearance(v)
+      if (v?.font && v?.fontSize) {
+        applyTypography({ font: v.font, fontSize: v.fontSize })
       }
     })
     return () => subscription.unsubscribe()
-    // form is stable from useForm; watch sets up internal subscription
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form])
 
-  async function onSubmit() {
+  async function onSubmit(data: SettingsFormValues) {
+    if (!userId) {
+      toast.error('Missing user id in URL');
+      return
+    }
     try {
-      toast.success('Settings updated successfully')
+      const res = await updateSettingsMutationFn(userId, {
+        font: data.font,
+        fontSize: String(data.fontSize),
+        theme: data.theme,
+        language: data.language,
+      })
+      const nextVals: SettingsFormValues = {
+        font: res.data.font,
+        fontSize: res.data.fontSize,
+        theme: res.data.theme as 'light' | 'dark',
+        language: res.data.language,
+      }
+      form.reset(nextVals)
+      applyAppearance(nextVals)
+      toast.success(res.message)
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to update settings'
       toast.error(message)
     }
   }
 
+  // Load settings on mount/by userId from backend
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        if (!userId) return
+        const res = await getSettingsMutationFn(userId)
+        if (!mounted) return
+        const nextVals: SettingsFormValues = {
+          font: res.data.font,
+          fontSize: res.data.fontSize,
+          theme: res.data.theme as 'light'|'dark',
+          language: res.data.language,
+        }
+        form.reset(nextVals)
+        applyAppearance(nextVals)
+      } catch {
+        // keep defaults
+      }
+    })()
+    return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
+
   async function onReset() {
+    if (!userId) {
+      toast.error('Missing user id in URL');
+      return
+    }
     try {
-      toast.success('Settings reset successfully')
+      const res = await resetSettingsMutationFn(userId)
+      const nextVals: SettingsFormValues = {
+        font: res.data.font,
+        fontSize: res.data.fontSize,
+        theme: res.data.theme as 'light'|'dark',
+        language: res.data.language,
+      }
+      form.reset(nextVals)
+      applyAppearance(nextVals)
+      toast.success(res.message)
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || 'Failed to reset settings'
       toast.error(message)
@@ -254,7 +365,12 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
               </FormDescription>
               <FormMessage />
               <RadioGroup
-                onValueChange={field.onChange}
+                onValueChange={(val) => {
+                  field.onChange(val)
+                  if (val === 'light' || val === 'dark') {
+                    applyThemePreference(val)
+                  }
+                }}
                 value={field.value}
                 className='grid max-w-md grid-cols-2 gap-8 pt-2'
               >

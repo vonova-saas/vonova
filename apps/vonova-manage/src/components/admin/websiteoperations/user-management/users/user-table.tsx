@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, UserPlus, Eye } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,13 @@ import { User } from "../types"
 
 interface UserTableProps {
   users: User[]
+  onView: (user: User) => void
   onEdit: (user: User) => void
   onDelete: (userId: string) => void
   onCreate: () => void
 }
 
-export function UserTable({ users, onEdit, onDelete, onCreate }: UserTableProps) {
+export function UserTable({ users, onView, onEdit, onDelete, onCreate }: UserTableProps) {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'active':
@@ -64,7 +65,7 @@ export function UserTable({ users, onEdit, onDelete, onCreate }: UserTableProps)
               <TableCell className="font-medium">{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
-                <Badge variant="outline">{user.role}</Badge>
+                <Badge variant="outline">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</Badge>
               </TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(user.status)}>
@@ -81,6 +82,10 @@ export function UserTable({ users, onEdit, onDelete, onCreate }: UserTableProps)
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onView(user)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      <span>View Details</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(user)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       <span>Edit</span>

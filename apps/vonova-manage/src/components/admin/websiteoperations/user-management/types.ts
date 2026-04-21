@@ -1,8 +1,10 @@
+export type UserRole = 'admin' | 'student' | 'instructor'
+
 export type User = {
   id: string
   name: string
   email: string
-  role: 'admin' | 'moderator' | 'user'
+  role: UserRole
   status: 'active' | 'inactive' | 'suspended'
   lastActive: string
   joinedDate: string

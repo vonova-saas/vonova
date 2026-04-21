@@ -30,6 +30,9 @@ export class CreatePostDto {
   @IsOptional()
   @IsString()
   imageKey?: string;
+
+  @IsOptional()
+  tags?: string[];
 }
 
 export class UpdatePostDto {
@@ -46,6 +49,9 @@ export class UpdatePostDto {
   @IsOptional()
   @IsString()
   imageKey?: string;
+
+  @IsOptional()
+  tags?: string[];
 }
 
 // ─── Comment DTOs ─────────────────────────────────────────────────────────────

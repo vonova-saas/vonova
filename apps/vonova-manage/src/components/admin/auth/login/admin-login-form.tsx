@@ -4,25 +4,54 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Mail, Lock, Shield } from "lucide-react";
+import { Mail, Lock, Shield, Loader } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { loginMutationFn } from "@/services";
 
 export function AdminLoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
   const [showPassword, setShowPassword] = useState(false);
-
-  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Add submit handler
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const { mutateAsync: login, isPending } = useMutation({
+    mutationFn: loginMutationFn,
+    onSettled: () => {
+      // no-op
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Add authentication logic here
-    router.push("/auth/2fa");
+    setFormError(null);
+    try {
+      const me = await login({ email, password });
+      // Invalidate auth user to fetch fresh user (http-only cookies are set by backend)
+      await queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      // Fetch the freshly authenticated user to get the userId and role
+      const userId = me?.data?.user?._id;
+      const role = me?.data?.user?.role as string | undefined; // e.g., 'STUDENT_USER' | 'INSTRUCTOR_USER'
+      if (userId) {
+        // Choose target path by role, with sensible localhost fallbacks
+        const targetPath = role === "ADMIN" ? "/admin" : "/";
+        window.location.assign(`${targetPath}/${userId}`);
+      } else {
+        // Fallback if userId is not found
+        window.location.assign(`${process.env.NEXT_PUBLIC_APP_SITE_DOMAIN}`);
+      }
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: { message?: string } } };
+      const msg = maybeAxios?.response?.data?.message || "Login failed. Please check your credentials.";
+      setFormError(msg);
+    }
   };
 
   return (
@@ -58,6 +87,8 @@ export function AdminLoginForm({
                   autoComplete="email"
                   placeholder="admin@example.com"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-12 text-gray-900 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -76,8 +107,10 @@ export function AdminLoginForm({
                   name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 h-12 text-gray-900 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <button
@@ -96,12 +129,14 @@ export function AdminLoginForm({
             </div>
 
             <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              >
-                Sign in
+              <Button type="submit" className="w-full cursor-pointer" disabled={isPending}>
+                {isPending ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
+                {isPending ? "Logging in..." : "Login"}
               </Button>
+
+              {formError && (
+                <p className="text-sm text-red-500" role="alert">{formError}</p>
+              )}
             </div>
           </div>
         </form>

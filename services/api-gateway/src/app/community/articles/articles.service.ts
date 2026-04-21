@@ -1,0 +1,92 @@
+import { Injectable, Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { CreateArticleDto } from './dto/create-article.dto';
+import { UpdateArticleDto } from './dto/update-article.dto';
+import { QueryArticlesDto } from './dto/query-articles.dto';
+import type { UploadedFile } from '../../../common/interfaces/file.interface';
+
+@Injectable()
+export class ArticlesGatewayService {
+  constructor(
+    @Inject('NATS_SERVICE')
+    private readonly client: ClientProxy,
+  ) {}
+
+  createArticle(createArticleDto: CreateArticleDto, file?: UploadedFile, files?: UploadedFile[], userId?: string) {
+    // Convert single file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer: typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')
+      };
+    }
+
+    // Convert multiple files buffer to base64 for NATS serialization
+    let processedFiles: UploadedFile[] | undefined = undefined;
+    if (files && files.length > 0) {
+      processedFiles = files.map(file => ({
+        ...file,
+        buffer: file.buffer ? (typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')) : ''
+      }));
+    }
+    
+    return this.client.send(
+      { cmd: 'app.community.articles.create' },
+      { dto: createArticleDto, image: processedFile, images: processedFiles, userId },
+    );
+  }
+
+  getArticles(query: QueryArticlesDto) {
+    return this.client.send(
+      { cmd: 'app.community.articles.getAll' },
+      query,
+    );
+  }
+
+  getArticleById(id: string) {
+    return this.client.send(
+      { cmd: 'app.community.articles.getById' },
+      { id },
+    );
+  }
+
+  getArticleBySlug(slug: string) {
+    return this.client.send(
+      { cmd: 'app.community.articles.getBySlug' },
+      { slug },
+    );
+  }
+
+  updateArticle(id: string, updateArticleDto: UpdateArticleDto, files?: UploadedFile[], userId?: string, role?: string) {
+    // Convert multiple files buffer to base64 for NATS serialization
+    let processedFiles: UploadedFile[] | undefined = undefined;
+    if (files && files.length > 0) {
+      processedFiles = files.map(file => ({
+        ...file,
+        buffer: file.buffer ? (typeof file.buffer === 'string' ? file.buffer : file.buffer.toString('base64')) : ''
+      }));
+    }
+    
+    return this.client.send(
+      { cmd: 'app.community.articles.update' },
+      { id, dto: updateArticleDto, images: processedFiles, userId, role },
+    );
+  }
+
+  deleteArticle(id: string, userId?: string, role?: string) {
+    return this.client.send(
+      { cmd: 'app.community.articles.delete' },
+      { id, userId, role },
+    );
+  }
+
+  
+  approveArticle(id: string, userId?: string, role?: string) {
+    return this.client.send(
+      { cmd: 'app.community.articles.approve' },
+      { id, userId, role },
+    );
+  }
+
+  }

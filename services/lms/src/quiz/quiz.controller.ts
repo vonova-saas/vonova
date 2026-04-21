@@ -4,6 +4,7 @@ import { QuizService } from './quiz.service';
 import {
   CreateQuizDto,
   SubmitQuizAnswersDto,
+  SubmitAnswerItemDto,
   UpdateQuizDto,
 } from './dto/quiz.dto';
 
@@ -11,66 +12,98 @@ import {
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
-  @MessagePattern({ cmd: 'quiz.create' })
-  createQuiz(
+  // ===== INSTRUCTOR-SPECIFIC MESSAGE PATTERNS =====
+
+  @MessagePattern({ cmd: 'quiz.createInstructor' })
+  createInstructorQuiz(
     @Payload('dto') dto: CreateQuizDto,
     @Payload('userId') userId: string,
   ) {
-    return this.quizService.createQuiz(dto, userId);
+    return this.quizService.createInstructorQuiz(dto, userId);
   }
 
-  @MessagePattern({ cmd: 'quiz.update' })
-  updateQuiz(
+  @MessagePattern({ cmd: 'quiz.updateInstructor' })
+  updateInstructorQuiz(
     @Payload('quizId') quizId: string,
     @Payload('dto') dto: UpdateQuizDto,
     @Payload('userId') userId: string,
   ) {
-    return this.quizService.updateQuiz(quizId, dto, userId);
+    return this.quizService.updateInstructorQuiz(quizId, dto, userId);
   }
 
-  @MessagePattern({ cmd: 'quiz.getAll' })
-  getAllQuizzes(@Payload('userId') userId: string) {
-    return this.quizService.getAllQuizzes(userId);
+  @MessagePattern({ cmd: 'quiz.getInstructorQuizzes' })
+  getInstructorQuizzes(@Payload('userId') userId: string) {
+    return this.quizService.getInstructorQuizzes(userId);
   }
 
-  @MessagePattern({ cmd: 'quiz.getAllForStudents' })
-  getAllQuizzesForStudents() {
-    return this.quizService.getAllQuizzesForStudents();
-  }
-
-  @MessagePattern({ cmd: 'quiz.getById' })
-  getQuiz(@Payload('quizId') quizId: string) {
-    return this.quizService.getQuizById(quizId);
-  }
-
-  @MessagePattern({ cmd: 'quiz.delete' })
-  deleteQuiz(
+  @MessagePattern({ cmd: 'quiz.getInstructorQuizById' })
+  getInstructorQuizById(
     @Payload('quizId') quizId: string,
     @Payload('userId') userId: string,
   ) {
-    return this.quizService.deleteQuiz(quizId, userId);
+    return this.quizService.getInstructorQuizById(quizId, userId);
   }
 
-  // ===== Attempts =====
-
-  @MessagePattern({ cmd: 'quiz.submit' })
-  submitQuiz(
-    @Payload('quizId') quizId: string,
-    @Payload('answers') dto: SubmitQuizAnswersDto['answers'],
-  ) {
-    return this.quizService.submitQuizAnswers(quizId, dto);
-  }
-
-  @MessagePattern({ cmd: 'quiz.getAttempt' })
-  getMyAttempt(@Payload('attemptId') attemptId: string) {
-    return this.quizService.getMyAttempt(attemptId);
-  }
-
-  @MessagePattern({ cmd: 'quiz.getAttemptsForQuiz' })
-  getMyAttempts(
+  @MessagePattern({ cmd: 'quiz.deleteInstructor' })
+  deleteInstructorQuiz(
     @Payload('quizId') quizId: string,
     @Payload('userId') userId: string,
   ) {
-    return this.quizService.getMyAttemptsForQuiz(quizId, userId);
+    return this.quizService.deleteInstructorQuiz(quizId, userId);
   }
-}
+
+  @MessagePattern({ cmd: 'quiz.getInstructorAttempts' })
+  getInstructorQuizAttempts(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.getInstructorQuizAttempts(quizId, userId);
+  }
+
+  @MessagePattern({ cmd: 'quiz.getInstructorStatistics' })
+  getInstructorQuizStatistics(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.getInstructorQuizStatistics(quizId, userId);
+  }
+
+  // ===== STUDENT-SPECIFIC MESSAGE PATTERNS =====
+
+  @MessagePattern({ cmd: 'quiz.getAvailableForStudents' })
+  getAvailableQuizzesForStudents() {
+    return this.quizService.getAvailableQuizzesForStudents();
+  }
+
+  @MessagePattern({ cmd: 'quiz.getQuizForStudent' })
+  getQuizForStudent(
+    @Payload('quizId') quizId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.getQuizForStudent(quizId, userId);
+  }
+
+  @MessagePattern({ cmd: 'quiz.submitStudent' })
+  submitStudentQuiz(
+    @Payload('quizId') quizId: string,
+    @Payload('answers') answers: SubmitAnswerItemDto[],
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.submitStudentQuiz(quizId, answers, userId);
+  }
+
+  @MessagePattern({ cmd: 'quiz.getStudentAttempt' })
+  getStudentAttempt(
+    @Payload('attemptId') attemptId: string,
+    @Payload('userId') userId: string,
+  ) {
+    return this.quizService.getStudentAttempt(attemptId, userId);
+  }
+
+  @MessagePattern({ cmd: 'quiz.getStudentAttempts' })
+  getStudentQuizAttempts(@Payload('userId') userId: string) {
+    return this.quizService.getStudentQuizAttempts(userId);
+  }
+
+  
+  }

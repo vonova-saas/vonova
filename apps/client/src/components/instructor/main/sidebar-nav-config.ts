@@ -7,7 +7,6 @@ import {
   SquareTerminal,
   User,
   LifeBuoy,
-  Send,
   Presentation,
   Video,
   Frame
@@ -82,11 +81,6 @@ export const sidebarNavData = {
       title: "Support",
       url: "/instructor/:instructorId/support",
       icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "/instructor/:instructorId/feedback",
-      icon: Send,
     },
   ],
 };

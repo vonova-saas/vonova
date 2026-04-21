@@ -6,7 +6,6 @@ export default function AccountForm() {
   const defaults = {
     name: '',
     email: '',
-    avatarUrl: '',
     bio: '',
     dateOfBirth: '',
     address: '',
