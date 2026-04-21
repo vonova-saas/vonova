@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 // Content block types
 export enum ContentBlockType {
+  TEXT = 'text',
   PARAGRAPH = 'paragraph',
   HEADING = 'heading',
   CODE = 'code',
@@ -14,6 +15,12 @@ export interface IContentBlock {
   _id?: Types.ObjectId;
   type: ContentBlockType;
   order: number;
+}
+
+// Text content block
+export interface ITextBlock extends IContentBlock {
+  type: ContentBlockType.TEXT;
+  content: string;
 }
 
 // Paragraph content block
@@ -55,6 +62,7 @@ export interface IQuoteBlock extends IContentBlock {
 
 // Union type for all content blocks
 export type ContentBlock = 
+  | ITextBlock
   | IParagraphBlock 
   | IHeadingBlock 
   | ICodeBlock 

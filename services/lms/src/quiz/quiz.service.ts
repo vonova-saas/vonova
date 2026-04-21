@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Quiz } from './schema/quiz.schema';
 import { QuizAnswer } from './schema/quiz-answer.schema';
 import {
@@ -17,16 +17,19 @@ export class QuizService {
     @InjectModel(QuizAnswer.name) private answerModel: Model<QuizAnswer>,
   ) {}
 
-  async createQuiz(dto: CreateQuizDto, userId: string) {
+  
+  // ===== INSTRUCTOR-SPECIFIC METHODS =====
+
+  async createInstructorQuiz(dto: CreateQuizDto, userId: string) {
     const quiz = await this.quizModel.create({ ...dto, createdBy: userId });
     return quiz;
   }
 
-  async updateQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
+  async updateInstructorQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    // Optional: Add authorization check to ensure user can update this quiz
+    // Ensure user can update this quiz
     if (quiz.createdBy.toString() !== userId) {
       throw new NotFoundException('Quiz not found or access denied');
     }
@@ -51,21 +54,23 @@ export class QuizService {
     return quiz;
   }
 
-  async getAllQuizzes(userId: string) {
-    return this.quizModel.find({ createdBy: userId });
+  async getInstructorQuizzes(userId: string) {
+    return this.quizModel.find({ createdBy: userId }).sort({ createdAt: -1 });
   }
 
-  async getAllQuizzesForStudents() {
-    return this.quizModel.find();
-  }
-
-  async getQuizById(quizId: string) {
+  async getInstructorQuizById(quizId: string, userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Ensure user can access this quiz
+    if (quiz.createdBy.toString() !== userId) {
+      throw new NotFoundException('Quiz not found or access denied');
+    }
+
     return quiz;
   }
 
-  async deleteQuiz(quizId: string, userId: string) {
+  async deleteInstructorQuiz(quizId: string, userId: string) {
     const quiz = await this.quizModel.findOne({
       _id: quizId,
       createdBy: userId,
@@ -76,8 +81,76 @@ export class QuizService {
     return { message: 'Quiz deleted successfully' };
   }
 
-  // ===== Attempts =====
-  async submitQuizAnswers(quizId: string, answers: SubmitAnswerItemDto[]) {
+  async getInstructorQuizAttempts(quizId: string, userId: string) {
+    const quiz = await this.quizModel.findById(quizId);
+    if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Ensure user can access this quiz
+    if (quiz.createdBy.toString() !== userId) {
+      throw new NotFoundException('Quiz not found or access denied');
+    }
+
+    return this.answerModel
+      .find({ quiz: quizId })
+      .sort({ createdAt: -1 });
+  }
+
+  async getInstructorQuizStatistics(quizId: string, userId: string) {
+    const quiz = await this.quizModel.findById(quizId);
+    if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Ensure user can access this quiz
+    if (quiz.createdBy.toString() !== userId) {
+      throw new NotFoundException('Quiz not found or access denied');
+    }
+
+    const attempts = await this.answerModel.find({ quiz: quizId });
+    const totalAttempts = attempts.length;
+    
+    if (totalAttempts === 0) {
+      return {
+        totalAttempts: 0,
+        averageScore: 0,
+        highestScore: 0,
+        lowestScore: 0,
+        passRate: 0,
+        completionRate: 0,
+      };
+    }
+
+    const scores = attempts.map(attempt => attempt.percentage);
+    const averageScore = scores.reduce((sum, score) => sum + score, 0) / totalAttempts;
+    const highestScore = Math.max(...scores);
+    const lowestScore = Math.min(...scores);
+    const passRate = (attempts.filter(attempt => attempt.percentage >= 70).length / totalAttempts) * 100;
+
+    return {
+      totalAttempts,
+      averageScore: Math.round(averageScore * 100) / 100,
+      highestScore,
+      lowestScore,
+      passRate: Math.round(passRate * 100) / 100,
+      completionRate: 100, // All submissions are complete
+    };
+  }
+
+  // ===== STUDENT-SPECIFIC METHODS =====
+
+  async getAvailableQuizzesForStudents() {
+    // Return quizzes without correct answers
+    const quizzes = await this.quizModel.find().select('-questions.correctOptionId');
+    return quizzes;
+  }
+
+  async getQuizForStudent(quizId: string, userId: string) {
+    const quiz = await this.quizModel.findById(quizId).select('-questions.correctOptionId');
+    if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Return quiz without correct answers
+    return quiz;
+  }
+
+  async submitStudentQuiz(quizId: string, answers: SubmitAnswerItemDto[], userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
@@ -107,7 +180,7 @@ export class QuizService {
 
     const attempt = await this.answerModel.create({
       quiz: quiz._id,
-      userId: 'student', // Default for student submissions
+      userId,
       answers: formatted,
       score,
       total,
@@ -117,15 +190,26 @@ export class QuizService {
     return attempt;
   }
 
-  async getMyAttempt(attemptId: string) {
+  async getStudentAttempt(attemptId: string, userId: string) {
     const attempt = await this.answerModel.findById(attemptId);
     if (!attempt) throw new NotFoundException('Attempt not found');
+
+    // Ensure user can only access their own attempts
+    if (attempt.userId.toString() !== userId) {
+      throw new NotFoundException('Attempt not found or access denied');
+    }
+
     return attempt;
   }
 
-  async getMyAttemptsForQuiz(quizId: string, userId: string) {
-    return this.answerModel
-      .find({ quiz: quizId, userId })
+  async getStudentQuizAttempts(userId: string) {
+    const attempts = await this.answerModel
+      .find({ userId })
+      .populate('quiz', 'title description topic noOfQuestions createdAt')
       .sort({ createdAt: -1 });
+
+    return attempts;
   }
-}
+
+  
+  }

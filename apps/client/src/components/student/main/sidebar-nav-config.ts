@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   User,
   BrainCog,
+  Users,
 } from "lucide-react";
 
 export const sidebarNavData = {
@@ -46,11 +47,11 @@ export const sidebarNavData = {
       url: "/student/:studentId/quizzes",
       icon: Component,
     },
-    // {
-    //   title: "Community",
-    //   url: "/student/:studentId/community",
-    //   icon: Frame,
-    // },
+    {
+      title: "Community",
+      url: "/student/:studentId/community",
+      icon: Users,
+    },
     {
       title: "PDF Summary",
       url: "/student/:studentId/pdf-summary",

@@ -21,8 +21,12 @@ const useUserId = () => {
   const auth = useAuthContextOptional();
   const userId = auth?.user?._id;
   
-  const paramId = params.studentId as string;
-  const validParamId = paramId && paramId !== "undefined" ? paramId : "";
+  const studentParam = params.studentId as string | undefined;
+  const instructorParam = params.instructorId as string | undefined;
+  const paramId =
+    (studentParam && studentParam !== "undefined" ? studentParam : "") ||
+    (instructorParam && instructorParam !== "undefined" ? instructorParam : "");
+  const validParamId = paramId || "";
   
   return (userId as string) || validParamId || "";
 };

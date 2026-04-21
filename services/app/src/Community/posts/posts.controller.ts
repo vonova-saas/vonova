@@ -9,6 +9,7 @@ import {
   UpdateCommentDto,
 } from './dto/post.dto';
 import { S3Service } from '../../common/aws/s3.service';
+import { CommunityS3Service } from '../../common/aws/community-s3.service';
 
 @Controller()
 export class PostsController {
@@ -16,22 +17,43 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly commentsService: CommentsService,
     private readonly s3Service: S3Service,
+    private readonly communityS3Service: CommunityS3Service,
   ) {}
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
   @MessagePattern({ cmd: 'app.community.posts.create' })
-  async createPost(@Payload() data: { userId: string; dto: CreatePostDto; image?: Express.Multer.File }) {
-    const { userId, dto, image } = data;
+  async createPost(@Payload() data: { userId: string; dto: CreatePostDto; image?: Express.Multer.File; images?: Express.Multer.File[]; videos?: Express.Multer.File[] }) {
+    const { userId, dto, image, images, videos } = data;
     if (!userId || !dto) throw new Error('userId and dto are required');
 
-    if (image) {
-      const uploadResult = await this.s3Service.uploadFile(image, 'posts');
-      dto.image = uploadResult.url;
-      dto.imageKey = uploadResult.key;
-    }
+    // Debug: Log file details
+    console.log('Received file data:', {
+      hasImage: !!image,
+      hasImages: !!images,
+      hasVideos: !!videos,
+      imageCount: images?.length || 0,
+      videoCount: videos?.length || 0,
+      imageType: typeof image,
+      imageKeys: image ? Object.keys(image) : null,
+      bufferType: image?.buffer ? typeof image.buffer : 'no buffer',
+      bufferSize: image?.buffer ? 
+          Buffer.byteLength(image.buffer) : 'no buffer'
+    });
 
-    const post = await this.postsService.createPost(userId, dto);
+    // Handle files based on what's provided
+    let post;
+    if (videos && videos.length > 0) {
+      // Handle videos (with or without images)
+      post = await this.postsService.createPostWithVideos(userId, dto, videos, images);
+    } else if (images && images.length > 0) {
+      // Handle multiple images only
+      post = await this.postsService.createPostWithMultipleFiles(userId, dto, images);
+    } else {
+      // Handle single image or no files
+      post = await this.postsService.createPostWithFile(userId, dto, image);
+    }
+      
     return { message: 'Post created successfully', data: { post } };
   }
 
@@ -61,17 +83,23 @@ export class PostsController {
   }
 
   @MessagePattern({ cmd: 'app.community.posts.update' })
-  async updatePost(@Payload() data: { postId: string; userId: string; role: string; dto: UpdatePostDto; image?: Express.Multer.File }) {
-    const { postId, userId, role, dto, image } = data;
+  async updatePost(@Payload() data: { postId: string; userId: string; role: string; dto: UpdatePostDto; image?: Express.Multer.File; images?: Express.Multer.File[]; videos?: Express.Multer.File[] }) {
+    const { postId, userId, role, dto, image, images, videos } = data;
     if (!postId || !userId || !role || !dto) throw new Error('postId, userId, role and dto are required');
 
-    if (image) {
-      const uploadResult = await this.s3Service.uploadFile(image, 'posts');
-      dto.image = uploadResult.url;
-      dto.imageKey = uploadResult.key;
+    // Handle files based on what's provided
+    let post;
+    if (videos && videos.length > 0) {
+      // Handle videos (with or without images)
+      post = await this.postsService.updatePostWithVideos(postId, userId, role, dto, videos, images);
+    } else if (images && images.length > 0) {
+      // Handle multiple images only
+      post = await this.postsService.updatePostWithMultipleFiles(postId, userId, role, dto, images);
+    } else {
+      // Handle single image or no files
+      post = await this.postsService.updatePostWithFile(postId, userId, role, dto, image);
     }
-
-    const post = await this.postsService.updatePost(postId, userId, role, dto);
+      
     return { message: 'Post updated successfully', data: { post } };
   }
 
@@ -94,11 +122,11 @@ export class PostsController {
   }
 
   @MessagePattern({ cmd: 'app.community.posts.share' })
-  async sharePost(@Payload() data: { postId: string }) {
-    const { postId } = data;
-    if (!postId) throw new Error('postId is required');
+  async sharePost(@Payload() data: { postId: string; userId: string; comment?: string }) {
+    const { postId, userId, comment } = data;
+    if (!postId || !userId) throw new Error('postId and userId are required');
 
-    const result = await this.postsService.sharePost(postId);
+    const result = await this.postsService.sharePost(postId, userId, comment);
     return { message: 'Post shared successfully', data: result };
   }
 
@@ -109,13 +137,7 @@ export class PostsController {
     const { postId, userId, dto, image } = data;
     if (!postId || !userId || !dto) throw new Error('postId, userId and dto are required');
 
-    if (image) {
-      const uploadResult = await this.s3Service.uploadFile(image, 'comments');
-      dto.image = uploadResult.url;
-      dto.imageKey = uploadResult.key;
-    }
-
-    const result = await this.commentsService.createComment(postId, userId, dto);
+    const result = await this.commentsService.createCommentWithFile(postId, userId, dto, image);
     return { message: 'Comment added successfully', data: result };
   }
 
@@ -133,13 +155,7 @@ export class PostsController {
     const { commentId, userId, role, dto, image } = data;
     if (!commentId || !userId || !role || !dto) throw new Error('commentId, userId, role and dto are required');
 
-    if (image) {
-      const uploadResult = await this.s3Service.uploadFile(image, 'comments');
-      dto.image = uploadResult.url;
-      dto.imageKey = uploadResult.key;
-    }
-
-    const result = await this.commentsService.updateComment(commentId, userId, role, dto);
+    const result = await this.commentsService.updateCommentWithFile(commentId, userId, role, dto, image);
     return { message: 'Comment updated successfully', data: result };
   }
 

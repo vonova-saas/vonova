@@ -5,7 +5,7 @@ export default function SettingsPage() {
   return (
     <ContentSection
       title='Settings'
-      desc='Update your settings.'
+      desc=''
     >
       <SettingsForm />
     </ContentSection>
