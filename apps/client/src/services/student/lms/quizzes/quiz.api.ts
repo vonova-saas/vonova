@@ -118,12 +118,9 @@ export const getQuizAttemptByIdMutationFn = async (
 export const getStudentQuizAttemptsMutationFn = async (
   quizId?: string,
 ): Promise<getAttemptsTypeResponse> => {
-  if (quizId?.trim()) {
-    const response = await API.get<getAttemptsTypeResponse>(
-      `${LMS_QUIZZES_STUDENT}/${quizId.trim()}/attempts`,
-    );
-    return response.data;
-  }
+  // Student APIs expose attempts at `/lms/student/quizzes/attempts` (not `/:quizId/attempts`).
+  // We always use the global endpoint and filter/group client-side when needed.
+  void quizId;
   const response = await API.get<getAttemptsTypeResponse>(`${LMS_QUIZZES_STUDENT}/attempts`);
   return response.data;
 };

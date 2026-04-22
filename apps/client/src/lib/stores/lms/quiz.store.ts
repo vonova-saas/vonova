@@ -15,6 +15,19 @@ import type {
   getAttemptsTypeResponse,
 } from "@/types/api/student/lms/quizzes/quiz.type";
 
+let attemptsHydrated = false;
+let attemptsHydrationPromise: Promise<void> | null = null;
+
+function getAttemptQuizId(attempt: unknown): string {
+  if (!attempt || typeof attempt !== "object") return "";
+  const quizValue = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
+    ?? (attempt as { quizId?: unknown }).quizId;
+  if (quizValue && typeof quizValue === "object") {
+    return String((quizValue as { _id?: string })._id ?? "");
+  }
+  return String(quizValue ?? "");
+}
+
 export type AttemptSummary = {
   id?: string;
   score: number;
@@ -54,7 +67,9 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await getAllQuizzesMutationFn();
-      const list = (res as { data: QuizType[] }).data || [];
+      const list = Array.isArray(res)
+        ? res
+        : (res as { data?: QuizType[] })?.data ?? [];
       const map: Record<string, QuizType> = {};
       const ids: string[] = [];
       for (const q of list) {
@@ -107,7 +122,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await getQuizByIdMutationFn(id);
-      const quiz = (res as { data: QuizType }).data;
+      const quiz = ((res as { data?: QuizType })?.data ?? res) as QuizType;
       set((st) => ({ quizzesById: { ...st.quizzesById, [quiz._id]: quiz }, allIds: st.allIds.includes(quiz._id) ? st.allIds : [...st.allIds, quiz._id] }));
       return quiz;
     } catch (e: unknown) {
@@ -175,19 +190,47 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
 
   fetchAttempts: async (quizId: string) => {
     try {
-      const res = await getStudentQuizAttemptsMutationFn(quizId);
-      const raw = (res as getAttemptsTypeResponse).data as unknown;
-      const arr = Array.isArray(raw) ? raw : [raw];
-      const attempts: AttemptSummary[] = arr.map((a) => ({
-        id: (a).id,
-        score: (a).score,
-        total: (a).total,
-        percentage: (a).percentage,
-        submittedAt: (a).submittedAt || (a).updatedAt || (a).createdAt,
-      }));
-      attempts.sort((a, b) => (Date.parse(b.submittedAt || "0") - Date.parse(a.submittedAt || "0")));
-      set((st) => ({ attemptsByQuizId: { ...st.attemptsByQuizId, [quizId]: attempts } }));
-      return attempts;
+      const cached = get().attemptsByQuizId[quizId];
+      if (cached) return cached;
+      if (attemptsHydrated) return [];
+
+      if (!attemptsHydrationPromise) {
+        attemptsHydrationPromise = (async () => {
+          const res = await getStudentQuizAttemptsMutationFn();
+          const raw = (res as getAttemptsTypeResponse).data as unknown;
+          const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+          const grouped: Record<string, AttemptSummary[]> = {};
+
+          for (const a of arr) {
+            const targetQuizId = getAttemptQuizId(a);
+            if (!targetQuizId) continue;
+            const mapped: AttemptSummary = {
+              id: (a as { id?: string }).id,
+              score: Number((a as { score?: number }).score ?? 0),
+              total: Number((a as { total?: number }).total ?? 0),
+              percentage: Number((a as { percentage?: number }).percentage ?? 0),
+              submittedAt:
+                (a as { submittedAt?: string; updatedAt?: string; createdAt?: string }).submittedAt
+                || (a as { submittedAt?: string; updatedAt?: string; createdAt?: string }).updatedAt
+                || (a as { submittedAt?: string; updatedAt?: string; createdAt?: string }).createdAt,
+            };
+            grouped[targetQuizId] = grouped[targetQuizId] ?? [];
+            grouped[targetQuizId].push(mapped);
+          }
+
+          for (const key of Object.keys(grouped)) {
+            grouped[key].sort((a, b) => Date.parse(b.submittedAt || "0") - Date.parse(a.submittedAt || "0"));
+          }
+
+          set((st) => ({ attemptsByQuizId: { ...st.attemptsByQuizId, ...grouped } }));
+          attemptsHydrated = true;
+        })().finally(() => {
+          attemptsHydrationPromise = null;
+        });
+      }
+
+      await attemptsHydrationPromise;
+      return get().attemptsByQuizId[quizId] ?? [];
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
       set({ error: msg || "Failed to load attempts" });

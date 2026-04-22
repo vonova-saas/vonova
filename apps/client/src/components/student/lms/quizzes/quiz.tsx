@@ -24,7 +24,10 @@ export default function Quiz() {
       setLoading(true);
       setError(null);
       const res = await getAllQuizzesMutationFn();
-      setQuizzes(res.data || []);
+      const list = Array.isArray(res)
+        ? res
+        : (res as { data?: QuizType[] })?.data ?? [];
+      setQuizzes(list);
     } catch (e: unknown) {
       let msg = "Failed to load quizzes";
       if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;

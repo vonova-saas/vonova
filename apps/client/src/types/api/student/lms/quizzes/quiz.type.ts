@@ -151,7 +151,23 @@ export type getAttemptsTypeResponse = {
     gradedAt: string;
     createdAt: string;
     updatedAt: string;
-  }
+  } | {
+    id: string;
+    quiz: string;
+    userId: string;
+    score: number;
+    total: number;
+    percentage: number;
+    answers: {
+      questionId: string;
+      selectedOptionId: string;
+      correct: boolean;
+    }[];
+    submittedAt: string;
+    gradedAt: string;
+    createdAt: string;
+    updatedAt: string;
+  }[]
 }
 
 export type getSpecificAttemptTypeResponse = {

@@ -706,8 +706,7 @@ export default function CommunityPageClient({
             Learn together. Share what you build.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            A calm, editorial space for guides and conversations—similar in spirit to EqraaTech:
-            curated articles, practical posts, and a community that grows with every lesson.
+          A curated space for in-depth guides and thoughtful insights—well-crafted content designed to teach, explain, and inspire deeper understanding.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button size="lg" className="rounded-full px-8" onClick={goToArticles}>

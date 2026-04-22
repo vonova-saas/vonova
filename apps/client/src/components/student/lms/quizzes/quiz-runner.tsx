@@ -51,6 +51,48 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
+  type GradedAnswer = { questionId: string; selectedOptionId: string; correct: boolean };
+  type NormalizedResult = {
+    attemptId: string;
+    quizId: string;
+    score: number;
+    total: number;
+    percentage: number;
+    answers: GradedAnswer[];
+  };
+
+  const normalizeSubmitResult = (raw: unknown): NormalizedResult | null => {
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw as Record<string, unknown>;
+    const maybeWrapped = obj.data && typeof obj.data === "object"
+      ? (obj.data as Record<string, unknown>)
+      : obj;
+
+    const attemptId =
+      typeof maybeWrapped.attemptId === "string"
+        ? maybeWrapped.attemptId
+        : typeof maybeWrapped.id === "string"
+          ? maybeWrapped.id
+          : "";
+    const quizId =
+      typeof maybeWrapped.quizId === "string"
+        ? maybeWrapped.quizId
+        : typeof maybeWrapped.quiz === "string"
+          ? maybeWrapped.quiz
+          : quiz._id;
+    const answers =
+      Array.isArray(maybeWrapped.answers)
+        ? (maybeWrapped.answers as GradedAnswer[])
+        : [];
+    const score = Number(maybeWrapped.score ?? 0);
+    const total = Number(maybeWrapped.total ?? questions.length);
+    const percentage = Number(
+      maybeWrapped.percentage ?? (total > 0 ? Math.round((score / total) * 100) : 0),
+    );
+
+    return { attemptId, quizId, score, total, percentage, answers };
+  };
+
   // Timer effect
   useEffect(() => {
     setTimer(10);
@@ -95,7 +137,8 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
         answers: Object.entries(answers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
       };
       const res = await submitQuizMutationFn(quiz._id, payload);
-      setResult(res.data);
+      const normalized = normalizeSubmitResult(res);
+      setResult(normalized);
       setShowResult(true);
     } catch (e: unknown) {
       let message = "Failed to submit quiz";
@@ -121,7 +164,17 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       } else if (data && typeof data === "object") {
         parsed = [data as getAttemptsTypeResponse["data"]];
       }
-      setAttempts(parsed);
+      const filtered = parsed.filter((attempt) => {
+        const attemptQuiz =
+          (attempt as { quiz?: unknown; quizId?: unknown }).quiz
+          ?? (attempt as { quiz?: unknown; quizId?: unknown }).quizId;
+        const attemptQuizId =
+          attemptQuiz && typeof attemptQuiz === "object"
+            ? (attemptQuiz as { _id?: string })._id
+            : String(attemptQuiz ?? "");
+        return attemptQuizId === quiz._id;
+      });
+      setAttempts(filtered);
     } catch (e: unknown) {
       let message = "Failed to load attempts";
       if (e && typeof e === "object" && "message" in e) {

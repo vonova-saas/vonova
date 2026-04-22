@@ -186,8 +186,8 @@ export default function EditQuizPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[85vh] w-full flex items-start justify-center p-6">
-        <div className="w-full max-w-5xl space-y-4">
+      <div className="min-h-full w-full pb-16">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-10 space-y-4">
           <div className="h-10 w-64 bg-muted animate-pulse rounded" />
           <div className="h-28 w-full bg-muted animate-pulse rounded" />
           <div className="h-72 w-full bg-muted animate-pulse rounded" />
@@ -198,38 +198,55 @@ export default function EditQuizPage() {
 
   if (error) {
     return (
-      <div className="min-h-[85vh] w-full flex items-center justify-center">
+      <div className="min-h-full w-full flex items-center justify-center py-12">
         <div className="text-destructive">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[85vh] w-full flex items-start justify-center p-6"
-      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}
-    >
-      <div className="w-full max-w-5xl">
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-4xl font-bold leading-tight">Edit Quiz</h1>
-          <ComponentIcon className="w-7 h-7 text-primary animate-pulse" />
-        </div>
-
-        {/* Hero-like summary card */}
-        <Card className="w-full mb-6 shadow-lg border-2 backdrop-blur-sm">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div className="flex-1">
-                <div className="text-lg font-semibold text-primary">Update quiz content</div>
-                <div className="text-sm text-muted-foreground">Edit the title, topic, description, number of questions, and questions/options.</div>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+            <ComponentIcon className="h-3.5 w-3.5 text-primary" />
+            Instructor hub
+          </div>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Edit Quiz</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Refine questions, improve wording, and keep your assessments aligned with learning goals.
+          </p>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{questions.length}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Questions
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Form card */}
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{noOfQuestions || "-"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Target Count
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl truncate">{topic || "-"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Topic
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div className="mx-auto max-w-6xl px-4 pt-10">
         <Card className="w-full shadow-xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl">Quiz Details</CardTitle>
