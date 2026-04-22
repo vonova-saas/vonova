@@ -12,6 +12,24 @@ const API = axios.create(options);
 let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;
 
+// Add request interceptor to include JWT token for admin endpoints
+API.interceptors.request.use(
+  (config) => {
+    // Check if this is an admin endpoint
+    if (config.url?.includes('/admin/')) {
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('admin_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 const isMissingAccessTokenCookieError = (status: number, data: unknown) => {
   const message = (data as { message?: string })?.message ?? "";
   return status === 400 && message.toLowerCase().includes("access token cookie is required");
@@ -34,7 +52,7 @@ API.interceptors.response.use(
     // Check if error message indicates token issues (for admin endpoints that return 403)
     const message = (data?.message || "").toLowerCase();
     const isTokenError = message.includes("admin access required") || message.includes("unauthorized") || message.includes("token");
-    
+
     const shouldAttemptRefresh = status === 401 || status === 403 && isTokenError || isMissingAccessTokenCookieError(status, data);
 
     if (shouldAttemptRefresh && originalRequest && !originalRequest._retry && !isAuthRefreshRequest && !isAuthLoginRequest) {

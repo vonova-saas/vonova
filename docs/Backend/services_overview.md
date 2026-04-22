@@ -6,7 +6,7 @@ This document maps backend service responsibilities in `services/` and links to 
 
 Client requests enter through the API Gateway, then flow through NATS to internal services.
 
-`Frontend -> API Gateway -> NATS -> Internal Services (App, LMS, Admin) -> MongoDB/Redis/S3/AI providers`
+`Frontend -> API Gateway -> NATS -> Internal Services (App, LMS) -> MongoDB/Redis/S3/AI providers`
 
 ## Service Map
 

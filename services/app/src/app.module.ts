@@ -7,6 +7,7 @@ import { getMongoConfigApp } from './common/config/mongo.config';
 import { AuthModule } from './auth/auth.module';
 import { OnboardingModule } from './auth/onboarding/onboarding.module';
 import { AdminSeedModule } from './admin-seed/admin-seed.module';
+import { AdminAuthModule } from './admin-auth/admin-auth.module';
 import { SettingsModule } from './settings/settings.module';
 import { AccountModule } from './account/account.module';
 import { BillingModule } from './billing/billing.module';
@@ -30,6 +31,7 @@ import { ArticlesModule } from './Community/articles/articles.module';
     }),
     //? App Models
     AuthModule,
+    AdminAuthModule,
     AdminSeedModule,
     OnboardingModule,
     WaitlistModule,

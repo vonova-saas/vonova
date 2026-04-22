@@ -37,6 +37,7 @@ import { ReviewGatewayModule } from './lms/library/review/review.gateway.module'
 import { ReaderGatewayModule } from './lms/library/reader/reader.gateway.module';
 import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module';
 import { AdminGatewayModule } from './admin/admin.module';
+import { AdminAuthGatewayModule } from './admin-auth/admin-auth.module';
 import { CommunityGatewayModule } from './app/community/community.module';
 
 @Module({
@@ -74,8 +75,9 @@ import { CommunityGatewayModule } from './app/community/community.module';
     ReviewGatewayModule,
     ReaderGatewayModule,
     UploadGatewayModule,
-    //* Admin Service
+    //* Admin Services
     AdminGatewayModule,
+    AdminAuthGatewayModule,
     //* Community Services
     CommunityGatewayModule,
     //* LMS AI Services

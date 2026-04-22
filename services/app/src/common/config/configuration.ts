@@ -12,6 +12,11 @@ export default () => ({
   MONGO_URI_LOCAL_APP: process.env.MONGO_URI_LOCAL_APP,
   MONGO_DB_NAME_APP: process.env.MONGO_DB_NAME_APP,
 
+  //* Admin Database configuration (Separate MongoDB for Admin),
+  MONGO_URI_REMOTE_ADMIN: process.env.MONGO_URI_REMOTE_ADMIN,
+  MONGO_URI_LOCAL_ADMIN: process.env.MONGO_URI_LOCAL_ADMIN,
+  MONGO_DB_NAME_ADMIN: process.env.MONGO_DB_NAME_ADMIN,
+
   //! =========== Authentication Layer ===========
   JWT: {
     JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
