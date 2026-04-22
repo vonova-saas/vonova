@@ -8,7 +8,7 @@ import { Document, Types } from 'mongoose';
 export interface QuizAnswerItem {
   questionId: string;
   selectedOptionId: string | null;
-  correct: boolean;
+  correct: boolean | null;
 }
 
 export interface QuizAnswerDocument extends Document {
@@ -30,8 +30,8 @@ class QuizAnswerItemClass {
   @Prop({ required: false, type: String })
   selectedOptionId: string | null;
 
-  @Prop({ required: true })
-  correct: boolean;
+  @Prop({ required: false, type: Boolean })
+  correct: boolean | null;
 }
 
 export const QuizAnswerItemSchema =
@@ -74,3 +74,6 @@ export class QuizAnswer extends Document implements QuizAnswerDocument {
 }
 
 export const QuizAnswerSchema = SchemaFactory.createForClass(QuizAnswer);
+
+// Add unique compound index to prevent duplicate quiz attempts
+QuizAnswerSchema.index({ quiz: 1, userId: 1 }, { unique: true });

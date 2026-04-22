@@ -72,8 +72,9 @@ export class QuizStudentController {
     description: 'Forbidden - Only students can access available quizzes',
   })
   @Get()
-  async getAvailableQuizzes() {
-    return firstValueFrom(this.quizService.getAvailableQuizzesForStudents());
+  async getAvailableQuizzes(@Request() req) {
+    const userId = req.user._id;
+    return firstValueFrom(this.quizService.getAvailableQuizzesForStudents(userId));
   }
 
   /**
@@ -197,6 +198,17 @@ export class QuizStudentController {
     @Body() dto: SubmitQuizAnswersDto,
   ) {
     const userId = req.user._id;
+    
+    // Double-check: Block any re-attempt attempts at controller level
+    const existingAttempts = await firstValueFrom(this.quizService.getStudentQuizAttempts(userId));
+    const hasAlreadyAttempted = existingAttempts.some(attempt => 
+      attempt.quiz.toString() === quizId
+    );
+    
+    if (hasAlreadyAttempted) {
+      throw new Error('ACCESS DENIED - You have already completed this quiz. No re-attempts are allowed. This is a final quiz submission.');
+    }
+    
     return firstValueFrom(this.quizService.submitStudentQuiz(quizId, dto, userId));
   }
 

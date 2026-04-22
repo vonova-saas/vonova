@@ -136,10 +136,34 @@ export class QuizService {
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
-  async getAvailableQuizzesForStudents() {
-    // Return quizzes without correct answers
+  async getAvailableQuizzesForStudents(userId?: string) {
+    // Return quizzes with completion status
     const quizzes = await this.quizModel.find().select('-questions.correctOptionId');
-    return quizzes;
+    
+    if (!userId) {
+      return quizzes;
+    }
+    
+    // Add completion status for authenticated user
+    const quizzesWithStatus = await Promise.all(
+      quizzes.map(async (quiz) => {
+        const existingAttempt = await this.answerModel.findOne({ 
+          quiz: quiz._id, 
+          userId 
+        });
+        
+        const quizObj = quiz.toObject();
+        return {
+          ...quizObj,
+          isCompleted: !!existingAttempt,
+          completedAt: existingAttempt?.submittedAt || null,
+          score: existingAttempt?.score || null,
+          percentage: existingAttempt?.percentage || null,
+        };
+      })
+    );
+    
+    return quizzesWithStatus;
   }
 
   async getQuizForStudent(quizId: string, userId: string) {
@@ -202,15 +226,16 @@ export class QuizService {
     // Check if student has already attempted this quiz
     const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
     if (existingAttempt) {
-      throw new Error('You have already attempted this quiz. Only one attempt is allowed.');
+      throw new Error(' QUIZ ALREADY COMPLETED - This quiz allows only ONE attempt. You have already submitted this quiz on ' + existingAttempt.submittedAt.toDateString() + '. You can only view your results now.');
     }
 
-    const total = quiz.questions.length;
+    const totalQuestions = quiz.questions.length;
+    let answeredQuestions = 0;
     let score = 0;
     const formatted: {
       questionId: string;
       selectedOptionId: string | null;
-      correct: boolean;
+      correct: boolean | null;
     }[] = [];
 
     // Process all questions with student answers and correct info
@@ -218,15 +243,19 @@ export class QuizService {
       const studentAnswer = answers.find(ans => ans.questionId === question.id);
       const selectedOptionId = studentAnswer?.selectedOptionId || null;
       
+      // Only count as answered if student provided an answer
+      const isAnswered = selectedOptionId !== null;
+      if (isAnswered) answeredQuestions++;
+      
       // Only count as correct if answered and matches
-      const correct = selectedOptionId !== null && question.correctOptionId === selectedOptionId;
+      const correct = isAnswered && question.correctOptionId === selectedOptionId;
       if (correct) score++;
 
       // Add all questions to formatted answers (including unanswered)
       formatted.push({
         questionId: question.id,
         selectedOptionId,
-        correct,
+        correct: isAnswered ? correct : null, // null for unanswered questions
       });
 
       // Return question with result info
@@ -248,14 +277,14 @@ export class QuizService {
       return questionResult;
     });
 
-    const percentage = total ? Math.round((score / total) * 10000) / 100 : 0;
+    const percentage = answeredQuestions ? Math.round((score / answeredQuestions) * 10000) / 100 : 0;
 
     const attempt = await this.answerModel.create({
       quiz: quiz._id,
       userId,
       answers: formatted,
       score,
-      total,
+      total: answeredQuestions, // Store answered questions count
       percentage,
     });
 
