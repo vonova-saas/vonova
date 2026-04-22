@@ -46,8 +46,8 @@ export class QuizGatewayService {
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
-  getAvailableQuizzesForStudents() {
-    return this.client.send({ cmd: 'quiz.getAvailableForStudents' }, {});
+  getAvailableQuizzesForStudents(userId?: string) {
+    return this.client.send({ cmd: 'quiz.getAvailableForStudents' }, { userId });
   }
 
   getQuizForStudent(quizId: string, userId: string) {

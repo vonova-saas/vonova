@@ -136,58 +136,171 @@ export class QuizService {
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
-  async getAvailableQuizzesForStudents() {
-    // Return quizzes without correct answers
+  async getAvailableQuizzesForStudents(userId?: string) {
+    // Return quizzes with completion status
     const quizzes = await this.quizModel.find().select('-questions.correctOptionId');
-    return quizzes;
+    
+    if (!userId) {
+      return quizzes;
+    }
+    
+    // Add completion status for authenticated user
+    const quizzesWithStatus = await Promise.all(
+      quizzes.map(async (quiz) => {
+        const existingAttempt = await this.answerModel.findOne({ 
+          quiz: quiz._id, 
+          userId 
+        });
+        
+        const quizObj = quiz.toObject();
+        return {
+          ...quizObj,
+          isCompleted: !!existingAttempt,
+          completedAt: existingAttempt?.submittedAt || null,
+          score: existingAttempt?.score || null,
+          percentage: existingAttempt?.percentage || null,
+        };
+      })
+    );
+    
+    return quizzesWithStatus;
   }
 
   async getQuizForStudent(quizId: string, userId: string) {
-    const quiz = await this.quizModel.findById(quizId).select('-questions.correctOptionId');
+    const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    // Return quiz without correct answers
-    return quiz;
+    // Check if student has already attempted this quiz
+    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+
+    // If student hasn't attempted, return quiz without correct answers
+    if (!existingAttempt) {
+      const quizObj = quiz.toObject();
+      // Remove correct answers from questions
+      const quizWithoutAnswers = {
+        ...quizObj,
+        questions: quizObj.questions.map(q => {
+          const { correctOptionId, ...questionWithoutAnswer } = q;
+          return questionWithoutAnswer;
+        })
+      };
+      return {
+        ...quizWithoutAnswers,
+        alreadyAttempted: false,
+        attemptId: null,
+      };
+    }
+
+    // If student has attempted, return quiz with their answers and correct answers for review
+    const quizObj = quiz.toObject();
+    const attemptObj = existingAttempt.toObject();
+
+    // Map student's answers to questions
+    const questionsWithAnswers = quizObj.questions.map(question => {
+      const studentAnswer = attemptObj.answers.find(ans => ans.questionId === question.id);
+      return {
+        ...question,
+        studentSelectedOptionId: studentAnswer?.selectedOptionId || null,
+        isCorrect: studentAnswer?.correct || false,
+      };
+    });
+
+    return {
+      ...quizObj,
+      questions: questionsWithAnswers,
+      alreadyAttempted: true,
+      attemptId: existingAttempt._id,
+      attempt: {
+        score: attemptObj.score,
+        total: attemptObj.total,
+        percentage: attemptObj.percentage,
+        submittedAt: attemptObj.submittedAt,
+      }
+    };
   }
 
   async submitStudentQuiz(quizId: string, answers: SubmitAnswerItemDto[], userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    const total = quiz.questions.length;
+    // Check if student has already attempted this quiz
+    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+    if (existingAttempt) {
+      throw new Error(' QUIZ ALREADY COMPLETED - This quiz allows only ONE attempt. You have already submitted this quiz on ' + existingAttempt.submittedAt.toDateString() + '. You can only view your results now.');
+    }
+
+    const totalQuestions = quiz.questions.length;
+    let answeredQuestions = 0;
     let score = 0;
     const formatted: {
       questionId: string;
-      selectedOptionId: string;
-      correct: boolean;
+      selectedOptionId: string | null;
+      correct: boolean | null;
     }[] = [];
 
-    for (const ans of answers) {
-      const q = quiz.questions.find((q) => q.id === ans.questionId);
-      if (!q) continue;
-
-      const correct = q.correctOptionId === ans.selectedOptionId;
+    // Process all questions with student answers and correct info
+    const questionsWithResults = quiz.questions.map(question => {
+      const studentAnswer = answers.find(ans => ans.questionId === question.id);
+      const selectedOptionId = studentAnswer?.selectedOptionId || null;
+      
+      // Only count as answered if student provided an answer
+      const isAnswered = selectedOptionId !== null;
+      if (isAnswered) answeredQuestions++;
+      
+      // Only count as correct if answered and matches
+      const correct = isAnswered && question.correctOptionId === selectedOptionId;
       if (correct) score++;
 
+      // Add all questions to formatted answers (including unanswered)
       formatted.push({
-        questionId: ans.questionId,
-        selectedOptionId: ans.selectedOptionId,
-        correct,
+        questionId: question.id,
+        selectedOptionId,
+        correct: isAnswered ? correct : null, // null for unanswered questions
       });
-    }
 
-    const percentage = total ? Math.round((score / total) * 10000) / 100 : 0;
+      // Return question with result info
+      const questionResult: any = {
+        questionId: question.id,
+        questionText: question.text,
+        options: question.options,
+        studentSelectedOptionId: selectedOptionId,
+        correct,
+      };
+
+      // If answer is wrong, add correct answer info
+      if (!correct && selectedOptionId) {
+        const correctOption = question.options.find(opt => opt.id === question.correctOptionId);
+        questionResult.correctOptionId = question.correctOptionId;
+        questionResult.correctOptionText = correctOption?.text || '';
+      }
+
+      return questionResult;
+    });
+
+    const percentage = answeredQuestions ? Math.round((score / answeredQuestions) * 10000) / 100 : 0;
 
     const attempt = await this.answerModel.create({
       quiz: quiz._id,
       userId,
       answers: formatted,
       score,
-      total,
+      total: answeredQuestions, // Store answered questions count
       percentage,
     });
 
-    return attempt;
+    // Return attempt with all questions and results
+    return {
+      ...attempt.toObject(),
+      quiz: {
+        _id: quiz._id,
+        title: quiz.title,
+        description: quiz.description,
+        topic: quiz.topic,
+        noOfQuestions: quiz.noOfQuestions,
+        questions: questionsWithResults,
+      },
+      submittedAt: attempt.submittedAt,
+    };
   }
 
   async getStudentAttempt(attemptId: string, userId: string) {
@@ -205,10 +318,41 @@ export class QuizService {
   async getStudentQuizAttempts(userId: string) {
     const attempts = await this.answerModel
       .find({ userId })
-      .populate('quiz', 'title description topic noOfQuestions createdAt')
+      .populate('quiz', 'title description topic noOfQuestions createdAt questions')
       .sort({ createdAt: -1 });
 
-    return attempts;
+    // Enhance attempts with correct answers for incorrect responses
+    const enhancedAttempts = await Promise.all(
+      attempts.map(async (attempt) => {
+        const quiz = await this.quizModel.findById(attempt.quiz);
+        if (!quiz) return attempt;
+
+        const answersWithCorrectInfo = attempt.answers.map(answer => {
+          const question = quiz.questions.find(q => q.id === answer.questionId);
+          if (!question) return answer;
+
+          // If answer is incorrect, add correct answer info
+          if (!answer.correct) {
+            const correctOption = question.options.find(opt => opt.id === question.correctOptionId);
+            return {
+              ...answer,
+              correctOptionId: question.correctOptionId,
+              correctOptionText: correctOption?.text || '',
+              questionText: question.text,
+              allOptions: question.options,
+            };
+          }
+
+          return answer;
+        });
+
+        const attemptObj = attempt.toObject();
+        attemptObj.answers = answersWithCorrectInfo;
+        return attemptObj;
+      })
+    );
+
+    return enhancedAttempts;
   }
 
   
