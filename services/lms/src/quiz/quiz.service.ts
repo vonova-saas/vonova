@@ -146,13 +146,27 @@ export class QuizService {
     const quiz = await this.quizModel.findById(quizId).select('-questions.correctOptionId');
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    // Return quiz without correct answers
-    return quiz;
+    // Check if student has already attempted this quiz
+    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+
+    // Return quiz without correct answers, but with attempt status
+    const quizObj = quiz.toObject();
+    return {
+      ...quizObj,
+      alreadyAttempted: !!existingAttempt,
+      attemptId: existingAttempt?._id,
+    };
   }
 
   async submitStudentQuiz(quizId: string, answers: SubmitAnswerItemDto[], userId: string) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
+
+    // Check if student has already attempted this quiz
+    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+    if (existingAttempt) {
+      throw new Error('You have already attempted this quiz. Only one attempt is allowed.');
+    }
 
     const total = quiz.questions.length;
     let score = 0;
@@ -160,6 +174,15 @@ export class QuizService {
       questionId: string;
       selectedOptionId: string;
       correct: boolean;
+    }[] = [];
+
+    // Collect correct answers for the response
+    const correctAnswers: {
+      questionId: string;
+      questionText: string;
+      correctOptionId: string;
+      correctOptionText: string;
+      allOptions: { id: string; text: string }[];
     }[] = [];
 
     for (const ans of answers) {
@@ -174,6 +197,18 @@ export class QuizService {
         selectedOptionId: ans.selectedOptionId,
         correct,
       });
+
+      // Add correct answer info for this question
+      const correctOption = q.options.find((opt) => opt.id === q.correctOptionId);
+      if (correctOption) {
+        correctAnswers.push({
+          questionId: q.id,
+          questionText: q.text,
+          correctOptionId: q.correctOptionId,
+          correctOptionText: correctOption.text,
+          allOptions: q.options,
+        });
+      }
     }
 
     const percentage = total ? Math.round((score / total) * 10000) / 100 : 0;
@@ -187,7 +222,11 @@ export class QuizService {
       percentage,
     });
 
-    return attempt;
+    // Return attempt with correct answers
+    return {
+      ...attempt.toObject(),
+      correctAnswers,
+    };
   }
 
   async getStudentAttempt(attemptId: string, userId: string) {

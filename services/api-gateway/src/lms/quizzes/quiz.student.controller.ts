@@ -110,6 +110,28 @@ export class QuizStudentController {
             },
           },
         },
+        correctAnswers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              questionId: { type: 'string', example: 'q_456' },
+              questionText: { type: 'string', example: 'What is 2 + 2?' },
+              correctOptionId: { type: 'string', example: 'opt_123' },
+              correctOptionText: { type: 'string', example: '4' },
+              allOptions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: 'opt_123' },
+                    text: { type: 'string', example: '4' },
+                  },
+                },
+              },
+            },
+          },
+        },
         createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
       },
     },
@@ -125,6 +147,10 @@ export class QuizStudentController {
   @ApiResponse({
     status: 403,
     description: 'Forbidden - Only students can submit quiz answers',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Student has already attempted this quiz',
   })
   @Post('/:quizId/submit')
   async submitQuiz(
@@ -250,6 +276,8 @@ export class QuizStudentController {
         },
         topic: { type: 'string', example: 'JavaScript Programming' },
         noOfQuestions: { type: 'number', example: 10 },
+        alreadyAttempted: { type: 'boolean', example: false },
+        attemptId: { type: 'string', example: '507f1f77bcf86cd799439012' },
         createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
       },
     },
