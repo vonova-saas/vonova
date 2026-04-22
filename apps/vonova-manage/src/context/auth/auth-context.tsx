@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const user = authData?.user;
   const isAuthenticated = !!user?._id;
   const role = user?.role;
+  const normalizedRole = role?.toUpperCase();
 
   // Handle authentication redirects
   useEffect(() => {
@@ -58,7 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get target dashboard path by role
   const getDashboardPathByRole = (role?: string) => {
-    if (role === 'ADMIN') return '/admin';
+    if (!role) return undefined;
+    if (role.toUpperCase() === 'ADMIN') return '/admin';
+    return undefined;
   };
 
   // Enforce role-path isolation: if role doesn't match current path area, redirect
@@ -69,17 +72,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const targetPath = getDashboardPathByRole(role);
 
     // If user is on a path area that doesn't match their role, move them
-   const isAdminRole = role === 'ADMIN';
+   const isAdminRole = normalizedRole === 'ADMIN';
 
-    if (!isAdminRole) {
+    if (!isAdminRole && targetPath) {
       router.replace(`${targetPath}/${user._id}`);
     }
 
-  }, [isAuthenticated, role, user?._id, pathname, router]);
+  }, [isAuthenticated, role, normalizedRole, user?._id, pathname, router]);
 
   const isRole = (r: string | string[]) => {
-    if (!role) return false;
-    return Array.isArray(r) ? r.includes(role) : role === r;
+    if (!normalizedRole) return false;
+    if (Array.isArray(r)) {
+      return r.map((item) => item.toUpperCase()).includes(normalizedRole);
+    }
+    return normalizedRole === r.toUpperCase();
   };
 
   // Logout function

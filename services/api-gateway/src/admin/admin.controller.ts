@@ -23,13 +23,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from 'src/common/guards/admin-jwt-auth.guard';
 import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('api/v1/admin')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(AdminJwtAuthGuard, AdminGuard)
 @ApiUnauthorizedResponse({
   description:
     'No or invalid session. The gateway reads `accessToken` from cookies and validates via `currentUser`.',

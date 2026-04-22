@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { sidebarNavData } from "./sidebar-nav-config";
 import Image from "next/image";
+import Link from "next/link";
 import useAdminId from "@/hooks/admin/use-admin-id";
 import { NavSubMain } from "./nav-sub-main";
 
@@ -28,7 +29,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href={adminId ? `/${adminId}` : "/admin"}>
+              <Link href={adminId ? `/admin/${adminId}` : "/admin"}>
                 <div className="bg-muted text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src="/icons/icon.png"
@@ -46,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     }
                   </span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -90,7 +90,7 @@ export function Admin2FAForm({
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
-      router.push(`/${adminId}`);
+      router.push(adminId ? `/admin/${adminId}` : "/admin");
     }, 1000);
   };
 

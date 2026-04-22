@@ -42,6 +42,7 @@ export function NavMain({
 
   // Function to add adminId to URL if it exists
   const getUrl = (url: string) => {
+    if (!adminId) return "/admin";
     return url.replace(":adminId", adminId);
   };
 
@@ -52,7 +53,9 @@ export function NavMain({
       </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
+          const hasActiveSubItem = item.items?.some(
+            (subItem) => pathname === getUrl(subItem.url),
+          );
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
           const isActive = (adminId && pathname === getUrl(item.url));
@@ -69,7 +72,7 @@ export function NavMain({
                   <Link href={getUrl(item.url)}>
                     <SidebarMenuButton
                       tooltip={item.title}
-                      isActive={pathname === item.url}
+                      isActive={pathname === getUrl(item.url)}
                     >
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
@@ -83,9 +86,9 @@ export function NavMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={pathname === subItem.url}
+                          isActive={pathname === getUrl(subItem.url)}
                         >
-                          <Link href={subItem.url}>
+                          <Link href={getUrl(subItem.url)}>
                             <span>{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
@@ -100,7 +103,7 @@ export function NavMain({
               <Link href={getUrl(item.url)}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={pathname === item.url}
+                  isActive={pathname === getUrl(item.url)}
                 >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>

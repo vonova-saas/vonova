@@ -42,6 +42,7 @@ export function NavSubMain({
 
   // Function to add userId to URL if it exists
   const getUrl = (url: string) => {
+    if (!adminId) return "/admin";
     return url.replace(":adminId", adminId);
   };
 
@@ -50,7 +51,9 @@ export function NavSubMain({
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
+          const hasActiveSubItem = item.items?.some(
+            (subItem) => pathname === getUrl(subItem.url),
+          );
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
           const isActive = (adminId && pathname === getUrl(item.url));
@@ -67,7 +70,7 @@ export function NavSubMain({
                   <Link href={getUrl(item.url)} className="flex-1">
                     <SidebarMenuButton
                       tooltip={item.title}
-                      isActive={pathname === item.url}
+                      isActive={pathname === getUrl(item.url)}
                     >
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
@@ -81,7 +84,7 @@ export function NavSubMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={pathname === subItem.url}
+                          isActive={pathname === getUrl(subItem.url)}
                         >
                           <Link href={getUrl(subItem.url)} className="flex-1">
                             <span>{subItem.title}</span>
@@ -98,7 +101,7 @@ export function NavSubMain({
               <Link href={getUrl(item.url)} className="flex-1">
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={pathname === item.url}
+                  isActive={pathname === getUrl(item.url)}
                 >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>

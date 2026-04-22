@@ -17,7 +17,8 @@ export class AdminGuard implements CanActivate {
       user?: { role?: string; email?: string };
     }>();
     const user = request.user;
-    if (user?.role !== 'ADMIN') {
+    const normalizedRole = String(user?.role ?? '').toUpperCase();
+    if (normalizedRole !== 'ADMIN') {
       throw new ForbiddenException('Admin access required');
     }
     const email = String(user?.email ?? '');

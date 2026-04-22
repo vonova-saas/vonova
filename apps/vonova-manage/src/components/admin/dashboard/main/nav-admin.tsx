@@ -26,11 +26,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAdminId from "@/hooks/admin/use-admin-id";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { adminLogoutMutationFn, adminCurrentUserQueryFn } from "@/services";
-import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
-import { getAccountMutationFn } from "@/services/app/account.api";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 export function NavAdmin({
   admin,
@@ -45,41 +44,13 @@ export function NavAdmin({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
   const adminId = useAdminId();
-  const queryClient = useQueryClient();
   const { mutateAsync: logout } = useMutation({ mutationFn: adminLogoutMutationFn });
   const { data: me } = useQuery({ queryKey: ["authUser"], queryFn: adminCurrentUserQueryFn });
-  const { data: account, refetch: refetchAccount } = useQuery({
-    queryKey: ["account", adminId],
-    queryFn: () => getAccountMutationFn(adminId),
-    enabled: !!adminId && adminId !== "undefined",
-  });
-
-  // Listen for account updates triggered by AccountFormClient and refresh data
-  useEffect(() => {
-    const onAccountUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: ["authUser"] });
-      if (adminId) {
-        queryClient.invalidateQueries({ queryKey: ["account", adminId] });
-        refetchAccount();
-      }
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('account:updated', onAccountUpdated);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('account:updated', onAccountUpdated);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminId]);
 
   // Prefer live user data; fall back to provided props
   const userName = me?.user?.name || admin.name;
   const userEmail = me?.user?.email || admin.email;
-  // Prefer auth profilePicture; fallback to account.avatarUrl; finally to provided prop
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userAvatar = me?.user?.profilePicture || (account as any)?.data?.avatarUrl || admin.avatar;
+  const userAvatar = admin.avatar;
   const initials = userName
     ? userName
       .split(" ")
@@ -163,7 +134,7 @@ export function NavAdmin({
               <DropdownMenuItem
                 onClick={() => {
                   if (adminId) {
-                    router.push(`/${adminId}/settings/account`)
+                    router.push(`/admin/${adminId}/settings/account`)
                   }
                 }}
               >
@@ -173,7 +144,7 @@ export function NavAdmin({
               <DropdownMenuItem
                 onClick={() => {
                   if (adminId) {
-                    router.push(`/${adminId}/settings/notifications`)
+                    router.push(`/admin/${adminId}/settings/notifications`)
                   }
                 }}
               >

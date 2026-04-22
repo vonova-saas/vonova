@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: Props) {
   const adminId = useAdminId();
   const segments = pathname.split('/').filter(Boolean);
   // Find the index of the 'admin' segment in the URL path
-  const adminIndex = segments.indexOf(`${adminId}`);
+  const adminIndex = adminId ? segments.indexOf(adminId) : -1;
 
   // Get all segments after admin ID for breadcrumbs
   const crumbSegments = adminIndex >= 0 && adminId
@@ -138,7 +138,9 @@ export default function DashboardLayout({ children }: Props) {
 
                         {/* Dynamic breadcrumb segments */}
                         {crumbSegments.map((segment, index) => {
-                          const href = `/${adminId}/${crumbSegments.slice(0, index + 1).join('/')}`;
+                          const href = adminId
+                            ? `/admin/${adminId}/${crumbSegments.slice(0, index + 1).join('/')}`
+                            : "/admin";
                           const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                           const isLast = index === crumbSegments.length - 1;
                           const isMobile = typeof window !== 'undefined' && window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint
@@ -199,7 +201,10 @@ export default function DashboardLayout({ children }: Props) {
                                 onSelect={() => {
                                   setOpen(false);
                                   setSearch("");
-                                  router.push(section.url);
+                                  const target = adminId
+                                    ? section.url.replace(":adminId", adminId)
+                                    : "/admin";
+                                  router.push(target);
                                 }}
                               >
                                 {section.name}

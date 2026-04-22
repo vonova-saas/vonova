@@ -16,8 +16,12 @@ const isBrowser = typeof window !== "undefined";
 // Add request interceptor to include JWT token for admin endpoints
 API.interceptors.request.use(
   (config) => {
-    // Check if this is an admin endpoint
-    if (config.url?.includes('/admin/') && isBrowser) {
+    // Attach admin JWT for protected admin/manage endpoints.
+    // Account APIs are also protected and used by the admin dashboard.
+    const needsAdminToken =
+      config.url?.includes('/admin/') || config.url?.includes('/account/');
+
+    if (needsAdminToken && isBrowser) {
       // Get JWT token from localStorage
       const token = localStorage.getItem('admin_token');
       if (token) {

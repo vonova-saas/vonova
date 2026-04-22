@@ -6,6 +6,7 @@ import { DashboardSupportGatewayController } from './dashboard-support.controlle
 import { AdminGatewayService } from './admin.service';
 import { AuthGatewayModule } from 'src/app/auth/auth.module';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from 'src/common/guards/admin-jwt-auth.guard';
 import { AdminGuard } from 'src/common/guards/admin.guard';
 import { ActivityTrackingInterceptor } from 'src/common/interceptors/activity-tracking.interceptor';
 
@@ -15,6 +16,7 @@ import { ActivityTrackingInterceptor } from 'src/common/interceptors/activity-tr
   providers: [
     AdminGatewayService,
     JwtAuthGuard,
+    AdminJwtAuthGuard,
     AdminGuard,
     {
       provide: APP_INTERCEPTOR,
