@@ -21,6 +21,7 @@ import {
   updateComment,
   updatePost,
 } from "@/services/app/community/community.api";
+import { getAccountMutationFn } from "@/services/app/settings/account.api";
 import type {
   CommunityArticle,
   CommunityArticleCategory,
@@ -102,6 +103,40 @@ function authorName(author: CommunityArticle["author"] | CommunityPost["author"]
   return author.name || author.email || "Member";
 }
 
+/** Only pass URLs the browser can load; invalid strings avoid a broken <img> request. */
+function isDisplayableImageSrc(src: string): boolean {
+  const s = src.trim();
+  if (!s) return false;
+  return (
+    s.startsWith("https://") ||
+    s.startsWith("http://") ||
+    s.startsWith("blob:") ||
+    s.startsWith("data:image/")
+  );
+}
+
+/**
+ * S3 objects often block hotlinked browser requests (Referer / ACL). Load via same-origin proxy.
+ * Blob/data URLs and non-S3 https stay as-is.
+ */
+function avatarImgSrcForDisplay(url: string): string {
+  const s = url.trim();
+  if (!s || s.startsWith("blob:") || s.startsWith("data:")) return s;
+  try {
+    const u = new URL(s);
+    if (
+      u.protocol === "https:" &&
+      u.hostname.toLowerCase().endsWith(".amazonaws.com") &&
+      u.hostname.toLowerCase().includes(".s3.")
+    ) {
+      return `/api/avatar?url=${encodeURIComponent(s)}`;
+    }
+  } catch {
+    return s;
+  }
+  return s;
+}
+
 function authorPic(author: CommunityArticle["author"] | CommunityPost["author"]): string | undefined {
   if (!author || typeof author === "string") return undefined;
   return (
@@ -113,10 +148,19 @@ function authorPic(author: CommunityArticle["author"] | CommunityPost["author"])
   );
 }
 
-function currentUserPic(user: unknown): string | undefined {
+function currentUserPic(user: unknown, account?: { data?: { avatarUrl?: string } }): string | undefined {
   if (!user || typeof user !== "object") return undefined;
   const u = user as Record<string, string | null | undefined>;
-  return u.profilePicture || u.avatar || u.photo || u.image || u.imageUrl || undefined;
+  const accountData = account?.data;
+  return (
+    accountData?.avatarUrl ||
+    u.profilePicture ||
+    u.avatar ||
+    u.photo ||
+    u.image ||
+    u.imageUrl ||
+    undefined
+  );
 }
 
 function initials(name: string) {
@@ -334,6 +378,12 @@ export default function CommunityPageClient({
     queryFn: () => fetchArticles(articleParams),
     retry: 2,
     staleTime: 30_000,
+  });
+
+  const { data: account } = useQuery({
+    queryKey: ["account", userId],
+    queryFn: () => getAccountMutationFn(userId),
+    enabled: !!userId && userId !== "undefined",
   });
 
   const postsInfinite = useInfiniteQuery({
@@ -706,8 +756,8 @@ export default function CommunityPageClient({
             Learn together. Share what you build.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            A calm, editorial space for guides and conversations—similar in spirit to EqraaTech:
-            curated articles, practical posts, and a community that grows with every lesson.
+            A place where makers learn in public, share what they’re building, and grow 
+            together through honest insights, practical guides, and meaningful conversations.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button size="lg" className="rounded-full px-8" onClick={goToArticles}>
@@ -944,7 +994,13 @@ export default function CommunityPageClient({
                         <CardFooter className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-2">
                             <Avatar className="h-7 w-7">
-                              <AvatarImage src={authorPic(article.author)} />
+                              {authorPic(article.author) && isDisplayableImageSrc(authorPic(article.author)!) ? (
+                                <AvatarImage
+                                  src={avatarImgSrcForDisplay(authorPic(article.author)!)}
+                                  className="object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : null}
                               <AvatarFallback>{initials(authorName(article.author))}</AvatarFallback>
                             </Avatar>
                             {authorName(article.author)}
@@ -1007,7 +1063,13 @@ export default function CommunityPageClient({
                 <CardContent className="space-y-4 p-4 md:p-5">
                   <div className="flex w-full max-w-[1000px] flex-wrap items-center gap-3 sm:flex-nowrap">
                     <Avatar className="h-11 w-11">
-                      <AvatarImage src={currentUserPic(user)} />
+                      {currentUserPic(user, account) && isDisplayableImageSrc(currentUserPic(user, account)!) ? (
+                        <AvatarImage
+                          src={avatarImgSrcForDisplay(currentUserPic(user, account)!)}
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : null}
                       <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
                     </Avatar>
                     <Button
@@ -1232,7 +1294,13 @@ export default function CommunityPageClient({
           <div className="shrink-0 border-b px-6 py-4 pr-14">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={currentUserPic(user)} />
+                {currentUserPic(user, account) && isDisplayableImageSrc(currentUserPic(user, account)!) ? (
+                  <AvatarImage
+                    src={avatarImgSrcForDisplay(currentUserPic(user, account)!)}
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : null}
                 <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
               </Avatar>
               <div>
@@ -1314,7 +1382,13 @@ export default function CommunityPageClient({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={currentUserPic(user)} />
+                {currentUserPic(user, account) && isDisplayableImageSrc(currentUserPic(user, account)!) ? (
+                  <AvatarImage
+                    src={avatarImgSrcForDisplay(currentUserPic(user, account)!)}
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : null}
                 <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
               </Avatar>
               <Textarea
@@ -1329,7 +1403,13 @@ export default function CommunityPageClient({
               <div className="max-h-[52vh] overflow-y-auto rounded-2xl border border-border/70 bg-muted/20 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={authorPic(shareTargetPost.author)} />
+                    {authorPic(shareTargetPost.author) && isDisplayableImageSrc(authorPic(shareTargetPost.author)!) ? (
+                      <AvatarImage
+                        src={avatarImgSrcForDisplay(authorPic(shareTargetPost.author)!)}
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : null}
                     <AvatarFallback>{initials(authorName(shareTargetPost.author))}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
@@ -1610,7 +1690,13 @@ function RepostWrapper({
       <div className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={authorPic(repost.author)} />
+            {authorPic(repost.author) && isDisplayableImageSrc(authorPic(repost.author)!) ? (
+              <AvatarImage
+                src={avatarImgSrcForDisplay(authorPic(repost.author)!)}
+                className="object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : null}
             <AvatarFallback>{initials(authorName(repost.author))}</AvatarFallback>
           </Avatar>
           <span className="text-sm font-medium">{authorName(repost.author)}</span>
@@ -1707,7 +1793,13 @@ function PostCard({
     <Card id={`post-${post._id}`} className="rounded-2xl border-border/70 shadow-sm">
       <CardHeader className="flex flex-row items-start gap-3 space-y-0 pb-3">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={authorPic(post.author)} />
+          {authorPic(post.author) && isDisplayableImageSrc(authorPic(post.author)!) ? (
+            <AvatarImage
+              src={avatarImgSrcForDisplay(authorPic(post.author)!)}
+              className="object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : null}
           <AvatarFallback>{initials(authorName(post.author))}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
@@ -1853,7 +1945,13 @@ function PostCard({
         <div className="border-t px-4 pb-4 pt-3">
           <div className="mb-3 flex items-start gap-2">
             <Avatar className="mt-0.5 h-8 w-8">
-              <AvatarImage src={typeof post.author === "object" ? authorPic(post.author) : undefined} />
+              {typeof post.author === "object" && authorPic(post.author) && isDisplayableImageSrc(authorPic(post.author)!) ? (
+                <AvatarImage
+                  src={avatarImgSrcForDisplay(authorPic(post.author)!)}
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : null}
               <AvatarFallback>{initials(authorName(post.author))}</AvatarFallback>
             </Avatar>
             <div className="w-full rounded-full border bg-background px-2.5 py-1.5">
@@ -2042,7 +2140,13 @@ function PostCard({
                   className="flex items-center gap-2 rounded-lg border px-3 py-2"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={u.avatar || u.profilePicture} />
+                    {(u.avatar || u.profilePicture) && isDisplayableImageSrc(u.avatar || u.profilePicture || "") ? (
+                      <AvatarImage
+                        src={avatarImgSrcForDisplay(u.avatar || u.profilePicture || "")}
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : null}
                     <AvatarFallback>{initials(u.name || u.email || "Member")}</AvatarFallback>
                   </Avatar>
                   <div className="text-sm font-medium">{u.name || u.email || "Member"}</div>
