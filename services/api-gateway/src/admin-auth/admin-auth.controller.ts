@@ -22,7 +22,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 import { extractAccessTokenFromRequest } from '../common/utils/extract-access-token';
 
 @ApiTags('Admin')
-@Controller('admin/auth')
+@Controller('api/v1/admin/auth')
 export class AdminAuthGatewayController {
   constructor(
     @Inject('NATS_SERVICE') private readonly natsClient: ClientProxy,
