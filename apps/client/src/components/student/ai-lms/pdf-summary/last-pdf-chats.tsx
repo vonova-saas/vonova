@@ -97,10 +97,11 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
   if (sessions.length === 0) {
     return (
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Recent PDF Chats</h3>
-          <Button variant="ghost" size="sm" onClick={handleViewAll} className="cursor-pointer">
-            View All
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-base font-semibold sm:text-lg">Recent PDF Chats</h3>
+          <Button variant="ghost" size="sm" onClick={handleViewAll} className="w-fit cursor-pointer self-start sm:self-auto">
+            <span className="hidden xs:inline">View All</span>
+            <span className="xs:hidden">View</span>
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
@@ -113,19 +114,20 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Recent PDF Chats</h3>
-        <Button variant="ghost" size="sm" onClick={handleViewAll} className="cursor-pointer">
-          View All
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-base font-semibold sm:text-lg">Recent PDF Chats</h3>
+        <Button variant="ghost" size="sm" onClick={handleViewAll} className="w-fit cursor-pointer self-start sm:self-auto">
+          <span className="hidden xs:inline">View All</span>
+          <span className="xs:hidden">View</span>
           <ArrowRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {sessions.map((session: Session) => (
           <Card
             key={session.session_id}
-            className="group hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"
+            className="group h-full min-h-44 cursor-pointer border-2 transition-all duration-200 hover:border-primary/20 hover:shadow-lg"
             onClick={() => {
               window.location.href = 
                 `/student/${studentId}/pdf-summary/${session.session_id}`;
@@ -138,7 +140,7 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-sm font-semibold truncate">
+                    <CardTitle className="line-clamp-2 break-all text-sm font-semibold">
                       {session.filename}
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
@@ -155,8 +157,9 @@ export default function LastPDFChats({ onChat }: LastPDFChatsProps) {
 
             <CardContent className="pt-0">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Session ID: {session.session_id}</span>
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0">Session ID:</span>
+                  <span className="line-clamp-2 break-all">{session.session_id}</span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   Click to open this PDF chat session

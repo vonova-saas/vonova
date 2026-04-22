@@ -28,7 +28,6 @@ import type { QuizType, Question, createQuizType } from "@/types/api/student/lms
 export function CreateQuiz() {
   const router = useRouter();
   const { user } = useAuthContext();
-  const userId = user?._id;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -93,7 +92,7 @@ export function CreateQuiz() {
       setSaving(true);
       setError(null);
 
-      if (!userId) {
+      if (!user?._id) {
         throw new Error("User not authenticated");
       }
 
@@ -104,7 +103,7 @@ export function CreateQuiz() {
         noOfQuestions,
         questions,
       };
-      await createNewQuizMutationFn(userId, payload as createQuizType);
+      await createNewQuizMutationFn(payload as createQuizType);
       router.back();
     } catch (e: unknown) {
       let msg = "Failed to create quiz";

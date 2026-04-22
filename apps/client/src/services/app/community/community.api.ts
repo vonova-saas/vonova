@@ -28,6 +28,43 @@ function unwrapData<T>(res: { data?: T } | T): T {
   return res as T;
 }
 
+function normalizeComment(raw: unknown): CommunityComment {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  return {
+    ...(row as CommunityComment),
+    text: String(row.text ?? row.content ?? ""),
+    image:
+      typeof row.image === "string"
+        ? row.image
+        : typeof row.imageUrl === "string"
+          ? row.imageUrl
+          : typeof row.fileUrl === "string"
+            ? row.fileUrl
+            : null,
+  };
+}
+
+function normalizePost(raw: unknown): CommunityPost {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const originalCandidate =
+    row.originalPost ??
+    row.sharedPost ??
+    row.original_post ??
+    row.repost ??
+    null;
+  const shared =
+    originalCandidate && typeof originalCandidate === "object"
+      ? normalizePost(originalCandidate)
+        : null;
+  return {
+    ...(row as CommunityPost),
+    originalPost: shared,
+    sharedPost: shared,
+    type: shared ? "repost" : "post",
+    content: String(row.content ?? row.shareComment ?? ""),
+  };
+}
+
 const emptyPagination = (): ArticlesListResponse["pagination"] => ({
   page: 1,
   limit: 10,
@@ -180,7 +217,10 @@ export async function fetchPosts(page = 1, limit = 10): Promise<PostsListPayload
   const res = await API.get(POSTS, { params: { page, limit } });
   const body = res.data as { message?: string; data?: PostsListPayload };
   if (body.data) {
-    return body.data;
+    return {
+      ...body.data,
+      posts: (body.data.posts ?? []).map(normalizePost),
+    };
   }
   return {
     posts: [],
@@ -199,7 +239,10 @@ export async function fetchPostsByUser(
   const res = await API.get(`${POSTS}/user/${userId}`, { params: { page, limit } });
   const body = res.data as { message?: string; data?: PostsListPayload };
   if (body.data) {
-    return body.data;
+    return {
+      ...body.data,
+      posts: (body.data.posts ?? []).map(normalizePost),
+    };
   }
   return {
     posts: [],
@@ -216,12 +259,12 @@ export async function fetchPostById(postId: string): Promise<CommunityPost> {
     res.data,
   );
   if (inner && typeof inner === "object" && "post" in inner && inner.post) {
-    return inner.post;
+    return normalizePost(inner.post);
   }
   if (inner && typeof inner === "object" && "data" in inner && inner.data?.post) {
-    return inner.data.post;
+    return normalizePost(inner.data.post);
   }
-  return inner as CommunityPost;
+  return normalizePost(inner);
 }
 
 export async function createPost(content: string, image?: File): Promise<CommunityPost> {
@@ -238,12 +281,12 @@ export async function createPost(content: string, image?: File): Promise<Communi
     res.data,
   );
   if (inner && typeof inner === "object" && "post" in inner && inner.post) {
-    return inner.post;
+    return normalizePost(inner.post);
   }
   if (inner && typeof inner === "object" && "data" in inner && inner.data?.post) {
-    return inner.data.post;
+    return normalizePost(inner.data.post);
   }
-  return inner as CommunityPost;
+  return normalizePost(inner);
 }
 
 export async function updatePost(
@@ -266,12 +309,12 @@ export async function updatePost(
     res.data,
   );
   if (inner && typeof inner === "object" && "post" in inner && inner.post) {
-    return inner.post;
+    return normalizePost(inner.post);
   }
   if (inner && typeof inner === "object" && "data" in inner && inner.data?.post) {
-    return inner.data.post;
+    return normalizePost(inner.data.post);
   }
-  return inner as CommunityPost;
+  return normalizePost(inner);
 }
 
 export async function deletePost(postId: string): Promise<void> {
@@ -292,16 +335,27 @@ export async function togglePostLike(postId: string): Promise<{ liked: boolean; 
   };
 }
 
-export async function sharePost(postId: string): Promise<{ shareableLink: string; sharesCount: number }> {
-  // Avoid backend share endpoint dependency on FRONTEND_ORIGIN env.
-  // Generate a stable client permalink instead.
-  const base =
-    typeof window !== "undefined"
-      ? `${window.location.origin}${window.location.pathname}`
-      : "";
+export async function sharePost(
+  postId: string,
+): Promise<{ shareableLink: string; sharesCount: number; sharedPost?: CommunityPost }> {
+  // Backend currently requires generated shared posts to have non-empty content.
+  // Send a default share comment so share creation never fails validation.
+  const res = await API.post(`${POSTS}/${postId}/share`, { comment: "Shared a post" });
+  const body = res.data as {
+    data?: {
+      shareableLink?: string;
+      originalPostSharesCount?: number;
+      sharedPost?: CommunityPost;
+    };
+    shareableLink?: string;
+    originalPostSharesCount?: number;
+    sharedPost?: CommunityPost;
+  };
+  const d = body.data ?? body;
   return {
-    shareableLink: `${base}#post-${postId}`,
-    sharesCount: 0,
+    shareableLink: String(d?.shareableLink ?? ""),
+    sharesCount: Number(d?.originalPostSharesCount ?? 0),
+    sharedPost: d?.sharedPost ? normalizePost(d.sharedPost) : undefined,
   };
 }
 
@@ -318,15 +372,15 @@ export async function fetchComments(
     | { data?: CommunityComment[] }
   >(res.data);
   if (inner && typeof inner === "object" && "comments" in inner && inner.comments) {
-    return { comments: inner.comments };
+    return { comments: inner.comments.map(normalizeComment) };
   }
   if (inner && typeof inner === "object" && "data" in inner) {
     const d = inner.data as { comments?: CommunityComment[] } | CommunityComment[];
     if (Array.isArray(d)) {
-      return { comments: d };
+      return { comments: d.map(normalizeComment) };
     }
     if (d && typeof d === "object" && "comments" in d && Array.isArray(d.comments)) {
-      return { comments: d.comments };
+      return { comments: d.comments.map(normalizeComment) };
     }
   }
   return { comments: [] };
@@ -334,55 +388,29 @@ export async function fetchComments(
 
 export async function createComment(postId: string, text: string, image?: File): Promise<CommunityComment> {
   const endpoint = `${POSTS}/${postId}/comments`;
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error("Comment text is required");
+  }
 
   const parse = (raw: unknown): CommunityComment => {
     const inner = unwrapData<{ data?: CommunityComment } | CommunityComment>(raw as never);
     if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-      return inner.data as CommunityComment;
+      return normalizeComment(inner.data);
     }
-    return inner as CommunityComment;
+    return normalizeComment(inner);
   };
 
-  // 1) Try JSON payload with expected key
-  try {
-    const res = await API.post(endpoint, { text });
-    return parse(res.data);
-  } catch (error) {
-    const message = (
-      error as { response?: { data?: { message?: unknown } } }
-    )?.response?.data?.message;
-    const looksLikeTextValidationError =
-      typeof message === "object" &&
-      message !== null &&
-      "property" in message &&
-      (message as { property?: string }).property === "text";
-
-    if (!looksLikeTextValidationError && !image) {
-      throw error;
-    }
+  // Send both `text` and `content` in one request for gateway compatibility.
+  const form = new FormData();
+  form.append("text", trimmed);
+  form.append("content", trimmed);
+  if (image) {
+    // Community comment endpoint uses FileInterceptor("file").
+    form.append("file", image);
   }
-
-  // 2) Try alternate backend key naming (some handlers use `content`)
-  try {
-    const res = await API.post(endpoint, { content: text });
-    return parse(res.data);
-  } catch {
-    if (!image) {
-      // 3) As last resort for text-only comments, send multipart with both keys
-      const form = new FormData();
-      form.append("text", text);
-      form.append("content", text);
-      const res = await API.post(endpoint, form);
-      return parse(res.data);
-    }
-    // 3) With image present, send multipart including both possible text keys
-    const form = new FormData();
-    form.append("text", text);
-    form.append("content", text);
-    form.append("files", image);
-    const res = await API.post(endpoint, form);
-    return parse(res.data);
-  }
+  const res = await API.post(endpoint, form);
+  return parse(res.data);
 }
 
 export async function updateComment(
@@ -395,9 +423,9 @@ export async function updateComment(
   const parse = (raw: unknown): CommunityComment => {
     const inner = unwrapData<{ data?: CommunityComment } | CommunityComment>(raw as never);
     if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-      return inner.data as CommunityComment;
+      return normalizeComment(inner.data);
     }
-    return inner as CommunityComment;
+    return normalizeComment(inner);
   };
 
   try {
@@ -418,7 +446,7 @@ export async function updateComment(
   form.append("text", text);
   form.append("content", text);
   if (image) {
-    form.append("files", image);
+    form.append("file", image);
   }
   const res = await API.put(endpoint, form);
   return parse(res.data);

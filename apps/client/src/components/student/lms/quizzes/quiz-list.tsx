@@ -30,7 +30,7 @@ export default function QuizList({ quizzes }: QuizListProps) {
 
       await Promise.allSettled(ids.map(async (id) => {
         try {
-          if (userId) await fetchAttempts(id, userId);
+          if (userId) await fetchAttempts(id);
         } finally {
           if (!cancelled) setLoadingMap(prev => ({ ...prev, [id]: false }));
         }

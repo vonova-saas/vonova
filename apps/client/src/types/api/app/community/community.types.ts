@@ -77,10 +77,15 @@ export type ArticlesListResponse = {
 
 export type CommunityPost = {
   _id: string;
+  type?: "post" | "repost";
   content: string;
   image?: string | null;
   images?: string[];
   author?: CommunityAuthor | string;
+  originalPost?: CommunityPost | null;
+  sharedPost?: CommunityPost | null;
+  sharedBy?: CommunityAuthor | string | null;
+  shareComment?: string | null;
   likesCount?: number;
   commentsCount?: number;
   sharesCount?: number;

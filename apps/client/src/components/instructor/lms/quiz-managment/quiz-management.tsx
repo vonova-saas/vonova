@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Component, Plus, RefreshCcw } from "lucide-react";
+import { Component, Plus, RefreshCcw } from "lucide-react";
 import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { useQuizStore } from "@/lib/stores";
 import InstructorQuizList from "./quiz-list";
@@ -21,7 +21,7 @@ export default function QuizManagement() {
 
   useEffect(() => {
     if (userId) {
-      fetchInstructorQuizzes(userId);
+      fetchInstructorQuizzes();
     }
   }, [userId, fetchInstructorQuizzes]);
 
@@ -45,57 +45,69 @@ export default function QuizManagement() {
 
   const handleDelete = async (id: string) => {
     if (userId) {
-      await deleteQuiz(id, userId);
+      await deleteQuiz(id);
     }
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start overflow-auto relative p-6"
-      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}
-    >
-      <div className="flex items-center gap-2 mb-4 w-full max-w-5xl">
-        <h1 className="text-4xl font-bold leading-tight">Quiz Management</h1>
-        <Component className="w-7 h-7 text-primary animate-pulse" />
-        <div className="ml-auto flex gap-2">
-          <Button variant="outline" onClick={() => userId && fetchInstructorQuizzes(userId)} title="Refresh" className="cursor-pointer">
-            <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
-          </Button>
-          <Link href={`/instructor/${userId}/quiz-managment/create`}>
-            <Button className="cursor-pointer">
-              <Plus className="w-4 h-4 mr-2" /> New Quiz
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+            <Component className="h-3.5 w-3.5 text-primary" />
+            Instructor hub
+          </div>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Quiz Management</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Create, edit, and manage your quizzes in one clear workspace.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => userId && fetchInstructorQuizzes()}
+              title="Refresh"
+              className="cursor-pointer rounded-full border-primary/25 bg-background/60 backdrop-blur"
+            >
+              <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
             </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Summary */}
-      <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm">
-        <CardContent className="py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-primary drop-shadow-sm">{totalQuizzes}</span>
-                  <span className="text-base font-medium text-muted-foreground mb-1">Total Quizzes</span>
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
-                    {totalQuestions} Questions
-                  </span>
-                </div>
+            <Link href={`/instructor/${userId}/quiz-managment/create`}>
+              <Button className="cursor-pointer rounded-full px-8">
+                <Plus className="w-4 h-4 mr-2" /> New Quiz
+              </Button>
+            </Link>
+          </div>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalQuizzes}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Total Quizzes
               </div>
             </div>
-            <div className="flex-1 text-center md:text-right flex flex-col justify-center">
-              <span className="text-lg font-semibold text-primary">Create, edit, and manage your quizzes</span>
-              <span className="text-muted-foreground text-sm mt-1">Keep your content up to date and engaging.</span>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalQuestions}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Questions
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">Ready</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Workspace
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-6xl px-4 pt-10">
       {/* Search */}
       <div className="w-full max-w-5xl flex gap-4 mb-6">
         <Input placeholder="Search quizzes..." value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -117,6 +129,7 @@ export default function QuizManagement() {
           onDelete={(id) => handleDelete(id)}
         />
       )}
+      </div>
     </div>
   );
 }

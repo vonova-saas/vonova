@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Book, ImageIcon, Presentation, Library, CheckCircle2, HelpCircle } from "lucide-react";
+import { Book, ImageIcon, Presentation, Library, CheckCircle2, HelpCircle, Sparkles, RefreshCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from "@/components/ui/dialog";
@@ -54,19 +55,60 @@ export default function MaterialLibrary() {
   const progressPercent = Math.round((exploredSections / totalSections) * 100);
 
   return (
-    <div
-      className="h-full w-full flex flex-col items-center justify-center overflow-auto relative bg-background p-6"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-        backgroundSize: "18px 18px",
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <h1 className="text-4xl font-bold leading-tight" tabIndex={0} aria-label="Material Library">Material Library</h1>
-        <Library className="w-7 h-7 text-primary animate-pulse" aria-hidden="true" focusable="false" />
-      </div>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            Student hub
+          </Badge>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Material Library</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Access books, guides, and presentations to boost your computer science journey.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalSections}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Sections
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalTopics}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Topics
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalMaterials}+</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Materials
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-4 pt-10 flex flex-col items-center">
       {/* Summary Card with Help Button */}
       <Card className="w-full max-w-5xl mb-6 shadow-lg border-2 backdrop-blur-sm relative">
         {/* Help Dialog */}
@@ -202,6 +244,7 @@ export default function MaterialLibrary() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

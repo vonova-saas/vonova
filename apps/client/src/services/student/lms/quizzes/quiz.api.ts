@@ -13,31 +13,8 @@ import {
   getAttemptsTypeResponse,
 } from "@/types/api/student/lms/quizzes/quiz.type";
 
-/**
- * LMS quiz HTTP API (gateway: `/api/v1/lms/quizzes`).
- *
- * Path segments use **creator id** (instructor) vs **student id** explicitly — they must not be swapped:
- * - Creator routes: `POST|PATCH|DELETE|GET .../:instructorId...` — the account that owns/manages quizzes.
- * - Student routes: `GET .../:studentUserId/:quizId/my-attempts` — the account taking the quiz.
- * - Quiz identity: `GET .../quiz/:quizId` — fetch one quiz by its document id (not a user id).
- */
-const LMS_QUIZZES = "/lms/quizzes";
-
-function assertInstructorId(instructorId: string | undefined): string {
-  const id = instructorId?.trim();
-  if (!id) {
-    throw new Error("Instructor (creator) ID is required");
-  }
-  return id;
-}
-
-function assertStudentUserId(studentUserId: string | undefined): string {
-  const id = studentUserId?.trim();
-  if (!id) {
-    throw new Error("Student user ID is required");
-  }
-  return id;
-}
+const LMS_QUIZZES_INSTRUCTOR = "/lms/instructor/quizzes";
+const LMS_QUIZZES_STUDENT = "/lms/student/quizzes";
 
 /** Backend DTOs expect `noOfQuestions` as a number; UI forms use string inputs. */
 function withNumericQuestionCount<T extends { noOfQuestions?: string | number; questions: unknown[] }>(
@@ -58,67 +35,48 @@ function withNumericQuestionCount<T extends { noOfQuestions?: string | number; q
 // ========== Instructor (creator) — manage quizzes ==========
 
 export const createNewQuizMutationFn = async (
-  instructorId: string,
   quizData: createQuizType,
 ): Promise<createQuizTypeResponse> => {
-  const uid = assertInstructorId(instructorId);
   const body = withNumericQuestionCount(quizData);
-  const response = await API.post<createQuizTypeResponse>(`${LMS_QUIZZES}/${uid}`, body);
+  const response = await API.post<createQuizTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}`, body);
   return response.data;
 };
 
 export const updateQuizMutationFn = async (
-  instructorId: string,
   quizId: string,
   quizData: updateQuizType,
 ): Promise<updateQuizTypeResponse> => {
-  const uid = assertInstructorId(instructorId);
   const qid = quizId?.trim();
   if (!qid) {
     throw new Error("Quiz ID is required");
   }
   const body = withNumericQuestionCount(quizData);
-  const response = await API.patch<updateQuizTypeResponse>(`${LMS_QUIZZES}/${uid}/${qid}`, body);
+  const response = await API.patch<updateQuizTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}/${qid}`, body);
   return response.data;
 };
 
 export const deleteQuizMutationFn = async (
-  instructorId: string,
   quizId: string,
 ): Promise<deleteQuizTypeResponse> => {
-  const uid = assertInstructorId(instructorId);
   const qid = quizId?.trim();
   if (!qid) {
     throw new Error("Quiz ID is required");
   }
-  const response = await API.delete<deleteQuizTypeResponse>(`${LMS_QUIZZES}/${uid}/${qid}`);
+  const response = await API.delete<deleteQuizTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}/${qid}`);
   return response.data;
 };
 
-/** Quizzes created by this instructor (creator id in path). */
-export const getInstructorQuizzesMutationFn = async (
-  instructorId: string,
-): Promise<getAllQuizzesTypeResponse> => {
-  const uid = assertInstructorId(instructorId);
-  const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}/${uid}`);
+/** Quizzes created by the authenticated instructor. */
+export const getInstructorQuizzesMutationFn = async (): Promise<getAllQuizzesTypeResponse> => {
+  const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}`);
   return response.data;
 };
 
 // ========== Student — browse & take quizzes ==========
 
 export const getAllQuizzesMutationFn = async (): Promise<getAllQuizzesTypeResponse> => {
-  try {
-    const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}`);
-    return response.data;
-  } catch (error: unknown) {
-    // Backward-compatibility for older deployed gateways that still expose the legacy path.
-    const status = (error as { response?: { status?: number } })?.response?.status;
-    if (status === 404) {
-      const legacyResponse = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES}/getAllQuizzes`);
-      return legacyResponse.data;
-    }
-    throw error;
-  }
+  const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES_STUDENT}`);
+  return response.data;
 };
 
 /** Single quiz by its id — uses `/quiz/:quizId` so it is not confused with “all quizzes for user”. */
@@ -129,7 +87,7 @@ export const getQuizByIdMutationFn = async (
   if (!qid) {
     throw new Error("Quiz ID is required");
   }
-  const response = await API.get<getQuizByIdTypeResponse>(`${LMS_QUIZZES}/quiz/${qid}`);
+  const response = await API.get<getQuizByIdTypeResponse>(`${LMS_QUIZZES_STUDENT}/${qid}`);
   return response.data;
 };
 
@@ -141,7 +99,7 @@ export const submitQuizMutationFn = async (
   if (!qid) {
     throw new Error("Quiz ID is required");
   }
-  const response = await API.post<submitQuizTypeResponse>(`${LMS_QUIZZES}/${qid}/submit`, answers);
+  const response = await API.post<submitQuizTypeResponse>(`${LMS_QUIZZES_STUDENT}/${qid}/submit`, answers);
   return response.data;
 };
 
@@ -153,25 +111,19 @@ export const getQuizAttemptByIdMutationFn = async (
   if (!aid) {
     throw new Error("Attempt ID is required");
   }
-  const response = await API.get<getAttemptsTypeResponse>(`${LMS_QUIZZES}/attempts/${aid}`);
+  const response = await API.get<getAttemptsTypeResponse>(`${LMS_QUIZZES_STUDENT}/attempts/${aid}`);
   return response.data;
 };
 
-/**
- * All attempts by this **student** for a given quiz.
- * Gateway: `GET /{studentUserId}/{quizId}/my-attempts`
- */
 export const getStudentQuizAttemptsMutationFn = async (
-  studentUserId: string,
-  quizId: string,
+  quizId?: string,
 ): Promise<getAttemptsTypeResponse> => {
-  const sid = assertStudentUserId(studentUserId);
-  const qid = quizId?.trim();
-  if (!qid) {
-    throw new Error("Quiz ID is required");
+  if (quizId?.trim()) {
+    const response = await API.get<getAttemptsTypeResponse>(
+      `${LMS_QUIZZES_STUDENT}/${quizId.trim()}/attempts`,
+    );
+    return response.data;
   }
-  const response = await API.get<getAttemptsTypeResponse>(
-    `${LMS_QUIZZES}/${sid}/${qid}/my-attempts`,
-  );
+  const response = await API.get<getAttemptsTypeResponse>(`${LMS_QUIZZES_STUDENT}/attempts`);
   return response.data;
 };

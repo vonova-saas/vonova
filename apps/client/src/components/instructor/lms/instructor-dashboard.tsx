@@ -215,7 +215,7 @@ export default function InstructorDashboard() {
 
   useEffect(() => {
     if (user?._id) {
-      void fetchInstructorQuizzes(user._id);
+      void fetchInstructorQuizzes();
     }
   }, [user?._id, fetchInstructorQuizzes]);
 

@@ -31,12 +31,12 @@ type QuizStore = {
   error: string | null;
   // actions
   fetchAll: () => Promise<void>;
-  fetchInstructorQuizzes: (userId: string) => Promise<void>;
+  fetchInstructorQuizzes: () => Promise<void>;
   fetchById: (id: string) => Promise<QuizType | undefined>;
-  createQuiz: (payload: createQuizType, userId?: string) => Promise<QuizType | undefined>;
-  updateQuiz: (id: string, payload: updateQuizType, userId?: string) => Promise<void>;
-  deleteQuiz: (id: string, userId?: string) => Promise<void>;
-  fetchAttempts: (quizId: string, studentUserId: string) => Promise<AttemptSummary[]>;
+  createQuiz: (payload: createQuizType) => Promise<QuizType | undefined>;
+  updateQuiz: (id: string, payload: updateQuizType) => Promise<void>;
+  deleteQuiz: (id: string) => Promise<void>;
+  fetchAttempts: (quizId: string) => Promise<AttemptSummary[]>;
   getLatestAttempt: (quizId: string) => AttemptSummary | null;
   clearError: () => void;
 };
@@ -70,10 +70,10 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  fetchInstructorQuizzes: async (userId: string) => {
+  fetchInstructorQuizzes: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await getInstructorQuizzesMutationFn(userId);
+      const res = await getInstructorQuizzesMutationFn();
 
       // Handle different response structures
       let list: QuizType[] = [];
@@ -119,12 +119,10 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  createQuiz: async (payload: createQuizType, userId?: string) => {
+  createQuiz: async (payload: createQuizType) => {
     set({ loading: true, error: null });
     try {
-      if (!userId) throw new Error("User ID required");
-
-      const res = await createNewQuizMutationFn(userId, payload);
+      const res = await createNewQuizMutationFn(payload);
       const created = (res as { data: QuizType }).data as unknown as QuizType;
       set((st) => ({
         quizzesById: { ...st.quizzesById, [created._id]: created },
@@ -140,12 +138,10 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  updateQuiz: async (id: string, payload: updateQuizType, userId?: string) => {
+  updateQuiz: async (id: string, payload: updateQuizType) => {
     set({ loading: true, error: null });
     try {
-      if (!userId) throw new Error("User ID required");
-
-      await updateQuizMutationFn(userId, id, payload);
+      await updateQuizMutationFn(id, payload);
       // optimistic: merge into cache
       set((st) => ({
         quizzesById: st.quizzesById[id]
@@ -160,12 +156,10 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  deleteQuiz: async (id: string, userId?: string) => {
+  deleteQuiz: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      if (!userId) throw new Error("User ID required");
-
-      await deleteQuizMutationFn(userId, id);
+      await deleteQuizMutationFn(id);
       set((st) => {
         const rest = { ...st.quizzesById };
         delete rest[id];
@@ -179,14 +173,9 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     }
   },
 
-  fetchAttempts: async (quizId: string, studentUserId: string) => {
+  fetchAttempts: async (quizId: string) => {
     try {
-      const sid = studentUserId?.trim();
-      if (!sid) {
-        set({ error: "Student user ID is required to load attempts" });
-        return [];
-      }
-      const res = await getStudentQuizAttemptsMutationFn(sid, quizId);
+      const res = await getStudentQuizAttemptsMutationFn(quizId);
       const raw = (res as getAttemptsTypeResponse).data as unknown;
       const arr = Array.isArray(raw) ? raw : [raw];
       const attempts: AttemptSummary[] = arr.map((a) => ({

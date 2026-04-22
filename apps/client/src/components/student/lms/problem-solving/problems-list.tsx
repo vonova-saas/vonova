@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Search, Filter, RefreshCcw, BrainCog } from "lucide-react";
+import { Search, Filter, RefreshCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 
 export default function ProblemsList() {
   const userId = useUserId();
@@ -49,72 +51,61 @@ export default function ProblemsList() {
   };
 
   return (
-    <div
-      className="h-full w-full flex flex-col items-center justify-start overflow-auto relative p-6"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-        backgroundSize: "18px 18px",
-      }}
-    >
-      {/* Header with title and refresh button */}
-      <div className="flex items-center mb-4 w-full max-w-3xl">
-        <div className="flex items-center gap-2">
-          <h1 className="text-4xl font-bold leading-tight">Problem Solving</h1>
-          <BrainCog className="w-7 h-7 text-primary animate-pulse" />
-        </div>
-
-        <div className="ml-auto flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            title="Refresh"
-            className="cursor-pointer"
-          >
-            <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Summary card */}
-      <Card className="w-full max-w-3xl mb-6 shadow-lg border-2 backdrop-blur-sm">
-        <CardContent className="py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-primary drop-shadow-sm">
-                    {PROBLEMS.length}
-                  </span>
-                  <span className="text-base font-medium text-muted-foreground mb-1">
-                    Total Problems
-                  </span>
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
-                    {difficulties.length - 1} Difficulties
-                  </span>
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold border border-primary/10">
-                    {totalExamples} Examples
-                  </span>
-                </div>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            Student hub
+          </Badge>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Problem Solving</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Practice classic coding interview questions and build confidence.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+              onClick={handleRefresh}
+              title="Refresh"
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{PROBLEMS.length}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Problems
               </div>
             </div>
-            <div className="flex-1 text-center md:text-right flex flex-col justify-center">
-              <span className="text-lg font-semibold text-primary">
-                Ready to train on real problems?
-              </span>
-              <span className="text-muted-foreground text-sm mt-1">
-                Practice classic coding interview questions and build confidence.
-              </span>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{difficulties.length - 1}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Difficulties
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalExamples}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Examples
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-6xl px-4 pt-10">
       {/* Search and filter */}
       <div className="w-full max-w-3xl flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
@@ -192,6 +183,7 @@ export default function ProblemsList() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

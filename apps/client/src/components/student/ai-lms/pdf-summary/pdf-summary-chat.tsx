@@ -635,14 +635,10 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
   // If viewing a specific PDF chat (individual chat mode), show the chat interface
   if (isIndividualChat && currentPDF) {
     return (
-      <div
-        className="h-screen w-full flex flex-col overflow-hidden relative"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-          backgroundSize: "18px 18px",
-        }}
-      >
+      <div className="h-screen w-full flex flex-col overflow-hidden relative">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 border-b bg-linear-to-br from-primary/12 via-background to-muted/30" />
+        <div aria-hidden className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -right-20 top-8 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl" />
         {/* Chat Header */}
         <div className="sticky top-0 z-[100] flex items-center justify-between p-4 border-b bg-background flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -963,26 +959,48 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
   // Main layout - following the roadmap pattern
   return (
     <>
-      <div
-        className="h-full w-full min-h-screen flex flex-col items-center justify-center overflow-hidden relative bg-background"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-          backgroundSize: "18px 18px",
-        }}
-      >
-        {/* Header */}
-        <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto pt-8 pb-4">
-          <FileText className="w-10 h-10 md:w-12 md:h-12 text-primary mb-3" />
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mb-1 text-center">
-            PDF Summary & Chat
-          </h1>
-          <p className="text-base md:text-lg text-muted-foreground font-normal text-center mb-2">
-            Upload your PDF files and chat with AI to get instant summaries,
-            answers, and insights from your documents.
-          </p>
-          <div className="w-16 h-1 rounded-full bg-primary/20 mx-auto mb-2" />
-        </div>
+      <div className="min-h-full w-full pb-16 relative">
+        <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+          />
+          <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+            <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+              <FileText className="mr-1 inline h-3.5 w-3.5" />
+              Student hub
+            </Badge>
+            <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">PDF Summary</h1>
+            <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+              Upload your PDF files and chat with AI to get instant summaries and insights.
+            </p>
+            <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+                <div className="text-2xl font-semibold tabular-nums md:text-3xl">AI</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                  Powered
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+                <div className="text-2xl font-semibold tabular-nums md:text-3xl">PDF</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                  Upload
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+                <div className="text-2xl font-semibold tabular-nums md:text-3xl">Chat</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                  Summary
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div className="mx-auto max-w-6xl px-4 pt-10">
 
         {/* Main Content - PDF Upload Card in Center */}
         <div className="flex flex-1 items-center justify-center w-full">
@@ -1019,6 +1037,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
           </div>
           <div className="w-16 h-1 rounded-full bg-primary/20 mb-6" />
           <LastPDFChats onChat={handleChat} />
+        </div>
         </div>
       </div>
 

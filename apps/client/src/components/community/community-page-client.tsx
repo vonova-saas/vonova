@@ -18,6 +18,7 @@ import {
 import type {
   CommunityArticle,
   CommunityArticleCategory,
+  CommunityAuthor,
   CommunityComment,
   CommunityPost,
 } from "@/types/api/app/community/community.types";
@@ -146,6 +147,43 @@ function pickPostImage(post: CommunityPost): string | undefined {
   return undefined;
 }
 
+function resolveOriginalPost(post: CommunityPost): CommunityPost | null {
+  if (post.originalPost && typeof post.originalPost === "object") return post.originalPost;
+  if (post.sharedPost && typeof post.sharedPost === "object") return post.sharedPost;
+  if ((post as unknown as { original_post?: CommunityPost }).original_post) {
+    return (post as unknown as { original_post?: CommunityPost }).original_post ?? null;
+  }
+  if ((post as unknown as { repost?: CommunityPost }).repost) {
+    return (post as unknown as { repost?: CommunityPost }).repost ?? null;
+  }
+  return null;
+}
+
+async function fetchAllRepostUsersForPost(postId: string): Promise<CommunityAuthor[]> {
+  const seen = new Set<string>();
+  const users: CommunityAuthor[] = [];
+  const limit = 50;
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const payload = await fetchPosts(page, limit);
+    totalPages = Math.max(1, payload.totalPages ?? 1);
+    for (const post of payload.posts ?? []) {
+      const original = resolveOriginalPost(post);
+      if (!original || original._id !== postId) continue;
+      if (!post.author || typeof post.author === "string") continue;
+      const key = post.author._id ?? post.author.email ?? post.author.name ?? "";
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      users.push(post.author);
+    }
+    page += 1;
+  }
+
+  return users;
+}
+
 function isMostlyArabic(text?: string): boolean {
   if (!text) return false;
   const arabicCount = (text.match(/[\u0600-\u06FF]/g) || []).length;
@@ -221,6 +259,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
   const [postScope, setPostScope] = useState<"all" | "mine">("all");
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [commentFiles, setCommentFiles] = useState<Record<string, File | null>>({});
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const articleParams = useMemo(
@@ -270,6 +309,21 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
   }, [postsInfinite.data?.pages]);
 
   const postsTotal = postsInfinite.data?.pages[0]?.total;
+
+  const repostUsersByPostId = useMemo(() => {
+    const byPost = new Map<string, CommunityAuthor[]>();
+    for (const post of feedPosts) {
+      const original = resolveOriginalPost(post);
+      if (!original?._id) continue;
+      if (!post.author || typeof post.author === "string") continue;
+      const current = byPost.get(original._id) ?? [];
+      if (!current.some((u) => u._id && post.author && typeof post.author === "object" && u._id === post.author._id)) {
+        current.push(post.author);
+      }
+      byPost.set(original._id, current);
+    }
+    return byPost;
+  }, [feedPosts]);
 
   const loadMorePosts = useCallback(() => {
     if (postsInfinite.hasNextPage && !postsInfinite.isFetchingNextPage) {
@@ -369,10 +423,11 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
   });
 
   const createCommentMut = useMutation({
-    mutationFn: ({ postId, text }: { postId: string; text: string }) =>
-      createComment(postId, text),
+    mutationFn: ({ postId, text, image }: { postId: string; text: string; image?: File }) =>
+      createComment(postId, text, image),
     onSuccess: (_, v) => {
       setCommentDrafts((d) => ({ ...d, [v.postId]: "" }));
+      setCommentFiles((files) => ({ ...files, [v.postId]: null }));
       void qc.invalidateQueries({ queryKey: ["community", "comments", v.postId] });
       void qc.invalidateQueries({ queryKey: ["community", "posts"] });
       toast({ title: "Comment added" });
@@ -773,37 +828,96 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                     </CardContent>
                   </Card>
                 ) : (
-                  feedPosts.map((post) => (
-                    <PostCard
-                      key={post._id}
-                      post={post}
-                      userId={user?._id}
-                      isAdmin={isAdmin}
-                      expanded={expandedPostId === post._id}
-                      onToggleComments={() =>
-                        setExpandedPostId((id) => (id === post._id ? null : post._id))
-                      }
-                      comments={commentsQuery.data?.comments ?? []}
-                      commentsLoading={Boolean(expandedPostId === post._id && commentsQuery.isFetching)}
-                      commentText={commentDrafts[post._id] ?? ""}
-                      onCommentChange={(t) =>
-                        setCommentDrafts((d) => ({
-                          ...d,
-                          [post._id]: t,
-                        }))
-                      }
-                      onSubmitComment={() => {
-                        const t = (commentDrafts[post._id] ?? "").trim();
-                        if (!t) return;
-                        createCommentMut.mutate({ postId: post._id, text: t });
-                      }}
-                      onDeletePost={() => deletePostMut.mutate(post._id)}
-                      onLike={() => likePostMut.mutate(post._id)}
-                      onShare={() => sharePostMut.mutate(post._id)}
-                      onDeleteComment={(id) => deleteCommentMut.mutate(id)}
-                      onLikeComment={(id) => likeCommentMut.mutate(id)}
-                    />
-                  ))
+                  feedPosts.map((post) => {
+                    console.log("POST DATA:", post);
+                    const originalPost = resolveOriginalPost(post);
+                    if (originalPost) {
+                      return (
+                        <RepostWrapper
+                          key={post._id}
+                          repost={post}
+                          originalPost={originalPost}
+                          userId={user?._id}
+                          isAdmin={isAdmin}
+                          expanded={expandedPostId === originalPost._id}
+                          onToggleComments={() =>
+                            setExpandedPostId((id) => (id === originalPost._id ? null : originalPost._id))
+                          }
+                          comments={commentsQuery.data?.comments ?? []}
+                          commentsLoading={Boolean(
+                            expandedPostId === originalPost._id && commentsQuery.isFetching,
+                          )}
+                          commentText={commentDrafts[originalPost._id] ?? ""}
+                          commentImage={commentFiles[originalPost._id] ?? null}
+                          onCommentChange={(t) =>
+                            setCommentDrafts((d) => ({
+                              ...d,
+                              [originalPost._id]: t,
+                            }))
+                          }
+                          onCommentImageChange={(f) =>
+                            setCommentFiles((files) => ({
+                              ...files,
+                              [originalPost._id]: f,
+                            }))
+                          }
+                          onSubmitComment={() => {
+                            const t = (commentDrafts[originalPost._id] ?? "").trim();
+                            const image = commentFiles[originalPost._id] ?? undefined;
+                            if (!t) return;
+                            createCommentMut.mutate({ postId: originalPost._id, text: t, image });
+                          }}
+                          onDeletePost={() => deletePostMut.mutate(post._id)}
+                          onLike={() => likePostMut.mutate(originalPost._id)}
+                          onShare={() => sharePostMut.mutate(originalPost._id)}
+                          onDeleteComment={(id) => deleteCommentMut.mutate(id)}
+                          onLikeComment={(id) => likeCommentMut.mutate(id)}
+                          repostUsers={repostUsersByPostId.get(originalPost._id) ?? []}
+                        />
+                      );
+                    }
+
+                    return (
+                      <PostCard
+                        key={post._id}
+                        post={post}
+                        userId={user?._id}
+                        isAdmin={isAdmin}
+                        expanded={expandedPostId === post._id}
+                        onToggleComments={() =>
+                          setExpandedPostId((id) => (id === post._id ? null : post._id))
+                        }
+                        comments={commentsQuery.data?.comments ?? []}
+                        commentsLoading={Boolean(expandedPostId === post._id && commentsQuery.isFetching)}
+                        commentText={commentDrafts[post._id] ?? ""}
+                        commentImage={commentFiles[post._id] ?? null}
+                        onCommentChange={(t) =>
+                          setCommentDrafts((d) => ({
+                            ...d,
+                            [post._id]: t,
+                          }))
+                        }
+                        onCommentImageChange={(f) =>
+                          setCommentFiles((files) => ({
+                            ...files,
+                            [post._id]: f,
+                          }))
+                        }
+                        onSubmitComment={() => {
+                          const t = (commentDrafts[post._id] ?? "").trim();
+                          const image = commentFiles[post._id] ?? undefined;
+                          if (!t) return;
+                          createCommentMut.mutate({ postId: post._id, text: t, image });
+                        }}
+                        onDeletePost={() => deletePostMut.mutate(post._id)}
+                        onLike={() => likePostMut.mutate(post._id)}
+                        onShare={() => sharePostMut.mutate(post._id)}
+                        onDeleteComment={(id) => deleteCommentMut.mutate(id)}
+                        onLikeComment={(id) => likeCommentMut.mutate(id)}
+                        repostUsers={repostUsersByPostId.get(post._id) ?? []}
+                      />
+                    );
+                  })
                 )}
                 <FeedEndSentinel
                   hasNext={Boolean(postsInfinite.hasNextPage)}
@@ -988,14 +1102,84 @@ type PostCardProps = {
   comments: CommunityComment[];
   commentsLoading: boolean;
   commentText: string;
+  commentImage: File | null;
   onCommentChange: (t: string) => void;
+  onCommentImageChange: (f: File | null) => void;
   onSubmitComment: () => void;
   onDeletePost: () => void;
   onLike: () => void;
   onShare: () => void;
   onDeleteComment: (id: string) => void;
   onLikeComment: (id: string) => void;
+  repostUsers: CommunityAuthor[];
 };
+
+type RepostWrapperProps = Omit<PostCardProps, "post"> & {
+  repost: CommunityPost;
+  originalPost: CommunityPost;
+};
+
+function RepostWrapper({
+  repost,
+  originalPost,
+  userId,
+  isAdmin,
+  expanded,
+  onToggleComments,
+  comments,
+  commentsLoading,
+  commentText,
+  commentImage,
+  onCommentChange,
+  onCommentImageChange,
+  onSubmitComment,
+  onDeletePost,
+  onLike,
+  onShare,
+  onDeleteComment,
+  onLikeComment,
+  repostUsers,
+}: RepostWrapperProps) {
+  return (
+    <Card id={`post-${repost._id}`} className="overflow-hidden rounded-2xl border-border/70 shadow-sm">
+      <div className="border-b bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        This post is not eligible to be boosted.
+      </div>
+      <div className="border-b px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={authorPic(repost.author)} />
+            <AvatarFallback>{initials(authorName(repost.author))}</AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium">{authorName(repost.author)}</span>
+          <span className="text-sm text-muted-foreground">reposted this</span>
+        </div>
+      </div>
+      <div className="p-3">
+        <PostCard
+          post={originalPost}
+          userId={userId}
+          isAdmin={isAdmin}
+          expanded={expanded}
+          onToggleComments={onToggleComments}
+          comments={comments}
+          commentsLoading={commentsLoading}
+          commentText={commentText}
+          commentImage={commentImage}
+          onCommentChange={onCommentChange}
+          onCommentImageChange={onCommentImageChange}
+          onSubmitComment={onSubmitComment}
+          onDeletePost={onDeletePost}
+          onLike={onLike}
+          onShare={onShare}
+          onDeleteComment={onDeleteComment}
+          onLikeComment={onLikeComment}
+          repostUsers={repostUsers}
+        />
+      </div>
+    </Card>
+  );
+}
 
 function PostCard({
   post,
@@ -1006,14 +1190,22 @@ function PostCard({
   comments,
   commentsLoading,
   commentText,
+  commentImage,
   onCommentChange,
+  onCommentImageChange,
   onSubmitComment,
   onDeletePost,
   onLike,
   onShare,
   onDeleteComment,
   onLikeComment,
+  repostUsers,
 }: PostCardProps) {
+  const commentImageInputRef = useRef<HTMLInputElement>(null);
+  const [commentImageErrors, setCommentImageErrors] = useState<Record<string, boolean>>({});
+  const [repostsOpen, setRepostsOpen] = useState(false);
+  const [repostUsersList, setRepostUsersList] = useState<CommunityAuthor[]>(repostUsers);
+  const [repostsLoading, setRepostsLoading] = useState(false);
   const authorId =
     typeof post.author === "object" && post.author ? post.author._id : undefined;
   const canDeletePost = Boolean(userId && authorId && userId === authorId) || isAdmin;
@@ -1023,6 +1215,23 @@ function PostCard({
     false;
   const postImage = pickPostImage(post);
   const contentIsArabic = isMostlyArabic(post.content);
+
+  useEffect(() => {
+    setRepostUsersList(repostUsers);
+  }, [repostUsers]);
+
+  const openReposts = async () => {
+    setRepostsOpen(true);
+    if ((post.sharesCount ?? 0) <= 0) return;
+    if (repostUsersList.length > 0) return;
+    setRepostsLoading(true);
+    try {
+      const users = await fetchAllRepostUsersForPost(post._id);
+      setRepostUsersList(users);
+    } finally {
+      setRepostsLoading(false);
+    }
+  };
 
   return (
     <Card id={`post-${post._id}`} className="rounded-2xl border-border/70 shadow-sm">
@@ -1053,15 +1262,17 @@ function PostCard({
         ) : null}
       </CardHeader>
       <CardContent className="space-y-3 pb-2">
-        <p
-          dir={contentIsArabic ? "rtl" : "ltr"}
-          className={cn(
-            "whitespace-pre-wrap text-sm leading-relaxed",
-            contentIsArabic ? "text-right" : "text-left",
-          )}
-        >
-          {post.content}
-        </p>
+        {post.content?.trim() ? (
+          <p
+            dir={contentIsArabic ? "rtl" : "ltr"}
+            className={cn(
+              "whitespace-pre-wrap text-sm leading-relaxed",
+              contentIsArabic ? "text-right" : "text-left",
+            )}
+          >
+            {post.content}
+          </p>
+        ) : null}
         {postImage ? (
           <img
             src={encodeURI(postImage)}
@@ -1075,35 +1286,102 @@ function PostCard({
           />
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center gap-2 border-t pt-4">
-        <Button
-          type="button"
-          variant={liked ? "default" : "outline"}
-          size="sm"
-          className="rounded-full"
-          onClick={onLike}
-        >
-          <Heart className={cn("mr-1 h-4 w-4", liked && "fill-current")} />
-          {post.likesCount ?? 0}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-          onClick={onToggleComments}
-        >
-          <MessageCircle className="mr-1 h-4 w-4" />
-          {post.commentsCount ?? 0}
-        </Button>
-        <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onShare}>
-          <Share2 className="mr-1 h-4 w-4" />
-          Share
-        </Button>
+      <CardFooter className="block border-t px-4 pb-2 pt-2">
+        <div className="mb-2 flex items-center justify-between px-1 text-xs text-muted-foreground">
+          <span>{post.likesCount ?? 0} likes</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="underline-offset-2 hover:underline"
+              onClick={onToggleComments}
+            >
+              {post.commentsCount ?? 0} comments
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              className="underline-offset-2 hover:underline"
+              onClick={() => void openReposts()}
+            >
+              {post.sharesCount ?? 0} reposts
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-1 border-t pt-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-9 rounded-md text-muted-foreground hover:bg-muted/60",
+              liked && "text-rose-500",
+            )}
+            onClick={onLike}
+          >
+            <Heart className={cn("mr-1.5 h-4 w-4", liked && "fill-current")} />
+            Like
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 rounded-md text-muted-foreground hover:bg-muted/60"
+            onClick={onToggleComments}
+          >
+            <MessageCircle className="mr-1.5 h-4 w-4" />
+            Comment
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 rounded-md text-muted-foreground hover:bg-muted/60"
+            onClick={onShare}
+          >
+            <Share2 className="mr-1.5 h-4 w-4" />
+            Repost
+          </Button>
+        </div>
       </CardFooter>
       {expanded ? (
-        <div className="border-t px-6 pb-6 pt-4">
-          <p className="mb-3 text-sm font-medium">Comments</p>
+        <div className="border-t px-4 pb-4 pt-3">
+          <div className="mb-3 flex items-start gap-2">
+            <Avatar className="mt-0.5 h-8 w-8">
+              <AvatarImage src={typeof post.author === "object" ? authorPic(post.author) : undefined} />
+              <AvatarFallback>{initials(authorName(post.author))}</AvatarFallback>
+            </Avatar>
+            <div className="w-full rounded-full border bg-background px-2.5 py-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  placeholder="Add a comment..."
+                  value={commentText}
+                  onChange={(e) => onCommentChange(e.target.value)}
+                  className="h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full text-muted-foreground"
+                  onClick={() => commentImageInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                </Button>
+                <input
+                  ref={commentImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  aria-label="Attach comment photo"
+                  title="Attach comment photo"
+                  onChange={(e) => onCommentImageChange(e.target.files?.[0] ?? null)}
+                />
+                <Button type="button" size="sm" className="h-7 rounded-full px-3 text-xs" onClick={onSubmitComment}>
+                  Reply
+                </Button>
+              </div>
+            </div>
+          </div>
           {commentsLoading ? (
             <Skeleton className="h-16 w-full rounded-xl" />
           ) : (
@@ -1115,7 +1393,7 @@ function PostCard({
                 return (
                   <div
                     key={c._id}
-                    className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm"
+                    className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-sm"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{authorName(c.author)}</span>
@@ -1151,24 +1429,78 @@ function PostCard({
                     >
                       {c.text}
                     </p>
+                    {c.image ? (
+                      <div className="mt-2 rounded-lg border border-border/70 bg-background/60 p-2">
+                        {commentImageErrors[c._id] ? (
+                          <div className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                            Could not load image preview.
+                            <a
+                              href={c.image}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="ml-1 underline underline-offset-2"
+                            >
+                              Open image
+                            </a>
+                          </div>
+                        ) : (
+                          <img
+                            src={encodeURI(c.image)}
+                            alt="Comment attachment"
+                            className="max-h-72 w-full rounded-md object-contain"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={() =>
+                              setCommentImageErrors((prev) => ({
+                                ...prev,
+                                [c._id]: true,
+                              }))
+                            }
+                          />
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           )}
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Textarea
-              placeholder="Write a comment…"
-              value={commentText}
-              onChange={(e) => onCommentChange(e.target.value)}
-              className="min-h-[72px] flex-1 rounded-xl"
-            />
-            <Button type="button" className="rounded-full sm:self-end" onClick={onSubmitComment}>
-              Reply
-            </Button>
-          </div>
+          {commentImage ? (
+            <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+              Attached image: <span className="font-medium">{commentImage.name}</span>
+            </div>
+          ) : null}
         </div>
       ) : null}
+      <Dialog open={repostsOpen} onOpenChange={setRepostsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>People who reposted</DialogTitle>
+          </DialogHeader>
+          {repostsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading repost records...</p>
+          ) : repostUsersList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No repost records found in available API pages.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {repostUsersList.map((u, i) => (
+                <div
+                  key={`${u._id ?? u.email ?? u.name ?? "user"}-${i}`}
+                  className="flex items-center gap-2 rounded-lg border px-3 py-2"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={u.avatar || u.profilePicture} />
+                    <AvatarFallback>{initials(u.name || u.email || "Member")}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-sm font-medium">{u.name || u.email || "Member"}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -209,10 +209,22 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // If viewing a specific roadmap (roadmapId is present), show the roadmap with Save/Back buttons
   if (roadmapId) {
     return (
-      <div className="min-h-screen w-full h-full relative flex flex-col items-center justify-center bg-background" style={{
-        background: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.15) 1.5px, transparent 1.5px)",
-        backgroundSize: "18px 18px"
-      }}>
+      <div className="min-h-full w-full pb-16 relative">
+        <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+          <div aria-hidden className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl" />
+          <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              Student hub
+            </div>
+            <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">AI Roadmap Generator</h1>
+            <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+              Explore your generated learning path and refine it as you progress.
+            </p>
+          </div>
+        </section>
+        <div className="mx-auto max-w-6xl px-4 pt-10">
         {/* Beautiful Header */}
         <div className="w-full max-w-2xl mx-auto flex flex-col items-center mt-16 mb-8 px-4">
           <div className="flex flex-col items-center">
@@ -359,20 +371,29 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
             </div>
           </div>
         )}
+        </div>
       </div>
     );
   }
 
   // Main layout
   return (
-    <div className="h-full w-full min-h-screen flex flex-col items-center justify-center overflow-hidden relative bg-background" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}>
-      {/* Header */}
-      <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto pt-8 pb-4">
-        <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-primary mb-3" />
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mb-1 text-center">AI Roadmap Generator</h1>
-        <p className="text-base md:text-lg text-muted-foreground font-normal text-center mb-2">What would you like to learn today? Enter your topic and preferences below to generate a personalized learning roadmap.</p>
-        <div className="w-16 h-1 rounded-full bg-primary/20 mx-auto mb-2" />
-      </div>
+    <div className="min-h-full w-full pb-16 relative">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div aria-hidden className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl" />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Student hub
+          </div>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">AI Roadmap Generator</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Enter your topic and preferences to generate a personalized learning roadmap.
+          </p>
+        </div>
+      </section>
+      <div className="mx-auto max-w-6xl px-4 pt-10">
       {/* Stepper/Progress Indicator OUTSIDE the card */}
       <div className="flex flex-col items-center w-full mb-4">
         <div className="flex items-center justify-center w-full max-w-md mx-auto">
@@ -527,6 +548,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

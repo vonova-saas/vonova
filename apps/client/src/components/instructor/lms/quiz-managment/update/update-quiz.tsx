@@ -168,7 +168,6 @@ export default function EditQuizPage() {
           noOfQuestions: typeof noOfQuestions === "string" ? noOfQuestions.trim() : String(noOfQuestions ?? ""),
           questions,
         },
-        instructorId,
       );
 
       // ============== (draft) ==============
