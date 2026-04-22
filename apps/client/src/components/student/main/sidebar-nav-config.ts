@@ -1,22 +1,45 @@
 import {
-  // Bot,
   BookOpen,
-  // BrainCog,
   Component,
   FileText,
-  // Frame,
   LayoutDashboard,
   Settings2,
   SquareTerminal,
-  // TvMinimalPlay,
   Zap,
   LifeBuoy,
   User,
   BrainCog,
   Users,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-export const sidebarNavData = {
+export interface NavItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  isActive?: boolean;
+  items?: NavSubItem[];
+}
+
+export interface NavSubItem {
+  title: string;
+  url: string;
+}
+
+export interface SidebarNavData {
+  studentData: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+  roles: {
+    student: string;
+  };
+  lms: NavItem[];
+  app: NavItem[];
+}
+
+export const sidebarNavData: SidebarNavData = {
   studentData: {
     name: "",
     email: "",
@@ -67,11 +90,6 @@ export const sidebarNavData = {
       url: "/student/:studentId/pdf-summary",
       icon: FileText,
     },
-    // {
-    //   title: "AI Video Generator",
-    //   url: "/student/:studentId/ai-video-generator",
-    //   icon: TvMinimalPlay,
-    // },
     {
       title: "AI Roadmap Generator",
       url: "/student/:studentId/ai-roadmap-generator",
@@ -82,11 +100,6 @@ export const sidebarNavData = {
       url: "/student/:studentId/problem-solving",
       icon: BrainCog,
     },
-    // {
-    //   title: "AI Assistant",
-    //   url: "/student/:studentId/ai-assistant",
-    //   icon: Bot,
-    // },
   ],
   app: [
     {

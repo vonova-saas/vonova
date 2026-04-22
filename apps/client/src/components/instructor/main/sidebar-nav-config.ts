@@ -11,8 +11,36 @@ import {
   Video,
   Frame
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-export const sidebarNavData = {
+export interface NavItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  isActive?: boolean;
+  items?: NavSubItem[];
+}
+
+export interface NavSubItem {
+  title: string;
+  url: string;
+}
+
+export interface SidebarNavData {
+  instructorData: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+  roles: {
+    instructor: string;
+  };
+  lmsManagement: NavItem[];
+  lmsTools: NavItem[];
+  app: NavItem[];
+}
+
+export const sidebarNavData: SidebarNavData = {
   instructorData: {
     name: "",
     email: "",
@@ -31,7 +59,7 @@ export const sidebarNavData = {
     {
       title: "Courses Management",
       url: "/instructor/:instructorId/courses-management",
-      icon: SquareTerminal
+      icon: SquareTerminal,
     },
     {
       title: "Material Library Management",
@@ -74,7 +102,7 @@ export const sidebarNavData = {
       title: "Course Recorder",
       url: "/instructor/:instructorId/course-recorder",
       icon: Video,
-    }
+    },
   ],
   app: [
     {
