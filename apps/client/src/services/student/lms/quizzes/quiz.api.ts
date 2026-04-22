@@ -11,6 +11,7 @@ import {
   submitQuizType,
   submitQuizTypeResponse,
   getAttemptsTypeResponse,
+  getSpecificAttemptTypeResponse,
 } from "@/types/api/student/lms/quizzes/quiz.type";
 
 const LMS_QUIZZES_INSTRUCTOR = "/lms/instructor/quizzes";
@@ -106,12 +107,12 @@ export const submitQuizMutationFn = async (
 /** One attempt record by attempt id (not quiz id). */
 export const getQuizAttemptByIdMutationFn = async (
   attemptId: string,
-): Promise<getAttemptsTypeResponse> => {
+): Promise<getSpecificAttemptTypeResponse> => {
   const aid = attemptId?.trim();
   if (!aid) {
     throw new Error("Attempt ID is required");
   }
-  const response = await API.get<getAttemptsTypeResponse>(`${LMS_QUIZZES_STUDENT}/attempts/${aid}`);
+  const response = await API.get<getSpecificAttemptTypeResponse>(`${LMS_QUIZZES_STUDENT}/attempts/${aid}`);
   return response.data;
 };
 

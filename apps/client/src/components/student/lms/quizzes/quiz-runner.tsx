@@ -44,7 +44,7 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   //   createdAt?: string;
   //   updatedAt?: string;
   // };
-  const [attempts, setAttempts] = useState<getAttemptsTypeResponse["data"][]>([]);
+  const [attempts, setAttempts] = useState<getAttemptsTypeResponse["data"]>([]);
   const [loadingAttempts, setLoadingAttempts] = useState(false);
   const [attemptsError, setAttemptsError] = useState<string | null>(null);
   const [timer, setTimer] = useState(10);
@@ -158,11 +158,11 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       setAttemptsError(null);
       const res = await getStudentQuizAttemptsMutationFn(quiz._id);
       const data: unknown = (res as { data: unknown }).data;
-      let parsed: getAttemptsTypeResponse["data"][] = [];
+      let parsed: getAttemptsTypeResponse["data"] = [];
       if (Array.isArray(data)) {
-        parsed = data as getAttemptsTypeResponse["data"][];
+        parsed = data as getAttemptsTypeResponse["data"];
       } else if (data && typeof data === "object") {
-        parsed = [data as getAttemptsTypeResponse["data"]];
+        parsed = [data as getAttemptsTypeResponse["data"][number]];
       }
       const filtered = parsed.filter((attempt) => {
         const attemptQuiz =
