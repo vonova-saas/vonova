@@ -10,8 +10,13 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import configuration from '../common/config/configuration';
 import { Admin, AdminDocument } from './schemas/admin.schema';
 import { AdminOtp, AdminOtpDocument } from './schemas/admin-otp.schema';
+import {
+  AdminRefreshToken,
+  AdminRefreshTokenDocument,
+} from './schemas/admin-refresh-token.schema';
 import { RequestLoginCodeDto } from './dto/request-login-code.dto';
 import { VerifyLoginDto } from './dto/verify-login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -42,6 +47,8 @@ export class AdminAuthService {
     private readonly adminModel: Model<AdminDocument>,
     @InjectModel(AdminOtp.name, 'adminConnection')
     private readonly adminOtpModel: Model<AdminOtpDocument>,
+    @InjectModel(AdminRefreshToken.name, 'adminConnection')
+    private readonly adminRefreshTokenModel: Model<AdminRefreshTokenDocument>,
     private readonly jwtService: JwtService,
     private readonly emailSender: EmailSenderService,
   ) { }
@@ -123,7 +130,7 @@ export class AdminAuthService {
    * Step 2: Verify login code
    * Validates OTP and returns JWT access token
    */
-  async verifyLogin(dto: VerifyLoginDto): Promise<{ access_token: string }> {
+  async verifyLogin(dto: VerifyLoginDto): Promise<{ access_token: string; refresh_token: string }> {
     const normalizedEmail = normalizeAdminEmail(dto.email);
 
     // Fetch OTP record
@@ -185,10 +192,24 @@ export class AdminAuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
+    const refreshJti = crypto.randomUUID();
+    const refreshToken = this.signRefreshToken(
+      admin._id.toString(),
+      refreshJti,
+    );
+
+    await this.adminRefreshTokenModel.deleteMany({ adminId: admin._id }).exec();
+    await this.adminRefreshTokenModel.create({
+      adminId: admin._id,
+      tokenHash: this.hashToken(refreshToken),
+      jti: refreshJti,
+      deviceHash: 'admin-portal',
+      expiresAt: this.getRefreshExpiry(),
+    });
 
     this.logger.log(`Admin logged in successfully: ${normalizedEmail}`);
 
-    return { access_token: accessToken };
+    return { access_token: accessToken, refresh_token: refreshToken };
   }
 
   /**
@@ -241,12 +262,150 @@ export class AdminAuthService {
     return { message: 'Password updated successfully' };
   }
 
+  async refreshToken(
+    token: string,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    try {
+      const payload = this.jwtService.verify<{
+        adminId: string;
+        role: string;
+        jti: string;
+        type: string;
+      }>(token, {
+        secret: this.requireConfig(
+          configuration().JWT.JWT_REFRESH_SECRET,
+          'JWT_REFRESH_SECRET',
+        ),
+      });
+
+      if (payload.type !== 'refresh' || !payload.jti) {
+        throw new UnauthorizedException('Malformed refresh token');
+      }
+
+      const storedToken = await this.adminRefreshTokenModel
+        .findOne({
+          adminId: payload.adminId,
+          tokenHash: this.hashToken(token),
+          jti: payload.jti,
+          revokedAt: null,
+        })
+        .exec();
+      if (!storedToken) {
+        throw new UnauthorizedException('Refresh token not found');
+      }
+
+      const admin = await this.adminModel.findById(payload.adminId).exec();
+      if (!admin) {
+        throw new UnauthorizedException('Admin not found');
+      }
+
+      const accessToken = this.jwtService.sign({
+        sub: admin._id.toString(),
+        role: 'admin',
+      });
+
+      const nextJti = crypto.randomUUID();
+      const refreshToken = this.signRefreshToken(admin._id.toString(), nextJti);
+
+      storedToken.revokedAt = new Date();
+      storedToken.revokedReason = 'rotated';
+      await storedToken.save();
+
+      await this.adminRefreshTokenModel.create({
+        adminId: admin._id,
+        tokenHash: this.hashToken(refreshToken),
+        rotatedFromTokenHash: this.hashToken(token),
+        jti: nextJti,
+        deviceHash: storedToken.deviceHash,
+        expiresAt: this.getRefreshExpiry(),
+      });
+
+      return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async logout(token: string): Promise<{ message: string }> {
+    await this.adminRefreshTokenModel
+      .updateOne(
+        { tokenHash: this.hashToken(token), revokedAt: null },
+        { revokedAt: new Date(), revokedReason: 'logout' },
+      )
+      .exec();
+
+    return { message: 'Logged out successfully' };
+  }
+
+  async getCurrentUser(
+    accessToken: string,
+  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+    try {
+      const payload = this.jwtService.verify<{ sub: string; role: string }>(
+        accessToken,
+      );
+      if (payload.role !== 'admin') {
+        throw new UnauthorizedException('Invalid admin token');
+      }
+
+      const admin = await this.adminModel.findById(payload.sub).exec();
+      if (!admin) {
+        throw new UnauthorizedException('Admin not found');
+      }
+
+      return {
+        message: 'Current admin fetched successfully',
+        user: {
+          _id: admin._id.toString(),
+          email: admin.email,
+          role: admin.role,
+        },
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid access token');
+    }
+  }
+
   /**
    * Generate a 6-digit OTP using crypto.randomInt
    */
   private generateOtp(): string {
     const otp = crypto.randomInt(100000, 999999);
     return otp.toString();
+  }
+
+  private requireConfig(value: string | undefined, name: string): string {
+    const normalized = value?.trim();
+    if (!normalized) {
+      throw new Error(`${name} is required in .env`);
+    }
+    return normalized;
+  }
+
+  private signRefreshToken(adminId: string, jti: string): string {
+    const refreshSecret = this.requireConfig(
+      configuration().JWT.JWT_REFRESH_SECRET,
+      'JWT_REFRESH_SECRET',
+    );
+    const refreshExpiresIn = this.requireConfig(
+      configuration().JWT.JWT_REFRESH_EXPIRES_IN,
+      'JWT_REFRESH_EXPIRES_IN',
+    );
+    return this.jwtService.sign(
+      { adminId, role: 'admin', type: 'refresh', jti },
+      { secret: refreshSecret, expiresIn: refreshExpiresIn as any },
+    );
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  private getRefreshExpiry(): Date {
+    return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
 
   /**

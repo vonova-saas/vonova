@@ -9,13 +9,28 @@ import {
 export const loginMutationFn = async (
   data: loginType
 ): Promise<loginResponseType> => {
-  const response = await API.post("/auth/login", data);
+  const response = await API.post("/admin/auth/request-login-code", data);
+  return response.data;
+};
+
+// ============== Verify Login API Services ==============
+export const verifyLoginMutationFn = async (
+  data: loginType
+): Promise<loginResponseType> => {
+  const response = await API.post("/admin/auth/verify-login", data);
+  return response.data;
+};
+
+export const resetPasswordMutationFn = async (
+  data: loginType
+): Promise<loginResponseType> => {
+  const response = await API.post("/admin/auth/reset-password", data);
   return response.data;
 };
 
 // ============== Refresh Token controllers ==============
 export const refreshTokenMutationFn = async () => {
-  const response = await API.get("/auth/refresh");
+  const response = await API.post("/auth/refresh-token");
   return response.data;
 };
 
@@ -32,6 +47,6 @@ export const logoutFromAllDevicesMutationFn = async (): Promise<{ message: strin
 
 // ============== User API Services ==============
 export const getCurrentUserQueryFn = async (): Promise<currentUserResponseType> => {
-  const response = await API.get("/auth/current-User");
+  const response = await API.get("/auth/current-user");
   return response.data;
 };

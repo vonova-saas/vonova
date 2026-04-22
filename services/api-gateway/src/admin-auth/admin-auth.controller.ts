@@ -3,18 +3,23 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpCode,
   HttpStatus,
   Inject,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { RequestLoginCodeDto } from './dto/request-login-code.dto';
 import { VerifyLoginDto } from './dto/verify-login.dto';
 import { AdminResetPasswordDto } from './dto/reset-password.dto';
+import { AdminRefreshTokenDto } from './dto/refresh-token.dto';
+import { AdminLogoutDto } from './dto/logout.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { extractAccessTokenFromRequest } from '../common/utils/extract-access-token';
 
 @ApiTags('Admin')
 @Controller('admin/auth')
@@ -175,7 +180,7 @@ export class AdminAuthGatewayController {
   })
   async verifyLogin(
     @Body() dto: VerifyLoginDto,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{ access_token: string; refresh_token: string }> {
     return firstValueFrom(this.natsClient.send('admin.auth.verify-login', dto));
   }
 
@@ -275,6 +280,81 @@ export class AdminAuthGatewayController {
         adminId,
         ...dto,
       }),
+    );
+  }
+
+  @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh admin tokens',
+    description: 'Rotates admin refresh token and issues a fresh access token.',
+  })
+  @ApiBody({ type: AdminRefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens refreshed successfully',
+    schema: {
+      example: {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+      },
+    },
+  })
+  async refreshToken(
+    @Body() dto: AdminRefreshTokenDto,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    return firstValueFrom(this.natsClient.send('admin.auth.refresh-token', dto));
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Logout admin',
+    description: 'Revokes the provided admin refresh token.',
+  })
+  @ApiBody({ type: AdminLogoutDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Logout successful',
+    schema: { example: { message: 'Logged out successfully' } },
+  })
+  async logout(@Body() dto: AdminLogoutDto): Promise<{ message: string }> {
+    return firstValueFrom(this.natsClient.send('admin.auth.logout', dto));
+  }
+
+  @Get('current-user')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get current authenticated admin',
+    description:
+      'Returns current admin profile from access token sent in Authorization header or accessToken cookie.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current admin fetched successfully',
+    schema: {
+      example: {
+        message: 'Current admin fetched successfully',
+        user: {
+          _id: '507f1f77bcf86cd799439011',
+          email: 'admin@vonova.com',
+          role: 'admin',
+        },
+      },
+    },
+  })
+  async currentUser(
+    @Request() req: any,
+  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+    const accessToken = extractAccessTokenFromRequest(req);
+    if (!accessToken) {
+      throw new BadRequestException(
+        'Access token required: set accessToken cookie or Authorization: Bearer <jwt>',
+      );
+    }
+    return firstValueFrom(
+      this.natsClient.send('admin.auth.current-user', accessToken),
     );
   }
 }

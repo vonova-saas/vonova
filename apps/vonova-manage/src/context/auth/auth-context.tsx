@@ -86,8 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       // Call logout API to clear cookies
-      const { logoutMutationFn } = await import("@/services");
-      await logoutMutationFn();
+      const { adminLogoutMutationFn } = await import("@/services");
+      await adminLogoutMutationFn();
       // Redirect to login
       if (typeof window !== 'undefined') {
         window.location.replace(`/`);

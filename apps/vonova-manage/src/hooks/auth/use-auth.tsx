@@ -1,4 +1,4 @@
-import { getCurrentUserQueryFn, refreshTokenMutationFn } from "@/services";
+import { adminCurrentUserQueryFn, adminRefreshTokenMutationFn } from "@/services";
 import { useQuery } from "@tanstack/react-query";
 
 const useAuth = () => {
@@ -6,7 +6,7 @@ const useAuth = () => {
     queryKey: ["authUser"],
     queryFn: async () => {
       try {
-        return await getCurrentUserQueryFn();
+        return await adminCurrentUserQueryFn();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const status = error?.response?.status;
@@ -17,9 +17,9 @@ const useAuth = () => {
         if (shouldAttemptRefresh) {
           // Try to refresh token
           try {
-            await refreshTokenMutationFn();
+            await adminRefreshTokenMutationFn();
             // Retry original request
-            return await getCurrentUserQueryFn();
+            return await adminCurrentUserQueryFn();
           } catch {
             throw error;
           }

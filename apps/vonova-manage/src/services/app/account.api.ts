@@ -8,7 +8,7 @@ import {
 export const getAccountMutationFn = async (
   userId: string
 ): Promise<getAccountResponseType> => {
-  const response = await API.get(`/account/user/${userId}`);
+  const response = await API.get(`/api/v1/account/user/${userId}`);
   return response.data;
 };
 
@@ -26,7 +26,7 @@ export const updateAccountMutationFn = async (
   if (data.file) {
     fd.append("file", data.file);
   }
-  const response = await API.put(`/account/user/${userId}`, fd);
+  const response = await API.put(`/api/v1/account/user/${userId}`, fd);
   return response.data;
 };
 

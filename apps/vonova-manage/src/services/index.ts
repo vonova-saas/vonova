@@ -12,6 +12,9 @@ import {
   adminRequestLoginCodeMutationFn,
   adminVerifyLoginMutationFn,
   adminResetPasswordMutationFn,
+  adminRefreshTokenMutationFn,
+  adminLogoutMutationFn,
+  adminCurrentUserQueryFn,
 } from "./auth/admin-auth.api";
 
 //? ************* Admin *************
@@ -44,6 +47,9 @@ export {
   adminRequestLoginCodeMutationFn,
   adminVerifyLoginMutationFn,
   adminResetPasswordMutationFn,
+  adminRefreshTokenMutationFn,
+  adminLogoutMutationFn,
+  adminCurrentUserQueryFn,
 
   //? admin api services
   getUsersQueryFn,

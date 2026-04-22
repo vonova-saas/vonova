@@ -17,6 +17,21 @@ import { AdminRequestLoginCodeType, AdminVerifyLoginType } from "@/types/api/aut
 
 type AuthStep = "credentials" | "otp" | "success";
 
+const getAdminIdFromToken = (token: string): string | null => {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    if (!payloadBase64) return null;
+    const decodedPayload = JSON.parse(atob(payloadBase64)) as {
+      adminId?: string;
+      userId?: string;
+      sub?: string;
+    };
+    return decodedPayload.adminId ?? decodedPayload.userId ?? decodedPayload.sub ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export function AdminOTPLoginForm({
   className,
   ...props
@@ -68,6 +83,7 @@ export function AdminOTPLoginForm({
       
       // Store JWT token (you might want to use a more secure method)
       localStorage.setItem('admin_token', response.access_token);
+      localStorage.setItem('admin_refresh_token', response.refresh_token);
       
       // Invalidate auth user to fetch fresh user
       await queryClient.invalidateQueries({ queryKey: ["authUser"] });
@@ -75,7 +91,12 @@ export function AdminOTPLoginForm({
       setCurrentStep("success");
       // Redirect after successful login
       setTimeout(() => {
-        window.location.assign('/admin/dashboard');
+        const adminId = getAdminIdFromToken(response.access_token);
+        if (adminId) {
+          window.location.assign(`/admin/${adminId}`);
+          return;
+        }
+        window.location.assign("/");
       }, 1500);
       
     } catch (err: unknown) {

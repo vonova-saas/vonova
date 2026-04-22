@@ -17,6 +17,7 @@ export type AdminVerifyLoginType = {
 
 export type AdminVerifyLoginResponseType = {
   access_token: string;
+  refresh_token: string;
 };
 
 export type AdminResetPasswordType = {
@@ -26,6 +27,20 @@ export type AdminResetPasswordType = {
 
 export type AdminResetPasswordResponseType = {
   message: string;
+};
+
+export type AdminRefreshTokenResponseType = {
+  access_token: string;
+  refresh_token: string;
+};
+
+export type AdminCurrentUserResponseType = {
+  message: string;
+  user: {
+    _id: string;
+    email: string;
+    role: string;
+  };
 };
 
 export type AdminAuthErrorType = {

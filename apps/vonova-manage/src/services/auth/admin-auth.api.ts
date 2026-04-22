@@ -6,6 +6,8 @@ import {
   AdminVerifyLoginResponseType,
   AdminResetPasswordType,
   AdminResetPasswordResponseType,
+  AdminRefreshTokenResponseType,
+  AdminCurrentUserResponseType,
 } from "@/types/api/auth/admin-auth.type";
 
 // ============== Admin Auth API Services ==============
@@ -31,5 +33,34 @@ export const adminResetPasswordMutationFn = async (
   data: AdminResetPasswordType
 ): Promise<AdminResetPasswordResponseType> => {
   const response = await API.post("/admin/auth/reset-password", data);
+  return response.data;
+};
+
+export const adminRefreshTokenMutationFn = async (): Promise<AdminRefreshTokenResponseType> => {
+  const refreshToken = localStorage.getItem("admin_refresh_token");
+  if (!refreshToken) {
+    throw new Error("Admin refresh token is missing");
+  }
+  const response = await API.post("/admin/auth/refresh-token", { refreshToken });
+  const tokens = response.data as AdminRefreshTokenResponseType;
+  localStorage.setItem("admin_token", tokens.access_token);
+  localStorage.setItem("admin_refresh_token", tokens.refresh_token);
+  return tokens;
+};
+
+export const adminLogoutMutationFn = async (): Promise<{ message: string }> => {
+  const refreshToken = localStorage.getItem("admin_refresh_token");
+  if (!refreshToken) {
+    localStorage.removeItem("admin_token");
+    return { message: "Logged out locally" };
+  }
+  const response = await API.post("/admin/auth/logout", { refreshToken });
+  localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_refresh_token");
+  return response.data;
+};
+
+export const adminCurrentUserQueryFn = async (): Promise<AdminCurrentUserResponseType> => {
+  const response = await API.get("/admin/auth/current-user");
   return response.data;
 };

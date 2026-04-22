@@ -4,6 +4,8 @@ import { AdminAuthService } from './admin-auth.service';
 import { RequestLoginCodeDto } from './dto/request-login-code.dto';
 import { VerifyLoginDto } from './dto/verify-login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { AdminRefreshTokenDto } from './dto/refresh-token.dto';
+import { AdminLogoutDto } from './dto/logout.dto';
 
 @Controller()
 export class AdminAuthController {
@@ -29,7 +31,7 @@ export class AdminAuthController {
   @MessagePattern('admin.auth.verify-login')
   async handleVerifyLogin(
     @Payload() dto: VerifyLoginDto,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{ access_token: string; refresh_token: string }> {
     return this.adminAuthService.verifyLogin(dto);
   }
 
@@ -44,5 +46,26 @@ export class AdminAuthController {
     @Payload() payload: { adminId: string } & ResetPasswordDto,
   ): Promise<{ message: string }> {
     return this.adminAuthService.resetPassword(payload.adminId, payload);
+  }
+
+  @MessagePattern('admin.auth.refresh-token')
+  async handleRefreshToken(
+    @Payload() dto: AdminRefreshTokenDto,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    return this.adminAuthService.refreshToken(dto.refreshToken);
+  }
+
+  @MessagePattern('admin.auth.logout')
+  async handleLogout(
+    @Payload() dto: AdminLogoutDto,
+  ): Promise<{ message: string }> {
+    return this.adminAuthService.logout(dto.refreshToken);
+  }
+
+  @MessagePattern('admin.auth.current-user')
+  async handleCurrentUser(
+    @Payload() accessToken: string,
+  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+    return this.adminAuthService.getCurrentUser(accessToken);
   }
 }

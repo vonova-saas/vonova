@@ -7,6 +7,10 @@ import { AdminAuthController } from './admin-auth.controller';
 import { AdminAuthService } from './admin-auth.service';
 import { Admin, AdminSchema } from './schemas/admin.schema';
 import { AdminOtp, AdminOtpSchema } from './schemas/admin-otp.schema';
+import {
+  AdminRefreshToken,
+  AdminRefreshTokenSchema,
+} from './schemas/admin-refresh-token.schema';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 import { EmailSenderService } from '../notification/email-sender.service';
 import { getMongoConfigAdmin } from '../common/config/mongo-admin.config';
@@ -24,6 +28,7 @@ import { AdminSeederService } from './admin-seeder.service';
       [
         { name: Admin.name, schema: AdminSchema },
         { name: AdminOtp.name, schema: AdminOtpSchema },
+        { name: AdminRefreshToken.name, schema: AdminRefreshTokenSchema },
       ],
       'adminConnection',
     ),

@@ -11,12 +11,13 @@ const options = {
 const API = axios.create(options);
 let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;
+const isBrowser = typeof window !== "undefined";
 
 // Add request interceptor to include JWT token for admin endpoints
 API.interceptors.request.use(
   (config) => {
     // Check if this is an admin endpoint
-    if (config.url?.includes('/admin/')) {
+    if (config.url?.includes('/admin/') && isBrowser) {
       // Get JWT token from localStorage
       const token = localStorage.getItem('admin_token');
       if (token) {
@@ -46,7 +47,7 @@ API.interceptors.response.use(
     const { data, status } = error.response;
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean });
     const requestUrl = originalRequest?.url ?? "";
-    const isAuthRefreshRequest = requestUrl.includes("/auth/refresh-token");
+    const isAuthRefreshRequest = requestUrl.includes("/admin/auth/refresh-token");
     const isAuthLoginRequest = requestUrl.includes("/auth/login");
 
     // Check if error message indicates token issues (for admin endpoints that return 403)
@@ -61,8 +62,17 @@ API.interceptors.response.use(
       try {
         if (!isRefreshing) {
           isRefreshing = true;
-          refreshPromise = API.post("/auth/refresh-token")
-            .then((response) => response.data)
+          refreshPromise = API.post("/admin/auth/refresh-token", {
+            refreshToken: isBrowser ? localStorage.getItem("admin_refresh_token") : null,
+          })
+            .then((response) => {
+              const tokens = response.data as { access_token?: string; refresh_token?: string };
+              if (isBrowser && tokens.access_token && tokens.refresh_token) {
+                localStorage.setItem("admin_token", tokens.access_token);
+                localStorage.setItem("admin_refresh_token", tokens.refresh_token);
+              }
+              return response.data;
+            })
             .finally(() => {
               isRefreshing = false;
               refreshPromise = null;
@@ -72,8 +82,10 @@ API.interceptors.response.use(
         await refreshPromise;
         return API(originalRequest);
       } catch (refreshError) {
-        if (typeof window !== "undefined") {
-          window.location.href = "/auth/login";
+        if (isBrowser) {
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_refresh_token");
+          window.location.href = "/";
         }
 
         return Promise.reject(refreshError);

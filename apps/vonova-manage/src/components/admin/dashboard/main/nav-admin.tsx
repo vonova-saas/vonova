@@ -28,7 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import useAdminId from "@/hooks/admin/use-admin-id";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { logoutMutationFn, getCurrentUserQueryFn } from "@/services";
+import { adminLogoutMutationFn, adminCurrentUserQueryFn } from "@/services";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { getAccountMutationFn } from "@/services/app/account.api";
 
@@ -46,8 +46,8 @@ export function NavAdmin({
   const router = useRouter();
   const adminId = useAdminId();
   const queryClient = useQueryClient();
-  const { mutateAsync: logout } = useMutation({ mutationFn: logoutMutationFn });
-  const { data: me } = useQuery({ queryKey: ["authUser"], queryFn: getCurrentUserQueryFn });
+  const { mutateAsync: logout } = useMutation({ mutationFn: adminLogoutMutationFn });
+  const { data: me } = useQuery({ queryKey: ["authUser"], queryFn: adminCurrentUserQueryFn });
   const { data: account, refetch: refetchAccount } = useQuery({
     queryKey: ["account", adminId],
     queryFn: () => getAccountMutationFn(adminId),

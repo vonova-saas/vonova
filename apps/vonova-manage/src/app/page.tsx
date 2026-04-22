@@ -1,4 +1,4 @@
-import { AdminLoginForm } from "@/components/admin/auth/login/admin-login-form";
+import { AdminOTPLoginForm } from "@/components/admin/auth/login/admin-otp-login-form";
 
 export default function AdminLoginPage() {
   return (
@@ -9,7 +9,7 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-md space-y-8">
 
           <div className="animate-in fade-in-0 zoom-in-95">
-            <AdminLoginForm />
+            <AdminOTPLoginForm />
           </div>
 
           <div className="mt-8 text-center text-xs text-gray-500">
