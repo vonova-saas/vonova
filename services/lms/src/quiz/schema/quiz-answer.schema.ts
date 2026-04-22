@@ -27,7 +27,7 @@ class QuizAnswerItemClass {
   @Prop({ required: true })
   questionId: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, type: String })
   selectedOptionId: string | null;
 
   @Prop({ required: true })
