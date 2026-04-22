@@ -1,38 +1,35 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import useAuth from "@/hooks/app/auth/use-auth";
-import { MutationOptions, QueryKey, useMutation } from "@tanstack/react-query";
-import axios, { AxiosError, AxiosResponse } from "axios";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import API from "@/services/axios-client";
+import type {
+  GenerateRoadmapRequest,
+  RoadmapPayload,
+} from "@/types/api/student/lms-ai/roadmap-generator/roadmap.type";
 
-const MutationFactory = (
-  mutationKey: QueryKey,
-  url: string,
-  method: "POST" | "PUT" | "PATCH",
-  options?: MutationOptions,
-) => {
-  return useMutation<any, AxiosError, any>({
-    mutationKey,
-    mutationFn: async (variables: { body: any }) => {
-      return axios({
-        url,
-        method,
-        withCredentials: true,
-        timeout: 60000, // Increased to 60 seconds for AI processing
-        data: variables.body,
-      }).then((response: AxiosResponse) => response.data);
+type GenerateRoadmapMutationOptions = Omit<
+  UseMutationOptions<
+    unknown,
+    AxiosError,
+    { body: GenerateRoadmapRequest }
+  >,
+  "mutationKey" | "mutationFn"
+>;
+
+export const useGenerateRoadmap = (options?: GenerateRoadmapMutationOptions) => {
+  return useMutation<
+    RoadmapPayload,
+    AxiosError,
+    { body: GenerateRoadmapRequest }
+  >({
+    mutationKey: ["Generate Roadmap"],
+    mutationFn: async ({ body }) => {
+      const response = await API.post<RoadmapPayload>("/roadmap/generate", body, {
+        timeout: 120000,
+      });
+      return response.data;
     },
     ...options,
   });
-};
-
-export const useGenerateRoadmap = (
-  options?: MutationOptions,
-) => {
-  const { data: authData } = useAuth();
-  const userId = authData?.user?._id;
-  return MutationFactory(
-    ["Generate Roadmap"],
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/roadmap/generate?userId=${userId}`,
-    "POST",
-    options,
-  );
 };
