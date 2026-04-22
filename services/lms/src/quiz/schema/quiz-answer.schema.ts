@@ -7,7 +7,7 @@ import { Document, Types } from 'mongoose';
 
 export interface QuizAnswerItem {
   questionId: string;
-  selectedOptionId: string;
+  selectedOptionId: string | null;
   correct: boolean;
 }
 
@@ -27,8 +27,8 @@ class QuizAnswerItemClass {
   @Prop({ required: true })
   questionId: string;
 
-  @Prop({ required: true })
-  selectedOptionId: string;
+  @Prop({ required: false })
+  selectedOptionId: string | null;
 
   @Prop({ required: true })
   correct: boolean;

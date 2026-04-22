@@ -99,6 +99,7 @@ export class QuizStudentController {
         score: { type: 'number', example: 8 },
         total: { type: 'number', example: 10 },
         percentage: { type: 'number', example: 80 },
+        submittedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
         answers: {
           type: 'array',
           items: {
@@ -110,24 +111,61 @@ export class QuizStudentController {
             },
           },
         },
-        correctAnswers: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              questionId: { type: 'string', example: 'q_456' },
-              questionText: { type: 'string', example: 'What is 2 + 2?' },
-              correctOptionId: { type: 'string', example: 'opt_123' },
-              correctOptionText: { type: 'string', example: '4' },
-              allOptions: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string', example: 'opt_123' },
-                    text: { type: 'string', example: '4' },
+        quizDetails: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
+            description: { type: 'string', example: 'Test your knowledge of basic JavaScript concepts.' },
+            topic: { type: 'string', example: 'JavaScript Programming' },
+            noOfQuestions: { type: 'number', example: 10 },
+            questions: {
+              type: 'array',
+              items: {
+                oneOf: [
+                  {
+                    type: 'object',
+                    title: 'Correct answer',
+                    properties: {
+                      questionId: { type: 'string', example: 'q_123' },
+                      questionText: { type: 'string', example: 'What is 2 + 2?' },
+                      options: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string', example: 'opt_1' },
+                            text: { type: 'string', example: '3' },
+                          },
+                        },
+                      },
+                      studentSelectedOptionId: { type: 'string', example: 'opt_2' },
+                      correct: { type: 'boolean', example: true },
+                    },
                   },
-                },
+                  {
+                    type: 'object',
+                    title: 'Incorrect answer with correct answer info',
+                    properties: {
+                      questionId: { type: 'string', example: 'q_456' },
+                      questionText: { type: 'string', example: 'What is the capital of France?' },
+                      options: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string', example: 'opt_1' },
+                            text: { type: 'string', example: 'London' },
+                          },
+                        },
+                      },
+                      studentSelectedOptionId: { type: 'string', example: 'opt_1' },
+                      correct: { type: 'boolean', example: false },
+                      correctOptionId: { type: 'string', example: 'opt_3' },
+                      correctOptionText: { type: 'string', example: 'Paris' },
+                    },
+                  },
+                ],
               },
             },
           },
@@ -259,27 +297,101 @@ export class QuizStudentController {
    * @returns Promise<Quiz> - The quiz object without correct answers
    */
   @ApiOperation({
-    summary: 'Get quiz for taking (Student only)',
-    description: 'Retrieves a specific quiz for students to take. Correct answers are hidden. Only students can access this endpoint.',
+    summary: 'Get quiz for taking or viewing (Student only)',
+    description: 'Retrieves a specific quiz for students. If not attempted, returns quiz without correct answers for taking. If already attempted, returns quiz with student answers and correct answers for review. Only students can access this endpoint.',
   })
   @ApiResponse({
     status: 200,
     description: 'Quiz retrieved successfully',
     schema: {
-      type: 'object',
-      properties: {
-        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-        title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
-        description: {
-          type: 'string',
-          example: 'Test your knowledge of basic JavaScript concepts.',
+      oneOf: [
+        {
+          type: 'object',
+          title: 'Quiz not yet attempted',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
+            description: {
+              type: 'string',
+              example: 'Test your knowledge of basic JavaScript concepts.',
+            },
+            topic: { type: 'string', example: 'JavaScript Programming' },
+            noOfQuestions: { type: 'number', example: 10 },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: 'q_123' },
+                  text: { type: 'string', example: 'What is 2 + 2?' },
+                  options: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', example: 'opt_1' },
+                        text: { type: 'string', example: '3' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            alreadyAttempted: { type: 'boolean', example: false },
+            attemptId: { type: 'string', example: null },
+            createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+          },
         },
-        topic: { type: 'string', example: 'JavaScript Programming' },
-        noOfQuestions: { type: 'number', example: 10 },
-        alreadyAttempted: { type: 'boolean', example: false },
-        attemptId: { type: 'string', example: '507f1f77bcf86cd799439012' },
-        createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
-      },
+        {
+          type: 'object',
+          title: 'Quiz already attempted (view mode)',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
+            description: {
+              type: 'string',
+              example: 'Test your knowledge of basic JavaScript concepts.',
+            },
+            topic: { type: 'string', example: 'JavaScript Programming' },
+            noOfQuestions: { type: 'number', example: 10 },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: 'q_123' },
+                  text: { type: 'string', example: 'What is 2 + 2?' },
+                  options: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', example: 'opt_1' },
+                        text: { type: 'string', example: '3' },
+                      },
+                    },
+                  },
+                  correctOptionId: { type: 'string', example: 'opt_2' },
+                  studentSelectedOptionId: { type: 'string', example: 'opt_1' },
+                  isCorrect: { type: 'boolean', example: false },
+                },
+              },
+            },
+            alreadyAttempted: { type: 'boolean', example: true },
+            attemptId: { type: 'string', example: '507f1f77bcf86cd799439012' },
+            attempt: {
+              type: 'object',
+              properties: {
+                score: { type: 'number', example: 8 },
+                total: { type: 'number', example: 10 },
+                percentage: { type: 'number', example: 80 },
+                submittedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              },
+            },
+            createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+          },
+        },
+      ],
     },
   })
   @ApiResponse({
