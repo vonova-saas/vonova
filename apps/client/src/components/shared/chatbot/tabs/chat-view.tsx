@@ -44,7 +44,7 @@ export default function ChatView({ conversation, onBack, onSend }: Props) {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4 py-3">
+      <ScrollArea className="min-h-0 flex-1 px-4 py-3">
         <div className="space-y-3">
           {conversation.messages.map((msg) => (
             <div
@@ -78,7 +78,7 @@ export default function ChatView({ conversation, onBack, onSend }: Props) {
                   <iframe
                     src={toDriveEmbed(msg.image)}
                     title="Image"
-                    className="w-full h-52"
+                    className="h-52 w-full pointer-events-none"
                     loading="lazy"
                     allow="autoplay"
                   />

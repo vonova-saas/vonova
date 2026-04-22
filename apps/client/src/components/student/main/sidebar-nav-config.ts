@@ -51,6 +51,16 @@ export const sidebarNavData = {
       title: "Community",
       url: "/student/:studentId/community",
       icon: Users,
+      items: [
+        {
+          title: "Articles",
+          url: "/student/:studentId/community/articles",
+        },
+        {
+          title: "Feed",
+          url: "/student/:studentId/community",
+        },
+      ],
     },
     {
       title: "PDF Summary",

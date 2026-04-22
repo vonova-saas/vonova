@@ -116,6 +116,140 @@ export type CreateArticleInput = {
   coverFiles?: File[];
 };
 
+export type GenerateArticleWithAIResponse = {
+  title: string;
+  summary: string;
+  body: string;
+  category:
+    | "architecture"
+    | "devops"
+    | "backend"
+    | "databases"
+    | "frontend"
+    | "mobile"
+    | "ai"
+    | "security";
+};
+
+const ARTICLE_CATEGORY_KEYWORDS: Array<{
+  category: GenerateArticleWithAIResponse["category"];
+  terms: string[];
+}> = [
+  { category: "frontend", terms: ["frontend", "front-end", "css", "html", "react", "vue", "angular"] },
+  { category: "backend", terms: ["backend", "back-end", "api", "server", "node", "express"] },
+  { category: "databases", terms: ["database", "sql", "nosql", "mongodb", "postgres"] },
+  { category: "devops", terms: ["devops", "docker", "kubernetes", "ci/cd", "deployment"] },
+  { category: "mobile", terms: ["mobile", "android", "ios", "react native", "flutter"] },
+  { category: "ai", terms: ["ai", "machine learning", "llm", "neural", "artificial intelligence"] },
+  { category: "security", terms: ["security", "auth", "encryption", "vulnerability", "owasp"] },
+  { category: "architecture", terms: ["architecture", "system design", "microservices", "scalability"] },
+];
+
+function cleanGeneratedMarkdown(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .replace(/^```[a-zA-Z]*\s*/m, "")
+    .replace(/\s*```$/m, "")
+    .trim();
+}
+
+function inferCategoryFromText(input: string): GenerateArticleWithAIResponse["category"] {
+  const text = input.toLowerCase();
+  for (const entry of ARTICLE_CATEGORY_KEYWORDS) {
+    if (entry.terms.some((term) => text.includes(term))) {
+      return entry.category;
+    }
+  }
+  return "backend";
+}
+
+function parseMarkdownArticle(rawMarkdown: string): GenerateArticleWithAIResponse {
+  const markdown = cleanGeneratedMarkdown(rawMarkdown);
+  const lines = markdown.split(/\r?\n/).map((line) => line.trim());
+
+  const headingLine = lines.find((line) => /^#\s+/.test(line)) ?? "";
+  const title = headingLine.replace(/^#\s+/, "").trim();
+
+  const summaryLine = lines.find(
+    (line) =>
+      line.length > 40 &&
+      !line.startsWith("#") &&
+      !line.startsWith("```") &&
+      !line.startsWith("- ") &&
+      !line.startsWith("* "),
+  );
+  const summary = summaryLine?.replace(/\s+/g, " ").trim() ?? "";
+
+  return {
+    title,
+    summary,
+    body: markdown,
+    category: inferCategoryFromText(markdown),
+  };
+}
+
+function normalizeGeneratedArticlePayload(raw: unknown): GenerateArticleWithAIResponse {
+  const root = (raw ?? {}) as Record<string, unknown>;
+  const nested = (
+    (root.data as Record<string, unknown> | undefined) ??
+    (typeof root.article === "object" && root.article
+      ? (root.article as Record<string, unknown>)
+      : undefined) ??
+    root
+  ) as Record<string, unknown>;
+
+  if (typeof root.article === "string") {
+    return parseMarkdownArticle(root.article);
+  }
+
+  if (typeof nested.article === "string") {
+    return parseMarkdownArticle(nested.article);
+  }
+
+  const title = String(nested.title ?? nested.headline ?? "");
+  const summary = String(nested.summary ?? nested.description ?? nested.excerpt ?? "");
+  const body = String(nested.body ?? nested.content ?? nested.articleBody ?? nested.markdown ?? "");
+  const categoryRaw = nested.category;
+  const category =
+    typeof categoryRaw === "string"
+      ? categoryRaw
+      : Array.isArray(categoryRaw)
+        ? String(categoryRaw[0] ?? "")
+        : inferCategoryFromText(`${title}\n${summary}\n${body}`);
+
+  return {
+    title,
+    summary,
+    body,
+    category: category as GenerateArticleWithAIResponse["category"],
+  };
+}
+
+export async function generateArticleWithAIMutationFn(
+  topic: string,
+): Promise<GenerateArticleWithAIResponse> {
+  const base = process.env.NEXT_PUBLIC_AI_ARTICLE_GENERATION_API_BASE?.trim();
+  if (!base) {
+    throw new Error("NEXT_PUBLIC_AI_ARTICLE_GENERATION_API_BASE is not configured");
+  }
+  const url = `${base.replace(/\/+$/, "")}/generate_article`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ topic }),
+  });
+  const payload = (await res.json()) as
+    | GenerateArticleWithAIResponse
+    | { data?: GenerateArticleWithAIResponse; message?: string };
+  if (!res.ok) {
+    const message = (payload as { message?: string })?.message || "Failed to generate article";
+    throw new Error(message);
+  }
+  const normalized = normalizeGeneratedArticlePayload(payload);
+  return normalized;
+}
+
 /** Matches backend article slug rules: lowercase letters, digits, hyphens. */
 export function slugifyArticleTitle(title: string): string {
   const base = title
@@ -153,11 +287,6 @@ export async function createArticle(input: CreateArticleInput): Promise<Communit
   for (const file of coverFiles) {
     form.append("files", file);
   }
-  // Compatibility: some gateway handlers use FileInterceptor("file"),
-  // while others use FilesInterceptor("files").
-  if (coverFiles[0]) {
-    form.append("file", coverFiles[0]);
-  }
   const res = await API.post(ARTICLES, form);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
@@ -187,15 +316,20 @@ export async function updateArticle(input: UpdateArticleInput): Promise<Communit
   for (const file of nextCoverFiles) {
     form.append("files", file);
   }
-  if (nextCoverFiles[0]) {
-    form.append("file", nextCoverFiles[0]);
-  }
   const res = await API.put(`${ARTICLES}/${id}`, form);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
     return inner.data;
   }
   return inner as CommunityArticle;
+}
+
+/** PUT /api/v1/community/articles/{id} */
+export async function putCommunityArticleById(
+  id: string,
+  input: Omit<UpdateArticleInput, "id">,
+): Promise<CommunityArticle> {
+  return updateArticle({ id, ...input });
 }
 
 export async function deleteArticle(id: string): Promise<void> {
@@ -209,6 +343,11 @@ export async function approveArticle(id: string): Promise<CommunityArticle> {
     return inner.data;
   }
   return inner as CommunityArticle;
+}
+
+/** PUT /api/v1/community/articles/{id}/approve */
+export async function putCommunityArticleApproveById(id: string): Promise<CommunityArticle> {
+  return approveArticle(id);
 }
 
 // ─── Posts ───────────────────────────────────────────────────────────────────
@@ -267,15 +406,36 @@ export async function fetchPostById(postId: string): Promise<CommunityPost> {
   return normalizePost(inner);
 }
 
-export async function createPost(content: string, image?: File): Promise<CommunityPost> {
-  const payload = image
+export type CreatePostInput = {
+  content: string;
+  tags?: string[];
+  files?: File[];
+  videos?: File[];
+};
+
+export async function createPost(input: string | CreatePostInput, image?: File): Promise<CommunityPost> {
+  const normalized: CreatePostInput =
+    typeof input === "string"
+      ? {
+          content: input,
+          files: image ? [image] : undefined,
+        }
+      : input;
+
+  const hasBinary = Boolean((normalized.files?.length ?? 0) > 0 || (normalized.videos?.length ?? 0) > 0);
+  const payload = hasBinary
     ? (() => {
         const form = new FormData();
-        form.append("content", content);
-        form.append("files", image);
+        form.append("content", normalized.content);
+        for (const tag of normalized.tags ?? []) form.append("tags", tag);
+        for (const file of normalized.files ?? []) form.append("files", file);
+        for (const video of normalized.videos ?? []) form.append("videos", video);
         return form;
       })()
-    : { content };
+    : {
+        content: normalized.content,
+        ...(normalized.tags?.length ? { tags: normalized.tags } : {}),
+      };
   const res = await API.post(POSTS, payload);
   const inner = unwrapData<{ data?: { post?: CommunityPost }; post?: CommunityPost }>(
     res.data,
@@ -317,6 +477,14 @@ export async function updatePost(
   return normalizePost(inner);
 }
 
+/** PUT /api/v1/community/posts/{postId} */
+export async function putCommunityPostById(
+  postId: string,
+  payload: { content?: string; image?: File | null },
+): Promise<CommunityPost> {
+  return updatePost(postId, payload);
+}
+
 export async function deletePost(postId: string): Promise<void> {
   await API.delete(`${POSTS}/${postId}`);
 }
@@ -337,10 +505,28 @@ export async function togglePostLike(postId: string): Promise<{ liked: boolean; 
 
 export async function sharePost(
   postId: string,
+  shareComment?: string,
 ): Promise<{ shareableLink: string; sharesCount: number; sharedPost?: CommunityPost }> {
+  const normalizeShareableLink = (raw: unknown): string => {
+    const value = String(raw ?? "").trim();
+    if (!value) return "";
+    const candidates = value
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (candidates.length === 0) return "";
+    const postsPathCandidate = candidates.find((url) => /\/posts\/[a-zA-Z0-9]+/i.test(url));
+    if (postsPathCandidate) return postsPathCandidate;
+    const absoluteCandidate = candidates.find((url) => /^https?:\/\//i.test(url));
+    if (absoluteCandidate) return absoluteCandidate;
+    return candidates[0];
+  };
+
   // Backend currently requires generated shared posts to have non-empty content.
   // Send a default share comment so share creation never fails validation.
-  const res = await API.post(`${POSTS}/${postId}/share`, { comment: "Shared a post" });
+  const res = await API.post(`${POSTS}/${postId}/share`, {
+    comment: shareComment?.trim() || "Shared a post",
+  });
   const body = res.data as {
     data?: {
       shareableLink?: string;
@@ -353,7 +539,7 @@ export async function sharePost(
   };
   const d = body.data ?? body;
   return {
-    shareableLink: String(d?.shareableLink ?? ""),
+    shareableLink: normalizeShareableLink(d?.shareableLink),
     sharesCount: Number(d?.originalPostSharesCount ?? 0),
     sharedPost: d?.sharedPost ? normalizePost(d.sharedPost) : undefined,
   };
@@ -450,6 +636,15 @@ export async function updateComment(
   }
   const res = await API.put(endpoint, form);
   return parse(res.data);
+}
+
+/** PUT /api/v1/community/posts/comments/{commentId} */
+export async function putCommunityPostCommentById(
+  commentId: string,
+  text: string,
+  image?: File,
+): Promise<CommunityComment> {
+  return updateComment(commentId, text, image);
 }
 
 export async function deleteComment(commentId: string): Promise<void> {

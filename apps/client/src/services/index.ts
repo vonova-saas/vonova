@@ -17,6 +17,10 @@ import {
   studentOnboardingMutationFn,
   instructorOnboardingMutationFn,
 } from "./app/auth/auth.api";
+import {
+  updateComment,
+  updatePost,
+} from "./app/community/community.api";
 
 //? ************* Settings *************
 //? ************* Account *************
@@ -47,6 +51,8 @@ export {
   getCurrentUserQueryFn,
   studentOnboardingMutationFn,
   instructorOnboardingMutationFn,
+  updatePost,
+  updateComment,
   //? settings api services
   //? account api services
   //? billing api services

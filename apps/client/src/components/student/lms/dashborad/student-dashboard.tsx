@@ -2,35 +2,60 @@
 
 import DashboardTabs from "./dashboard-tabs";
 import { useAuthContext } from "@/context/app/auth/auth-context";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 
 export default function StudentDashboard() {
   const { user } = useAuthContext();
   const displayName = user?.name?.split(" ")[0] || "Student";
 
   return (
-    <div
-      className="relative overflow-hidden flex flex-col gap-8 w-full mx-auto px-2 md:px-8 py-8"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-        backgroundSize: "18px 18px",
-      }}
-    >
-      <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/4 -right-20 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-16 left-1/3 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
-      <section className="relative rounded-2xl border border-border/50 bg-card/60 backdrop-blur-md px-5 py-6 md:px-8 md:py-7 shadow-xl">
-        <p className="text-sm text-primary/90 font-medium">Student</p>
-        <p className="mt-1 text-sm text-muted-foreground">Monday, April 20</p>
-        <h1 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">
-          Good morning, {displayName}
-        </h1>
-        <p className="mt-2 text-muted-foreground max-w-2xl">
-          Stay on track with courses, sharpen your quiz skills, and grow your
-          learning streaks in one calm workspace.
-        </p>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            Student hub
+          </Badge>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">
+            Learn together. Share what you build.
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Stay on track, {displayName}. Keep momentum across courses, quizzes, and progress.
+          </p>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">Courses</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Learning
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">Quizzes</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Practice
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">Progress</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Growth
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
-      <DashboardTabs />
+      <div className="mx-auto max-w-6xl px-4 pt-10">
+        <DashboardTabs />
+      </div>
     </div>
   );
 }

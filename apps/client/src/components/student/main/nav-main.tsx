@@ -3,6 +3,7 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   Collapsible,
@@ -19,7 +20,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { useUserId } from "@/hooks";
 
 export function NavMain({
   items,
@@ -36,12 +36,16 @@ export function NavMain({
   }[];
 }) {
   const pathname = usePathname();
-  const userId = useUserId();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Function to add studentId to URL if it exists
-  const getUrl = (url: string) => {
-    return url.replace(":studentId", userId);
-  };
+  if (!mounted) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>LMS</SidebarGroupLabel>
+      </SidebarGroup>
+    );
+  }
 
   return (
     <SidebarGroup>
@@ -50,10 +54,10 @@ export function NavMain({
       </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const hasActiveSubItem = item.items?.some(subItem => pathname === subItem.url);
+          const hasActiveSubItem = item.items?.some((subItem) => pathname === subItem.url);
 
           const shouldBeOpen = item.isActive || hasActiveSubItem;
-          const isActive = (userId && pathname === getUrl(item.url));
+          const isActive = pathname === item.url;
 
           return item.items && item.items.length > 0 ? (
             <Collapsible
@@ -64,7 +68,7 @@ export function NavMain({
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <Link href={getUrl(item.url)}>
+                  <Link href={item.url}>
                     <SidebarMenuButton
                       tooltip={item.title}
                       isActive={pathname === item.url}
@@ -95,7 +99,7 @@ export function NavMain({
             </Collapsible>
           ) : (
             <SidebarMenuItem key={item.url} className={isActive ? 'bg-muted rounded-md' : ''}>
-              <Link href={getUrl(item.url)}>
+              <Link href={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
                   isActive={pathname === item.url}

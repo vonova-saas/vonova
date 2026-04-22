@@ -52,6 +52,16 @@ export const sidebarNavData = {
       title: "Community",
       url: "/instructor/:instructorId/community",
       icon: Frame,
+      items: [
+        {
+          title: "Articles",
+          url: "/instructor/:instructorId/community/articles",
+        },
+        {
+          title: "Feed",
+          url: "/instructor/:instructorId/community",
+        },
+      ],
     },
   ],
   lmsTools: [

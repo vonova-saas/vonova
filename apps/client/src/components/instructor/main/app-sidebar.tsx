@@ -17,25 +17,39 @@ import {
 } from "@/components/ui/sidebar";
 import { sidebarNavData } from "./sidebar-nav-config";
 import Image from "next/image";
-import { useUserId } from "@/hooks";
+import { usePathname } from "next/navigation";
 import { NavSubMain } from "./nav-sub-main";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const userId = useUserId();
+  const pathname = usePathname();
+  const userId = pathname?.split("/")[2] ?? "";
+  const withInstructorId = (url: string) => url.replace(":instructorId", userId);
 
   const lmsManagementItems = sidebarNavData.lmsManagement.map((item) => ({
     ...item,
-    url: item.url.replace(":instructorId", userId || ""),
+    url: withInstructorId(item.url),
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      url: withInstructorId(subItem.url),
+    })),
   }));
 
   const lmsToolsItems = sidebarNavData.lmsTools.map((item) => ({
     ...item,
-    url: item.url.replace(":instructorId", userId || ""),
+    url: withInstructorId(item.url),
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      url: withInstructorId(subItem.url),
+    })),
   }));
 
   const appItems = sidebarNavData.app.map((item) => ({
     ...item,
-    url: item.url.replace(":instructorId", userId || ""),
+    url: withInstructorId(item.url),
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      url: withInstructorId(subItem.url),
+    })),
   }));
 
   return (

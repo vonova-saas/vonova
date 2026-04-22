@@ -2,18 +2,24 @@
 
 import { useAuthContext } from "@/context/app/auth/auth-context";
 import {
+  approveArticle,
   createArticle,
   createComment,
   createPost,
+  deleteArticle,
   deleteComment,
   deletePost,
   fetchArticles,
   fetchComments,
   fetchPosts,
   fetchPostsByUser,
+  generateArticleWithAIMutationFn,
   sharePost,
   toggleCommentLike,
   togglePostLike,
+  updateArticle,
+  updateComment,
+  updatePost,
 } from "@/services/app/community/community.api";
 import type {
   CommunityArticle,
@@ -64,6 +70,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,6 +84,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks";
 import { cn } from "@/lib/utils";
+import { MoreHorizontal } from "lucide-react";
 
 const CATEGORIES: CommunityArticleCategory[] = [
   "architecture",
@@ -91,7 +104,19 @@ function authorName(author: CommunityArticle["author"] | CommunityPost["author"]
 
 function authorPic(author: CommunityArticle["author"] | CommunityPost["author"]): string | undefined {
   if (!author || typeof author === "string") return undefined;
-  return author.avatar || author.profilePicture;
+  return (
+    author.avatar ||
+    author.profilePicture ||
+    (author as Record<string, string | undefined>).photo ||
+    (author as Record<string, string | undefined>).image ||
+    (author as Record<string, string | undefined>).imageUrl
+  );
+}
+
+function currentUserPic(user: unknown): string | undefined {
+  if (!user || typeof user !== "object") return undefined;
+  const u = user as Record<string, string | null | undefined>;
+  return u.profilePicture || u.avatar || u.photo || u.image || u.imageUrl || undefined;
 }
 
 function initials(name: string) {
@@ -234,16 +259,36 @@ function FeedEndSentinel({
 export type CommunityPageClientProps = {
   area: "student" | "instructor";
   userId: string;
+  initialTab?: "articles" | "feed";
+  viewMode?: "articles" | "feed" | "both";
 };
 
-export default function CommunityPageClient({ area, userId }: CommunityPageClientProps) {
+export default function CommunityPageClient({
+  area,
+  userId,
+  initialTab = "feed",
+  viewMode = "both",
+}: CommunityPageClientProps) {
   const { user, role } = useAuthContext();
   const { toast } = useToast();
   const qc = useQueryClient();
   const router = useRouter();
   const isAdmin = role === "ADMIN";
 
-  const [tab, setTab] = useState<"articles" | "feed">("feed");
+  const [tab, setTab] = useState<"articles" | "feed">(initialTab);
+  const activeTab = viewMode === "both" ? tab : viewMode;
+  const showArticleControls = activeTab === "articles";
+  const handleTabChange = (nextTab: "articles" | "feed") => {
+    if (viewMode !== "both") return;
+    setTab(nextTab);
+    const basePath = `/${area}/${userId}/community`;
+    if (nextTab === "articles") {
+      router.push(`${basePath}/articles`);
+      return;
+    }
+    router.push(basePath);
+  };
+
   const [articlePage, setArticlePage] = useState(1);
   const [category, setCategory] = useState<CommunityArticleCategory | "all">("all");
   const [createOpen, setCreateOpen] = useState(false);
@@ -251,16 +296,29 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
   const [newDescription, setNewDescription] = useState("");
   const [newBody, setNewBody] = useState("");
   const [newCats, setNewCats] = useState<CommunityArticleCategory[]>(["frontend"]);
+  const [articleTopic, setArticleTopic] = useState("");
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [articleEditOpen, setArticleEditOpen] = useState(false);
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
+  const [editArticleTitle, setEditArticleTitle] = useState("");
+  const [editArticleDescription, setEditArticleDescription] = useState("");
+  const [editArticleBody, setEditArticleBody] = useState("");
+  const [editArticleCats, setEditArticleCats] = useState<CommunityArticleCategory[]>(["frontend"]);
 
   const [postContent, setPostContent] = useState("");
-  const [postFile, setPostFile] = useState<File | null>(null);
+  const [postFiles, setPostFiles] = useState<File[]>([]);
+  const [postVideos, setPostVideos] = useState<File[]>([]);
   const [postComposerOpen, setPostComposerOpen] = useState(false);
   const [postScope, setPostScope] = useState<"all" | "mine">("all");
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentFiles, setCommentFiles] = useState<Record<string, File | null>>({});
+  const [shareComposerOpen, setShareComposerOpen] = useState(false);
+  const [shareTargetPost, setShareTargetPost] = useState<CommunityPost | null>(null);
+  const [shareCommentDraft, setShareCommentDraft] = useState("");
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
+  const postVideoInputRef = useRef<HTMLInputElement>(null);
 
   const articleParams = useMemo(
     () => ({
@@ -367,13 +425,102 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
       toast({ title: "Error", description: msg, variant: "destructive" });
     },
   });
+  const updateArticleMut = useMutation({
+    mutationFn: () =>
+      updateArticle({
+        id: editingArticleId as string,
+        title: editArticleTitle.trim(),
+        description: editArticleDescription.trim(),
+        category: editArticleCats,
+        contentBlocks: [{ type: "paragraph", order: 0, content: editArticleBody.trim() || " " }],
+      }),
+    onSuccess: () => {
+      toast({ title: "Article updated" });
+      setArticleEditOpen(false);
+      setEditingArticleId(null);
+      void qc.invalidateQueries({ queryKey: ["community", "articles"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not update article.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+  const approveArticleMut = useMutation({
+    mutationFn: (id: string) => approveArticle(id),
+    onSuccess: () => {
+      toast({ title: "Article approved" });
+      void qc.invalidateQueries({ queryKey: ["community", "articles"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not approve article.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+  const deleteArticleMut = useMutation({
+    mutationFn: (id: string) => deleteArticle(id),
+    onSuccess: () => {
+      toast({ title: "Article deleted" });
+      void qc.invalidateQueries({ queryKey: ["community", "articles"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not delete article.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const handleGenerateArticleWithAI = async () => {
+    const topic = (newTitle.trim() || articleTopic.trim()).trim();
+    if (!topic) {
+      toast({ title: "Topic required", description: "Enter a topic or title first.", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingArticle(true);
+    try {
+      const generated = await generateArticleWithAIMutationFn(topic);
+      const allowed = new Set<CommunityArticleCategory>([
+        "architecture",
+        "devops",
+        "backend",
+        "databases",
+        "frontend",
+        "mobile",
+        "ai",
+        "security",
+      ]);
+      const category: CommunityArticleCategory = allowed.has(generated.category)
+        ? generated.category
+        : "backend";
+      setNewTitle((generated.title || topic).trim());
+      setNewDescription((generated.summary || "AI-generated summary").trim());
+      setNewBody((generated.body || "AI-generated article body").trim());
+      setNewCats([category]);
+      toast({ title: "Generated", description: "Article draft was generated with AI." });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Could not generate article.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
 
 
   const createPostMut = useMutation({
-    mutationFn: () => createPost(postContent.trim(), postFile ?? undefined),
+    mutationFn: () =>
+      createPost({
+        content: postContent.trim(),
+        files: postFiles,
+        videos: postVideos,
+      }),
     onSuccess: () => {
       setPostContent("");
-      setPostFile(null);
+      setPostFiles([]);
+      setPostVideos([]);
       setPostComposerOpen(false);
       toast({ title: "Posted" });
       void qc.invalidateQueries({ queryKey: ["community", "posts"] });
@@ -392,12 +539,16 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
   });
 
   const sharePostMut = useMutation({
-    mutationFn: (postId: string) => sharePost(postId),
+    mutationFn: ({ postId, comment }: { postId: string; comment?: string }) => sharePost(postId, comment),
     onSuccess: async (data) => {
       if (data.shareableLink && typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(data.shareableLink);
         toast({ title: "Link copied", description: "Share link is on your clipboard." });
       }
+      setShareComposerOpen(false);
+      setShareTargetPost(null);
+      setShareCommentDraft("");
+      toast({ title: "Reposted", description: "Your repost is now published." });
       void qc.invalidateQueries({ queryKey: ["community", "posts"] });
     },
     onError: (e: unknown) => {
@@ -407,6 +558,21 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
       toast({ title: "Error", description: msg, variant: "destructive" });
     },
   });
+
+  const openShareComposer = (post: CommunityPost) => {
+    setShareTargetPost(post);
+    setShareCommentDraft("");
+    setShareComposerOpen(true);
+  };
+  const openEditArticle = (article: CommunityArticle) => {
+    setEditingArticleId(article._id);
+    setEditArticleTitle(article.title ?? "");
+    setEditArticleDescription(article.description ?? "");
+    const paragraphBlock = (article.contentBlocks ?? []).find((b) => b.type === "paragraph");
+    setEditArticleBody(paragraphBlock?.content ?? "");
+    setEditArticleCats((article.category?.length ? article.category : ["frontend"]) as CommunityArticleCategory[]);
+    setArticleEditOpen(true);
+  };
 
   const deletePostMut = useMutation({
     mutationFn: (postId: string) => deletePost(postId),
@@ -439,6 +605,35 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
       toast({ title: "Error", description: msg, variant: "destructive" });
     },
   });
+  const updatePostMut = useMutation({
+    mutationFn: ({ postId, content }: { postId: string; content: string }) =>
+      updatePost(postId, { content }),
+    onSuccess: () => {
+      toast({ title: "Post updated" });
+      void qc.invalidateQueries({ queryKey: ["community", "posts"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not update post.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+  const updateCommentMut = useMutation({
+    mutationFn: ({ commentId, text }: { commentId: string; text: string }) =>
+      updateComment(commentId, text),
+    onSuccess: () => {
+      toast({ title: "Comment updated" });
+      void qc.invalidateQueries({ queryKey: ["community", "comments", expandedPostId] });
+      void qc.invalidateQueries({ queryKey: ["community", "posts"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not update comment.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
 
   const deleteCommentMut = useMutation({
     mutationFn: (commentId: string) => deleteComment(commentId),
@@ -461,10 +656,33 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
       void qc.invalidateQueries({ queryKey: ["community", "comments", expandedPostId] }),
   });
 
-  const scrollToArticles = useCallback(() => {
-    setTab("articles");
-    document.getElementById("community-articles")?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+  const goToArticles = useCallback(() => {
+    const basePath = `/${area}/${userId}/community`;
+    if (viewMode === "both") {
+      setTab("articles");
+      document.getElementById("community-articles")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (viewMode === "articles") {
+      document.getElementById("community-articles")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    router.push(`${basePath}/articles`);
+  }, [area, router, userId, viewMode]);
+
+  const goToFeed = useCallback(() => {
+    const basePath = `/${area}/${userId}/community`;
+    if (viewMode === "both") {
+      setTab("feed");
+      document.getElementById("community-feed")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (viewMode === "feed") {
+      document.getElementById("community-feed")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    router.push(basePath);
+  }, [area, router, userId, viewMode]);
 
   const hubLabel = area === "instructor" ? "Instructor hub" : "Student hub";
 
@@ -492,7 +710,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
             curated articles, practical posts, and a community that grows with every lesson.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" className="rounded-full px-8" onClick={scrollToArticles}>
+            <Button size="lg" className="rounded-full px-8" onClick={goToArticles}>
               <BookOpen className="mr-2 h-4 w-4" />
               Browse articles
             </Button>
@@ -500,10 +718,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
               size="lg"
               variant="outline"
               className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
-              onClick={() => {
-                setTab("feed");
-                document.getElementById("community-feed")?.scrollIntoView({ behavior: "smooth" });
-              }}
+              onClick={goToFeed}
             >
               <Users className="mr-2 h-4 w-4" />
               Open the feed
@@ -540,75 +755,81 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
           </Alert>
         ) : null}
 
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Explore topics</h2>
-            <p className="text-sm text-muted-foreground">
-              Filter published articles by track—same category rhythm as EqraaTech’s guides.
-            </p>
-          </div>
-          <Button
-            className="w-fit rounded-full"
-            onClick={() => setCreateOpen(true)}
-            variant="default"
-          >
-            <PenLine className="mr-2 h-4 w-4" />
-            New article
-          </Button>
-        </div>
-
-        <ScrollArea className="pb-4">
-          <div className="flex w-max gap-2 pb-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={category === "all" ? "default" : "outline"}
-              className="rounded-full"
-              onClick={() => {
-                setCategory("all");
-                setArticlePage(1);
-              }}
-            >
-              All
-            </Button>
-            {CATEGORIES.map((c) => (
+        {showArticleControls ? (
+          <>
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">Explore topics</h2>
+                <p className="text-sm text-muted-foreground">
+                  Filter published articles by track—same category rhythm as EqraaTech’s guides.
+                </p>
+              </div>
               <Button
-                key={c}
-                type="button"
-                size="sm"
-                variant={category === c ? "default" : "outline"}
-                className="rounded-full capitalize"
-                onClick={() => {
-                  setCategory(c);
-                  setArticlePage(1);
-                }}
+                className="w-fit rounded-full"
+                onClick={() => setCreateOpen(true)}
+                variant="default"
               >
-                {c}
+                <PenLine className="mr-2 h-4 w-4" />
+                New article
               </Button>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+
+            <ScrollArea className="pb-4">
+              <div className="flex w-max gap-2 pb-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={category === "all" ? "default" : "outline"}
+                  className="rounded-full"
+                  onClick={() => {
+                    setCategory("all");
+                    setArticlePage(1);
+                  }}
+                >
+                  All
+                </Button>
+                {CATEGORIES.map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={category === c ? "default" : "outline"}
+                    className="rounded-full capitalize"
+                    onClick={() => {
+                      setCategory(c);
+                      setArticlePage(1);
+                    }}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          </>
+        ) : null}
 
         <Tabs
           id="community-articles"
-          value={tab}
-          onValueChange={(v) => setTab(v as "articles" | "feed")}
+          value={activeTab}
+          onValueChange={(v) => handleTabChange(v as "articles" | "feed")}
           className="mt-8"
         >
-          <TabsList className="h-auto w-full justify-start gap-1 rounded-2xl border border-border/60 bg-muted/40 p-1.5 md:w-auto">
-            <TabsTrigger
-              value="articles"
-              className="rounded-xl px-5 py-2.5 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              Articles
-            </TabsTrigger>
-            <TabsTrigger
-              value="feed"
-              className="rounded-xl px-5 py-2.5 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              Community feed
-            </TabsTrigger>
-          </TabsList>
+          {viewMode === "both" ? (
+            <TabsList className="h-auto w-full justify-start gap-1 rounded-2xl border border-border/60 bg-muted/40 p-1.5 md:w-auto">
+              <TabsTrigger
+                value="articles"
+                className="rounded-xl px-5 py-2.5 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Articles
+              </TabsTrigger>
+              <TabsTrigger
+                value="feed"
+                className="rounded-xl px-5 py-2.5 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Community feed
+              </TabsTrigger>
+            </TabsList>
+          ) : null}
 
           <TabsContent value="articles" className="mt-8 space-y-8">
             {articlesQuery.isLoading ? (
@@ -622,16 +843,24 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                 {(articlesQuery.data?.data ?? []).map((article) => {
                   const mins = readMinutes(article);
                   const cardImage = pickArticleCardImage(article);
+                  const articleAuthorId =
+                    typeof article.author === "string"
+                      ? article.author
+                      : article.author && typeof article.author === "object"
+                        ? article.author._id
+                        : undefined;
+                  const canManageArticle = isAdmin || Boolean(user?._id && articleAuthorId && user._id === articleAuthorId);
                   return (
-                    <button
+                    <div
                       key={article._id}
-                      type="button"
                       className="text-left"
-                      onClick={() =>
-                        router.push(`/${area}/${userId}/community/articles/${encodeURIComponent(article.slug)}`)
-                      }
                     >
-                      <Card className="h-full overflow-hidden rounded-2xl border-border/70 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg">
+                      <Card
+                        className="h-full overflow-hidden rounded-2xl border-border/70 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+                        onClick={() =>
+                          router.push(`/${area}/${userId}/community/articles/${encodeURIComponent(article.slug)}`)
+                        }
+                      >
                         <div className="relative aspect-16/10 w-full bg-muted">
                           <ArticlePreviewImage src={cardImage} alt={article.title} />
                           <div className="absolute left-3 top-3 flex flex-wrap gap-1">
@@ -645,6 +874,54 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                               </Badge>
                             ))}
                           </div>
+                          {canManageArticle ? (
+                            <div className="absolute right-3 top-3">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-full border border-border/70 bg-background/95 text-foreground shadow-sm backdrop-blur hover:bg-background"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontal className="h-5 w-5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditArticle(article);
+                                    }}
+                                  >
+                                    Edit
+                                  </DropdownMenuItem>
+                                  {isAdmin && article.publishedStatus !== "published" ? (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        approveArticleMut.mutate(article._id);
+                                      }}
+                                      disabled={approveArticleMut.isPending}
+                                    >
+                                      Approve
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteArticleMut.mutate(article._id);
+                                    }}
+                                    disabled={deleteArticleMut.isPending}
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ) : null}
                         </div>
                         <CardHeader className="space-y-2 pb-2">
                           {article.publishedStatus ? (
@@ -680,7 +957,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                           </span>
                         </CardFooter>
                       </Card>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -730,7 +1007,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                 <CardContent className="space-y-4 p-4 md:p-5">
                   <div className="flex w-full max-w-[1000px] flex-wrap items-center gap-3 sm:flex-nowrap">
                     <Avatar className="h-11 w-11">
-                      <AvatarImage />
+                      <AvatarImage src={currentUserPic(user)} />
                       <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
                     </Avatar>
                     <Button
@@ -748,10 +1025,8 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                       variant="ghost"
                       className="justify-center rounded-lg border bg-muted/20 py-5 text-base"
                       onClick={() => {
-                        toast({
-                          title: "Video posting",
-                          description: "Video endpoint is not available yet. You can post text and photo now.",
-                        });
+                        postVideoInputRef.current?.click();
+                        setPostComposerOpen(true);
                       }}
                     >
                       <Video className="mr-2 h-5 w-5 text-emerald-500" />
@@ -775,9 +1050,20 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                     type="file"
                     accept="image/*"
                     className="hidden"
+                    multiple
                     aria-label="Select post photo"
                     title="Select post photo"
-                    onChange={(e) => setPostFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => setPostFiles(Array.from(e.target.files ?? []))}
+                  />
+                  <input
+                    ref={postVideoInputRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    multiple
+                    aria-label="Select post videos"
+                    title="Select post videos"
+                    onChange={(e) => setPostVideos(Array.from(e.target.files ?? []))}
                   />
                 </CardContent>
               </Card>
@@ -869,8 +1155,12 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                           }}
                           onDeletePost={() => deletePostMut.mutate(post._id)}
                           onLike={() => likePostMut.mutate(originalPost._id)}
-                          onShare={() => sharePostMut.mutate(originalPost._id)}
+                          onShare={(post) => openShareComposer(post)}
+                          onEditPost={(postId, content) => updatePostMut.mutate({ postId, content })}
                           onDeleteComment={(id) => deleteCommentMut.mutate(id)}
+                          onEditComment={(commentId, text) =>
+                            updateCommentMut.mutate({ commentId, text })
+                          }
                           onLikeComment={(id) => likeCommentMut.mutate(id)}
                           repostUsers={repostUsersByPostId.get(originalPost._id) ?? []}
                         />
@@ -911,8 +1201,12 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                         }}
                         onDeletePost={() => deletePostMut.mutate(post._id)}
                         onLike={() => likePostMut.mutate(post._id)}
-                        onShare={() => sharePostMut.mutate(post._id)}
+                        onShare={(post) => openShareComposer(post)}
+                        onEditPost={(postId, content) => updatePostMut.mutate({ postId, content })}
                         onDeleteComment={(id) => deleteCommentMut.mutate(id)}
+                        onEditComment={(commentId, text) =>
+                          updateCommentMut.mutate({ commentId, text })
+                        }
                         onLikeComment={(id) => likeCommentMut.mutate(id)}
                         repostUsers={repostUsersByPostId.get(post._id) ?? []}
                       />
@@ -932,10 +1226,13 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
 
       <Dialog open={postComposerOpen} onOpenChange={setPostComposerOpen}>
         <DialogContent className="flex h-[82vh] max-w-4xl flex-col overflow-hidden rounded-2xl p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create post</DialogTitle>
+          </DialogHeader>
           <div className="shrink-0 border-b px-6 py-4 pr-14">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
-                <AvatarImage />
+                <AvatarImage src={currentUserPic(user)} />
                 <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
               </Avatar>
               <div>
@@ -951,9 +1248,14 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
               onChange={(e) => setPostContent(e.target.value)}
               className="min-h-[50vh] resize-none border-0 p-0 text-3xl leading-tight shadow-none focus-visible:ring-0"
             />
-            {postFile ? (
+            {postFiles.length > 0 ? (
               <div className="mt-4 rounded-xl border bg-muted/20 p-3 text-sm">
-                Attached photo: <span className="font-medium">{postFile.name}</span>
+                Attached photos: <span className="font-medium">{postFiles.map((f) => f.name).join(", ")}</span>
+              </div>
+            ) : null}
+            {postVideos.length > 0 ? (
+              <div className="mt-3 rounded-xl border bg-muted/20 p-3 text-sm">
+                Attached videos: <span className="font-medium">{postVideos.map((f) => f.name).join(", ")}</span>
               </div>
             ) : null}
           </div>
@@ -964,12 +1266,7 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
                   type="button"
                   variant="ghost"
                   className="rounded-full"
-                  onClick={() => {
-                    toast({
-                      title: "Video posting",
-                      description: "Video endpoint is not available yet. You can post text and photo now.",
-                    });
-                  }}
+                  onClick={() => postVideoInputRef.current?.click()}
                 >
                   <Video className="mr-2 h-4 w-4 text-emerald-500" />
                   Video
@@ -987,12 +1284,101 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
               <Button
                 type="button"
                 className="rounded-full px-6"
-                disabled={!postContent.trim() || createPostMut.isPending}
+                disabled={
+                  (!postContent.trim() && postFiles.length === 0 && postVideos.length === 0) ||
+                  createPostMut.isPending
+                }
                 onClick={() => createPostMut.mutate()}
               >
                 {createPostMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={shareComposerOpen}
+        onOpenChange={(open) => {
+          setShareComposerOpen(open);
+          if (!open) {
+            setShareTargetPost(null);
+            setShareCommentDraft("");
+          }
+        }}
+      >
+        <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col overflow-hidden rounded-2xl p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
+            <DialogTitle>Repost</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={currentUserPic(user)} />
+                <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
+              </Avatar>
+              <Textarea
+                value={shareCommentDraft}
+                onChange={(e) => setShareCommentDraft(e.target.value)}
+                placeholder="Add a thought about this..."
+                className="min-h-[96px] rounded-xl"
+              />
+            </div>
+
+            {shareTargetPost ? (
+              <div className="max-h-[52vh] overflow-y-auto rounded-2xl border border-border/70 bg-muted/20 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={authorPic(shareTargetPost.author)} />
+                    <AvatarFallback>{initials(authorName(shareTargetPost.author))}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{authorName(shareTargetPost.author)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {shareTargetPost.createdAt
+                        ? formatDistanceToNow(new Date(shareTargetPost.createdAt), { addSuffix: true })
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+                {shareTargetPost.content?.trim() ? (
+                  <p
+                    dir={isMostlyArabic(shareTargetPost.content) ? "rtl" : "ltr"}
+                    className={cn(
+                      "whitespace-pre-wrap text-sm",
+                      isMostlyArabic(shareTargetPost.content) ? "text-right" : "text-left",
+                    )}
+                  >
+                    {shareTargetPost.content}
+                  </p>
+                ) : null}
+                {pickPostImage(shareTargetPost) ? (
+                  <img
+                    src={encodeURI(pickPostImage(shareTargetPost) as string)}
+                    alt="Post preview"
+                    className="mt-3 max-h-[60vh] w-full rounded-xl border bg-black/5 object-contain"
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            <DialogFooter className="shrink-0">
+              <Button variant="ghost" onClick={() => setShareComposerOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!shareTargetPost?._id) return;
+                  sharePostMut.mutate({
+                    postId: shareTargetPost._id,
+                    comment: shareCommentDraft.trim() || undefined,
+                  });
+                }}
+                disabled={sharePostMut.isPending || !shareTargetPost?._id}
+              >
+                {sharePostMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Repost"}
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -1006,6 +1392,27 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="ca-topic">Topic (for AI generation)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="ca-topic"
+                    value={articleTopic}
+                    onChange={(e) => setArticleTopic(e.target.value)}
+                    className="rounded-xl"
+                    placeholder="e.g. Clean Architecture in Node.js"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl"
+                    disabled={isGeneratingArticle}
+                    onClick={() => void handleGenerateArticleWithAI()}
+                  >
+                    {isGeneratingArticle ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generate with AI"}
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="ca-title">Title</Label>
                 <Input
@@ -1089,6 +1496,57 @@ export default function CommunityPageClient({ area, userId }: CommunityPageClien
         </DialogContent>
       </Dialog>
 
+      <Dialog open={articleEditOpen} onOpenChange={setArticleEditOpen}>
+        <DialogContent className="flex max-h-[78vh] w-[min(92vw,56rem)] max-w-4xl flex-col overflow-hidden rounded-2xl p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
+            <DialogTitle>Edit article</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+            <Input value={editArticleTitle} onChange={(e) => setEditArticleTitle(e.target.value)} />
+            <Textarea
+              value={editArticleDescription}
+              onChange={(e) => setEditArticleDescription(e.target.value)}
+              className="min-h-[90px] resize-y"
+            />
+            <Textarea
+              value={editArticleBody}
+              onChange={(e) => setEditArticleBody(e.target.value)}
+              className="min-h-[220px] resize-y"
+            />
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => {
+                const on = editArticleCats.includes(c);
+                return (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={on ? "default" : "outline"}
+                    className="rounded-full capitalize"
+                    onClick={() =>
+                      setEditArticleCats((prev) => (on ? prev.filter((x) => x !== c) : [...prev, c]))
+                    }
+                  >
+                    {c}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
+            <Button variant="ghost" onClick={() => setArticleEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateArticleMut.mutate()}
+              disabled={!editingArticleId || !editArticleTitle.trim() || updateArticleMut.isPending}
+            >
+              {updateArticleMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
@@ -1108,8 +1566,10 @@ type PostCardProps = {
   onSubmitComment: () => void;
   onDeletePost: () => void;
   onLike: () => void;
-  onShare: () => void;
+  onShare: (post: CommunityPost) => void;
+  onEditPost: (postId: string, content: string) => void;
   onDeleteComment: (id: string) => void;
+  onEditComment: (commentId: string, text: string) => void;
   onLikeComment: (id: string) => void;
   repostUsers: CommunityAuthor[];
 };
@@ -1136,7 +1596,9 @@ function RepostWrapper({
   onDeletePost,
   onLike,
   onShare,
+  onEditPost,
   onDeleteComment,
+  onEditComment,
   onLikeComment,
   repostUsers,
 }: RepostWrapperProps) {
@@ -1172,7 +1634,9 @@ function RepostWrapper({
           onDeletePost={onDeletePost}
           onLike={onLike}
           onShare={onShare}
+          onEditPost={onEditPost}
           onDeleteComment={onDeleteComment}
+          onEditComment={onEditComment}
           onLikeComment={onLikeComment}
           repostUsers={repostUsers}
         />
@@ -1197,7 +1661,9 @@ function PostCard({
   onDeletePost,
   onLike,
   onShare,
+  onEditPost,
   onDeleteComment,
+  onEditComment,
   onLikeComment,
   repostUsers,
 }: PostCardProps) {
@@ -1206,6 +1672,10 @@ function PostCard({
   const [repostsOpen, setRepostsOpen] = useState(false);
   const [repostUsersList, setRepostUsersList] = useState<CommunityAuthor[]>(repostUsers);
   const [repostsLoading, setRepostsLoading] = useState(false);
+  const [editingPost, setEditingPost] = useState(false);
+  const [editingPostText, setEditingPostText] = useState(post.content ?? "");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
   const authorId =
     typeof post.author === "object" && post.author ? post.author._id : undefined;
   const canDeletePost = Boolean(userId && authorId && userId === authorId) || isAdmin;
@@ -1256,13 +1726,49 @@ function PostCard({
           </p>
         </div>
         {canDeletePost ? (
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={onDeletePost}>
-            Remove
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditingPost(true);
+                setEditingPostText(post.content ?? "");
+              }}
+            >
+              Edit
+            </Button>
+            <Button variant="ghost" size="sm" className="text-destructive" onClick={onDeletePost}>
+              Remove
+            </Button>
+          </div>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-3 pb-2">
-        {post.content?.trim() ? (
+        {editingPost ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editingPostText}
+              onChange={(e) => setEditingPostText(e.target.value)}
+              className="min-h-[90px]"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditingPost(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  onEditPost(post._id, editingPostText);
+                  setEditingPost(false);
+                }}
+                disabled={!editingPostText.trim()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : post.content?.trim() ? (
           <p
             dir={contentIsArabic ? "rtl" : "ltr"}
             className={cn(
@@ -1336,7 +1842,7 @@ function PostCard({
             variant="ghost"
             size="sm"
             className="h-9 rounded-md text-muted-foreground hover:bg-muted/60"
-            onClick={onShare}
+            onClick={() => onShare(post)}
           >
             <Share2 className="mr-1.5 h-4 w-4" />
             Repost
@@ -1408,27 +1914,72 @@ function PostCard({
                           <Heart className="h-3.5 w-3.5" />
                         </Button>
                         {canDel ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => {
+                                setEditingCommentId(c._id);
+                                setEditingCommentText(c.text);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-destructive"
+                              onClick={() => onDeleteComment(c._id)}
+                            >
+                              ×
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                    {editingCommentId === c._id ? (
+                      <div className="mt-2 space-y-2">
+                        <Textarea
+                          value={editingCommentText}
+                          onChange={(e) => setEditingCommentText(e.target.value)}
+                          className="min-h-[70px]"
+                        />
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-destructive"
-                            onClick={() => onDeleteComment(c._id)}
+                            onClick={() => setEditingCommentId(null)}
                           >
-                            ×
+                            Cancel
                           </Button>
-                        ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              onEditComment(c._id, editingCommentText);
+                              setEditingCommentId(null);
+                            }}
+                            disabled={!editingCommentText.trim()}
+                          >
+                            Save
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <p
-                      dir={isMostlyArabic(c.text) ? "rtl" : "ltr"}
-                      className={cn(
-                        "mt-1 text-muted-foreground",
-                        isMostlyArabic(c.text) ? "text-right" : "text-left",
-                      )}
-                    >
-                      {c.text}
-                    </p>
+                    ) : (
+                      <p
+                        dir={isMostlyArabic(c.text) ? "rtl" : "ltr"}
+                        className={cn(
+                          "mt-1 text-muted-foreground",
+                          isMostlyArabic(c.text) ? "text-right" : "text-left",
+                        )}
+                      >
+                        {c.text}
+                      </p>
+                    )}
                     {c.image ? (
                       <div className="mt-2 rounded-lg border border-border/70 bg-background/60 p-2">
                         {commentImageErrors[c._id] ? (

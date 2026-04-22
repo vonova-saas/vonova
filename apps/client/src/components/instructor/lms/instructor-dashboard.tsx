@@ -43,12 +43,6 @@ import { useQuizStore } from "@/lib/stores";
 import { cn } from "@/lib/utils";
 import type { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 
-const DOT_GRID_STYLE = {
-  backgroundImage:
-    "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-  backgroundSize: "18px 18px",
-} as const;
-
 const instructorOutputData = [
   { month: "Jan", value: 3 },
   { month: "Feb", value: 5 },
@@ -243,112 +237,75 @@ export default function InstructorDashboard() {
   );
 
   return (
-    <div
-      className="min-h-full w-full overflow-auto px-4 py-6 sm:px-6 md:px-8 md:py-8"
-      style={DOT_GRID_STYLE}
-    >
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 md:gap-10">
-        {/* Hero */}
-        <header className="relative overflow-hidden rounded-3xl border-2 border-border/80 bg-card/40 px-6 py-8 shadow-lg backdrop-blur-md sm:px-10 sm:py-10">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 bottom-0 h-64 w-64 rounded-full bg-chart-2/20 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/40 to-transparent"
-          />
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="secondary"
-                  className="border border-primary/20 bg-primary/10 font-medium text-primary"
-                >
-                  Instructor
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {formatShortDate(now)}
-                </span>
-              </div>
-              <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl md:leading-[1.1]">
-                <span className="bg-linear-to-br from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-foreground dark:to-foreground/75">
-                  {greetingForHour(now)}, {displayName}
-                </span>
-              </h1>
-              <p className="mt-4 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Shape courses, sharpen quizzes, and ship lessons that stick — all
-                in one calm workspace.
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-xl shadow-md"
-                disabled={disabledNav}
-              >
-                <Link href={`${base}/quiz-managment/create`}>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  New quiz
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="rounded-xl border-2 bg-background/50 backdrop-blur-sm"
-                disabled={disabledNav}
-              >
-                <Link href={`${base}/courses-management/create`}>
-                  Start a course
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+            Instructor hub
+          </Badge>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">
+            Learn together. Share what you build.
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            {greetingForHour(now)}, {displayName}. Shape courses and quizzes in one clear workspace.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="rounded-full px-8"
+              disabled={disabledNav}
+            >
+              <Link href={`${base}/quiz-managment/create`}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                New quiz
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+              disabled={disabledNav}
+            >
+              <Link href={`${base}/courses-management/create`}>
+                Start a course
+              </Link>
+            </Button>
           </div>
-
-          {/* Inline stats */}
-          <div className="relative z-10 mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/80 bg-background/50 px-4 py-4 backdrop-blur-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{loading ? "—" : totalQuizzes}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
                 Quizzes
-              </p>
-              {loading ? (
-                <div className="mt-2 h-9 w-16 animate-pulse rounded-md bg-muted" />
-              ) : (
-                <p className="mt-1 text-3xl font-bold tabular-nums text-primary">
-                  {totalQuizzes}
-                </p>
-              )}
+              </div>
             </div>
-            <div className="rounded-2xl border border-border/80 bg-background/50 px-4 py-4 backdrop-blur-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{loading ? "—" : totalQuestions}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
                 Questions
-              </p>
-              {loading ? (
-                <div className="mt-2 h-9 w-20 animate-pulse rounded-md bg-muted" />
-              ) : (
-                <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
-                  {totalQuestions}
-                </p>
-              )}
+              </div>
             </div>
-            <div className="col-span-2 rounded-2xl border border-dashed border-primary/25 bg-primary/6 px-4 py-4 sm:col-span-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-primary/90">
-                Momentum
-              </p>
-              <p className="mt-2 text-sm leading-snug text-muted-foreground">
-                Small edits today keep learners engaged tomorrow.
-              </p>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{formatShortDate(now)}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Today
+              </div>
             </div>
           </div>
-        </header>
+        </div>
+      </section>
 
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pt-10 md:gap-10">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
           <Card className="relative overflow-hidden border-2 shadow-lg backdrop-blur-sm lg:col-span-7">
             <div

@@ -34,6 +34,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { logoutMutationFn, getCurrentUserQueryFn } from "@/services";
 import { getAccountMutationFn } from "@/services/app/settings/account.api";
 
+function normalizeAvatarUrl(value?: string | null): string | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  return /^https?:\/\//i.test(raw) ? encodeURI(raw) : encodeURI(raw);
+}
+
 export function NavStudent({
   student,
 }: {
@@ -79,9 +85,20 @@ export function NavStudent({
   // Prefer live user data; fall back to provided props
   const userName = me?.user?.name || student.name;
   const userEmail = me?.user?.email || student.email;
-  // Prefer auth profilePicture; fallback to account.avatarUrl; finally to provided prop
+  // Prefer auth/account profile picture across known backend keys.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userAvatar = me?.user?.profilePicture || (account as any)?.data?.avatarUrl || student.avatar;
+  const accountData = (account as any)?.data ?? account;
+  const userAvatar = normalizeAvatarUrl(
+    me?.user?.profilePicture ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (me?.user as any)?.avatar ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (me?.user as any)?.photo ||
+      accountData?.avatarUrl ||
+      accountData?.profilePicture ||
+      accountData?.avatar ||
+      student.avatar,
+  );
   const initials = userName
     ? userName
       .split(" ")

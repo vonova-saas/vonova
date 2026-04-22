@@ -17,20 +17,30 @@ import {
 } from "@/components/ui/sidebar";
 import { sidebarNavData } from "./sidebar-nav-config";
 import Image from "next/image";
-import { useUserId } from "@/hooks";
+import { usePathname } from "next/navigation";
 import { NavSubMain } from "./nav-sub-main";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const userId = useUserId();
+  const pathname = usePathname();
+  const userId = pathname?.split("/")[2] ?? "";
+  const withStudentId = (url: string) => url.replace(":studentId", userId);
   const lmsItems = sidebarNavData.lms.map((item) => ({
-  ...item,
-  url: item.url.replace(":studentId", userId || ""),
-}));
+    ...item,
+    url: withStudentId(item.url),
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      url: withStudentId(subItem.url),
+    })),
+  }));
 
-const appItems = sidebarNavData.app.map((item) => ({
-  ...item,
-  url: item.url.replace(":studentId", userId || ""),
-}));
+  const appItems = sidebarNavData.app.map((item) => ({
+    ...item,
+    url: withStudentId(item.url),
+    items: item.items?.map((subItem) => ({
+      ...subItem,
+      url: withStudentId(subItem.url),
+    })),
+  }));
 
   return (
     <Sidebar collapsible="icon" {...props}>
