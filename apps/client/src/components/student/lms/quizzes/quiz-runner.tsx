@@ -12,6 +12,8 @@ import {
   getQuizByIdMutationFn,
   submitQuizMutationFn,
   getStudentQuizAttemptsMutationFn,
+  normalizeQuizAttemptsResponse,
+  getAttemptRecordId,
 } from "@/services/student/lms/quizzes/quiz.api";
 import { getAttemptsTypeResponse } from "@/types/api/student/lms/quizzes/quiz.type";
 import { useUserId } from "@/hooks";
@@ -70,8 +72,8 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
           ? String((quizRef as { _id?: string })._id ?? "")
           : String(quizRef ?? "");
       return attemptQuizId === targetQuizId;
-    }) as { id?: string } | undefined;
-    return match?.id ?? null;
+    });
+    return match ? getAttemptRecordId(match) || null : null;
   };
 
   const redirectToAttempt = async (attemptId?: string | null) => {
@@ -81,7 +83,7 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
     }
     const attemptsRes = await getStudentQuizAttemptsMutationFn();
     const resolvedAttemptId = resolveAttemptIdForQuiz(
-      (attemptsRes as { data?: unknown }).data,
+      normalizeQuizAttemptsResponse(attemptsRes),
       quiz._id,
     );
     if (resolvedAttemptId) {
@@ -239,12 +241,10 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       setLoadingAttempts(true);
       setAttemptsError(null);
       const res = await getStudentQuizAttemptsMutationFn(quiz._id);
-      const data: unknown = (res as { data: unknown }).data;
+      const normalized = normalizeQuizAttemptsResponse(res);
       let parsed: getAttemptsTypeResponse["data"] = [];
-      if (Array.isArray(data)) {
-        parsed = data as getAttemptsTypeResponse["data"];
-      } else if (data && typeof data === "object") {
-        parsed = [data as getAttemptsTypeResponse["data"][number]];
+      if (normalized.length) {
+        parsed = normalized as getAttemptsTypeResponse["data"];
       }
       const filtered = parsed.filter((attempt) => {
         const attemptQuiz =

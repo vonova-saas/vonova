@@ -14,6 +14,37 @@ import {
   UpdateQuizDto,
 } from './dto/quiz.dto';
 
+type QuestionLike = {
+  id: string;
+  text: string;
+  options: { id: string; text: string }[];
+  correctOptionId?: string;
+};
+
+function resolveCorrectOptionFromQuestion(question: QuestionLike): {
+  correctOptionId: string;
+  correctOptionText: string;
+} {
+  const qAny = question as QuestionLike & { correct_option_id?: string };
+  const raw =
+    question.correctOptionId ?? qAny.correct_option_id ?? '';
+  const cid = String(raw).trim();
+  const opts = question.options ?? [];
+  const opt = cid
+    ? opts.find((o) => String(o.id).trim() === cid)
+    : undefined;
+  return {
+    correctOptionId: cid,
+    correctOptionText: opt?.text?.trim() ?? '',
+  };
+}
+
+function sameUserId(a: unknown, b: unknown): boolean {
+  const sa = a instanceof Types.ObjectId ? a.toHexString() : String(a ?? '');
+  const sb = b instanceof Types.ObjectId ? b.toHexString() : String(b ?? '');
+  return sa === sb;
+}
+
 @Injectable()
 export class QuizService {
   constructor(
@@ -181,9 +212,9 @@ export class QuizService {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    // Check if student has already attempted this quiz
+    // Prefer the quiz document's ObjectId so the query matches how attempts are stored.
     const existingAttempt = await this.answerModel.findOne({
-      quiz: quizId,
+      quiz: quiz._id,
       userId,
     });
 
@@ -211,11 +242,16 @@ export class QuizService {
 
     // Map student's answers to questions
     const questionsWithAnswers = quizObj.questions.map((question) => {
+      const qKey = String(question.id).trim();
       const studentAnswer = attemptObj.answers.find(
-        (ans) => ans.questionId === question.id,
+        (ans) => String(ans.questionId).trim() === qKey,
       );
+      const { correctOptionId, correctOptionText } =
+        resolveCorrectOptionFromQuestion(question as QuestionLike);
       return {
         ...question,
+        correctOptionId,
+        correctOptionText,
         studentSelectedOptionId: studentAnswer?.selectedOptionId || null,
         isCorrect: studentAnswer?.correct || false,
       };
@@ -243,9 +279,8 @@ export class QuizService {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    // Check if student has already attempted this quiz
     const existingAttempt = await this.answerModel.findOne({
-      quiz: quizId,
+      quiz: quiz._id,
       userId,
     });
     if (existingAttempt) {
@@ -348,11 +383,70 @@ export class QuizService {
     if (!attempt) throw new NotFoundException('Attempt not found');
 
     // Ensure user can only access their own attempts
-    if (attempt.userId.toString() !== userId) {
+    if (!sameUserId(attempt.userId, userId)) {
       throw new NotFoundException('Attempt not found or access denied');
     }
 
-    return attempt;
+    const quiz = await this.quizModel.findById(attempt.quiz);
+    const attemptObj = attempt.toObject() as {
+      answers: {
+        questionId: string;
+        selectedOptionId: string | null;
+        correct: boolean | null;
+      }[];
+    };
+
+    if (!quiz) {
+      return attempt.toObject();
+    }
+
+    const enhancedAnswers = attemptObj.answers.map((answer) => {
+      const qid = String(answer.questionId).trim();
+      const question = quiz.questions.find(
+        (q) => String(q.id).trim() === qid,
+      );
+      if (!question) {
+        return {
+          ...answer,
+          questionText: String(answer.questionId),
+          selectedOptionText: answer.selectedOptionId
+            ? String(answer.selectedOptionId)
+            : 'No answer',
+        };
+      }
+
+      const sel = (answer.selectedOptionId || '').trim();
+      const selectedOption = question.options.find(
+        (o) => String(o.id).trim() === sel,
+      );
+      const { correctOptionId, correctOptionText } =
+        resolveCorrectOptionFromQuestion(question as QuestionLike);
+
+      const base = {
+        questionId: answer.questionId,
+        selectedOptionId: answer.selectedOptionId,
+        correct: answer.correct,
+        questionText: question.text,
+        selectedOptionText:
+          selectedOption?.text ||
+          (answer.selectedOptionId == null ? 'No answer' : '—'),
+      };
+
+      if (answer.correct) {
+        return base;
+      }
+
+      return {
+        ...base,
+        correctOptionId,
+        correctOptionText,
+      };
+    });
+
+    return {
+      ...attemptObj,
+      answers: enhancedAnswers,
+    };
   }
 
   async getStudentQuizAttempts(userId: string) {
@@ -371,20 +465,20 @@ export class QuizService {
         if (!quiz) return attempt;
 
         const answersWithCorrectInfo = attempt.answers.map((answer) => {
+          const qid = String(answer.questionId).trim();
           const question = quiz.questions.find(
-            (q) => q.id === answer.questionId,
+            (q) => String(q.id).trim() === qid,
           );
           if (!question) return answer;
 
           // If answer is incorrect, add correct answer info
           if (!answer.correct) {
-            const correctOption = question.options.find(
-              (opt) => opt.id === question.correctOptionId,
-            );
+            const { correctOptionId, correctOptionText } =
+              resolveCorrectOptionFromQuestion(question as QuestionLike);
             return {
               ...answer,
-              correctOptionId: question.correctOptionId,
-              correctOptionText: correctOption?.text || '',
+              correctOptionId,
+              correctOptionText,
               questionText: question.text,
               allOptions: question.options,
             };

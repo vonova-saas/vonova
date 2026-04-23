@@ -6,6 +6,11 @@ export type QuizType = {
   topic: string;
   noOfQuestions: string | number;
   questions: Question[];
+  /** Set by LMS when listing quizzes for the authenticated student (from QuizAnswer). */
+  isCompleted?: boolean;
+  completedAt?: string | null;
+  score?: number | null;
+  percentage?: number | null;
   alreadyAttempted?: boolean;
   attemptId?: string | null;
 };
@@ -15,6 +20,8 @@ export type Question = {
   text: string;
   options: Option[];
   correctOptionId: string;
+  /** Present on student GET when the quiz was already attempted (LMS review payload). */
+  correctOptionText?: string;
 };
 
 export type Option = {
@@ -135,6 +142,17 @@ export type submitQuizTypeResponse = {
   }
 }
 
+/** Graded line item; GET attempt may add human-readable fields from the quiz. */
+export type GradedAttemptAnswer = {
+  questionId: string;
+  selectedOptionId: string | null;
+  correct: boolean | null;
+  questionText?: string;
+  selectedOptionText?: string;
+  correctOptionId?: string;
+  correctOptionText?: string;
+};
+
 /** One graded quiz attempt returned by GET student quiz attempts. */
 export type StudentQuizAttempt = {
   id: string;
@@ -143,11 +161,7 @@ export type StudentQuizAttempt = {
   score: number;
   total: number;
   percentage: number;
-  answers: {
-    questionId: string;
-    selectedOptionId: string;
-    correct: boolean;
-  }[];
+  answers: GradedAttemptAnswer[];
   submittedAt: string;
   gradedAt: string;
   createdAt: string;

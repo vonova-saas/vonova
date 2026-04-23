@@ -7,7 +7,11 @@ import { useUserId } from "@/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { useQuizStore } from "@/lib/stores";
 import type { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
-import { getStudentQuizAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import {
+  getStudentQuizAttemptsMutationFn,
+  normalizeQuizAttemptsResponse,
+  getAttemptRecordId,
+} from "@/services/student/lms/quizzes/quiz.api";
 
 export default function QuizDetailPage() {
   const userId = useUserId();
@@ -33,9 +37,7 @@ export default function QuizDetailPage() {
             return;
           }
           const attemptsRes = await getStudentQuizAttemptsMutationFn();
-          const attempts = Array.isArray((attemptsRes as { data?: unknown[] })?.data)
-            ? ((attemptsRes as { data?: unknown[] }).data ?? [])
-            : [];
+          const attempts = normalizeQuizAttemptsResponse(attemptsRes);
           const matchingAttempt = attempts.find((attempt) => {
             const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
               ?? (attempt as { quizId?: unknown }).quizId;
@@ -44,9 +46,10 @@ export default function QuizDetailPage() {
                 ? String((quizRef as { _id?: string })._id ?? "")
                 : String(quizRef ?? "");
             return attemptQuizId === id;
-          }) as { id?: string } | undefined;
-          if (matchingAttempt?.id) {
-            router.replace(`/student/${userId}/quizzes/attempts/${matchingAttempt.id}`);
+          });
+          const attemptRecordId = matchingAttempt ? getAttemptRecordId(matchingAttempt) : "";
+          if (attemptRecordId) {
+            router.replace(`/student/${userId}/quizzes/attempts/${attemptRecordId}`);
             return;
           }
         }

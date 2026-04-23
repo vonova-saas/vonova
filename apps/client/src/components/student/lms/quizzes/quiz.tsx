@@ -1,11 +1,15 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import QuizList from "./quiz-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllQuizzesMutationFn, getStudentQuizAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
-import { QuizType, StudentQuizAttempt } from "@/types/api/student/lms/quizzes/quiz.type";
+import {
+  getAllQuizzesMutationFn,
+  getStudentQuizAttemptsMutationFn,
+  normalizeQuizAttemptsResponse,
+} from "@/services/student/lms/quizzes/quiz.api";
+import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
 import { BookOpen, Search, Filter, Component, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,10 +23,9 @@ export default function Quiz() {
   const [quizzes, setQuizzes] = useState<QuizType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState<StudentQuizAttempt[]>([]);
   const pageSize = 6;
 
-  const loadQuizzes = async () => {
+  const loadQuizzes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -32,26 +35,28 @@ export default function Quiz() {
         : (res as { data?: QuizType[] })?.data ?? [];
       let completedQuizIds = new Set<string>();
       if (userId) {
-        const attemptsRes = await getStudentQuizAttemptsMutationFn();
-        const rawAttempts = Array.isArray((attemptsRes as { data?: unknown[] })?.data)
-          ? ((attemptsRes as { data?: StudentQuizAttempt[] }).data ?? [])
-          : [];
-        setAttempts(rawAttempts);
-        completedQuizIds = new Set(
-          rawAttempts
-            .map((attempt) => {
-              const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
-                ?? (attempt as { quizId?: unknown }).quizId;
-              return quizRef && typeof quizRef === "object"
-                ? String((quizRef as { _id?: string })._id ?? "")
-                : String(quizRef ?? "");
-            })
-            .filter(Boolean),
-        );
+        try {
+          const attemptsRes = await getStudentQuizAttemptsMutationFn();
+          const rawAttempts = normalizeQuizAttemptsResponse(attemptsRes);
+          completedQuizIds = new Set(
+            rawAttempts
+              .map((attempt) => {
+                const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
+                  ?? (attempt as { quizId?: unknown }).quizId;
+                return quizRef && typeof quizRef === "object"
+                  ? String((quizRef as { _id?: string })._id ?? "")
+                  : String(quizRef ?? "");
+              })
+              .filter(Boolean),
+          );
+        } catch {
+          // Quiz list from GET /quizzes still carries isCompleted from DB (QuizAnswer).
+        }
       }
       const withStatus = list.map((quiz) => ({
         ...quiz,
-        alreadyAttempted: completedQuizIds.has(quiz._id),
+        // Prefer LMS list payload (reads QuizAnswer in DB); attempts API is secondary for IDs/scores in cards.
+        alreadyAttempted: Boolean(quiz.isCompleted || completedQuizIds.has(quiz._id)),
       }));
       setQuizzes(withStatus);
     } catch (e: unknown) {
@@ -61,11 +66,11 @@ export default function Quiz() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    loadQuizzes();
-  }, []);
+    void loadQuizzes();
+  }, [loadQuizzes]);
 
   const topics = useMemo(() => [
     "All",
@@ -195,7 +200,7 @@ export default function Quiz() {
           <span className="text-lg font-semibold text-destructive mb-2">{error}</span>
           <span className="text-sm text-muted-foreground">Please try again later.</span>
         </div>
-      ) : availableQuizzes.length === 0 ? (
+      ) : filteredQuizzes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <BookOpen className="w-16 h-16 text-primary/20 mb-4" />
           <span className="text-lg font-semibold text-muted-foreground mb-2">No quizzes found</span>
@@ -205,7 +210,15 @@ export default function Quiz() {
         <div className="space-y-10">
           <section>
             <h2 className="text-xl font-semibold mb-4">Available Quizzes</h2>
-            <QuizList quizzes={paginatedQuizzes} mode="available" />
+            {availableQuizzes.length === 0 ? (
+              <Card>
+                <CardContent className="py-6 text-muted-foreground">
+                  You have no quizzes left to attempt. See completed quizzes below.
+                </CardContent>
+              </Card>
+            ) : (
+              <QuizList quizzes={paginatedQuizzes} mode="available" />
+            )}
           </section>
           <section>
             <h2 className="text-xl font-semibold mb-4">Completed Quizzes</h2>

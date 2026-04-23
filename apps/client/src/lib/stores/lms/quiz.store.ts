@@ -7,12 +7,13 @@ import {
   deleteQuizMutationFn,
   getInstructorQuizzesMutationFn,
   getStudentQuizAttemptsMutationFn,
+  normalizeQuizAttemptsResponse,
+  getAttemptRecordId,
 } from "@/services/student/lms/quizzes/quiz.api";
 import type {
   QuizType,
   createQuizType,
   updateQuizType,
-  getAttemptsTypeResponse,
 } from "@/types/api/student/lms/quizzes/quiz.type";
 
 let attemptsHydrated = false;
@@ -117,8 +118,6 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   },
 
   fetchById: async (id: string) => {
-    const cached = get().quizzesById[id];
-    if (cached) return cached;
     set({ loading: true, error: null });
     try {
       const res = await getQuizByIdMutationFn(id);
@@ -197,15 +196,14 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
       if (!attemptsHydrationPromise) {
         attemptsHydrationPromise = (async () => {
           const res = await getStudentQuizAttemptsMutationFn();
-          const raw = (res as getAttemptsTypeResponse).data as unknown;
-          const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+          const arr = normalizeQuizAttemptsResponse(res);
           const grouped: Record<string, AttemptSummary[]> = {};
 
           for (const a of arr) {
             const targetQuizId = getAttemptQuizId(a);
             if (!targetQuizId) continue;
             const mapped: AttemptSummary = {
-              id: (a as { id?: string }).id,
+              id: getAttemptRecordId(a) || undefined,
               score: Number((a as { score?: number }).score ?? 0),
               total: Number((a as { total?: number }).total ?? 0),
               percentage: Number((a as { percentage?: number }).percentage ?? 0),
