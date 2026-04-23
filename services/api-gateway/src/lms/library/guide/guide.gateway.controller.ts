@@ -367,6 +367,129 @@ export class GuideGatewayController {
     status: 404,
     description: 'Guide not found',
   })
+  @ApiOperation({
+    summary: 'Get all guide file links',
+    description:
+      'Retrieves all uploaded file links for guides with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'Complete JavaScript Learning Guide' },
+              slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+              fileName: { type: 'string', example: 'javascript-guide.pdf' },
+              objectKey: { type: 'string', example: 'library/guide/123456/javascript-guide.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 1024000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 25 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllGuideLinks() {
+    return firstValueFrom(this.guideService.getAllLinks());
+  }
+
+  @ApiOperation({
+    summary: 'Get guide by ID',
+    description:
+      'Retrieves a specific guide using its unique identifier including full details and content structure.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the guide',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'Complete JavaScript Learning Guide',
+        },
+        slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to learning JavaScript.',
+        },
+        description: {
+          type: 'string',
+          example: 'This guide covers everything from basics to advanced.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/guide-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['featured', 'popular'],
+        },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 15 },
+        isFavorite: { type: 'boolean', example: false },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', example: 'Getting Started' },
+              content: { type: 'string', example: 'Section content here...' },
+              order: { type: 'number', example: 1 },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Guide not found',
+  })
   @Get(':id')
   async getGuideById(@Param('id') id: string) {
     return firstValueFrom(this.guideService.getGuideById(id));
@@ -599,52 +722,4 @@ export class GuideGatewayController {
     return firstValueFrom(this.guideService.deleteGuide(id, userId));
   }
 
-  @ApiOperation({
-    summary: 'Get all guide file links',
-    description:
-      'Retrieves all uploaded file links for guides with presigned URLs for direct access.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Guide links retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        links: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: {
-                type: 'string',
-                example: 'Complete JavaScript Learning Guide',
-              },
-              slug: {
-                type: 'string',
-                example: 'complete-javascript-learning-guide',
-              },
-              fileName: { type: 'string', example: 'javascript-guide.pdf' },
-              objectKey: {
-                type: 'string',
-                example: 'library/guide/123456/javascript-guide.pdf',
-              },
-              presignedUrl: { type: 'string', example: 'https://...' },
-              uploadedAt: {
-                type: 'string',
-                example: '2023-01-01T00:00:00.000Z',
-              },
-              contentType: { type: 'string', example: 'application/pdf' },
-              size: { type: 'number', example: 1024000 },
-            },
-          },
-        },
-        total: { type: 'number', example: 25 },
-      },
-    },
-  })
-  @Get('links')
-  async getAllGuideLinks() {
-    return firstValueFrom(this.guideService.getAllLinks());
-  }
 }

@@ -515,6 +515,132 @@ export class PresentationGatewayController {
     status: 404,
     description: 'Presentation not found',
   })
+  @ApiOperation({
+    summary: 'Get all presentation file links',
+    description:
+      'Retrieves all uploaded file links for presentations with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript Fundamentals Presentation' },
+              slug: { type: 'string', example: 'javascript-fundamentals-presentation' },
+              fileName: { type: 'string', example: 'javascript-presentation.pdf' },
+              objectKey: { type: 'string', example: 'library/presentation/123456/javascript-presentation.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 5120000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 8 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllPresentationLinks() {
+    return firstValueFrom(this.presentationService.getAllLinks());
+  }
+
+  @ApiOperation({
+    summary: 'Get presentation by ID',
+    description:
+      'Retrieves a specific presentation using its unique identifier including full details and content structure.',
+  })
+  @ApiParam({
+    name: 'presentationId',
+    description: 'The unique identifier of the presentation',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: {
+          type: 'string',
+          example: 'JavaScript Fundamentals Presentation',
+        },
+        slug: {
+          type: 'string',
+          example: 'javascript-fundamentals-presentation',
+        },
+        summary: {
+          type: 'string',
+          example: 'An introduction to JavaScript fundamentals.',
+        },
+        description: {
+          type: 'string',
+          example: 'This presentation covers basic JavaScript concepts.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Beginner' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/presentation-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['interactive', 'featured'],
+        },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 10 },
+        isFavorite: { type: 'boolean', example: false },
+        slides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', example: 'Introduction' },
+              content: { type: 'string', example: 'Slide content here...' },
+              order: { type: 'number', example: 1 },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Presentation not found',
+  })
   @Get('getPresentationById/:presentationId')
   async getById(@Param('presentationId') presentationId: string) {
     return firstValueFrom(this.presentationService.getById(presentationId));
@@ -586,56 +712,4 @@ export class PresentationGatewayController {
     return firstValueFrom(this.presentationService.getContent(presentationId));
   }
 
-  @ApiOperation({
-    summary: 'Get all presentation file links',
-    description:
-      'Retrieves all uploaded file links for presentations with presigned URLs for direct access.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Presentation links retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        links: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: {
-                type: 'string',
-                example: 'JavaScript Fundamentals Presentation',
-              },
-              slug: {
-                type: 'string',
-                example: 'javascript-fundamentals-presentation',
-              },
-              fileName: {
-                type: 'string',
-                example: 'javascript-presentation.pdf',
-              },
-              objectKey: {
-                type: 'string',
-                example:
-                  'library/presentation/123456/javascript-presentation.pdf',
-              },
-              presignedUrl: { type: 'string', example: 'https://...' },
-              uploadedAt: {
-                type: 'string',
-                example: '2023-01-01T00:00:00.000Z',
-              },
-              contentType: { type: 'string', example: 'application/pdf' },
-              size: { type: 'number', example: 5120000 },
-            },
-          },
-        },
-        total: { type: 'number', example: 8 },
-      },
-    },
-  })
-  @Get('links')
-  async getAllPresentationLinks() {
-    return firstValueFrom(this.presentationService.getAllLinks());
-  }
 }

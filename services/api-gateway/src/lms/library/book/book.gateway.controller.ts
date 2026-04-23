@@ -389,6 +389,127 @@ export class BookGatewayController {
     status: 404,
     description: 'Book not found',
   })
+  @ApiOperation({
+    summary: 'Get all book file links',
+    description:
+      'Retrieves all uploaded file links for books with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+              slug: { type: 'string', example: 'javascript-complete-guide' },
+              fileName: { type: 'string', example: 'javascript-book.pdf' },
+              objectKey: { type: 'string', example: 'library/book/123456/javascript-book.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 2048000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 15 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllBookLinks() {
+    return firstValueFrom(this.bookService.getAllLinks());
+  }
+
+  @ApiOperation({
+    summary: 'Get book by ID',
+    description:
+      'Retrieves a specific book using its unique identifier including full details and content availability.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the book',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+        slug: { type: 'string', example: 'javascript-complete-guide' },
+        summary: {
+          type: 'string',
+          example: 'A comprehensive guide to JavaScript programming.',
+        },
+        description: {
+          type: 'string',
+          example:
+            'This book covers everything from basic JavaScript concepts to advanced topics.',
+        },
+        authors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'John Doe' },
+              avatarUrl: {
+                type: 'string',
+                example: 'https://example.com/author-avatar.jpg',
+              },
+              bio: {
+                type: 'string',
+                example: 'Experienced JavaScript developer and instructor.',
+              },
+            },
+          },
+        },
+        topics: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['javascript', 'programming', 'web-development'],
+        },
+        level: { type: 'string', example: 'Intermediate' },
+        coverUrl: {
+          type: 'string',
+          example: 'https://example.com/book-cover.jpg',
+        },
+        language: { type: 'string', example: 'en' },
+        badges: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['bestseller', 'featured'],
+        },
+        pageCount: { type: 'number', example: 450 },
+        readingTimeMin: { type: 'number', example: 180 },
+        status: { type: 'string', example: 'PUBLISHED' },
+        publishedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        averageRating: { type: 'number', example: 4.5 },
+        reviewCount: { type: 'number', example: 25 },
+        isFavorite: { type: 'boolean', example: false },
+        userProgress: {
+          type: 'object',
+          properties: {
+            currentPage: { type: 'number', example: 125 },
+            totalPages: { type: 'number', example: 450 },
+            progressPercentage: { type: 'number', example: 0.28 },
+            lastReadAt: { type: 'string', example: '2023-01-15T00:00:00.000Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book not found',
+  })
   @Get(':id')
   async getBookById(@Param('id') id: string) {
     return firstValueFrom(this.bookService.getBookById(id));
@@ -616,49 +737,4 @@ export class BookGatewayController {
     return firstValueFrom(this.bookService.deleteBook(id, userId));
   }
 
-  @ApiOperation({
-    summary: 'Get all book file links',
-    description:
-      'Retrieves all uploaded file links for books with presigned URLs for direct access.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Book links retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        links: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: {
-                type: 'string',
-                example: 'JavaScript: The Complete Guide',
-              },
-              slug: { type: 'string', example: 'javascript-complete-guide' },
-              fileName: { type: 'string', example: 'javascript-book.pdf' },
-              objectKey: {
-                type: 'string',
-                example: 'library/book/123456/javascript-book.pdf',
-              },
-              presignedUrl: { type: 'string', example: 'https://...' },
-              uploadedAt: {
-                type: 'string',
-                example: '2023-01-01T00:00:00.000Z',
-              },
-              contentType: { type: 'string', example: 'application/pdf' },
-              size: { type: 'number', example: 2048000 },
-            },
-          },
-        },
-        total: { type: 'number', example: 15 },
-      },
-    },
-  })
-  @Get('links')
-  async getAllBookLinks() {
-    return firstValueFrom(this.bookService.getAllLinks());
-  }
 }
