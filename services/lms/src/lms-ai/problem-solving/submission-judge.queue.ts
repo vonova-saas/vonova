@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ModuleRef } from '@nestjs/core';
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { SubmissionService } from './submission.service';
@@ -16,13 +17,17 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
   private queue?: Queue;
   private worker?: Worker;
   private enabled = false;
+  private submissionService?: SubmissionService;
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly submissionService: SubmissionService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async onModuleInit() {
+    this.submissionService = this.moduleRef.get(SubmissionService, {
+      strict: false,
+    });
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://127.0.0.1:6379';
     try {
@@ -32,6 +37,9 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
         this.queueName,
         async (job) => {
           const payload = job.data as JudgeJobPayload;
+          if (!this.submissionService) {
+            throw new Error('SubmissionService is unavailable');
+          }
           await this.submissionService.processSubmissionJob(payload.submissionId);
         },
         { connection: this.connection, concurrency: 3 },
@@ -52,6 +60,14 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueue(payload: JudgeJobPayload) {
+    if (!this.submissionService) {
+      this.submissionService = this.moduleRef.get(SubmissionService, {
+        strict: false,
+      });
+    }
+    if (!this.submissionService) {
+      throw new Error('SubmissionService is unavailable');
+    }
     if (!this.enabled || !this.queue) {
       await this.submissionService.processSubmissionJob(payload.submissionId);
       return;
