@@ -50,21 +50,21 @@ export function EditCourseForm({ data } : iAppProps) {
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title: data.title,
-      description: data.description,
-      fileKey: data.fileKey!,
-      price: data.price,
-      duration: data.duration,
-      level:  data.level,
-      category: data.category as CourseSchemaType['category'],
-      status: data.status,
+      description: data.description || "",
+      fileKey: data.thumbnailUrl || "",
+      price: data.price?.amount || 0,
+      duration: 0, // Not in API response
+      level: data.difficulty === "INTERMEDIATE" ? "Intermidate" : data.difficulty === "BEGINNER" ? "Beginner" : "Advanced",
+      category: "Development" as CourseSchemaType['category'], // Default since not in API
+      status: data.status === "DRAFT" ? "Draft" : data.status === "PUBLISHED" ? "Published" : "Archive",
       slug: data.slug,
-      smallDescription: data.smallDescription,
+      smallDescription: data.smallDescription || "",
     },
   });
 
   function onSubmit(values: CourseSchemaType) {
     startTransition(async () => {
-      const { data: result, error } = await tryCatch(editCourse(values, data.id));
+      const { data: result, error } = await tryCatch(editCourse(values, data._id));
 
       if (error) {
         toast.error("An unexpected error occured. Please try again.");

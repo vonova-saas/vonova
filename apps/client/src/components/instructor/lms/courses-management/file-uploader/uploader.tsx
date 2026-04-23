@@ -62,7 +62,6 @@ export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
             fileName: file.name,
             contentType: file.type,
             size: file.size,
-            isImage: fileTypeAccepted === "image" ? true : false,
           }),
         });
         if (!presignedResponse.ok) {
@@ -76,6 +75,13 @@ export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
           return;
         }
         const { presignedUrl, key } = await presignedResponse.json();
+
+        // Construct the public S3 URL from the presigned URL
+        // Presigned URL format: https://bucket.s3.region.amazonaws.com/key?signature=...
+        // We need to extract the base URL without the query params
+        const presignedUrlObj = new URL(presignedUrl);
+        const publicUrl = `${presignedUrlObj.protocol}//${presignedUrlObj.host}/${key}`;
+
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.upload.onprogress = (event) => {
@@ -95,7 +101,7 @@ export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
                 uploading: false,
                 key: key,
               }));
-              onChange?.(key);
+              onChange?.(publicUrl);
               toast.success("File uploaded successfully");
               resolve();
             } else {

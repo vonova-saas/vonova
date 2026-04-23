@@ -58,15 +58,15 @@ interface SortableItemProps {
 
 export function CourseStrucutre({ data }: iAppProps) {
   const initialItems =
-    data.chapter.map((chapter) => ({
-      id: chapter.id,
+    (data.chapters || []).map((chapter) => ({
+      id: chapter._id,
       title: chapter.title,
-      order: chapter.position,
+      order: chapter.index,
       isOpen: true, // default chapter to open
-      lessons: chapter.lessons.map((lesson) => ({
-        id: lesson.id,
+      lessons: (chapter.lessons || []).map((lesson) => ({
+        id: lesson._id,
         title: lesson.title,
-        order: lesson.position,
+        order: lesson.index,
       })),
     })) || [];
 
@@ -76,16 +76,16 @@ export function CourseStrucutre({ data }: iAppProps) {
   useEffect(() => {
     setItems((prevItems) => {
       const updatedItems =
-        data.chapter.map((chapter) => ({
-          id: chapter.id,
+        (data.chapters || []).map((chapter) => ({
+          id: chapter._id,
           title: chapter.title,
-          order: chapter.position,
+          order: chapter.index,
           isOpen:
-            prevItems.find((item) => item.id === chapter.id)?.isOpen ?? true,
-          lessons: chapter.lessons.map((lesson) => ({
-            id: lesson.id,
+            prevItems.find((item) => item.id === chapter._id)?.isOpen ?? true,
+          lessons: (chapter.lessons || []).map((lesson) => ({
+            id: lesson._id,
             title: lesson.title,
-            order: lesson.position,
+            order: lesson.index,
           })),
         })) || [];
       return updatedItems;
@@ -130,7 +130,7 @@ export function CourseStrucutre({ data }: iAppProps) {
     const overId = over.id;
     const activeType = active.data.current?.type as "chapter" | "lesson";
     const overType = over.data.current?.type as "chapter" | "lesson";
-    const courseId = data.id;
+    const courseId = data._id;
 
     if (activeType === "chapter") {
       let targetChapterId = null;
@@ -297,7 +297,7 @@ export function CourseStrucutre({ data }: iAppProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between border-b border-border">
           <CardTitle>Chapters</CardTitle>
-          <NewChapterModal courseId={data.id} />
+          <NewChapterModal courseId={data._id} />
         </CardHeader>
         <CardContent className="space-y-8">
           <SortableContext items={items} strategy={verticalListSortingStrategy}>
@@ -337,7 +337,7 @@ export function CourseStrucutre({ data }: iAppProps) {
                           </p>
                         </div>
 
-                        <DeleteChapter chapterId={item.id} courseId={data.id}/>
+                        <DeleteChapter chapterId={item.id} courseId={data._id}/>
                       </div>
 
                       <CollapsibleContent>
@@ -364,7 +364,7 @@ export function CourseStrucutre({ data }: iAppProps) {
                                       </Button>
                                       <FileText className="size-4" />
                                       <Link
-                                        href={`/courses-management/${data.id}/${item.id}/${lesson.id}`}
+                                        href={`/courses-management/${data._id}/${item.id}/${lesson.id}`}
                                       >
                                         {lesson.title}
                                       </Link>
@@ -372,7 +372,7 @@ export function CourseStrucutre({ data }: iAppProps) {
 
                                     <DeleteLesson
                                       chapterId={item.id}
-                                      courseId={data.id}
+                                      courseId={data._id}
                                       lessonId={lesson.id}
                                     />
                                   </div>
@@ -383,7 +383,7 @@ export function CourseStrucutre({ data }: iAppProps) {
                           <div className="p-2">
                             <NewLessonModal
                               chapterId={item.id}
-                              courseId={data.id}
+                              courseId={data._id}
                             />
                           </div>
                         </div>

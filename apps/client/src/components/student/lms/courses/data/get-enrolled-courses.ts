@@ -1,40 +1,43 @@
-export async function getEnrolledCourses() {
-  // Demo-only: return a static list of "enrolled" courses for the demo user
-  const data = [
-    {
-      Course: {
-        id: "enrolled-course-1",
-        smallDescription: "Quick overview of the MarshalLMS platform.",
-        title: "Getting Started with MarshalLMS",
-        fileKey: "demo-enrolled-1",
-        level: "Beginner",
-        slug: "getting-started-with-marshal-lms",
-        duration: 2,
-        chapter: [
-          {
-            id: "enrolled-course-1-chapter-1",
-            lessons: [
-              {
-                id: "enrolled-course-1-lesson-1",
-                lessonProgress: [
-                  {
-                    id: "progress-1",
-                    completed: false,
-                    lessonId: "enrolled-course-1-lesson-1",
-                    userId: "demo-user-id",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    },
-  ];
+import { Course } from "@/types/api/lms/courses.type";
+import { getAllCoursesQueryFn } from "@/services/student/lms/courses/courses.api";
+import { getEnrollmentStatusQueryFn } from "@/services/student/lms/courses/courses.api";
 
-  return data;
+export async function getEnrolledCourses(): Promise<EnrolledCourseType[]> {
+  try {
+    // Get all published courses
+    const coursesResponse = await getAllCoursesQueryFn({ status: "PUBLISHED" });
+    const courses = coursesResponse.courses;
+
+    // Check enrollment status for each course
+    const enrolledCourses: EnrolledCourseType[] = [];
+
+    for (const course of courses) {
+      try {
+        const enrollment = await getEnrollmentStatusQueryFn(course._id);
+        if (enrollment.status === "ACTIVE" || enrollment.status === "COMPLETED") {
+          enrolledCourses.push({
+            Course: course,
+            progress: enrollment.progress,
+            completedLessons: enrollment.completedLessons,
+            totalLessons: enrollment.totalLessons,
+          });
+        }
+      } catch {
+        // User is not enrolled in this course, skip it
+        continue;
+      }
+    }
+
+    return enrolledCourses;
+  } catch (error) {
+    console.error("Error fetching enrolled courses:", error);
+    return [];
+  }
 }
 
-export type EnrolledCourseType = Awaited<
-  ReturnType<typeof getEnrolledCourses>
->[0];
+export type EnrolledCourseType = {
+  Course: Course;
+  progress?: number;
+  completedLessons?: number;
+  totalLessons?: number;
+};

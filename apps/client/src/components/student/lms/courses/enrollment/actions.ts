@@ -1,16 +1,26 @@
 "use server";
 
 import { ApiResponse } from "@/lib/courses/types";
+import { enrollCourseMutationFn } from "@/services/student/lms/courses/courses.api";
+import { EnrollCourseDto } from "@/types/api/lms/courses.type";
 
 export async function enrollInCourseAction(
-  courseId: string
+  courseId: string,
+  couponCode?: string
 ): Promise<ApiResponse> {
-  // Demo-only: no auth, no DB, no payments.
-  // Simulate a successful enrollment for the given courseId.
-  console.log("Demo enrollInCourseAction called", { courseId });
+  try {
+    const data: EnrollCourseDto = couponCode ? { couponCode } : {};
+    await enrollCourseMutationFn(courseId, data);
 
-  return {
-    status: "success",
-    message: "You have been enrolled in this course (demo mode).",
-  };
+    return {
+      status: "success",
+      message: "You have been enrolled in this course successfully.",
+    };
+  } catch (error) {
+    console.error("Error enrolling in course:", error);
+    return {
+      status: "error",
+      message: "Failed to enroll in course. Please try again.",
+    };
+  }
 }

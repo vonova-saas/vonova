@@ -1,16 +1,31 @@
 "use server";
 
 import { ApiResponse } from "@/lib/courses/types";
+import { markLessonCompleteMutationFn } from "@/services/student/lms/courses/courses.api";
+import { MarkLessonCompleteDto } from "@/types/api/lms/courses.type";
 
 export async function markLessonComlete(
   lessonId: string,
-  slug: string
+  courseId: string,
+  timeSpentSec?: number
 ): Promise<ApiResponse> {
-  // Demo-only: no DB, no auth, no cache revalidation
-  console.log("Demo markLessonComlete called", { lessonId, slug });
+  try {
+    const data: MarkLessonCompleteDto = {
+      completed: true,
+      timeSpentSec,
+    };
 
-  return {
-    status: "success",
-    message: "Progress updated (demo mode)",
-  };
+    await markLessonCompleteMutationFn(courseId, lessonId, data);
+
+    return {
+      status: "success",
+      message: "Lesson marked as complete",
+    };
+  } catch (error) {
+    console.error("Error marking lesson complete:", error);
+    return {
+      status: "error",
+      message: "Failed to mark lesson as complete. Please try again.",
+    };
+  }
 }
