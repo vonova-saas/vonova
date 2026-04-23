@@ -8,6 +8,7 @@ import { AssignmentModule } from './assignment/assignment.module';
 import { BookModule } from './library/book/book.module';
 import { PresentationModule } from './library/presentation/presentation.module';
 import { GuideModule } from './library/guide/guide.module';
+import { LibraryModule } from './library/library/library.module';
 import { FavoriteModule } from './library/favorite/favorite.module';
 import { ReviewModule } from './library/review/review.module';
 import { CourseModule } from './course/course/course.module';
@@ -22,6 +23,7 @@ import { ProgressModule } from './course/progress/progress.module';
 import { DatabaseModule } from './lms-ai/database/database.module';
 import { RoadmapModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
+import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.module';
 
 @Module({
   imports: [
@@ -50,6 +52,7 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
     BookModule,
     PresentationModule,
     GuideModule,
+    LibraryModule,
     FavoriteModule,
     ReviewModule,
     CourseModule,
@@ -65,6 +68,7 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
     DatabaseModule,
     RoadmapModule,
     PdfSummaryModule,
+    ProblemSolvingModule,
   ],
   controllers: [AppController],
   providers: [],

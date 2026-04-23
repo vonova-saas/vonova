@@ -78,6 +78,10 @@ export class CreateBookDto {
   @IsInt()
   @Type(() => Number)
   readingTimeMin?: number = 0;
+
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdateBookDto extends PartialType(CreateBookDto) {}
@@ -120,6 +124,14 @@ export class GetBooksQueryDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  userRole?: string;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }
 
 export class UpdateProgressDto {

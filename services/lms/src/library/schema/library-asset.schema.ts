@@ -26,6 +26,12 @@ export class LibraryAssetUrls {
 
   @Prop({ type: [String], default: [] })
   previewThumbnails?: string[];
+
+  @Prop()
+  presignedUrl?: string;
+
+  @Prop()
+  presignedUrlExpiresAt?: Date;
 }
 
 @Schema({ timestamps: true })

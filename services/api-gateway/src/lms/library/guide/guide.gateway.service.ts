@@ -21,7 +21,12 @@ export class GuideGatewayService {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
     return this.client.send(
       { cmd: 'library.guides.getAll' },
-      { ...query, topics: topicsArray },
+      { 
+        ...query, 
+        topics: topicsArray,
+        userRole: query.userRole,
+        userId: query.userId
+      },
     );
   }
 
@@ -43,5 +48,9 @@ export class GuideGatewayService {
 
   deleteGuide(id: string, userId: string) {
     return this.client.send({ cmd: 'library.guides.delete' }, { id, userId });
+  }
+
+  getAllLinks() {
+    return this.client.send({ cmd: 'library.guides.getAllLinks' }, {});
   }
 }

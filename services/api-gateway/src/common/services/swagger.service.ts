@@ -68,6 +68,7 @@ export class SwaggerService {
       .addTag('LMS Course Progress', 'LMS Course Progress')
       .addTag('LMS Course Enrollment', 'LMS Course Enrollment')
       .addTag('LMS Course Reviews', 'LMS Course Reviews')
+      .addTag('LMS Library', 'LMS Library - Unified library API for books, guides, and presentations')
       .addTag('LMS Library Books', 'LMS Library Books')
       .addTag('LMS Library Presentations', 'LMS Library Presentations')
       .addTag('LMS Library Guides', 'LMS Library Guides')

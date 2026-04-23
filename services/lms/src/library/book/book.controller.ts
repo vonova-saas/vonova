@@ -38,9 +38,15 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.getAll' })
-  getBooks(@Payload() query: GetBooksQueryDto) {
+  getBooks(@Payload() data: GetBooksQueryDto & { userRole?: string; userId?: string }) {
+    const { userRole, userId, ...query } = data;
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
-    return this.bookService.getBooksService({ ...query, topics: topicsArray });
+    return this.bookService.getBooksService({ 
+      ...query, 
+      topics: topicsArray,
+      userRole,
+      userId
+    });
   }
 
   @MessagePattern({ cmd: 'book.getById' })
@@ -87,5 +93,10 @@ export class BookController {
     if (!createdBy) throw new Error('User identification is required');
 
     return this.bookService.deleteBookService(id, createdBy);
+  }
+
+  @MessagePattern({ cmd: 'book.getAllLinks' })
+  async getAllBookLinks() {
+    return this.bookService.getAllBookLinksService();
   }
 }

@@ -18,6 +18,7 @@ import { AuthGatewayModule } from './app/auth/auth.module';
 import { OnboardingGatewayModule } from './app/onboarding/onboarding.gateway.module';
 import { RoadmapGatewayModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryGatewayModule } from './lms-ai/pdf-summary/pdf-summary.module';
+import { ProblemSolvingGatewayModule } from './lms-ai/problem-solving/problem-solving.module';
 import { FaviconController } from './common/controllers/favicon.controller';
 import { RootRedirectController } from './common/controllers/root-redirect.controller';
 import { QuizGatewayModule } from './lms/quizzes/quiz.gateway.module';
@@ -32,6 +33,7 @@ import { ReviewCourseGatewayModule } from './lms/course/review-course/review-cou
 import { BookGatewayModule } from './lms/library/book/book.gateway.module';
 import { PresentationGatewayModule } from './lms/library/presentation/presentation.gateway.module';
 import { GuideGatewayModule } from './lms/library/guide/guide.gateway.module';
+import { LibraryGatewayModule } from './lms/library/library/library.gateway.module';
 import { FavoriteGatewayModule } from './lms/library/favorite/favorite.gateway.module';
 import { ReviewGatewayModule } from './lms/library/review/review.gateway.module';
 import { ReaderGatewayModule } from './lms/library/reader/reader.gateway.module';
@@ -71,6 +73,7 @@ import { CommunityGatewayModule } from './app/community/community.module';
     BookGatewayModule,
     PresentationGatewayModule,
     GuideGatewayModule,
+    LibraryGatewayModule,
     FavoriteGatewayModule,
     ReviewGatewayModule,
     ReaderGatewayModule,
@@ -83,6 +86,7 @@ import { CommunityGatewayModule } from './app/community/community.module';
     //* LMS AI Services
     RoadmapGatewayModule,
     PdfSummaryGatewayModule,
+    ProblemSolvingGatewayModule,
     //* Generative AI Services
   ],
   controllers: [AppController, FaviconController, RootRedirectController],
