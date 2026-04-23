@@ -32,8 +32,10 @@ export class S3Service {
         Key: objectKey,
         ContentType: contentType,
       });
-      
-      const url = await getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
+
+      const url = await getSignedUrl(this.s3, command, {
+        expiresIn: expiresInSeconds,
+      });
       return url;
     } catch (error) {
       console.error('Error generating presigned URL:', error);
@@ -50,8 +52,10 @@ export class S3Service {
         Bucket: process.env.AWS_S3_BUCKET_LMS,
         Key: objectKey,
       });
-      
-      const url = await getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
+
+      const url = await getSignedUrl(this.s3, command, {
+        expiresIn: expiresInSeconds,
+      });
       return url;
     } catch (error) {
       console.error('Error generating presigned GET URL:', error);
@@ -88,9 +92,9 @@ export class S3Service {
       });
 
       await this.s3.send(command);
-      
+
       const location = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
-      
+
       return {
         location,
         key: objectKey,
@@ -116,16 +120,18 @@ export class S3Service {
   async deleteObject(objectKey: string): Promise<boolean> {
     try {
       const bucketName = process.env.AWS_S3_BUCKET_LMS;
-      
-      console.log(`Deleting S3 object: ${objectKey} from bucket: ${bucketName}`);
-      
+
+      console.log(
+        `Deleting S3 object: ${objectKey} from bucket: ${bucketName}`,
+      );
+
       // Check if object exists first
       const exists = await this.headObjectExists(objectKey);
       if (!exists) {
         console.log(`S3 object ${objectKey} does not exist, skipping deletion`);
         return true;
       }
-      
+
       const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
       const result = await this.s3.send(
         new DeleteObjectCommand({
@@ -133,7 +139,7 @@ export class S3Service {
           Key: objectKey,
         }),
       );
-      
+
       console.log(`Successfully deleted S3 object: ${objectKey}`);
       return true;
     } catch (error) {

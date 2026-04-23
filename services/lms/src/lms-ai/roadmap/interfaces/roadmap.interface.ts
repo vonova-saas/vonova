@@ -34,7 +34,7 @@ export const SKILL_LEVEL_VALUES: SkillLevel[] = [
   SkillLevel.ADVANCED,
   SkillLevel.BEGINNER_CAP,
   SkillLevel.INTERMEDIATE_CAP,
-  SkillLevel.ADVANCED_CAP
+  SkillLevel.ADVANCED_CAP,
 ];
 
 export interface IRoadmapRequest {
@@ -87,13 +87,13 @@ export interface IRoadmapHistory {
   roadmapId: string;
   userId: string;
   action:
-  | 'generated'
-  | 'viewed'
-  | 'started'
-  | 'week_completed'
-  | 'milestone_reached'
-  | 'completed'
-  | 'archived';
+    | 'generated'
+    | 'viewed'
+    | 'started'
+    | 'week_completed'
+    | 'milestone_reached'
+    | 'completed'
+    | 'archived';
   timestamp: Date;
   ip_address?: string;
   user_agent?: string;

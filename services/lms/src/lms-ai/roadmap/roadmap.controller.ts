@@ -7,7 +7,7 @@ import { RoadmapService } from './roadmap.service';
 export class RoadmapController {
   private readonly logger = new Logger(RoadmapController.name);
 
-  constructor(private readonly roadmapService: RoadmapService) { }
+  constructor(private readonly roadmapService: RoadmapService) {}
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -205,7 +205,9 @@ export class RoadmapController {
 
     const roadmaps = await this.roadmapService.getUserRoadmaps(userId.trim());
 
-    this.logger.log(`Retrieved ${roadmaps.length} roadmaps for user: ${userId}`);
+    this.logger.log(
+      `Retrieved ${roadmaps.length} roadmaps for user: ${userId}`,
+    );
 
     return {
       success: true,

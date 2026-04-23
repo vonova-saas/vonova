@@ -31,9 +31,9 @@ export async function editCourse(
       slug: data.slug,
       smallDescription: data.smallDescription,
       description: data.description,
-      difficulty: data.level === "Intermidate" ? "INTERMEDIATE" : data.level.toUpperCase(),
+      difficulty: data.level === "Intermidate" ? "Intermediate" : data.level === "Beginner" ? "Beginner" : "Advanced",
       tags: [],
-      thumbnailUrl: data.fileKey ? undefined : undefined,
+      thumbnailUrl: data.fileKey || undefined,
       language: "English",
       price: {
         amount: data.price,

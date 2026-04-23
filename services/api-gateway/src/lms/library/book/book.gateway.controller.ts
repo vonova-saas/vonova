@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
@@ -119,17 +119,17 @@ export class BookGatewayController {
   @Post('createBook')
   async createBook(@Body() dto: CreateBookDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     // Ensure status is set from request body or default to PUBLISHED
     const bookData = {
       ...dto,
-      status: dto.status || 'PUBLISHED'
+      status: dto.status || 'PUBLISHED',
     };
-    
+
     return firstValueFrom(this.bookService.createBook(bookData, userId));
   }
 
@@ -178,11 +178,11 @@ export class BookGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.bookService.publishBook(id, dto, userId));
   }
 
@@ -241,7 +241,10 @@ export class BookGatewayController {
             type: 'object',
             properties: {
               _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+              title: {
+                type: 'string',
+                example: 'JavaScript: The Complete Guide',
+              },
               slug: { type: 'string', example: 'javascript-complete-guide' },
               summary: {
                 type: 'string',
@@ -296,8 +299,10 @@ export class BookGatewayController {
     const user = req.user;
     const userRole = user?.role;
     const userId = user?.id || user?.sub || user?._id;
-    
-    return firstValueFrom(this.bookService.getBooks(query, { userRole, userId }));
+
+    return firstValueFrom(
+      this.bookService.getBooks(query, { userRole, userId }),
+    );
   }
 
   @ApiOperation({
@@ -624,11 +629,11 @@ export class BookGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.bookService.updateBook(id, dto, userId));
   }
 
@@ -679,11 +684,11 @@ export class BookGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.bookService.updateBookProgress(bookId, userId, body),
     );
@@ -724,12 +729,12 @@ export class BookGatewayController {
   @Delete(':id')
   async deleteBook(@Param('id') id: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.bookService.deleteBook(id, userId));
   }
 
-  }
+}

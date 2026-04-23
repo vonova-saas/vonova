@@ -12,7 +12,7 @@ export class PdfChatHistoryRepository {
   constructor(
     @InjectModel(PdfChatHistory.name, LMS_AI_CONNECTION_NAME)
     private pdfChatHistoryModel: Model<PdfChatHistoryDocument>,
-  ) { }
+  ) {}
 
   async create(
     chatData: Partial<PdfChatHistory>,

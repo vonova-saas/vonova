@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, SortOrder } from 'mongoose';
 import { Book, BookDocument } from '../schema/book/book.schema';
 import { Guide, GuideDocument } from '../schema/guide.schema';
-import { Presentation, PresentationDocument } from '../schema/presentation.schema';
+import {
+  Presentation,
+  PresentationDocument,
+} from '../schema/presentation.schema';
 import { LibraryType, LibraryTopics } from '../schema/library.schema';
 import { UploadService } from '../upload/upload.service';
 
@@ -53,33 +56,92 @@ export class LibraryService {
    * @returns Paginated result with items, total count, and metadata
    */
   async getAllByType(query: GetAllByTypeQuery) {
-    const { type, q, topics, level, sort, page = 1, limit = 10, status } = query;
-    
+    const {
+      type,
+      q,
+      topics,
+      level,
+      sort,
+      page = 1,
+      limit = 10,
+      status,
+    } = query;
+
     // If no type specified, get all items from all collections
     if (!type) {
       const [books, guides, presentations] = await Promise.all([
-        this.getItemsFromModel(this.bookModel, { q, topics, level, sort, page, limit, status }),
-        this.getItemsFromModel(this.guideModel, { q, topics, level, sort, page, limit, status }),
-        this.getItemsFromModel(this.presentationModel, { q, topics, level, sort, page, limit, status }),
+        this.getItemsFromModel(this.bookModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        }),
+        this.getItemsFromModel(this.guideModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        }),
+        this.getItemsFromModel(this.presentationModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        }),
       ]);
-      
+
       return {
         items: [...books.items, ...guides.items, ...presentations.items],
         total: books.total + guides.total + presentations.total,
         page,
         limit,
-        totalPages: Math.ceil((books.total + guides.total + presentations.total) / limit),
+        totalPages: Math.ceil(
+          (books.total + guides.total + presentations.total) / limit,
+        ),
       };
     }
 
     // Get items from specific collection based on type
     switch (type) {
       case 'book':
-        return this.getItemsFromModel(this.bookModel, { q, topics, level, sort, page, limit, status });
+        return this.getItemsFromModel(this.bookModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        });
       case 'guide':
-        return this.getItemsFromModel(this.guideModel, { q, topics, level, sort, page, limit, status });
+        return this.getItemsFromModel(this.guideModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        });
       case 'presentation':
-        return this.getItemsFromModel(this.presentationModel, { q, topics, level, sort, page, limit, status });
+        return this.getItemsFromModel(this.presentationModel, {
+          q,
+          topics,
+          level,
+          sort,
+          page,
+          limit,
+          status,
+        });
       default:
         throw new Error(`Invalid type: ${type}`);
     }
@@ -87,7 +149,15 @@ export class LibraryService {
 
   private async getItemsFromModel(
     model: Model<any>,
-    { q, topics, level, sort, page, limit, status }: {
+    {
+      q,
+      topics,
+      level,
+      sort,
+      page,
+      limit,
+      status,
+    }: {
       q?: string;
       topics?: string[];
       level?: string;
@@ -95,22 +165,22 @@ export class LibraryService {
       page?: number;
       limit?: number;
       status?: string;
-    }
+    },
   ) {
     const filter: any = {};
-    
+
     if (status) {
       filter.status = status;
     }
-    
+
     if (level) {
       filter.level = level;
     }
-    
+
     if (topics && topics.length > 0) {
       filter.topics = { $in: topics };
     }
-    
+
     if (q) {
       filter.$text = { $search: q };
     }
@@ -119,13 +189,14 @@ export class LibraryService {
     const skip = ((page || 1) - 1) * (limit || 10);
 
     const [items, total] = await Promise.all([
-      model.find(filter)
+      model
+        .find(filter)
         .sort(sortOptions)
         .skip(skip)
         .limit(limit || 10)
         .populate('fileAssetId')
         .lean(),
-      model.countDocuments(filter)
+      model.countDocuments(filter),
     ]);
 
     // Add presigned URLs for items with fileAssetId
@@ -192,11 +263,21 @@ export class LibraryService {
    * @returns List of available topics and filtered items
    */
   async getTopics(query: GetTopicsQuery) {
-    const { topic, topics, type, q, level, sort, page = 1, limit = 10, status } = query;
-    
+    const {
+      topic,
+      topics,
+      type,
+      q,
+      level,
+      sort,
+      page = 1,
+      limit = 10,
+      status,
+    } = query;
+
     // Get all available topics
     const allTopics = Object.values(LibraryTopics);
-    
+
     // If no specific topic filtering, return all available topics
     if (!topic && !topics) {
       return {
@@ -208,10 +289,10 @@ export class LibraryService {
         totalPages: 1,
       };
     }
-    
+
     // Convert topics to array for filtering
-    const topicsArray = topic ? [topic] : (topics ? topics : []);
-    
+    const topicsArray = topic ? [topic] : topics ? topics : [];
+
     // Use getAllByType to get filtered items
     const itemsResult = await this.getAllByType({
       type,
@@ -223,7 +304,7 @@ export class LibraryService {
       limit,
       status,
     });
-    
+
     return {
       topics: allTopics,
       totalTopics: allTopics.length,
@@ -254,15 +335,24 @@ export class LibraryService {
       breakdown: {
         books: {
           count: bookCount,
-          percentage: ((bookCount / (bookCount + guideCount + presentationCount)) * 100).toFixed(2),
+          percentage: (
+            (bookCount / (bookCount + guideCount + presentationCount)) *
+            100
+          ).toFixed(2),
         },
         guides: {
           count: guideCount,
-          percentage: ((guideCount / (bookCount + guideCount + presentationCount)) * 100).toFixed(2),
+          percentage: (
+            (guideCount / (bookCount + guideCount + presentationCount)) *
+            100
+          ).toFixed(2),
         },
         presentations: {
           count: presentationCount,
-          percentage: ((presentationCount / (bookCount + guideCount + presentationCount)) * 100).toFixed(2),
+          percentage: (
+            (presentationCount / (bookCount + guideCount + presentationCount)) *
+            100
+          ).toFixed(2),
         },
       },
     };

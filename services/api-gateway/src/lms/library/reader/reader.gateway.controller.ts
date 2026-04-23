@@ -70,11 +70,11 @@ export class ReaderGatewayController {
   @Get('books/:bookId/content')
   async getBookContent(@Param('bookId') bookId: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const data = await firstValueFrom(
       this.readerService.getBookContent(bookId, userId),
     );
@@ -83,8 +83,7 @@ export class ReaderGatewayController {
 
   @ApiOperation({
     summary: 'Get guide content',
-    description:
-      'Retrieves the content of a specific guide for reading.',
+    description: 'Retrieves the content of a specific guide for reading.',
   })
   @ApiParam({
     name: 'guideId',
@@ -172,7 +171,10 @@ export class ReaderGatewayController {
                 type: 'object',
                 properties: {
                   _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                  title: { type: 'string', example: 'Introduction to JavaScript' },
+                  title: {
+                    type: 'string',
+                    example: 'Introduction to JavaScript',
+                  },
                   content: { type: 'string', example: 'Slide content...' },
                   order: { type: 'number', example: 1 },
                   slideType: { type: 'string', example: 'TITLE' },
@@ -258,11 +260,11 @@ export class ReaderGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const doc = await firstValueFrom(
       this.readerService.updateBookProgress(bookId, userId, dto),
     );
@@ -304,8 +306,14 @@ export class ReaderGatewayController {
                 type: 'object',
                 properties: {
                   page: { type: 'number', example: 50 },
-                  note: { type: 'string', example: 'Important section about closures' },
-                  createdAt: { type: 'string', example: '2023-01-10T00:00:00.000Z' },
+                  note: {
+                    type: 'string',
+                    example: 'Important section about closures',
+                  },
+                  createdAt: {
+                    type: 'string',
+                    example: '2023-01-10T00:00:00.000Z',
+                  },
                 },
               },
             },
@@ -328,11 +336,11 @@ export class ReaderGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const data = await firstValueFrom(
       this.readerService.getMyBookProgress(bookId, userId),
     );

@@ -13,7 +13,6 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-
 export class CreateLessonDto {
   @ApiProperty({
     description: 'Title of the lesson',
@@ -142,7 +141,9 @@ export class ReorderLessonItemDto {
     type: String,
   })
   @IsString()
-  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for lessonId' })
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for lessonId',
+  })
   lessonId: string;
 
   @ApiProperty({
@@ -196,7 +197,8 @@ export class VideoUploadDto {
 
 export class VideoAttachDto {
   @ApiProperty({
-    description: 'External video URL (YouTube, Vimeo, etc.) to attach to the lesson',
+    description:
+      'External video URL (YouTube, Vimeo, etc.) to attach to the lesson',
     example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     type: String,
   })
@@ -216,7 +218,8 @@ export class VideoAttachDto {
 
 export class VideoAttachAutomaticDto {
   @ApiProperty({
-    description: 'Duration of the uploaded video in minutes. This should match the actual video length.',
+    description:
+      'Duration of the uploaded video in minutes. This should match the actual video length.',
     example: 45,
     minimum: 0,
     type: Number,
@@ -247,7 +250,8 @@ export class VideoUploadUrlDto {
 export class VideoUploadResponseDto {
   @ApiProperty({
     description: 'Presigned URL for uploading video directly to S3',
-    example: 'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
+    example:
+      'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
     type: String,
   })
   @IsString()
@@ -273,7 +277,8 @@ export class VideoUploadResponseDto {
 export class VideoUrlResponseDto {
   @ApiProperty({
     description: 'Presigned URL for accessing the video',
-    example: 'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
+    example:
+      'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
     type: String,
   })
   @IsString()

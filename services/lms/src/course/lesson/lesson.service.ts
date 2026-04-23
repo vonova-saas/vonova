@@ -12,7 +12,7 @@ import { Asset, AssetDocument } from '../content/schema/asset.schema';
 import {
   CreateLessonDto,
   ReorderLessonDto,
-  UpdateLessonDto
+  UpdateLessonDto,
 } from './dto/lesson.dto';
 import { S3ConfigService } from './config/s3.config';
 import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
@@ -89,23 +89,25 @@ export class LessonService {
     // Check if user is course owner - use string comparison for courseId
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
-    
+
     if (course.ownerId.toString() !== userId)
       throw new ForbiddenException('Only course owner can reorder lessons');
 
     // Validate all lessonIds exist before processing
-    const lessonIds = order.map(o => o.lessonId);
+    const lessonIds = order.map((o) => o.lessonId);
     console.log('Looking for lessons with IDs:', lessonIds);
-    
-    const existingLessons = await this.lessonModel.find({ 
-      _id: { $in: lessonIds }, 
-      courseId 
+
+    const existingLessons = await this.lessonModel.find({
+      _id: { $in: lessonIds },
+      courseId,
     });
-    
+
     if (existingLessons.length !== lessonIds.length) {
-      const foundIds = existingLessons.map(l => l._id.toString());
-      const missingIds = lessonIds.filter(id => !foundIds.includes(id));
-      throw new NotFoundException(`Lessons not found: ${missingIds.join(', ')}`);
+      const foundIds = existingLessons.map((l) => l._id.toString());
+      const missingIds = lessonIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundException(
+        `Lessons not found: ${missingIds.join(', ')}`,
+      );
     }
 
     const ops = order.map((o) => {
@@ -138,14 +140,19 @@ export class LessonService {
     return { message: 'Lesson deleted successfully', lesson };
   }
 
-  async uploadVideoDirectly(courseId: string, lessonId: string, videoMetadata: {
-  objectKey: string;
-  videoUrl: string;
-  hasVideo: boolean;
-  size: number;
-  mimetype: string;
-  originalName: string;
-}, ownerId: string) {
+  async uploadVideoDirectly(
+    courseId: string,
+    lessonId: string,
+    videoMetadata: {
+      objectKey: string;
+      videoUrl: string;
+      hasVideo: boolean;
+      size: number;
+      mimetype: string;
+      originalName: string;
+    },
+    ownerId: string,
+  ) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
 
@@ -167,11 +174,16 @@ export class LessonService {
     };
   }
 
-  async getVideoUploadUrl(courseId: string, lessonId: string, uploadData: {
-  fileName: string;
-  contentType: string;
-  objectKey: string;
-}, ownerId: string) {
+  async getVideoUploadUrl(
+    courseId: string,
+    lessonId: string,
+    uploadData: {
+      fileName: string;
+      contentType: string;
+      objectKey: string;
+    },
+    ownerId: string,
+  ) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
 
@@ -188,7 +200,9 @@ export class LessonService {
     });
 
     const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const uploadUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
 
     // Update lesson with video object key (will be used when client confirms upload)
     lesson.videoObjectKey = uploadData.objectKey;
@@ -227,7 +241,9 @@ export class LessonService {
     });
 
     const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const uploadUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
 
     return { uploadUrl };
   }
@@ -246,7 +262,9 @@ export class LessonService {
         Bucket: this.s3ConfigService.getBucketName(),
         Key: lesson.videoObjectKey,
       });
-      videoUrl = await getSignedUrl(this.s3ConfigService.getClient(), command, { expiresIn: 3600 });
+      videoUrl = await getSignedUrl(this.s3ConfigService.getClient(), command, {
+        expiresIn: 3600,
+      });
     }
 
     const lessonResponse = {
@@ -273,11 +291,18 @@ export class LessonService {
     if (!course) throw new NotFoundException('Course not found');
 
     // Verify the chapter exists and belongs to the course
-    const chapter = await this.chapterModel.findOne({ _id: chapterId, courseId });
+    const chapter = await this.chapterModel.findOne({
+      _id: chapterId,
+      courseId,
+    });
     if (!chapter) throw new NotFoundException('Chapter not found in course');
 
     // Verify the lesson exists and belongs to the chapter
-    const lesson = await this.lessonModel.findOne({ _id: lessonId, chapterId, courseId });
+    const lesson = await this.lessonModel.findOne({
+      _id: lessonId,
+      chapterId,
+      courseId,
+    });
     if (!lesson) throw new NotFoundException('Lesson not found in chapter');
 
     // Create asset record

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { Injectable, INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -58,8 +58,14 @@ export class SwaggerService {
       .addTag('Waitlist Management', 'Waitlist management')
       .addTag('Roadmap Generation AI', 'AI-powered learning roadmap generation')
       .addTag('PDF Summarization AI', 'AI-powered PDF summarization and chat')
-      .addTag('LMS Instructor Quizzes', 'LMS Instructor Quizzes - Create, manage, and analyze quizzes')
-      .addTag('LMS Student Quizzes', 'LMS Student Quizzes - Take quizzes and view results')
+      .addTag(
+        'LMS Instructor Quizzes',
+        'LMS Instructor Quizzes - Create, manage, and analyze quizzes',
+      )
+      .addTag(
+        'LMS Student Quizzes',
+        'LMS Student Quizzes - Take quizzes and view results',
+      )
       .addTag('LMS Assignments', 'LMS Assignments')
       .addTag('LMS Courses', 'LMS Courses')
       .addTag('LMS Course Chapters', 'LMS Course Chapters')
@@ -68,7 +74,10 @@ export class SwaggerService {
       .addTag('LMS Course Progress', 'LMS Course Progress')
       .addTag('LMS Course Enrollment', 'LMS Course Enrollment')
       .addTag('LMS Course Reviews', 'LMS Course Reviews')
-      .addTag('LMS Library', 'LMS Library - Unified library API for books, guides, and presentations')
+      .addTag(
+        'LMS Library',
+        'LMS Library - Unified library API for books, guides, and presentations',
+      )
       .addTag('LMS Library Books', 'LMS Library Books')
       .addTag('LMS Library Presentations', 'LMS Library Presentations')
       .addTag('LMS Library Guides', 'LMS Library Guides')

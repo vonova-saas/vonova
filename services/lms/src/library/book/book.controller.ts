@@ -14,10 +14,17 @@ export class BookController {
   constructor(private readonly bookService: BookService) {}
 
   @MessagePattern({ cmd: 'book.create' })
-  createBook(@Payload() data: { dto: CreateBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+  createBook(
+    @Payload()
+    data: {
+      dto: CreateBookDto;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
     const { dto, userId, user } = data;
     if (!dto) throw new Error('dto is required');
-    
+
     // Extract userId from multiple possible sources
     const createdBy = userId || user?.id || user?.sub || user?._id;
     if (!createdBy) throw new Error('User identification is required');
@@ -26,10 +33,18 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.publish' })
-  publishBook(@Payload() data: { id: string; dto: PublishBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+  publishBook(
+    @Payload()
+    data: {
+      id: string;
+      dto: PublishBookDto;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
     const { id, dto, userId, user } = data;
     if (!id || !dto) throw new Error('id and dto are required');
-    
+
     // Extract userId from multiple possible sources
     const createdBy = userId || user?.id || user?.sub || user?._id;
     if (!createdBy) throw new Error('User identification is required');
@@ -38,14 +53,16 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.getAll' })
-  getBooks(@Payload() data: GetBooksQueryDto & { userRole?: string; userId?: string }) {
+  getBooks(
+    @Payload() data: GetBooksQueryDto & { userRole?: string; userId?: string },
+  ) {
     const { userRole, userId, ...query } = data;
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
-    return this.bookService.getBooksService({ 
-      ...query, 
+    return this.bookService.getBooksService({
+      ...query,
       topics: topicsArray,
       userRole,
-      userId
+      userId,
     });
   }
 
@@ -60,10 +77,18 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.update' })
-  updateBook(@Payload() data: { id: string; dto: UpdateBookDto; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+  updateBook(
+    @Payload()
+    data: {
+      id: string;
+      dto: UpdateBookDto;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
     const { id, dto, userId, user } = data;
     if (!id || !dto) throw new Error('id and dto are required');
-    
+
     // Extract userId from multiple possible sources
     const createdBy = userId || user?.id || user?.sub || user?._id;
     if (!createdBy) throw new Error('User identification is required');
@@ -72,10 +97,18 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.updateProgress' })
-  updateBookProgress(@Payload() data: { bookId: string; userId?: string; user?: { id?: string; sub?: string; _id?: string }; body: UpdateProgressDto }) {
+  updateBookProgress(
+    @Payload()
+    data: {
+      bookId: string;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+      body: UpdateProgressDto;
+    },
+  ) {
     const { bookId, userId, user, body } = data;
     if (!bookId || !body) throw new Error('bookId and body are required');
-    
+
     // Extract userId from multiple possible sources
     const createdBy = userId || user?.id || user?.sub || user?._id;
     if (!createdBy) throw new Error('User identification is required');
@@ -84,10 +117,17 @@ export class BookController {
   }
 
   @MessagePattern({ cmd: 'book.delete' })
-  deleteBook(@Payload() data: { id: string; userId?: string; user?: { id?: string; sub?: string; _id?: string } }) {
+  deleteBook(
+    @Payload()
+    data: {
+      id: string;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
     const { id, userId, user } = data;
     if (!id) throw new Error('id is required');
-    
+
     // Extract userId from multiple possible sources
     const createdBy = userId || user?.id || user?.sub || user?._id;
     if (!createdBy) throw new Error('User identification is required');

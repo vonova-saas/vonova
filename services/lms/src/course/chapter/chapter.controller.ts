@@ -12,10 +12,18 @@ export class ChapterController {
   constructor(private readonly chapterService: ChapterService) {}
 
   @MessagePattern({ cmd: 'app.courses.chapters.create' })
-  createChapter(@Payload() data: { courseId: string; dto: CreateChapterDto; createdBy?: string; user?: { id?: string; sub?: string } }) {
+  createChapter(
+    @Payload()
+    data: {
+      courseId: string;
+      dto: CreateChapterDto;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
     const { courseId, dto, createdBy, user } = data;
     if (!courseId || !dto) throw new Error('courseId and dto are required');
-    
+
     // Extract createdBy from multiple possible sources
     const userId = createdBy || user?.id || user?.sub;
     if (!userId) throw new Error('User identification is required');
@@ -46,15 +54,18 @@ export class ChapterController {
   }
 
   @MessagePattern({ cmd: 'app.courses.chapters.reorder' })
-  reorderChapters(@Payload() data: { 
-    courseId: string; 
-    dto: ReorderChaptersDto; 
-    ownerId?: string; 
-    user?: { id?: string; sub?: string } 
-  }) {
+  reorderChapters(
+    @Payload()
+    data: {
+      courseId: string;
+      dto: ReorderChaptersDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
     const { courseId, dto, ownerId, user } = data;
     console.log('Reorder chapters payload:', JSON.stringify(data, null, 2));
-    
+
     if (!courseId || !dto) {
       console.error('Missing required fields:', { courseId, dto });
       throw new Error('courseId and dto are required');
@@ -72,7 +83,15 @@ export class ChapterController {
   }
 
   @MessagePattern({ cmd: 'app.courses.chapters.delete' })
-  deleteChapter(@Payload() data: { courseId: string; chapterId: string; ownerId?: string; user?: { id?: string; sub?: string } }) {
+  deleteChapter(
+    @Payload()
+    data: {
+      courseId: string;
+      chapterId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
     const { courseId, chapterId, ownerId, user } = data;
     if (!courseId || !chapterId)
       throw new Error('courseId and chapterId are required');
@@ -85,7 +104,13 @@ export class ChapterController {
   }
 
   @MessagePattern({ cmd: 'app.courses.chapters.getAll' })
-  getAllChapters(@Payload() data: { courseId: string; pagination: { page?: number; limit?: number } }) {
+  getAllChapters(
+    @Payload()
+    data: {
+      courseId: string;
+      pagination: { page?: number; limit?: number };
+    },
+  ) {
     const { courseId, pagination } = data;
     if (!courseId) throw new Error('courseId is required');
 
@@ -95,7 +120,8 @@ export class ChapterController {
   @MessagePattern({ cmd: 'app.courses.chapters.getById' })
   getChapterById(@Payload() data: { courseId: string; chapterId: string }) {
     const { courseId, chapterId } = data;
-    if (!courseId || !chapterId) throw new Error('courseId and chapterId are required');
+    if (!courseId || !chapterId)
+      throw new Error('courseId and chapterId are required');
 
     return this.chapterService.getChapterById(courseId, chapterId);
   }

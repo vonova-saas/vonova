@@ -17,7 +17,11 @@ import {
   BadRequestException,
   UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor, FilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileInterceptor,
+  FilesInterceptor,
+  FileFieldsInterceptor,
+} from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -34,8 +38,13 @@ import type { UploadedFile as CustomUploadedFile } from '../../../common/interfa
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PostsGatewayService } from './posts.service';
-import { CreateCommentDto, CreatePostDto, UpdateCommentDto, UpdatePostDto, SharePostDto } from './dto/post.dto';
-
+import {
+  CreateCommentDto,
+  CreatePostDto,
+  UpdateCommentDto,
+  UpdatePostDto,
+  SharePostDto,
+} from './dto/post.dto';
 
 @ApiTags('Community Posts')
 @ApiBearerAuth()
@@ -48,7 +57,8 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Create a new post',
-    description: 'Creates a new post with optional single or multiple image and video uploads',
+    description:
+      'Creates a new post with optional single or multiple image and video uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -68,7 +78,8 @@ export class PostsGatewayController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Optional one or more image files for the post (max 10 files)',
+          description:
+            'Optional one or more image files for the post (max 10 files)',
         },
         videos: {
           type: 'array',
@@ -76,7 +87,8 @@ export class PostsGatewayController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Optional one or more video files for the post (max 5 files, 200MB per video)',
+          description:
+            'Optional one or more video files for the post (max 5 files, 200MB per video)',
         },
       },
     },
@@ -99,31 +111,57 @@ export class PostsGatewayController {
                 author: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439012',
+                    },
                     name: { type: 'string', example: 'John Doe' },
-                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/avatar.jpg',
+                    },
                   },
                 },
-                image: { type: 'string', example: 'https://example.com/post-image.jpg', nullable: true },
-                images: { 
-                  type: 'array', 
-                  items: { type: 'string' }, 
-                  example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
-                  nullable: true 
+                image: {
+                  type: 'string',
+                  example: 'https://example.com/post-image.jpg',
+                  nullable: true,
                 },
-                video: { type: 'string', example: 'https://example.com/post-video.mp4', nullable: true },
-                videos: { 
-                  type: 'array', 
-                  items: { type: 'string' }, 
-                  example: ['https://example.com/post-video1.mp4', 'https://example.com/post-video2.mp4'],
-                  nullable: true 
+                images: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: [
+                    'https://example.com/post-image1.jpg',
+                    'https://example.com/post-image2.jpg',
+                  ],
+                  nullable: true,
+                },
+                video: {
+                  type: 'string',
+                  example: 'https://example.com/post-video.mp4',
+                  nullable: true,
+                },
+                videos: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: [
+                    'https://example.com/post-video1.mp4',
+                    'https://example.com/post-video2.mp4',
+                  ],
+                  nullable: true,
                 },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
                 comments: { type: 'number', example: 3 },
-                createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
-                updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                createdAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
+                updatedAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
               },
             },
           },
@@ -131,16 +169,24 @@ export class PostsGatewayController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token is required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token is required',
+  })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post()
-  @UseInterceptors(FileFieldsInterceptor([
-    { name: 'files', maxCount: 10 },
-    { name: 'videos', maxCount: 5 }
-  ]))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'files', maxCount: 10 },
+      { name: 'videos', maxCount: 5 },
+    ]),
+  )
   async createPost(
     @Body() body: Record<string, unknown>,
-    @Request() req: any & { files?: { files?: CustomUploadedFile[], videos?: CustomUploadedFile[] } },
+    @Request()
+    req: any & {
+      files?: { files?: CustomUploadedFile[]; videos?: CustomUploadedFile[] };
+    },
   ) {
     const createPostDto = plainToInstance(CreatePostDto, {
       content: body.content,
@@ -157,24 +203,34 @@ export class PostsGatewayController {
     const uploadedVideos = req.files?.videos || [];
 
     // Separate images from files based on mimetype
-    const images = uploadedFiles.filter(file => 
-      file.mimetype && file.mimetype.startsWith('image/')
-    ) || [];
-    
-    const videos = uploadedVideos.filter(video => 
-      video.mimetype && video.mimetype.startsWith('video/')
-    ) || [];
+    const images =
+      uploadedFiles.filter(
+        (file) => file.mimetype && file.mimetype.startsWith('image/'),
+      ) || [];
+
+    const videos =
+      uploadedVideos.filter(
+        (video) => video.mimetype && video.mimetype.startsWith('video/'),
+      ) || [];
 
     // Validate video file sizes (200MB max per video)
     const maxSize = 200 * 1024 * 1024; // 200MB in bytes
     for (const video of videos) {
       if (video.size > maxSize) {
-        throw new BadRequestException(`Video file ${video.originalname} exceeds maximum size of 200MB`);
+        throw new BadRequestException(
+          `Video file ${video.originalname} exceeds maximum size of 200MB`,
+        );
       }
     }
 
     return firstValueFrom(
-      this.postsService.createPost(createPostDto, undefined, images, videos, req.user._id),
+      this.postsService.createPost(
+        createPostDto,
+        undefined,
+        images,
+        videos,
+        req.user._id,
+      ),
     );
   }
 
@@ -266,31 +322,57 @@ export class PostsGatewayController {
                 author: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439012',
+                    },
                     name: { type: 'string', example: 'John Doe' },
-                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/avatar.jpg',
+                    },
                   },
                 },
-                image: { type: 'string', example: 'https://example.com/post-image.jpg', nullable: true },
-                images: { 
-                  type: 'array', 
-                  items: { type: 'string' }, 
-                  example: ['https://example.com/post-image1.jpg', 'https://example.com/post-image2.jpg'],
-                  nullable: true 
+                image: {
+                  type: 'string',
+                  example: 'https://example.com/post-image.jpg',
+                  nullable: true,
                 },
-                video: { type: 'string', example: 'https://example.com/post-video.mp4', nullable: true },
-                videos: { 
-                  type: 'array', 
-                  items: { type: 'string' }, 
-                  example: ['https://example.com/post-video1.mp4', 'https://example.com/post-video2.mp4'],
-                  nullable: true 
+                images: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: [
+                    'https://example.com/post-image1.jpg',
+                    'https://example.com/post-image2.jpg',
+                  ],
+                  nullable: true,
+                },
+                video: {
+                  type: 'string',
+                  example: 'https://example.com/post-video.mp4',
+                  nullable: true,
+                },
+                videos: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: [
+                    'https://example.com/post-video1.mp4',
+                    'https://example.com/post-video2.mp4',
+                  ],
+                  nullable: true,
                 },
                 tags: { type: 'array', items: { type: 'string' } },
                 likes: { type: 'number', example: 5 },
                 shares: { type: 'number', example: 2 },
                 comments: { type: 'number', example: 3 },
-                createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
-                updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                createdAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
+                updatedAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
               },
             },
           },
@@ -306,7 +388,8 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Update a post',
-    description: 'Updates an existing post with optional single or multiple image and video uploads',
+    description:
+      'Updates an existing post with optional single or multiple image and video uploads',
   })
   @ApiConsumes('multipart/form-data')
   @ApiParam({
@@ -331,7 +414,8 @@ export class PostsGatewayController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Optional one or more new image files for the post (max 10 files)',
+          description:
+            'Optional one or more new image files for the post (max 10 files)',
         },
         videos: {
           type: 'array',
@@ -339,7 +423,8 @@ export class PostsGatewayController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Optional one or more new video files for the post (max 5 files, 200MB per video)',
+          description:
+            'Optional one or more new video files for the post (max 5 files, 200MB per video)',
         },
       },
     },
@@ -349,16 +434,24 @@ export class PostsGatewayController {
     description: 'Post updated successfully',
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to update this post' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not authorized to update this post',
+  })
   @Put(':postId')
-  @UseInterceptors(FileFieldsInterceptor([
-    { name: 'files', maxCount: 10 },
-    { name: 'videos', maxCount: 5 }
-  ]))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'files', maxCount: 10 },
+      { name: 'videos', maxCount: 5 },
+    ]),
+  )
   async updatePost(
     @Param('postId') postId: string,
     @Body() body: Record<string, unknown>,
-    @Request() req: any & { files?: { files?: CustomUploadedFile[], videos?: CustomUploadedFile[] } },
+    @Request()
+    req: any & {
+      files?: { files?: CustomUploadedFile[]; videos?: CustomUploadedFile[] };
+    },
   ) {
     let tags = body.tags;
 
@@ -368,7 +461,10 @@ export class PostsGatewayController {
         tags = JSON.parse(tags);
       } catch {
         // If not JSON, split by comma
-        tags = (tags as string).split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+        tags = (tags as string)
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter((tag: string) => tag);
       }
     }
 
@@ -387,24 +483,36 @@ export class PostsGatewayController {
     const uploadedVideos = req.files?.videos || [];
 
     // Separate images from files based on mimetype
-    const images = uploadedFiles.filter(file => 
-      file.mimetype && file.mimetype.startsWith('image/')
-    ) || [];
-    
-    const videos = uploadedVideos.filter(video => 
-      video.mimetype && video.mimetype.startsWith('video/')
-    ) || [];
+    const images =
+      uploadedFiles.filter(
+        (file) => file.mimetype && file.mimetype.startsWith('image/'),
+      ) || [];
+
+    const videos =
+      uploadedVideos.filter(
+        (video) => video.mimetype && video.mimetype.startsWith('video/'),
+      ) || [];
 
     // Validate video file sizes (200MB max per video)
     const maxSize = 200 * 1024 * 1024; // 200MB in bytes
     for (const video of videos) {
       if (video.size > maxSize) {
-        throw new BadRequestException(`Video file ${video.originalname} exceeds maximum size of 200MB`);
+        throw new BadRequestException(
+          `Video file ${video.originalname} exceeds maximum size of 200MB`,
+        );
       }
     }
 
     return firstValueFrom(
-      this.postsService.updatePost(postId, updatePostDto, undefined, images, videos, req.user._id, req.user.role),
+      this.postsService.updatePost(
+        postId,
+        updatePostDto,
+        undefined,
+        images,
+        videos,
+        req.user._id,
+        req.user.role,
+      ),
     );
   }
 
@@ -422,7 +530,10 @@ export class PostsGatewayController {
     description: 'Post deleted successfully',
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to delete this post' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not authorized to delete this post',
+  })
   @Delete(':postId')
   async deletePost(@Param('postId') postId: string, @Request() req: any) {
     return firstValueFrom(
@@ -464,7 +575,8 @@ export class PostsGatewayController {
 
   @ApiOperation({
     summary: 'Share a post',
-    description: 'Creates a new shared post referencing the original post with optional comment',
+    description:
+      'Creates a new shared post referencing the original post with optional comment',
   })
   @ApiParam({
     name: 'postId',
@@ -476,11 +588,11 @@ export class PostsGatewayController {
     schema: {
       type: 'object',
       properties: {
-        comment: { 
-          type: 'string', 
+        comment: {
+          type: 'string',
           example: 'Check out this amazing post!',
           description: 'Optional comment to add when sharing the post',
-          maxLength: 500
+          maxLength: 500,
         },
       },
     },
@@ -502,24 +614,48 @@ export class PostsGatewayController {
                 author: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439012',
+                    },
                     name: { type: 'string', example: 'John Doe' },
-                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/avatar.jpg',
+                    },
                   },
                 },
-                content: { type: 'string', example: 'Check out this amazing post!' },
-                shareComment: { type: 'string', example: 'Check out this amazing post!' },
+                content: {
+                  type: 'string',
+                  example: 'Check out this amazing post!',
+                },
+                shareComment: {
+                  type: 'string',
+                  example: 'Check out this amazing post!',
+                },
                 sharedPost: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    content: { type: 'string', example: 'This is the original post content' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439011',
+                    },
+                    content: {
+                      type: 'string',
+                      example: 'This is the original post content',
+                    },
                     author: {
                       type: 'object',
                       properties: {
-                        _id: { type: 'string', example: '507f1f77bcf86cd799439013' },
+                        _id: {
+                          type: 'string',
+                          example: '507f1f77bcf86cd799439013',
+                        },
                         name: { type: 'string', example: 'Jane Smith' },
-                        avatarUrl: { type: 'string', example: 'https://example.com/avatar2.jpg' },
+                        avatarUrl: {
+                          type: 'string',
+                          example: 'https://example.com/avatar2.jpg',
+                        },
                       },
                     },
                   },
@@ -527,16 +663,28 @@ export class PostsGatewayController {
                 sharedBy: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439012',
+                    },
                     name: { type: 'string', example: 'John Doe' },
-                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    avatarUrl: {
+                      type: 'string',
+                      example: 'https://example.com/avatar.jpg',
+                    },
                   },
                 },
-                createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                createdAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
               },
             },
             originalPostSharesCount: { type: 'number', example: 3 },
-            shareableLink: { type: 'string', example: 'http://localhost:3000/posts/507f1f77bcf86cd799439011' },
+            shareableLink: {
+              type: 'string',
+              example: 'http://localhost:3000/posts/507f1f77bcf86cd799439011',
+            },
           },
         },
       },
@@ -607,10 +755,16 @@ export class PostsGatewayController {
               properties: {
                 _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
                 name: { type: 'string', example: 'John Doe' },
-                avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                avatarUrl: {
+                  type: 'string',
+                  example: 'https://example.com/avatar.jpg',
+                },
               },
             },
-            image: { type: 'string', example: 'https://example.com/comment-image.jpg' },
+            image: {
+              type: 'string',
+              example: 'https://example.com/comment-image.jpg',
+            },
             likes: { type: 'number', example: 2 },
             createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
             updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
@@ -639,7 +793,12 @@ export class PostsGatewayController {
     }
 
     return firstValueFrom(
-      this.postsService.createComment(postId, createCommentDto, file, req.user._id),
+      this.postsService.createComment(
+        postId,
+        createCommentDto,
+        file,
+        req.user._id,
+      ),
     );
   }
 
@@ -717,7 +876,10 @@ export class PostsGatewayController {
     description: 'Comment updated successfully',
   })
   @ApiResponse({ status: 404, description: 'Comment not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to update this comment' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not authorized to update this comment',
+  })
   @Put('comments/:commentId')
   @UseInterceptors(FileInterceptor('file'))
   async updateComment(
@@ -736,7 +898,13 @@ export class PostsGatewayController {
     }
 
     return firstValueFrom(
-      this.postsService.updateComment(commentId, updateCommentDto, file, req.user._id, req.user.role),
+      this.postsService.updateComment(
+        commentId,
+        updateCommentDto,
+        file,
+        req.user._id,
+        req.user.role,
+      ),
     );
   }
 
@@ -754,9 +922,15 @@ export class PostsGatewayController {
     description: 'Comment deleted successfully',
   })
   @ApiResponse({ status: 404, description: 'Comment not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to delete this comment' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Not authorized to delete this comment',
+  })
   @Delete('comments/:commentId')
-  async deleteComment(@Param('commentId') commentId: string, @Request() req: any) {
+  async deleteComment(
+    @Param('commentId') commentId: string,
+    @Request() req: any,
+  ) {
     return firstValueFrom(
       this.postsService.deleteComment(commentId, req.user._id, req.user.role),
     );
@@ -790,7 +964,12 @@ export class PostsGatewayController {
   })
   @ApiResponse({ status: 404, description: 'Comment not found' })
   @Post('comments/:commentId/like')
-  async toggleCommentLike(@Param('commentId') commentId: string, @Request() req: any) {
-    return firstValueFrom(this.postsService.toggleCommentLike(commentId, req.user._id));
+  async toggleCommentLike(
+    @Param('commentId') commentId: string,
+    @Request() req: any,
+  ) {
+    return firstValueFrom(
+      this.postsService.toggleCommentLike(commentId, req.user._id),
+    );
   }
 }

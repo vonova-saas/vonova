@@ -114,17 +114,17 @@ export class GuideGatewayController {
   @Post()
   async createGuide(@Body() dto: CreateGuideDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     // Ensure status is set from request body or default to PUBLISHED
     const guideData = {
       ...dto,
-      status: dto.status || 'PUBLISHED'
+      status: dto.status || 'PUBLISHED',
     };
-    
+
     return firstValueFrom(this.guideService.createGuide(guideData, userId));
   }
 
@@ -194,7 +194,10 @@ export class GuideGatewayController {
                 type: 'string',
                 example: 'Complete JavaScript Learning Guide',
               },
-              slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+              slug: {
+                type: 'string',
+                example: 'complete-javascript-learning-guide',
+              },
               summary: {
                 type: 'string',
                 example: 'A comprehensive guide to learning JavaScript.',
@@ -261,7 +264,7 @@ export class GuideGatewayController {
     const user = req?.user;
     const userRole = user?.role;
     const userId = user?.id || user?.sub || user?._id;
-    
+
     const topicsArray = topics ? topics.split(',') : undefined;
     return firstValueFrom(
       this.guideService.listGuides({
@@ -615,11 +618,11 @@ export class GuideGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.guideService.updateGuide(id, dto, userId));
   }
 
@@ -668,11 +671,11 @@ export class GuideGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.guideService.publishGuide(id, dto, userId));
   }
 
@@ -711,12 +714,12 @@ export class GuideGatewayController {
   @Delete(':id')
   async deleteGuide(@Param('id') id: string, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.guideService.deleteGuide(id, userId));
   }
 
-  }
+}

@@ -11,4 +11,4 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
   providers: [SupportGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class SupportGatewayModule { }
+export class SupportGatewayModule {}

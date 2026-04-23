@@ -99,11 +99,11 @@ export class CourseGatewayController {
   @Post('createCourse')
   async createCourse(@Body() dto: CreateCourseDto, @Request() req: any) {
     const createdBy = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!createdBy) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.courseService.createCourse(dto, createdBy));
   }
 
@@ -152,11 +152,11 @@ export class CourseGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!ownerId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.courseService.updateCourse(courseId, dto, ownerId),
     );
@@ -207,11 +207,11 @@ export class CourseGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!ownerId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.courseService.publishCourse(courseId, dto, ownerId),
     );
@@ -252,11 +252,11 @@ export class CourseGatewayController {
   @Delete(':courseId')
   async deleteCourse(@Param('courseId') courseId: string, @Request() req: any) {
     const ownerId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!ownerId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.courseService.deleteCourse(courseId, ownerId));
   }
 
@@ -276,7 +276,10 @@ export class CourseGatewayController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Course aggregates recomputed successfully' },
+        message: {
+          type: 'string',
+          example: 'Course aggregates recomputed successfully',
+        },
         enrollmentCount: { type: 'number', example: 150 },
         averageRating: { type: 'number', example: 4.5 },
         completionRate: { type: 'number', example: 0.75 },
@@ -348,8 +351,14 @@ export class CourseGatewayController {
             type: 'object',
             properties: {
               _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: { type: 'string', example: 'Complete JavaScript Masterclass' },
-              slug: { type: 'string', example: 'complete-javascript-masterclass' },
+              title: {
+                type: 'string',
+                example: 'Complete JavaScript Masterclass',
+              },
+              slug: {
+                type: 'string',
+                example: 'complete-javascript-masterclass',
+              },
               smallDescription: {
                 type: 'string',
                 example: 'Learn JavaScript from scratch.',
@@ -492,8 +501,14 @@ export class CourseGatewayController {
                 items: {
                   type: 'object',
                   properties: {
-                    _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    title: { type: 'string', example: 'Variables and Data Types' },
+                    _id: {
+                      type: 'string',
+                      example: '507f1f77bcf86cd799439011',
+                    },
+                    title: {
+                      type: 'string',
+                      example: 'Variables and Data Types',
+                    },
                     index: { type: 'number', example: 0 },
                     durationMinutes: { type: 'number', example: 45 },
                     type: { type: 'string', example: 'VIDEO' },

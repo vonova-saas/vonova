@@ -4,7 +4,8 @@ export class FileUploadDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    description: 'The file to upload (supports PDF, DOC, DOCX, PPT, PPTX, etc.)',
+    description:
+      'The file to upload (supports PDF, DOC, DOCX, PPT, PPTX, etc.)',
     example: 'book.pdf',
   })
   file: Express.Multer.File;
@@ -36,13 +37,15 @@ export class UploadResponseDto {
 
   @ApiProperty({
     description: 'Direct S3 URL of the uploaded file',
-    example: 'https://your-library-bucket.s3.amazonaws.com/library/book/507f1f77bcf86cd799439011/550e8400-e29b-41d4-a716-446655440000-book.pdf',
+    example:
+      'https://your-library-bucket.s3.amazonaws.com/library/book/507f1f77bcf86cd799439011/550e8400-e29b-41d4-a716-446655440000-book.pdf',
   })
   fileUrl: string;
 
   @ApiProperty({
     description: 'S3 object key for the uploaded file',
-    example: 'library/book/507f1f77bcf86cd799439011/550e8400-e29b-41d4-a716-446655440000-book.pdf',
+    example:
+      'library/book/507f1f77bcf86cd799439011/550e8400-e29b-41d4-a716-446655440000-book.pdf',
   })
   objectKey: string;
 

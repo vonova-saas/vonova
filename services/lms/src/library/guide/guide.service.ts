@@ -41,7 +41,7 @@ export class GuideService {
       throw new ForbiddenException(
         'You are not authorized to publish this guide',
       );
-    
+
     guide.status = dto.status;
     await guide.save();
     return guide;
@@ -70,27 +70,24 @@ export class GuideService {
       userId,
     } = query;
     const filter: any = {};
-    
+
     // Role-based filtering logic
     if (userRole === 'INSTRUCTOR_USER') {
       // Instructors can see all guides they created, plus all published guides
       if (userId) {
-        filter.$or = [
-          { createdBy: userId },
-          { status: 'PUBLISHED' }
-        ];
+        filter.$or = [{ createdBy: userId }, { status: 'PUBLISHED' }];
       }
     } else {
       // Students and other roles only see published guides
       filter.status = 'PUBLISHED';
     }
-    
+
     // Apply explicit status filter if provided (but don't override role-based logic for students)
     if (status && userRole === 'INSTRUCTOR_USER') {
       if (userId) {
         filter.$or = [
           { createdBy: userId, status: status },
-          { status: 'PUBLISHED' }
+          { status: 'PUBLISHED' },
         ];
       }
     }
@@ -119,44 +116,57 @@ export class GuideService {
     const guidesWithUrls = await Promise.all(
       items.map(async (guide) => {
         const guideObj = guide.toObject();
-        
+
         if (guide.fileAssetId) {
           try {
-            const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
+            const asset = await this.libraryAssetModel.findById(
+              guide.fileAssetId,
+            );
             if (asset?.objectKey) {
               let contentUrl: string | undefined;
-              
+
               // Check if we have a valid stored presigned URL
-              if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+              if (
+                asset.urls?.presignedUrl &&
+                asset.urls?.presignedUrlExpiresAt
+              ) {
                 const now = new Date();
                 const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-                
+
                 if (now < expiresAt) {
                   contentUrl = asset.urls.presignedUrl;
                 }
               }
-              
+
               // Generate new presigned URL if none exists or expired
               if (!contentUrl) {
-                contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+                contentUrl = await this.s3Service.getPresignedGetUrl(
+                  asset.objectKey,
+                );
                 // Store the new presigned URL in database with 1 hour expiration
                 const expiresAt = new Date(Date.now() + 3600 * 1000);
-                await this.libraryAssetModel.findByIdAndUpdate(guide.fileAssetId, {
-                  'urls.presignedUrl': contentUrl,
-                  'urls.presignedUrlExpiresAt': expiresAt,
-                });
+                await this.libraryAssetModel.findByIdAndUpdate(
+                  guide.fileAssetId,
+                  {
+                    'urls.presignedUrl': contentUrl,
+                    'urls.presignedUrlExpiresAt': expiresAt,
+                  },
+                );
               }
-              
+
               (guideObj as any).contentUrl = contentUrl;
             }
           } catch (error) {
-            console.error(`Failed to generate presigned URL for guide ${guide._id}:`, error);
+            console.error(
+              `Failed to generate presigned URL for guide ${guide._id}:`,
+              error,
+            );
             // Continue without presigned URL - the guide can still be returned
           }
         }
-        
+
         return guideObj;
-      })
+      }),
     );
 
     return { items: guidesWithUrls, total, page, limit };
@@ -165,28 +175,30 @@ export class GuideService {
   async getGuideByIdService(id: string) {
     const guide = await this.guideModel.findById(id);
     if (!guide) throw new NotFoundException('Guide not found');
-    
+
     const guideObj = guide.toObject();
-    
+
     if (guide.fileAssetId) {
       try {
         const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
-          
+
           // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-            
+
             if (now < expiresAt) {
               contentUrl = asset.urls.presignedUrl;
             }
           }
-          
+
           // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            contentUrl = await this.s3Service.getPresignedGetUrl(
+              asset.objectKey,
+            );
             // Store the new presigned URL in database with 1 hour expiration
             const expiresAt = new Date(Date.now() + 3600 * 1000);
             await this.libraryAssetModel.findByIdAndUpdate(guide.fileAssetId, {
@@ -194,43 +206,48 @@ export class GuideService {
               'urls.presignedUrlExpiresAt': expiresAt,
             });
           }
-          
+
           (guideObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
-        console.error(`Failed to generate presigned URL for guide ${guide._id}:`, error);
+        console.error(
+          `Failed to generate presigned URL for guide ${guide._id}:`,
+          error,
+        );
         // Continue without presigned URL
       }
     }
-    
+
     return guideObj;
   }
 
   async getGuideBySlugService(slug: string) {
     const guide = await this.guideModel.findOne({ slug });
     if (!guide) throw new NotFoundException('Guide not found');
-    
+
     const guideObj = guide.toObject();
-    
+
     if (guide.fileAssetId) {
       try {
         const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
-          
+
           // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-            
+
             if (now < expiresAt) {
               contentUrl = asset.urls.presignedUrl;
             }
           }
-          
+
           // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            contentUrl = await this.s3Service.getPresignedGetUrl(
+              asset.objectKey,
+            );
             // Store the new presigned URL in database with 1 hour expiration
             const expiresAt = new Date(Date.now() + 3600 * 1000);
             await this.libraryAssetModel.findByIdAndUpdate(guide.fileAssetId, {
@@ -238,15 +255,18 @@ export class GuideService {
               'urls.presignedUrlExpiresAt': expiresAt,
             });
           }
-          
+
           (guideObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
-        console.error(`Failed to generate presigned URL for guide ${guide._id}:`, error);
+        console.error(
+          `Failed to generate presigned URL for guide ${guide._id}:`,
+          error,
+        );
         // Continue without presigned URL
       }
     }
-    
+
     return guideObj;
   }
 
@@ -324,50 +344,60 @@ export class GuideService {
       throw new ForbiddenException(
         'You are not authorized to delete this guide',
       );
-    
+
     await guide.deleteOne();
     return { message: 'Guide deleted successfully' };
   }
 
   async getAllGuideLinksService() {
-    const guides = await this.guideModel.find({ fileAssetId: { $exists: true, $ne: null } });
-    
+    const guides = await this.guideModel.find({
+      fileAssetId: { $exists: true, $ne: null },
+    });
+
     const links = await Promise.all(
       guides.map(async (guide) => {
         try {
           if (guide.fileAssetId) {
-            const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
+            const asset = await this.libraryAssetModel.findById(
+              guide.fileAssetId,
+            );
             if (asset?.objectKey) {
-              const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+              const presignedUrl = await this.s3Service.getPresignedGetUrl(
+                asset.objectKey,
+              );
               return {
                 id: guide._id,
                 title: guide.title,
                 slug: guide.slug,
-                fileName: asset.originalFileName || asset.objectKey.split('/').pop(),
+                fileName:
+                  asset.originalFileName || asset.objectKey.split('/').pop(),
                 objectKey: asset.objectKey,
                 presignedUrl,
                 uploadedAt: (guide as any).createdAt,
                 contentType: asset.mimeType,
-                size: asset.size
+                size: asset.size,
               };
             }
           }
         } catch (error) {
-          console.error(`Failed to generate presigned URL for guide ${guide._id}:`, error);
+          console.error(
+            `Failed to generate presigned URL for guide ${guide._id}:`,
+            error,
+          );
           return {
             id: guide._id,
             title: guide.title,
             slug: guide.slug,
-            error: 'Failed to generate presigned URL'
+            error: 'Failed to generate presigned URL',
           };
         }
         return null;
-      })
+      }),
     );
 
     return {
-      links: links.filter(link => link !== null),
-      total: links.filter(link => link !== null).length
+      links: links.filter((link) => link !== null),
+      total: links.filter((link) => link !== null).length,
     };
   }
 }

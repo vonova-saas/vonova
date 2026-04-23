@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
@@ -79,15 +78,21 @@ export class ChapterGatewayController {
     @Request() req: any,
   ) {
     console.log('Create chapter request user:', req.user);
-    const createdBy = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const createdBy =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!createdBy) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     console.log('Creating chapter with createdBy:', createdBy);
-    return firstValueFrom(this.chapterService.createChapter(courseId, dto, createdBy));
+    return firstValueFrom(
+      this.chapterService.createChapter(courseId, dto, createdBy),
+    );
   }
 
   @ApiOperation({
@@ -138,8 +143,12 @@ export class ChapterGatewayController {
     @Request() req: any,
   ) {
     console.log('Reorder chapters request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
@@ -150,9 +159,15 @@ export class ChapterGatewayController {
       throw new Error(`Invalid courseId format: ${courseId}`);
     }
 
-    console.log('Gateway reorder chapters payload:', { courseId, dto, ownerId });
-    
-    return firstValueFrom(this.chapterService.reorderChapters(courseId, dto, ownerId));
+    console.log('Gateway reorder chapters payload:', {
+      courseId,
+      dto,
+      ownerId,
+    });
+
+    return firstValueFrom(
+      this.chapterService.reorderChapters(courseId, dto, ownerId),
+    );
   }
 
   @ApiOperation({
@@ -204,13 +219,17 @@ export class ChapterGatewayController {
     @Request() req: any,
   ) {
     console.log('Update chapter request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.chapterService.updateChapter(courseId, chapterId, dto, ownerId),
     );
@@ -243,7 +262,9 @@ export class ChapterGatewayController {
     @Param('courseId') courseId: string,
     @Query() pagination: PaginationDto,
   ) {
-    return firstValueFrom(this.chapterService.getAllChapters(courseId, pagination));
+    return firstValueFrom(
+      this.chapterService.getAllChapters(courseId, pagination),
+    );
   }
 
   @ApiOperation({
@@ -288,7 +309,9 @@ export class ChapterGatewayController {
     @Param('courseId') courseId: string,
     @Param('chapterId') chapterId: string,
   ) {
-    return firstValueFrom(this.chapterService.getChapterById(courseId, chapterId));
+    return firstValueFrom(
+      this.chapterService.getChapterById(courseId, chapterId),
+    );
   }
 
   @ApiOperation({
@@ -331,13 +354,17 @@ export class ChapterGatewayController {
     @Request() req: any,
   ) {
     console.log('Delete chapter request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.chapterService.deleteChapter(courseId, chapterId, ownerId),
     );

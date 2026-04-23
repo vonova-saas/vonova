@@ -11,4 +11,4 @@ import { AuthGatewayModule } from '../auth/auth.module';
   providers: [SettingsGatewayService, JwtAuthGuard],
   exports: [JwtAuthGuard],
 })
-export class SettingsGatewayModule { }
+export class SettingsGatewayModule {}

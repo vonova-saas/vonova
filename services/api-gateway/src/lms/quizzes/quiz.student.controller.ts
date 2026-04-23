@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
+  ConflictException,
   Controller,
   Get,
   Param,
@@ -40,7 +41,8 @@ export class QuizStudentController {
    */
   @ApiOperation({
     summary: 'Get available quizzes (Student only)',
-    description: 'Retrieves all quizzes available for students to take. Only students can access this endpoint.',
+    description:
+      'Retrieves all quizzes available for students to take. Only students can access this endpoint.',
   })
   @ApiResponse({
     status: 200,
@@ -74,7 +76,9 @@ export class QuizStudentController {
   @Get()
   async getAvailableQuizzes(@Request() req) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.getAvailableQuizzesForStudents(userId));
+    return firstValueFrom(
+      this.quizService.getAvailableQuizzesForStudents(userId),
+    );
   }
 
   /**
@@ -86,7 +90,8 @@ export class QuizStudentController {
    */
   @ApiOperation({
     summary: 'Submit quiz answers (Student only)',
-    description: 'Submits answers for a completed quiz and calculates score. Only students can submit quiz answers.',
+    description:
+      'Submits answers for a completed quiz and calculates score. Only students can submit quiz answers.',
   })
   @ApiResponse({
     status: 201,
@@ -117,7 +122,10 @@ export class QuizStudentController {
           properties: {
             _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
             title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
-            description: { type: 'string', example: 'Test your knowledge of basic JavaScript concepts.' },
+            description: {
+              type: 'string',
+              example: 'Test your knowledge of basic JavaScript concepts.',
+            },
             topic: { type: 'string', example: 'JavaScript Programming' },
             noOfQuestions: { type: 'number', example: 10 },
             questions: {
@@ -129,7 +137,10 @@ export class QuizStudentController {
                     title: 'Correct answer',
                     properties: {
                       questionId: { type: 'string', example: 'q_123' },
-                      questionText: { type: 'string', example: 'What is 2 + 2?' },
+                      questionText: {
+                        type: 'string',
+                        example: 'What is 2 + 2?',
+                      },
                       options: {
                         type: 'array',
                         items: {
@@ -140,7 +151,10 @@ export class QuizStudentController {
                           },
                         },
                       },
-                      studentSelectedOptionId: { type: 'string', example: 'opt_2' },
+                      studentSelectedOptionId: {
+                        type: 'string',
+                        example: 'opt_2',
+                      },
                       correct: { type: 'boolean', example: true },
                     },
                   },
@@ -149,7 +163,10 @@ export class QuizStudentController {
                     title: 'Incorrect answer with correct answer info',
                     properties: {
                       questionId: { type: 'string', example: 'q_456' },
-                      questionText: { type: 'string', example: 'What is the capital of France?' },
+                      questionText: {
+                        type: 'string',
+                        example: 'What is the capital of France?',
+                      },
                       options: {
                         type: 'array',
                         items: {
@@ -160,7 +177,10 @@ export class QuizStudentController {
                           },
                         },
                       },
-                      studentSelectedOptionId: { type: 'string', example: 'opt_1' },
+                      studentSelectedOptionId: {
+                        type: 'string',
+                        example: 'opt_1',
+                      },
                       correct: { type: 'boolean', example: false },
                       correctOptionId: { type: 'string', example: 'opt_3' },
                       correctOptionText: { type: 'string', example: 'Paris' },
@@ -198,18 +218,27 @@ export class QuizStudentController {
     @Body() dto: SubmitQuizAnswersDto,
   ) {
     const userId = req.user._id;
-    
-    // Double-check: Block any re-attempt attempts at controller level
-    const existingAttempts = await firstValueFrom(this.quizService.getStudentQuizAttempts(userId));
-    const hasAlreadyAttempted = existingAttempts.some(attempt => 
-      attempt.quiz.toString() === quizId
+
+    // Keep guard at gateway level for fast rejection before forwarding submit.
+    const existingAttempts = await firstValueFrom(
+      this.quizService.getStudentQuizAttempts(userId),
     );
-    
+    const hasAlreadyAttempted = existingAttempts.some((attempt) => {
+      const quizRef = (attempt as { quiz?: unknown }).quiz;
+      const attemptedQuizId =
+        quizRef && typeof quizRef === 'object'
+          ? String((quizRef as { _id?: string })._id ?? '')
+          : String(quizRef ?? '');
+      return attemptedQuizId === quizId;
+    });
+
     if (hasAlreadyAttempted) {
-      throw new Error('ACCESS DENIED - You have already completed this quiz. No re-attempts are allowed. This is a final quiz submission.');
+      throw new ConflictException('You already attempted this quiz');
     }
-    
-    return firstValueFrom(this.quizService.submitStudentQuiz(quizId, dto, userId));
+
+    return firstValueFrom(
+      this.quizService.submitStudentQuiz(quizId, dto, userId),
+    );
   }
 
   /**
@@ -219,7 +248,8 @@ export class QuizStudentController {
    */
   @ApiOperation({
     summary: 'Get all my quiz attempts (Student only)',
-    description: 'Retrieves all quiz attempts made by the authenticated student with quiz details and scores. Only students can access their own attempts.',
+    description:
+      'Retrieves all quiz attempts made by the authenticated student with quiz details and scores. Only students can access their own attempts.',
   })
   @ApiResponse({
     status: 200,
@@ -234,11 +264,20 @@ export class QuizStudentController {
             type: 'object',
             properties: {
               _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-              title: { type: 'string', example: 'JavaScript Fundamentals Quiz' },
-              description: { type: 'string', example: 'Test your knowledge of basic JavaScript concepts.' },
+              title: {
+                type: 'string',
+                example: 'JavaScript Fundamentals Quiz',
+              },
+              description: {
+                type: 'string',
+                example: 'Test your knowledge of basic JavaScript concepts.',
+              },
               topic: { type: 'string', example: 'JavaScript Programming' },
               noOfQuestions: { type: 'number', example: 10 },
-              createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              createdAt: {
+                type: 'string',
+                example: '2023-01-01T00:00:00.000Z',
+              },
             },
           },
           userId: { type: 'string', example: 'student_user_id' },
@@ -279,7 +318,8 @@ export class QuizStudentController {
    */
   @ApiOperation({
     summary: 'Get quiz attempt (Student only)',
-    description: 'Retrieves detailed information about a specific quiz attempt. Only students can view their own attempts.',
+    description:
+      'Retrieves detailed information about a specific quiz attempt. Only students can view their own attempts.',
   })
   @ApiResponse({
     status: 200,
@@ -294,12 +334,11 @@ export class QuizStudentController {
     description: 'Forbidden - Only students can view their own attempts',
   })
   @Get('/attempts/:attemptId')
-  async getMyAttempt(
-    @Request() req,
-    @Param('attemptId') attemptId: string,
-  ) {
+  async getMyAttempt(@Request() req, @Param('attemptId') attemptId: string) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.getStudentAttempt(attemptId, userId));
+    return firstValueFrom(
+      this.quizService.getStudentAttempt(attemptId, userId),
+    );
   }
 
   /**
@@ -310,7 +349,8 @@ export class QuizStudentController {
    */
   @ApiOperation({
     summary: 'Get quiz for taking or viewing (Student only)',
-    description: 'Retrieves a specific quiz for students. If not attempted, returns quiz without correct answers for taking. If already attempted, returns quiz with student answers and correct answers for review. Only students can access this endpoint.',
+    description:
+      'Retrieves a specific quiz for students. If not attempted, returns quiz without correct answers for taking. If already attempted, returns quiz with student answers and correct answers for review. Only students can access this endpoint.',
   })
   @ApiResponse({
     status: 200,
@@ -397,7 +437,10 @@ export class QuizStudentController {
                 score: { type: 'number', example: 8 },
                 total: { type: 'number', example: 10 },
                 percentage: { type: 'number', example: 80 },
-                submittedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                submittedAt: {
+                  type: 'string',
+                  example: '2023-01-01T00:00:00.000Z',
+                },
               },
             },
             createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
@@ -415,10 +458,7 @@ export class QuizStudentController {
     description: 'Forbidden - Only students can access quizzes',
   })
   @Get('/:quizId')
-  async getQuizForTaking(
-    @Request() req,
-    @Param('quizId') quizId: string,
-  ) {
+  async getQuizForTaking(@Request() req, @Param('quizId') quizId: string) {
     const userId = req.user._id;
     return firstValueFrom(this.quizService.getQuizForStudent(quizId, userId));
   }

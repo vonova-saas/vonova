@@ -1,7 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { Controller, Get, Post, Param, Request, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Request,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Query,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -104,11 +114,11 @@ export class ContentGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.contentService.getCourseContentTree(courseId, userId),
     );
@@ -142,7 +152,8 @@ export class ContentGatewayController {
         },
         content: {
           type: 'string',
-          example: 'Lesson content including text, video URLs, and resources...',
+          example:
+            'Lesson content including text, video URLs, and resources...',
         },
         type: { type: 'string', example: 'VIDEO' },
         durationMinutes: { type: 'number', example: 45 },
@@ -153,7 +164,10 @@ export class ContentGatewayController {
             properties: {
               type: { type: 'string', example: 'PDF' },
               title: { type: 'string', example: 'JavaScript Cheat Sheet' },
-              url: { type: 'string', example: 'https://example.com/resource.pdf' },
+              url: {
+                type: 'string',
+                example: 'https://example.com/resource.pdf',
+              },
             },
           },
         },
@@ -181,11 +195,11 @@ export class ContentGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.contentService.getLessonContent(courseId, lessonId, userId),
     );
@@ -193,7 +207,8 @@ export class ContentGatewayController {
 
   @ApiOperation({
     summary: 'Upload file to course content',
-    description: 'Uploads a file directly to AWS S3 storage for course content. Only INSTRUCTOR_USER role can upload files.',
+    description:
+      'Uploads a file directly to AWS S3 storage for course content. Only INSTRUCTOR_USER role can upload files.',
   })
   @ApiQuery({
     name: 'contentType',
@@ -204,7 +219,8 @@ export class ContentGatewayController {
   })
   @ApiQuery({
     name: 'contentId',
-    description: 'The unique identifier of the content (lesson, chapter, or course ID)',
+    description:
+      'The unique identifier of the content (lesson, chapter, or course ID)',
     example: '507f1f77bcf86cd799439011',
     required: true,
   })
@@ -230,8 +246,15 @@ export class ContentGatewayController {
       type: 'object',
       properties: {
         message: { type: 'string', example: 'File uploaded successfully' },
-        fileUrl: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/course/content/lesson/id/file.pdf' },
-        objectKey: { type: 'string', example: 'course/content/lesson/id/file.pdf' },
+        fileUrl: {
+          type: 'string',
+          example:
+            'https://bucket.s3.region.amazonaws.com/course/content/lesson/id/file.pdf',
+        },
+        objectKey: {
+          type: 'string',
+          example: 'course/content/lesson/id/file.pdf',
+        },
         size: { type: 'number', example: 5242880 },
         assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
       },
@@ -265,11 +288,11 @@ export class ContentGatewayController {
     @Request() req: any,
   ) {
     const instructorId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!instructorId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     if (!file) {
       throw new Error('File is required');
     }
@@ -279,7 +302,7 @@ export class ContentGatewayController {
       const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `course/${courseId}/content/${contentType}/${contentId}/${uniqueId}-${file.originalname}`;
-      
+
       // Upload directly to S3
       const bucketName = process.env.AWS_S3_BUCKET_LMS;
       const command = new PutObjectCommand({
@@ -293,7 +316,7 @@ export class ContentGatewayController {
       console.log('S3 upload successful:', objectKey);
 
       // Create asset record via LMS service (only metadata)
-      const result = await firstValueFrom(
+      const result = (await firstValueFrom(
         this.contentService.createAssetRecord(
           courseId,
           contentType.toUpperCase() as 'LESSON' | 'CHAPTER' | 'COURSE',
@@ -305,9 +328,17 @@ export class ContentGatewayController {
             size: file.size,
             objectKey,
             fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
-          }
+          },
         ),
-      ) as { assetId: string; contentId: string; objectKey: string; fileName: string; size: number; mimeType: string; fileUrl: string };
+      )) as {
+        assetId: string;
+        contentId: string;
+        objectKey: string;
+        fileName: string;
+        size: number;
+        mimeType: string;
+        fileUrl: string;
+      };
 
       const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
 
@@ -321,7 +352,9 @@ export class ContentGatewayController {
     } catch (error) {
       console.error('File upload error:', error);
       if (error.message.includes('credential')) {
-        throw new Error('AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.');
+        throw new Error(
+          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
+        );
       }
       throw new Error(`Failed to upload file: ${error.message}`);
     }

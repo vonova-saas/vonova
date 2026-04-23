@@ -95,11 +95,11 @@ export class ReviewGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const review = await firstValueFrom(
       this.reviewService.createOrUpdateReview(itemType, itemId, userId, dto),
     );
@@ -154,10 +154,19 @@ export class ReviewGatewayController {
                 properties: {
                   _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
                   itemType: { type: 'string', example: 'BOOK' },
-                  itemId: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                  userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                  itemId: {
+                    type: 'string',
+                    example: '507f1f77bcf86cd799439011',
+                  },
+                  userId: {
+                    type: 'string',
+                    example: '507f1f77bcf86cd799439011',
+                  },
                   rating: { type: 'number', example: 5 },
-                  title: { type: 'string', example: 'Excellent JavaScript Guide!' },
+                  title: {
+                    type: 'string',
+                    example: 'Excellent JavaScript Guide!',
+                  },
                   body: {
                     type: 'string',
                     example: 'This guide provided comprehensive coverage...',
@@ -166,11 +175,20 @@ export class ReviewGatewayController {
                     type: 'object',
                     properties: {
                       name: { type: 'string', example: 'John Doe' },
-                      avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                      avatarUrl: {
+                        type: 'string',
+                        example: 'https://example.com/avatar.jpg',
+                      },
                     },
                   },
-                  createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
-                  updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+                  createdAt: {
+                    type: 'string',
+                    example: '2023-01-01T00:00:00.000Z',
+                  },
+                  updatedAt: {
+                    type: 'string',
+                    example: '2023-01-01T00:00:00.000Z',
+                  },
                 },
               },
             },
@@ -267,11 +285,11 @@ export class ReviewGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const review = await firstValueFrom(
       this.reviewService.getMyReview(itemType, itemId, userId),
     );

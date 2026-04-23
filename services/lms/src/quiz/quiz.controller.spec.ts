@@ -77,7 +77,11 @@ describe('QuizController', () => {
 
       const result = await controller.updateQuiz(id, dto, 'USER_ID');
 
-      expect(quizServiceMock.updateQuiz).toHaveBeenCalledWith(id, dto, 'USER_ID');
+      expect(quizServiceMock.updateQuiz).toHaveBeenCalledWith(
+        id,
+        dto,
+        'USER_ID',
+      );
       expect(result).toEqual(expected);
     });
   });
@@ -164,7 +168,10 @@ describe('QuizController', () => {
       const payload = { quizId, userId: 'USER_ID' };
       const result = await controller.getMyAttempts(payload);
 
-      expect(quizServiceMock.getMyAttemptsForQuiz).toHaveBeenCalledWith(payload, undefined);
+      expect(quizServiceMock.getMyAttemptsForQuiz).toHaveBeenCalledWith(
+        payload,
+        undefined,
+      );
       expect(result).toEqual(expected);
     });
   });

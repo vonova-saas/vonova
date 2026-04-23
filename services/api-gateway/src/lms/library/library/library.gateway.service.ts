@@ -12,11 +12,13 @@ export class LibraryGatewayService {
 
   async getAllByType(query: GetAllByTypeQueryDto) {
     const pattern = { cmd: 'library.getAllByType' };
-    
+
     // Convert topics from string to array if present
     const payload = {
       ...query,
-      topics: query.topics ? query.topics.split(',').map(t => t.trim()) : undefined,
+      topics: query.topics
+        ? query.topics.split(',').map((t) => t.trim())
+        : undefined,
     };
 
     return firstValueFrom(this.client.send(pattern, payload));
@@ -24,11 +26,13 @@ export class LibraryGatewayService {
 
   async getTopics(query: GetTopicsQueryDto) {
     const pattern = { cmd: 'library.getTopics' };
-    
+
     // Convert topics from string to array if present
     const payload = {
       ...query,
-      topics: query.topics ? query.topics.split(',').map(t => t.trim()) : undefined,
+      topics: query.topics
+        ? query.topics.split(',').map((t) => t.trim())
+        : undefined,
     };
 
     return firstValueFrom(this.client.send(pattern, payload));

@@ -220,7 +220,9 @@ describe('PdfSummaryService', () => {
       const userAudio = Buffer.from('user-audio-bytes');
 
       mockS3Service.uploadFile
-        .mockResolvedValueOnce('voice/pdf-summary/test-session/user/1-user.webm')
+        .mockResolvedValueOnce(
+          'voice/pdf-summary/test-session/user/1-user.webm',
+        )
         .mockResolvedValueOnce('voice/pdf-summary/test-session/ai/2-ai.mp3');
       mockS3Service.getPresignedGetUrl
         .mockResolvedValueOnce('https://signed.example.com/user')
@@ -260,7 +262,9 @@ describe('PdfSummaryService', () => {
         'voice/pdf-summary/test-session/user',
       );
       expect(result.userAudioS3Url).toContain('https://');
-      expect(result.aiAudioS3Key).toContain('voice/pdf-summary/test-session/ai');
+      expect(result.aiAudioS3Key).toContain(
+        'voice/pdf-summary/test-session/ai',
+      );
       expect(result.aiAudioS3Url).toContain('https://');
 
       expect(mockPdfSummaryAudioRepository.create).toHaveBeenCalledTimes(1);

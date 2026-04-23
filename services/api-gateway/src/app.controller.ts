@@ -7,7 +7,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 @ApiTags('Gateway')
 @Controller('api/v1')
 export class AppController {
-  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) { }
+  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) {}
   private static readonly HEALTH_TIMEOUT_MS = 3000;
 
   private async getServiceHealth(cmd: string, serviceName: string) {

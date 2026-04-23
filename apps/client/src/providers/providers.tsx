@@ -7,7 +7,7 @@ import * as React from "react";
 import { Toaster } from "sonner";
 import { ViewTransitions } from "next-view-transitions";
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000, // 1 min default - reduces refetches on navigation

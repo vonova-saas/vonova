@@ -24,7 +24,7 @@ import {
 export const createCourseMutationFn = async (
   data: CreateCourseDto
 ): Promise<Course> => {
-  const response = await API.post("/api/v1/lms/courses/createCourse", data);
+  const response = await API.post("/lms/courses/createCourse", data);
   return response.data;
 };
 
@@ -33,7 +33,7 @@ export const updateCourseMutationFn = async (
   courseId: string,
   data: UpdateCourseDto
 ): Promise<Course> => {
-  const response = await API.patch(`/api/v1/lms/courses/${courseId}`, data);
+  const response = await API.patch(`/lms/courses/${courseId}`, data);
   return response.data;
 };
 
@@ -43,7 +43,7 @@ export const publishCourseMutationFn = async (
   data: PublishCourseDto
 ): Promise<Course> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/publish`,
+    `/lms/courses/${courseId}/publish`,
     data
   );
   return response.data;
@@ -53,7 +53,7 @@ export const publishCourseMutationFn = async (
 export const deleteCourseMutationFn = async (
   courseId: string
 ): Promise<{ message: string }> => {
-  const response = await API.delete(`/api/v1/lms/courses/${courseId}`);
+  const response = await API.delete(`/lms/courses/${courseId}`);
   return response.data;
 };
 
@@ -62,7 +62,7 @@ export const recomputeCourseAggregatesMutationFn = async (
   courseId: string
 ): Promise<CourseAggregatesResponse> => {
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/recompute-aggregates`
+    `/lms/courses/${courseId}/recompute-aggregates`
   );
   return response.data;
 };
@@ -77,7 +77,7 @@ export const getInstructorCoursesQueryFn = async (
     limit?: number;
   }
 ): Promise<CoursesResponse> => {
-  const response = await API.get("/api/v1/lms/courses", { params });
+  const response = await API.get("/lms/courses", { params });
   return response.data;
 };
 
@@ -85,7 +85,7 @@ export const getInstructorCoursesQueryFn = async (
 export const getInstructorCourseByIdQueryFn = async (
   courseId: string
 ): Promise<Course> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}`);
+  const response = await API.get(`/lms/courses/${courseId}`);
   return response.data;
 };
 
@@ -97,7 +97,7 @@ export const createChapterMutationFn = async (
   data: CreateChapterDto
 ): Promise<Chapter> => {
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/chapters`,
+    `/lms/courses/${courseId}/chapters`,
     data
   );
   return response.data;
@@ -110,7 +110,7 @@ export const updateChapterMutationFn = async (
   data: UpdateChapterDto
 ): Promise<Chapter> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}`,
+    `/lms/courses/${courseId}/chapters/${chapterId}`,
     data
   );
   return response.data;
@@ -122,7 +122,7 @@ export const deleteChapterMutationFn = async (
   chapterId: string
 ): Promise<{ message: string }> => {
   const response = await API.delete(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}`
+    `/lms/courses/${courseId}/chapters/${chapterId}`
   );
   return response.data;
 };
@@ -133,7 +133,7 @@ export const reorderChaptersMutationFn = async (
   data: ReorderChaptersDto
 ): Promise<Chapter> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/chapters/reorder`,
+    `/lms/courses/${courseId}/chapters/reorder`,
     data
   );
   return response.data;
@@ -148,7 +148,7 @@ export const getChaptersQueryFn = async (
   }
 ): Promise<ChaptersResponse> => {
   const response = await API.get(
-    `/api/v1/lms/courses/${courseId}/chapters`,
+    `/lms/courses/${courseId}/chapters`,
     { params }
   );
   return response.data;
@@ -160,7 +160,7 @@ export const getChapterByIdQueryFn = async (
   chapterId: string
 ): Promise<Chapter> => {
   const response = await API.get(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}`
+    `/lms/courses/${courseId}/chapters/${chapterId}`
   );
   return response.data;
 };
@@ -174,7 +174,7 @@ export const createLessonMutationFn = async (
   data: CreateLessonDto
 ): Promise<Lesson> => {
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons`,
     data
   );
   return response.data;
@@ -188,7 +188,7 @@ export const updateLessonMutationFn = async (
   data: UpdateLessonDto
 ): Promise<Lesson> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`,
     data
   );
   return response.data;
@@ -201,7 +201,7 @@ export const deleteLessonMutationFn = async (
   lessonId: string
 ): Promise<{ message: string }> => {
   const response = await API.delete(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`
   );
   return response.data;
 };
@@ -213,7 +213,7 @@ export const reorderLessonsMutationFn = async (
   data: ReorderLessonsDto
 ): Promise<{ message: string }> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/reorder`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/reorder`,
     data
   );
   return response.data;
@@ -226,7 +226,7 @@ export const getLessonByIdQueryFn = async (
   lessonId: string
 ): Promise<Lesson> => {
   const response = await API.get(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`
   );
   return response.data;
 };
@@ -239,7 +239,7 @@ export const getVideoUrlMutationFn = async (
   data: VideoUploadUrlDto
 ): Promise<{ videoUrl: string }> => {
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/url`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/url`,
     data
   );
   return response.data;
@@ -256,7 +256,7 @@ export const uploadVideoMutationFn = async (
   formData.append("video", file);
 
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/upload-direct`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/upload-direct`,
     formData,
     {
       headers: {
@@ -278,7 +278,7 @@ export const uploadFileMutationFn = async (
   formData.append("file", file);
 
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/upload`,
+    `/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/upload`,
     formData,
     {
       headers: {

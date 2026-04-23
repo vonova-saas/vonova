@@ -47,7 +47,7 @@ import { extractAccessTokenFromRequest } from '../../common/utils/extract-access
 @ApiCookieAuth()
 @Controller('api/v1/auth')
 export class AuthGatewayController {
-  constructor(private readonly authService: AuthGatewayService) { }
+  constructor(private readonly authService: AuthGatewayService) {}
 
   // Register Flow
   @ApiOperation({
@@ -470,7 +470,10 @@ export class AuthGatewayController {
   })
   @ApiBody({ type: AdminResetPasswordBodyDto })
   @ApiResponse({ status: 200, description: 'Password updated' })
-  @ApiResponse({ status: 400, description: 'Wrong old password or weak new password' })
+  @ApiResponse({
+    status: 400,
+    description: 'Wrong old password or weak new password',
+  })
   @ApiResponse({ status: 401, description: 'Invalid access token' })
   @ApiResponse({ status: 403, description: 'Not an allowlisted admin' })
   @ApiBearerAuth()

@@ -21,7 +21,12 @@ export class ChapterGatewayService {
     );
   }
 
-  updateChapter(courseId: string, chapterId: string, dto: UpdateChapterDto, ownerId: string) {
+  updateChapter(
+    courseId: string,
+    chapterId: string,
+    dto: UpdateChapterDto,
+    ownerId: string,
+  ) {
     return this.client.send(
       { cmd: 'app.courses.chapters.update' },
       { courseId, chapterId, dto, ownerId, user: { id: ownerId } },

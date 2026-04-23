@@ -20,7 +20,15 @@ export class ProgressController {
       timeSpentSec: number;
     },
   ) {
-    const { courseId, lessonId, userId, createdBy, user, completed, timeSpentSec } = data;
+    const {
+      courseId,
+      lessonId,
+      userId,
+      createdBy,
+      user,
+      completed,
+      timeSpentSec,
+    } = data;
     if (!courseId || !lessonId || !userId)
       throw new Error('courseId, lessonId and userId are required');
 

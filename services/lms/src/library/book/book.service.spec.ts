@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { BookService } from './book.service';
@@ -116,7 +114,10 @@ describe('BookService', () => {
       const id = 'book-id';
       const dto: PublishBookDto = { status: 'PUBLISHED' };
       const book = { _id: id, createdBy: { toString: () => 'user1' } };
-      const updated = { _id: 'book-id', status: 'PUBLISHED' } as unknown as Partial<BookDocument>;
+      const updated = {
+        _id: 'book-id',
+        status: 'PUBLISHED',
+      } as unknown as Partial<BookDocument>;
       bookModelMock.findById.mockResolvedValue(book);
       bookModelMock.findByIdAndUpdate.mockResolvedValue(updated);
 
@@ -224,7 +225,10 @@ describe('BookService', () => {
       const id = 'book-id';
       const dto: UpdateBookDto = { title: 'Updated' } as UpdateBookDto;
       const book = { createdBy: { toString: () => 'user1' } };
-      const updated = { _id: 'book-id', ...dto } as unknown as Partial<BookDocument>;
+      const updated = {
+        _id: 'book-id',
+        ...dto,
+      } as unknown as Partial<BookDocument>;
       bookModelMock.findById.mockResolvedValue(book);
       bookModelMock.findByIdAndUpdate.mockResolvedValue(updated);
 

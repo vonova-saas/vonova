@@ -31,7 +31,7 @@ Deep dive: `docs/Backend/services/app.md`
 ### LMS Service (`services/lms`)
 
 - LMS domain (courses, lessons, quizzes, assignments, progress).
-- LMS-AI orchestration flows (roadmap generation, PDF summary/chat).
+- LMS-AI orchestration flows (roadmap generation, PDF summary/chat, problem-solving coach).
 - SSRF-protected outbound calls to AI services.
 
 Documentation: `services/lms/README.md`

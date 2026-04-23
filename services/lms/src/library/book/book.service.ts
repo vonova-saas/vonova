@@ -17,7 +17,10 @@ import {
   PublishBookDto,
   UpdateProgressDto,
 } from './dto/book.dto';
-import { LibraryAsset, LibraryAssetDocument } from '../schema/library-asset.schema';
+import {
+  LibraryAsset,
+  LibraryAssetDocument,
+} from '../schema/library-asset.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 
 @Injectable()
@@ -35,7 +38,7 @@ export class BookService {
     const bookData = {
       ...data,
       createdBy: userId,
-      status: data.status || 'PUBLISHED'
+      status: data.status || 'PUBLISHED',
     };
     const book = await this.bookModel.create(bookData);
     if (!book) throw new BadRequestException('Book not created');
@@ -81,31 +84,28 @@ export class BookService {
       userId,
     } = query;
     const filter: any = {};
-    
+
     // Role-based filtering logic
     if (userRole === 'INSTRUCTOR_USER') {
       // Instructors can see all books they created, plus all published books
       if (userId) {
-        filter.$or = [
-          { createdBy: userId },
-          { status: 'PUBLISHED' }
-        ];
+        filter.$or = [{ createdBy: userId }, { status: 'PUBLISHED' }];
       }
     } else {
       // Students and other roles only see published books
       filter.status = 'PUBLISHED';
     }
-    
+
     // Apply explicit status filter if provided (but don't override role-based logic for students)
     if (status && userRole === 'INSTRUCTOR_USER') {
       if (userId) {
         filter.$or = [
           { createdBy: userId, status: status },
-          { status: 'PUBLISHED' }
+          { status: 'PUBLISHED' },
         ];
       }
     }
-    
+
     if (q) filter.$text = { $search: q };
     if (topics && topics.length) filter.topics = { $in: topics };
     if (level) filter.level = level;
@@ -129,74 +129,95 @@ export class BookService {
     const booksWithUrls = await Promise.all(
       items.map(async (book) => {
         const bookObj = book.toObject();
-        
+
         if (book.fileAssetId) {
           try {
-            const asset = await this.libraryAssetModel.findById(book.fileAssetId);
+            const asset = await this.libraryAssetModel.findById(
+              book.fileAssetId,
+            );
             if (asset?.objectKey) {
               let contentUrl: string | undefined;
-              
+
               // Check if we have a valid stored presigned URL
-              if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+              if (
+                asset.urls?.presignedUrl &&
+                asset.urls?.presignedUrlExpiresAt
+              ) {
                 const now = new Date();
                 const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-                
+
                 if (now < expiresAt) {
                   contentUrl = asset.urls.presignedUrl;
                 }
               }
-              
+
               // Generate new presigned URL if none exists or expired
               if (!contentUrl) {
-                contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+                contentUrl = await this.s3Service.getPresignedGetUrl(
+                  asset.objectKey,
+                );
                 // Store the new presigned URL in database with 1 hour expiration
                 const expiresAt = new Date(Date.now() + 3600 * 1000);
-                await this.libraryAssetModel.findByIdAndUpdate(book.fileAssetId, {
-                  'urls.presignedUrl': contentUrl,
-                  'urls.presignedUrlExpiresAt': expiresAt,
-                });
+                await this.libraryAssetModel.findByIdAndUpdate(
+                  book.fileAssetId,
+                  {
+                    'urls.presignedUrl': contentUrl,
+                    'urls.presignedUrlExpiresAt': expiresAt,
+                  },
+                );
               }
-              
+
               (bookObj as any).contentUrl = contentUrl;
             }
           } catch (error) {
-            console.error(`Failed to generate presigned URL for book ${book._id}:`, error);
+            console.error(
+              `Failed to generate presigned URL for book ${book._id}:`,
+              error,
+            );
             // Continue without presigned URL
           }
         }
-        
+
         return bookObj;
-      })
+      }),
     );
 
-    return { items: booksWithUrls, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      items: booksWithUrls,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getBookByIdService(id: string) {
     const book = await this.bookModel.findById(id);
     if (!book) throw new NotFoundException('Book not found');
-    
+
     const bookObj = book.toObject();
-    
+
     if (book.fileAssetId) {
       try {
         const asset = await this.libraryAssetModel.findById(book.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
-          
+
           // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-            
+
             if (now < expiresAt) {
               contentUrl = asset.urls.presignedUrl;
             }
           }
-          
+
           // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            contentUrl = await this.s3Service.getPresignedGetUrl(
+              asset.objectKey,
+            );
             // Store the new presigned URL in database with 1 hour expiration
             const expiresAt = new Date(Date.now() + 3600 * 1000);
             await this.libraryAssetModel.findByIdAndUpdate(book.fileAssetId, {
@@ -204,43 +225,48 @@ export class BookService {
               'urls.presignedUrlExpiresAt': expiresAt,
             });
           }
-          
+
           (bookObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
-        console.error(`Failed to generate presigned URL for book ${book._id}:`, error);
+        console.error(
+          `Failed to generate presigned URL for book ${book._id}:`,
+          error,
+        );
         // Continue without presigned URL
       }
     }
-    
+
     return bookObj;
   }
 
   async getBookBySlugService(slug: string) {
     const book = await this.bookModel.findOne({ slug });
     if (!book) throw new NotFoundException('Book not found');
-    
+
     const bookObj = book.toObject();
-    
+
     if (book.fileAssetId) {
       try {
         const asset = await this.libraryAssetModel.findById(book.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
-          
+
           // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-            
+
             if (now < expiresAt) {
               contentUrl = asset.urls.presignedUrl;
             }
           }
-          
+
           // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            contentUrl = await this.s3Service.getPresignedGetUrl(
+              asset.objectKey,
+            );
             // Store the new presigned URL in database with 1 hour expiration
             const expiresAt = new Date(Date.now() + 3600 * 1000);
             await this.libraryAssetModel.findByIdAndUpdate(book.fileAssetId, {
@@ -248,15 +274,18 @@ export class BookService {
               'urls.presignedUrlExpiresAt': expiresAt,
             });
           }
-          
+
           (bookObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
-        console.error(`Failed to generate presigned URL for book ${book._id}:`, error);
+        console.error(
+          `Failed to generate presigned URL for book ${book._id}:`,
+          error,
+        );
         // Continue without presigned URL
       }
     }
-    
+
     return bookObj;
   }
 
@@ -327,44 +356,54 @@ export class BookService {
   }
 
   async getAllBookLinksService() {
-    const books = await this.bookModel.find({ fileAssetId: { $exists: true, $ne: null } });
-    
+    const books = await this.bookModel.find({
+      fileAssetId: { $exists: true, $ne: null },
+    });
+
     const links = await Promise.all(
       books.map(async (book) => {
         try {
           if (book.fileAssetId) {
-            const asset = await this.libraryAssetModel.findById(book.fileAssetId);
+            const asset = await this.libraryAssetModel.findById(
+              book.fileAssetId,
+            );
             if (asset?.objectKey) {
-              const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+              const presignedUrl = await this.s3Service.getPresignedGetUrl(
+                asset.objectKey,
+              );
               return {
                 id: book._id,
                 title: book.title,
                 slug: book.slug,
-                fileName: asset.originalFileName || asset.objectKey.split('/').pop(),
+                fileName:
+                  asset.originalFileName || asset.objectKey.split('/').pop(),
                 objectKey: asset.objectKey,
                 presignedUrl,
                 uploadedAt: (book as any).createdAt,
                 contentType: asset.mimeType,
-                size: asset.size
+                size: asset.size,
               };
             }
           }
         } catch (error) {
-          console.error(`Failed to generate presigned URL for book ${book._id}:`, error);
+          console.error(
+            `Failed to generate presigned URL for book ${book._id}:`,
+            error,
+          );
           return {
             id: book._id,
             title: book.title,
             slug: book.slug,
-            error: 'Failed to generate presigned URL'
+            error: 'Failed to generate presigned URL',
           };
         }
         return null;
-      })
+      }),
     );
 
     return {
-      links: links.filter(link => link !== null),
-      total: links.filter(link => link !== null).length
+      links: links.filter((link) => link !== null),
+      total: links.filter((link) => link !== null).length,
     };
   }
 }

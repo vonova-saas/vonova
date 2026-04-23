@@ -23,6 +23,7 @@ import { ProgressModule } from './course/progress/progress.module';
 import { DatabaseModule } from './lms-ai/database/database.module';
 import { RoadmapModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
+import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
     DatabaseModule,
     RoadmapModule,
     PdfSummaryModule,
+    ProblemSolvingModule,
   ],
   controllers: [AppController],
   providers: [],

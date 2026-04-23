@@ -8,15 +8,27 @@ import QuestionComponent from "./quiz-question";
 import QuizResult from "./quiz-result";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
-import { submitQuizMutationFn, getStudentQuizAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import {
+  getQuizByIdMutationFn,
+  submitQuizMutationFn,
+  getStudentQuizAttemptsMutationFn,
+  normalizeQuizAttemptsResponse,
+  getAttemptRecordId,
+} from "@/services/student/lms/quizzes/quiz.api";
 import { getAttemptsTypeResponse } from "@/types/api/student/lms/quizzes/quiz.type";
+import { useUserId } from "@/hooks";
 
 function getQuestions(quiz: QuizType): Question[] {
   return quiz.questions.length > 0 ? quiz.questions : [];
 }
 
 export default function QuizRunner({ quiz }: { quiz: QuizType }) {
+  const userId = useUserId();
   const questions = getQuestions(quiz);
+  const [started, setStarted] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [lockedAttemptId, setLockedAttemptId] = useState<string | null>(quiz.attemptId ?? null);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
   const [timedOut, setTimedOut] = useState<{ [questionId: string]: boolean }>({});
@@ -50,6 +62,69 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   const [timer, setTimer] = useState(10);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+  const resolveAttemptIdForQuiz = (rawAttempts: unknown, targetQuizId: string): string | null => {
+    const list = Array.isArray(rawAttempts) ? rawAttempts : [];
+    const match = list.find((attempt) => {
+      const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
+        ?? (attempt as { quizId?: unknown }).quizId;
+      const attemptQuizId =
+        quizRef && typeof quizRef === "object"
+          ? String((quizRef as { _id?: string })._id ?? "")
+          : String(quizRef ?? "");
+      return attemptQuizId === targetQuizId;
+    });
+    return match ? getAttemptRecordId(match) || null : null;
+  };
+
+  const redirectToAttempt = async (attemptId?: string | null) => {
+    if (attemptId) {
+      router.replace(`/student/${userId}/quizzes/attempts/${attemptId}`);
+      return;
+    }
+    const attemptsRes = await getStudentQuizAttemptsMutationFn();
+    const resolvedAttemptId = resolveAttemptIdForQuiz(
+      normalizeQuizAttemptsResponse(attemptsRes),
+      quiz._id,
+    );
+    if (resolvedAttemptId) {
+      router.replace(`/student/${userId}/quizzes/attempts/${resolvedAttemptId}`);
+      return;
+    }
+    router.replace(`/student/${userId}/quizzes`);
+  };
+
+  useEffect(() => {
+    let active = true;
+    const checkAccess = async () => {
+      try {
+        setCheckingAccess(true);
+        setAccessError(null);
+        const res = await getQuizByIdMutationFn(quiz._id);
+        const latestQuiz = ((res as { data?: QuizType }).data ?? res) as QuizType;
+        if (!active) return;
+        if (latestQuiz.alreadyAttempted) {
+          const attemptId = latestQuiz.attemptId ?? null;
+          setLockedAttemptId(attemptId);
+          await redirectToAttempt(attemptId);
+          return;
+        }
+      } catch (e: unknown) {
+        if (!active) return;
+        const message =
+          e && typeof e === "object" && "message" in e
+            ? String((e as { message?: string }).message)
+            : "Failed to verify quiz access";
+        setAccessError(message || "Failed to verify quiz access");
+      } finally {
+        if (active) setCheckingAccess(false);
+      }
+    };
+    void checkAccess();
+    return () => {
+      active = false;
+    };
+  }, [quiz._id]);
+
 
   type GradedAnswer = { questionId: string; selectedOptionId: string; correct: boolean };
   type NormalizedResult = {
@@ -141,6 +216,15 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       setResult(normalized);
       setShowResult(true);
     } catch (e: unknown) {
+      const status =
+        e && typeof e === "object" && "response" in e
+          ? Number(((e as { response?: { status?: number } }).response?.status ?? 0))
+          : 0;
+      if (status === 409) {
+        setSubmitError("You already attempted this quiz");
+        await redirectToAttempt(lockedAttemptId);
+        return;
+      }
       let message = "Failed to submit quiz";
       if (e && typeof e === "object" && "message" in e) {
         message = String((e as { message?: string }).message) || message;
@@ -157,12 +241,10 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       setLoadingAttempts(true);
       setAttemptsError(null);
       const res = await getStudentQuizAttemptsMutationFn(quiz._id);
-      const data: unknown = (res as { data: unknown }).data;
+      const normalized = normalizeQuizAttemptsResponse(res);
       let parsed: getAttemptsTypeResponse["data"] = [];
-      if (Array.isArray(data)) {
-        parsed = data as getAttemptsTypeResponse["data"];
-      } else if (data && typeof data === "object") {
-        parsed = [data as getAttemptsTypeResponse["data"][number]];
+      if (normalized.length) {
+        parsed = normalized as getAttemptsTypeResponse["data"];
       }
       const filtered = parsed.filter((attempt) => {
         const attemptQuiz =
@@ -187,12 +269,66 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   };
 
   const handleRestart = () => {
-    setCurrent(0);
-    setAnswers({});
-    setTimedOut({});
-    setShowResult(false);
-    setTimer(10);
+    void redirectToAttempt(lockedAttemptId);
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground">
+        Verifying quiz access...
+      </div>
+    );
+  }
+
+  if (accessError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <p className="text-destructive">{accessError}</p>
+        <Button onClick={() => router.replace(`/student/${userId}/quizzes`)}>Back to quizzes</Button>
+      </div>
+    );
+  }
+
+  if (!started) {
+    const isLocked = Boolean(quiz.alreadyAttempted || lockedAttemptId);
+    return (
+      <Card className="w-full max-w-2xl mx-auto mt-10">
+        <CardHeader>
+          <CardTitle>{quiz.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{quiz.description}</p>
+          {isLocked ? (
+            <p className="text-destructive font-medium">You already completed this quiz.</p>
+          ) : null}
+          <Button
+            className="w-full"
+            disabled={isLocked}
+            onClick={() => {
+              if (isLocked) {
+                void redirectToAttempt(lockedAttemptId);
+                return;
+              }
+              setStarted(true);
+            }}
+          >
+            {isLocked ? "Quiz Locked" : "Start Quiz"}
+          </Button>
+          {isLocked ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                void redirectToAttempt(lockedAttemptId);
+              }}
+            >
+              View Attempt Result
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (showResult) {
     return (
@@ -210,6 +346,7 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
         onLoadAttempts={loadAttempts}
         onRestart={handleRestart}
         onBack={() => router.back()}
+        showRestart={false}
       />
     );
   }

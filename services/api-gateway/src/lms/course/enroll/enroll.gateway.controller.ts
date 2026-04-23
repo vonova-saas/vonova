@@ -77,11 +77,11 @@ export class EnrollGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const createdBy = userId;
     return firstValueFrom(
       this.enrollService.enrollCourse(courseId, userId, createdBy, dto),

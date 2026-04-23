@@ -34,7 +34,8 @@ export class DashboardSupportGatewayController {
   @ApiBody({ type: CreateDashboardSupportDto })
   @ApiResponse({
     status: 200,
-    description: 'Ticket created; response is the NATS RPC envelope from the admin service',
+    description:
+      'Ticket created; response is the NATS RPC envelope from the admin service',
     schema: {
       example: {
         success: true,

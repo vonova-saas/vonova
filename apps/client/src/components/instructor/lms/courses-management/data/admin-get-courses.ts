@@ -4,7 +4,7 @@ import { Course } from "@/types/api/lms/courses.type";
 export async function adminGetCourses() {
   try {
     const response = await getInstructorCoursesQueryFn();
-    return response.courses;
+    return response.items || [];
   } catch (error) {
     console.error("Error fetching instructor courses:", error);
     return [];

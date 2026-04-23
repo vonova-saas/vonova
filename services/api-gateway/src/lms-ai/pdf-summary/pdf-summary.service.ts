@@ -6,7 +6,7 @@ export class PdfSummaryGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) { }
+  ) {}
 
   uploadPDF(data: any) {
     return this.client.send({ cmd: 'lms.ai.pdf.upload' }, data);
@@ -60,10 +60,7 @@ export class PdfSummaryGatewayService {
   }
 
   getSessionWithFullData(data: { user_id: string; sessionId: string }) {
-    return this.client.send(
-      { cmd: 'lms.ai.pdf.getSessionWithFullData' },
-      data,
-    );
+    return this.client.send({ cmd: 'lms.ai.pdf.getSessionWithFullData' }, data);
   }
 
   getServiceStats(data: { user_id?: string }) {

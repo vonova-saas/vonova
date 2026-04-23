@@ -32,7 +32,9 @@ export class UpdateChapterDto {
 
 export class ReorderChapterItemDto {
   @IsString()
-  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for chapterId' })
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for chapterId',
+  })
   chapterId: string;
 
   @IsInt()

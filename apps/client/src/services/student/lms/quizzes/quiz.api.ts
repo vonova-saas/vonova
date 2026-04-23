@@ -17,6 +17,22 @@ import {
 const LMS_QUIZZES_INSTRUCTOR = "/lms/instructor/quizzes";
 const LMS_QUIZZES_STUDENT = "/lms/student/quizzes";
 
+/** Gateway returns attempts as a JSON array; some callers still wrap as `{ data: [...] }`. */
+export function normalizeQuizAttemptsResponse(res: unknown): unknown[] {
+  if (Array.isArray(res)) return res;
+  if (res && typeof res === "object" && Array.isArray((res as { data?: unknown[] }).data)) {
+    return (res as { data: unknown[] }).data;
+  }
+  return [];
+}
+
+export function getAttemptRecordId(attempt: unknown): string {
+  if (!attempt || typeof attempt !== "object") return "";
+  const a = attempt as { id?: unknown; _id?: unknown };
+  const raw = a.id ?? a._id;
+  return raw !== undefined && raw !== null ? String(raw) : "";
+}
+
 /** Backend DTOs expect `noOfQuestions` as a number; UI forms use string inputs. */
 function withNumericQuestionCount<T extends { noOfQuestions?: string | number; questions: unknown[] }>(
   body: T,

@@ -33,7 +33,7 @@ export function PublicCourseCard({ data }: iAppProps) {
       <CardContent className="p-4">
         <Link
           className="font-medium text-lg line-clamp-2 hover:underline group-hover:text-primary transition-colors"
-          href={`/student/courses/${data.slug}`}
+          href={`/student/courses/${data.slug}/enroll`}
         >
           {data.title}
         </Link>
@@ -56,10 +56,10 @@ export function PublicCourseCard({ data }: iAppProps) {
         <div className="mt-2 flex items-center justify-between">
           <p className="text-lg font-bold text-primary">{price}</p>
           <Link
-            href={`/student/courses/${data.slug}`}
+            href={`/student/courses/${data.slug}/enroll`}
             className={buttonVariants({ className: "mt-2", size: "sm" })}
           >
-            Learn More
+            {data.price?.isFree ? "Enroll Free" : "Enroll Now"}
           </Link>
         </div>
       </CardContent>

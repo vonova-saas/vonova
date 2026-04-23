@@ -59,47 +59,60 @@ export class LessonGatewayService {
     );
   }
 
-  uploadVideoDirectly(courseId: string, lessonId: string, videoMetadata: {
-  objectKey: string;
-  videoUrl: string;
-  hasVideo: boolean;
-  size: number;
-  mimetype: string;
-  originalName: string;
-}, ownerId: string) {
+  uploadVideoDirectly(
+    courseId: string,
+    lessonId: string,
+    videoMetadata: {
+      objectKey: string;
+      videoUrl: string;
+      hasVideo: boolean;
+      size: number;
+      mimetype: string;
+      originalName: string;
+    },
+    ownerId: string,
+  ) {
     return this.client.send(
-      { cmd: 'app.courses.lessons.video.upload.direct' }, 
-      { courseId, lessonId, videoMetadata, ownerId, user: { id: ownerId } }
+      { cmd: 'app.courses.lessons.video.upload.direct' },
+      { courseId, lessonId, videoMetadata, ownerId, user: { id: ownerId } },
     );
   }
 
-  getVideoUploadUrl(courseId: string, lessonId: string, uploadData: {
-  fileName: string;
-  contentType: string;
-  objectKey: string;
-}, ownerId: string) {
+  getVideoUploadUrl(
+    courseId: string,
+    lessonId: string,
+    uploadData: {
+      fileName: string;
+      contentType: string;
+      objectKey: string;
+    },
+    ownerId: string,
+  ) {
     return this.client.send(
-      { cmd: 'app.courses.lessons.video.upload.url' }, 
-      { courseId, lessonId, uploadData, ownerId, user: { id: ownerId } }
+      { cmd: 'app.courses.lessons.video.upload.url' },
+      { courseId, lessonId, uploadData, ownerId, user: { id: ownerId } },
     );
   }
 
   getPresignedUploadUrl(objectKey: string, contentType: string) {
     return this.client.send(
-      { cmd: 'app.courses.lessons.video.upload.presigned' }, 
-      { objectKey, contentType }
+      { cmd: 'app.courses.lessons.video.upload.presigned' },
+      { objectKey, contentType },
     );
   }
 
   getVideoUrl(objectKey: string) {
     return this.client.send(
-      { cmd: 'app.courses.lessons.video.url' }, 
-      { objectKey }
+      { cmd: 'app.courses.lessons.video.url' },
+      { objectKey },
     );
   }
 
   getLesson(lessonId: string, courseId: string) {
-    return this.client.send({ cmd: 'app.courses.lessons.get' }, { lessonId, courseId });
+    return this.client.send(
+      { cmd: 'app.courses.lessons.get' },
+      { lessonId, courseId },
+    );
   }
 
   createAssetRecord(

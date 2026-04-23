@@ -10,7 +10,12 @@ export class AdminGatewayService {
     return this.client.send({ cmd: 'admin.health.check' }, {});
   }
 
-  getUsers(query: { page?: number; limit?: number; role?: string; search?: string }) {
+  getUsers(query: {
+    page?: number;
+    limit?: number;
+    role?: string;
+    search?: string;
+  }) {
     return this.client.send({ cmd: 'admin.account.getUsers' }, query);
   }
 
@@ -23,10 +28,7 @@ export class AdminGatewayService {
   }
 
   approveInstructor(instructorId: string) {
-    return this.client.send(
-      { cmd: 'approveInstructor' },
-      { instructorId },
-    );
+    return this.client.send({ cmd: 'approveInstructor' }, { instructorId });
   }
 
   rejectInstructor(instructorId: string) {

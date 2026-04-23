@@ -8,4 +8,4 @@ import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
   controllers: [WaitlistGatewayController],
   providers: [WaitlistGatewayService],
 })
-export class WaitlistGatewayModule { }
+export class WaitlistGatewayModule {}

@@ -113,24 +113,27 @@ export class PresentationGatewayController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Only INSTRUCTOR_USER role can create presentations',
+    description:
+      'Forbidden - Only INSTRUCTOR_USER role can create presentations',
   })
   @Roles(Role.INSTRUCTOR_USER)
   @Post('createPresentation')
   async create(@Body() dto: CreatePresentationDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     // Ensure status is set from request body or default to PUBLISHED
     const presentationData = {
       ...dto,
-      status: dto.status || 'PUBLISHED'
+      status: dto.status || 'PUBLISHED',
     };
-    
-    return firstValueFrom(this.presentationService.create(presentationData, userId));
+
+    return firstValueFrom(
+      this.presentationService.create(presentationData, userId),
+    );
   }
 
   @ApiOperation({
@@ -181,11 +184,11 @@ export class PresentationGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.presentationService.update(id, dto, userId));
   }
 
@@ -234,11 +237,11 @@ export class PresentationGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(this.presentationService.publish(id, dto, userId));
   }
 
@@ -258,7 +261,10 @@ export class PresentationGatewayController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Presentation deleted successfully' },
+        message: {
+          type: 'string',
+          example: 'Presentation deleted successfully',
+        },
       },
     },
   })
@@ -280,11 +286,11 @@ export class PresentationGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.presentationService.delete(presentationId, userId),
     );
@@ -410,13 +416,13 @@ export class PresentationGatewayController {
     const user = req?.user;
     const userRole = user?.role;
     const userId = user?.id || user?.sub || user?._id;
-    
+
     const queryWithUser = {
       ...query,
       userRole,
-      userId
+      userId,
     };
-    
+
     return firstValueFrom(this.presentationService.getAll(queryWithUser));
   }
 
@@ -670,7 +676,8 @@ export class PresentationGatewayController {
               title: { type: 'string', example: 'Introduction to JavaScript' },
               content: {
                 type: 'string',
-                example: 'Slide content including text, images, and interactive elements...',
+                example:
+                  'Slide content including text, images, and interactive elements...',
               },
               order: { type: 'number', example: 1 },
               slideType: { type: 'string', example: 'TITLE' },
@@ -705,4 +712,4 @@ export class PresentationGatewayController {
     return firstValueFrom(this.presentationService.getContent(presentationId));
   }
 
-  }
+}

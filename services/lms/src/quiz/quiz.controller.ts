@@ -104,6 +104,4 @@ export class QuizController {
   getStudentQuizAttempts(@Payload('userId') userId: string) {
     return this.quizService.getStudentQuizAttempts(userId);
   }
-
-  
-  }
+}

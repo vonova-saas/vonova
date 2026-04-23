@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsArray, IsString, IsNumber } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsArray,
+  IsString,
+  IsNumber,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export enum LibraryTopics {

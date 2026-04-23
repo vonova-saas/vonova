@@ -113,13 +113,17 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     console.log('Create lesson request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     console.log('Creating lesson with ownerId:', ownerId);
     return firstValueFrom(
       this.lessonService.createLesson(courseId, chapterId, dto, ownerId),
@@ -133,8 +137,12 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     console.log('Reorder lessons request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
@@ -146,8 +154,10 @@ export class LessonGatewayController {
     }
 
     console.log('Gateway reorder lessons payload:', { courseId, dto, ownerId });
-    
-    return firstValueFrom(this.lessonService.reorderLessons(courseId, dto, ownerId));
+
+    return firstValueFrom(
+      this.lessonService.reorderLessons(courseId, dto, ownerId),
+    );
   }
 
   @ApiOperation({
@@ -209,13 +219,17 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     console.log('Update lesson request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.lessonService.updateLesson(courseId, lessonId, dto, ownerId),
     );
@@ -223,8 +237,7 @@ export class LessonGatewayController {
 
   @ApiOperation({
     summary: 'Delete lesson',
-    description:
-      'Permanently deletes a lesson from a chapter within a course.',
+    description: 'Permanently deletes a lesson from a chapter within a course.',
   })
   @ApiParam({
     name: 'courseId',
@@ -265,13 +278,17 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     console.log('Delete lesson request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.lessonService.deleteLesson(courseId, lessonId, ownerId),
     );
@@ -279,7 +296,8 @@ export class LessonGatewayController {
 
   @ApiOperation({
     summary: 'Get presigned URL for video access',
-    description: 'Generates a presigned S3 URL for accessing a video. Use this to get a temporary URL that works for 1 hour.',
+    description:
+      'Generates a presigned S3 URL for accessing a video. Use this to get a temporary URL that works for 1 hour.',
   })
   @ApiParam({
     name: 'courseId',
@@ -302,10 +320,10 @@ export class LessonGatewayController {
     schema: {
       type: 'object',
       properties: {
-        videoUrl: { 
-          type: 'string', 
+        videoUrl: {
+          type: 'string',
           example: 'https://your-bucket.s3.amazonaws.com/videos/...',
-          description: 'Presigned URL for video access (expires in 1 hour)' 
+          description: 'Presigned URL for video access (expires in 1 hour)',
         },
       },
     },
@@ -331,7 +349,8 @@ export class LessonGatewayController {
 
   @ApiOperation({
     summary: 'Upload video directly to S3',
-    description: 'Uploads a video file directly to AWS S3 storage. Works with any file size by bypassing NATS limitations.',
+    description:
+      'Uploads a video file directly to AWS S3 storage. Works with any file size by bypassing NATS limitations.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -342,11 +361,11 @@ export class LessonGatewayController {
         video: {
           type: 'string',
           format: 'binary',
-          description: 'Video file (MP4, AVI, MOV, WMV, WebM) - Max 3GB'
-        }
+          description: 'Video file (MP4, AVI, MOV, WMV, WebM) - Max 3GB',
+        },
       },
-      required: ['video']
-    }
+      required: ['video'],
+    },
   })
   @ApiParam({
     name: 'courseId',
@@ -370,15 +389,15 @@ export class LessonGatewayController {
       type: 'object',
       properties: {
         message: { type: 'string', example: 'Video uploaded successfully' },
-        videoUrl: { 
-          type: 'string', 
+        videoUrl: {
+          type: 'string',
           example: 'https://your-bucket.s3.amazonaws.com/...',
-          description: 'Direct S3 URL of the uploaded video' 
+          description: 'Direct S3 URL of the uploaded video',
         },
-        objectKey: { 
-          type: 'string', 
+        objectKey: {
+          type: 'string',
           example: 'userId/courses/courseId/lessons/lessonId/uuid-video.mp4',
-          description: 'S3 object key for the uploaded video' 
+          description: 'S3 object key for the uploaded video',
         },
       },
     },
@@ -411,8 +430,12 @@ export class LessonGatewayController {
     @Request() req: any,
   ) {
     console.log('Direct video upload request user:', req.user);
-    const ownerId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!ownerId) {
       console.error('User identification failed. User object:', req.user);
       throw new Error('Authentication required - No user found');
@@ -422,16 +445,18 @@ export class LessonGatewayController {
       throw new Error('Video file is required');
     }
 
-    console.log('File details:', { 
-      mimetype: file.mimetype, 
-      size: file.size, 
-      name: file.originalname 
+    console.log('File details:', {
+      mimetype: file.mimetype,
+      size: file.size,
+      name: file.originalname,
     });
 
     // Validate file size (3GB limit for S3)
     const maxSize = 3 * 1024 * 1024 * 1024; // 3GB
     if (file.size > maxSize) {
-      throw new Error(`File size too large. Maximum size is 3GB. Your file is ${Math.round(file.size / 1024 / 1024)}MB.`);
+      throw new Error(
+        `File size too large. Maximum size is 3GB. Your file is ${Math.round(file.size / 1024 / 1024)}MB.`,
+      );
     }
 
     try {
@@ -440,7 +465,9 @@ export class LessonGatewayController {
         throw new Error('AWS_S3_REGION is required in .env');
       }
       // Get lesson details to determine userId
-      const lessonResponse = await firstValueFrom(this.lessonService.getLesson(lessonId, courseId));
+      const lessonResponse = await firstValueFrom(
+        this.lessonService.getLesson(lessonId, courseId),
+      );
       const lesson = lessonResponse.lesson;
       const userId = lesson.createdBy || ownerId;
 
@@ -457,7 +484,11 @@ export class LessonGatewayController {
       const objectKey = `courses/${userId}/${courseId}/chapters/${lesson.chapterId}/lessons/${lessonId}/${uuidv4()}-${file.originalname}`;
       const bucketName = process.env.AWS_S3_BUCKET_LMS;
 
-      console.log('Uploading to S3:', { bucketName, objectKey, fileSize: file.size });
+      console.log('Uploading to S3:', {
+        bucketName,
+        objectKey,
+        fileSize: file.size,
+      });
 
       // Convert buffer to stream for S3 upload
       const stream = Readable.from(file.buffer);
@@ -475,14 +506,21 @@ export class LessonGatewayController {
       console.log('S3 upload successful:', objectKey);
 
       // Update lesson with video information (only small metadata via NATS)
-      await firstValueFrom(this.lessonService.uploadVideoDirectly(courseId, lessonId, {
-        objectKey,
-        videoUrl: `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`,
-        hasVideo: true,
-        size: file.size,
-        mimetype: file.mimetype,
-        originalName: file.originalname
-      }, ownerId));
+      await firstValueFrom(
+        this.lessonService.uploadVideoDirectly(
+          courseId,
+          lessonId,
+          {
+            objectKey,
+            videoUrl: `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`,
+            hasVideo: true,
+            size: file.size,
+            mimetype: file.mimetype,
+            originalName: file.originalname,
+          },
+          ownerId,
+        ),
+      );
 
       const videoUrl = `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`;
 
@@ -495,7 +533,9 @@ export class LessonGatewayController {
     } catch (error) {
       console.error('Video upload error:', error);
       if (error.message.includes('credential')) {
-        throw new Error('AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.');
+        throw new Error(
+          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
+        );
       }
       throw new Error(`Failed to upload video: ${error.message}`);
     }
@@ -513,7 +553,8 @@ export class LessonGatewayController {
 
   @ApiOperation({
     summary: 'Upload file to lesson',
-    description: 'Uploads a file directly to AWS S3 storage for lesson content. Only INSTRUCTOR_USER role can upload files.',
+    description:
+      'Uploads a file directly to AWS S3 storage for lesson content. Only INSTRUCTOR_USER role can upload files.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -552,7 +593,10 @@ export class LessonGatewayController {
       type: 'object',
       properties: {
         message: { type: 'string', example: 'File uploaded successfully' },
-        fileUrl: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/lesson/file.pdf' },
+        fileUrl: {
+          type: 'string',
+          example: 'https://bucket.s3.region.amazonaws.com/lesson/file.pdf',
+        },
         objectKey: { type: 'string', example: 'lesson/file.pdf' },
         size: { type: 'number', example: 5242880 },
         assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
@@ -586,12 +630,16 @@ export class LessonGatewayController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    const instructorId = req.user?.id || req.user?.sub || req.user?._id?.toString() || req.user?.userId;
-    
+    const instructorId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+
     if (!instructorId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     if (!file) {
       throw new Error('File is required');
     }
@@ -601,7 +649,7 @@ export class LessonGatewayController {
       const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/${uniqueId}-${file.originalname}`;
-      
+
       // Upload directly to S3
       const bucketName = process.env.AWS_S3_BUCKET_LMS;
       const command = new PutObjectCommand({
@@ -615,7 +663,7 @@ export class LessonGatewayController {
       console.log('S3 upload successful:', objectKey);
 
       // Create asset record via LMS service (only metadata)
-      const result = await firstValueFrom(
+      const result = (await firstValueFrom(
         this.lessonService.createAssetRecord(
           courseId,
           chapterId,
@@ -627,9 +675,17 @@ export class LessonGatewayController {
             size: file.size,
             objectKey,
             fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
-          }
+          },
         ),
-      ) as { assetId: string; lessonId: string; objectKey: string; fileName: string; size: number; mimeType: string; fileUrl: string };
+      )) as {
+        assetId: string;
+        lessonId: string;
+        objectKey: string;
+        fileName: string;
+        size: number;
+        mimeType: string;
+        fileUrl: string;
+      };
 
       const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
 
@@ -643,7 +699,9 @@ export class LessonGatewayController {
     } catch (error) {
       console.error('File upload error:', error);
       if (error.message.includes('credential')) {
-        throw new Error('AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.');
+        throw new Error(
+          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
+        );
       }
       throw new Error(`Failed to upload file: ${error.message}`);
     }

@@ -10,7 +10,7 @@ import { PdfSummaryService } from './pdf-summary.service';
 export class PdfSummaryController {
   private readonly logger = new Logger(PdfSummaryController.name);
 
-  constructor(private readonly pdfSummaryService: PdfSummaryService) { }
+  constructor(private readonly pdfSummaryService: PdfSummaryService) {}
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
   async uploadPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -122,7 +122,9 @@ export class PdfSummaryController {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));
 
     if (isNaN(pageNum) || isNaN(limitNum)) {
-      this.logger.warn(`Invalid pagination parameters: page=${page}, limit=${limit}`);
+      this.logger.warn(
+        `Invalid pagination parameters: page=${page}, limit=${limit}`,
+      );
       throw new BadRequestException('Invalid page or limit parameter');
     }
 
@@ -227,7 +229,10 @@ export class PdfSummaryController {
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.getSessionsWithFullData' })
-  async getSessionsWithFullData(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+  async getSessionsWithFullData(
+    @Payload() data: any,
+    @Ctx() _ctx: NatsContext,
+  ) {
     const rawUserId = data?.user_id ?? data?.userId ?? data?.user?.id;
     const userId =
       rawUserId === undefined || rawUserId === null
@@ -243,8 +248,7 @@ export class PdfSummaryController {
       throw new BadRequestException('user_id is required');
     }
 
-    const result =
-      await this.pdfSummaryService.getSessionsWithFullData(userId);
+    const result = await this.pdfSummaryService.getSessionsWithFullData(userId);
 
     this.logger.log(
       `Retrieved ${result.data?.length || 0} sessions with full data for user: ${userId}`,
@@ -289,9 +293,7 @@ export class PdfSummaryController {
         ? undefined
         : String(rawUserId);
 
-    this.logger.log(
-      `Received service stats request: user_id=${userId}`,
-    );
+    this.logger.log(`Received service stats request: user_id=${userId}`);
 
     if (!userId) {
       this.logger.warn('Service stats request missing user_id');
@@ -349,9 +351,7 @@ export class PdfSummaryController {
       user_id,
     );
 
-    this.logger.log(
-      `Retrieved query analytics: ${JSON.stringify(analytics)}`,
-    );
+    this.logger.log(`Retrieved query analytics: ${JSON.stringify(analytics)}`);
 
     return {
       success: true,
@@ -362,7 +362,14 @@ export class PdfSummaryController {
 
   @MessagePattern({ cmd: 'lms.ai.pdf.voiceAsk' })
   async voiceAsk(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { session_id, audioBase64, mimeType, filename, user_id, idempotency_key } = data;
+    const {
+      session_id,
+      audioBase64,
+      mimeType,
+      filename,
+      user_id,
+      idempotency_key,
+    } = data;
 
     this.logger.log(
       `Received voice ask request: session_id=${session_id}, user_id=${user_id}, audio_size=${audioBase64?.length}, filename=${filename}`,

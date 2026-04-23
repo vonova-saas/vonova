@@ -33,9 +33,10 @@ interface QuizResultProps {
   onLoadAttempts?: () => void;
   onRestart: () => void;
   onBack: () => void;
+  showRestart?: boolean;
 }
 
-export default function QuizResult({ quiz, questions, answers, timedOut, submitting, submitError, result, attempts = [], loadingAttempts, attemptsError, onLoadAttempts, onRestart, onBack }: QuizResultProps) {
+export default function QuizResult({ quiz, questions, answers, timedOut, submitting, submitError, result, attempts = [], loadingAttempts, attemptsError, onLoadAttempts, onRestart, onBack, showRestart = true }: QuizResultProps) {
   const gradedByQuestionId = new Map(
     (result?.answers ?? []).map((a) => [a.questionId, a]),
   );
@@ -123,7 +124,7 @@ export default function QuizResult({ quiz, questions, answers, timedOut, submitt
         </ul>
         <div className="flex flex-col gap-4">
           <div className="flex gap-4">
-            <Button onClick={onRestart}>Restart Quiz</Button>
+            {showRestart ? <Button onClick={onRestart}>Restart Quiz</Button> : null}
             <Button variant="outline" onClick={onBack}>Back to Quizzes</Button>
           </div>
           <div className="mt-2">
