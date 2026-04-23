@@ -7,7 +7,7 @@ import { CourseEnrollButton } from "@/components/student/lms/courses/course-enro
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Star, Clock, BookOpen } from "lucide-react";
+import { Users, Star, BookOpen } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -116,12 +116,6 @@ export default function CourseEnrollPage() {
                 {currentCourse.chapters?.length || 0} Chapters
               </span>
             </div>
-            <div className="flex items-center gap-x-2">
-              <Clock className="size-6 p-1 rounded-md text-primary bg-primary/10" />
-              <span className="font-medium">
-                {currentCourse.totalDuration || 0} Hours
-              </span>
-            </div>
           </div>
         </div>
       </section>
@@ -145,43 +139,6 @@ export default function CourseEnrollPage() {
                   {currentCourse.description}
                 </p>
 
-                {currentCourse.learningOutcomes && (
-                  <>
-                    <h3 className="text-lg font-semibold mt-6 mb-3">
-                      What You Will Learn
-                    </h3>
-                    <ul className="space-y-2">
-                      {currentCourse.learningOutcomes.map((outcome, index) => (
-                        <li
-                          key={index}
-                          className="flex items-start gap-x-2 text-muted-foreground"
-                        >
-                          <span className="text-primary mt-1">✓</span>
-                          {outcome}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-
-                {currentCourse.prerequisites && (
-                  <>
-                    <h3 className="text-lg font-semibold mt-6 mb-3">
-                      Prerequisites
-                    </h3>
-                    <ul className="space-y-2">
-                      {currentCourse.prerequisites.map((prereq, index) => (
-                        <li
-                          key={index}
-                          className="flex items-start gap-x-2 text-muted-foreground"
-                        >
-                          <span className="text-primary mt-1">•</span>
-                          {prereq}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -207,15 +164,9 @@ export default function CourseEnrollPage() {
 
                 <div className="pt-4 border-t space-y-3 text-sm text-muted-foreground">
                   <div className="flex justify-between">
-                    <span>Duration</span>
+                    <span>Chapters</span>
                     <span className="font-medium text-foreground">
-                      {currentCourse.totalDuration || 0} hours
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Lessons</span>
-                    <span className="font-medium text-foreground">
-                      {currentCourse.totalLessons || 0}
+                      {currentCourse.chapters?.length || 0}
                     </span>
                   </div>
                   <div className="flex justify-between">

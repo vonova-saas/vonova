@@ -6,7 +6,7 @@ export async function getEnrolledCourses(): Promise<EnrolledCourseType[]> {
   try {
     // Get all published courses
     const coursesResponse = await getAllCoursesQueryFn({ status: "PUBLISHED" });
-    const courses = coursesResponse.courses;
+    const courses = coursesResponse.items || [];
 
     // Check enrollment status for each course
     const enrolledCourses: EnrolledCourseType[] = [];

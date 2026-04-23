@@ -1,17 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
 import { getCourseContentTreeQueryFn } from "@/services/student/lms/courses/courses.api";
-import { Course } from "@/types/api/lms/courses.type";
+import { getInstructorCourseByIdQueryFn } from "@/services/instructor/course-managment/courses.api";
+import { Chapter, Course } from "@/types/api/lms/courses.type";
 
 export const useInstructorCourse = (courseId: string) => {
   return useQuery<Course, Error>({
     queryKey: ["instructor-course", courseId],
     queryFn: async () => {
-      // Use content tree endpoint which returns course with chapters
-      const response = await getCourseContentTreeQueryFn(courseId);
+      // Fetch both course details and content tree in parallel
+      const [course, tree] = await Promise.all([
+        getInstructorCourseByIdQueryFn(courseId),
+        getCourseContentTreeQueryFn(courseId),
+      ]);
+      // Transform ContentChapter[] to Chapter[] by adding missing fields
+      const chapters: Chapter[] = (tree.chapters || []).map((contentChapter) => ({
+        ...contentChapter,
+        courseId: course._id,
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+        lessons: contentChapter.lessons?.map((contentLesson) => ({
+          ...contentLesson,
+          _id: contentLesson._id,
+          courseId: course._id,
+          chapterId: contentChapter._id,
+          createdAt: course.createdAt,
+          updatedAt: course.updatedAt,
+        })),
+      }));
+
       // Merge chapters into course data
       const courseWithChapters = {
-        ...response.course,
-        chapters: response.chapters || [],
+        ...course,
+        chapters,
       };
       return courseWithChapters;
     },

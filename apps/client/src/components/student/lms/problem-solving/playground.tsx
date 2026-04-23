@@ -231,7 +231,7 @@ export default function Playground({ problem }: PlaygroundProps) {
             <MonacoEditor
               language={language}
               value={code}
-              onChange={(value) => setCode(value ?? "")}
+              onChange={(value: string | undefined) => setCode(value ?? "")}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },
