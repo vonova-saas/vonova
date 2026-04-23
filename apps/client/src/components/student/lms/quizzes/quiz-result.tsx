@@ -36,7 +36,41 @@ interface QuizResultProps {
 }
 
 export default function QuizResult({ quiz, questions, answers, timedOut, submitting, submitError, result, attempts = [], loadingAttempts, attemptsError, onLoadAttempts, onRestart, onBack }: QuizResultProps) {
-  const localCorrectCount = questions.filter((q) => answers[q.id] === q.correctOptionId).length;
+  const gradedByQuestionId = new Map(
+    (result?.answers ?? []).map((a) => [a.questionId, a]),
+  );
+
+  const isQuestionCorrect = (q: Question) => {
+    const graded = gradedByQuestionId.get(q.id);
+    if (graded) return graded.correct;
+    if (!q.correctOptionId) return false;
+    return answers[q.id] === q.correctOptionId;
+  };
+
+  const getCorrectAnswerText = (q: Question) => {
+    if (q.correctOptionId) {
+      const byId = q.options.find((o) => o.id === q.correctOptionId)?.text;
+      if (byId) return byId;
+    }
+
+    const directAnswer = (q as unknown as { correctAnswer?: string }).correctAnswer;
+    if (typeof directAnswer === "string" && directAnswer.trim()) return directAnswer;
+
+    const byFlag = q.options.find((o) => {
+      const meta = o as unknown as { isCorrect?: boolean; correct?: boolean; isAnswer?: boolean };
+      return !!(meta.isCorrect || meta.correct || meta.isAnswer);
+    })?.text;
+    if (byFlag) return byFlag;
+
+    const graded = gradedByQuestionId.get(q.id);
+    if (graded?.correct) {
+      return q.options.find((o) => o.id === graded.selectedOptionId)?.text ?? null;
+    }
+
+    return null;
+  };
+
+  const localCorrectCount = questions.filter((q) => isQuestionCorrect(q)).length;
   const score = result ? result.score : localCorrectCount;
   const total = result ? result.total : questions.length;
   const percentage = result ? result.percentage : Math.round((score / total) * 100);
@@ -59,23 +93,31 @@ export default function QuizResult({ quiz, questions, answers, timedOut, submitt
         <ul className="mb-6 space-y-2">
           {questions.map((q) => (
             <li key={q.id} className="flex flex-col">
+              {(() => {
+                const correct = isQuestionCorrect(q);
+                const correctAnswerText = getCorrectAnswerText(q);
+                return (
+                  <>
               <span className="font-medium">{q.text}</span>
               <span className={
-                answers[q.id] === q.correctOptionId
+                correct
                   ? "text-green-600"
                   : "text-red-600"
               }>
                 Your answer: {q.options.find((o) => o.id === answers[q.id])?.text || "-"}
-                {answers[q.id] === q.correctOptionId ? " (Correct)" : " (Incorrect)"}
+                {correct ? " (Correct)" : " (Incorrect)"}
               </span>
               {timedOut[q.id] && !answers[q.id] && (
                 <span className="text-yellow-600 font-medium">Time ran out for this question.</span>
               )}
-              {answers[q.id] !== q.correctOptionId && (
+              {!correct && (
                 <span className="text-muted-foreground">
-                  Correct answer: {q.options.find((o) => o.id === q.correctOptionId)?.text}
+                  Correct answer: {correctAnswerText ?? "Not provided by API"}
                 </span>
               )}
+                  </>
+                );
+              })()}
             </li>
           ))}
         </ul>

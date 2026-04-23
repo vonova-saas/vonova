@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { UseMutateFunction } from "@tanstack/react-query";
+import { useQueryClient, UseMutateFunction } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -61,6 +61,7 @@ export const GeneratorControls = (props: Props) => {
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
   const [isAuthor, setIsAuthor] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [topic, setTopic] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [durationWeeks, setDurationWeeks] = useState("");
@@ -158,6 +159,7 @@ export const GeneratorControls = (props: Props) => {
         },
         {
           onSuccess: (data: any) => {
+            void queryClient.invalidateQueries({ queryKey: ["user-roadmaps"] });
             toast.success("Success", {
               description: "Roadmap generated successfully.",
               duration: 4000,

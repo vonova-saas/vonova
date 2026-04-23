@@ -5,14 +5,14 @@ export const addSupportTicketMutationFn = async (
   userId: string,
   data: addSupportTicketType
 ): Promise<addSupportTicketResponseType> => {
-  const response = await API.post(`/api/v1/support/user/${userId}`, data);
+  const response = await API.post(`/support/user/${userId}`, data);
   return response.data;
 };
 
 export const getSupportTicketMutationFn = async (
   userId: string
 ): Promise<getSupportTicketResponseType> => {
-  const response = await API.get(`/api/v1/support/user/${userId}`);
+  const response = await API.get(`/support/user/${userId}`);
   return response.data;
 };
 
@@ -20,7 +20,7 @@ export const getSupportTicketByIdMutationFn = async (
   userId: string,
   id: string
 ): Promise<getSupportTicketByIdResponseType> => {
-  const response = await API.get(`/api/v1/support/user/${userId}/${id}`);
+  const response = await API.get(`/support/user/${userId}/${id}`);
   return response.data;
 };
 
@@ -29,7 +29,7 @@ export const updateSupportTicketMutationFn = async (
   id: string,
   data: updateSupportTicketType
 ): Promise<updateSupportTicketResponseType> => {
-  const response = await API.put(`/api/v1/support/user/${userId}/${id}`, data);
+  const response = await API.put(`/support/user/${userId}/${id}`, data);
   return response.data;
 };
 
@@ -37,7 +37,7 @@ export const deleteSupportTicketMutationFn = async (
   userId: string,
   id: string
 ): Promise<deleteSupportTicketResponseType> => {
-  const response = await API.delete(`/api/v1/support/user/${userId}/${id}`);
+  const response = await API.delete(`/support/user/${userId}/${id}`);
   return response.data;
 };
 
@@ -47,7 +47,7 @@ export const addSupportMessageMutationFn = async (
   id: string,
   data: addSupportMessageRequestType
 ): Promise<addSupportMessageResponseType> => {
-  const response = await API.post(`/api/v1/support/user/${userId}/${id}/messages`, data);
+  const response = await API.post(`/support/user/${userId}/${id}/messages`, data);
   return response.data;
 };
 

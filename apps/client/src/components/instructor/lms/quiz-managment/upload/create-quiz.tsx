@@ -115,40 +115,60 @@ export function CreateQuiz() {
   };
 
   return (
-    <div className="min-h-[85vh] w-full flex items-start justify-center p-6"
-      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }}
-    >
-      <div className="w-full max-w-5xl">
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-4xl font-bold leading-tight">Create Quiz</h1>
-          <ComponentIcon className="w-7 h-7 text-primary animate-pulse" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAIGenerator(true)}
-            className="ml-auto cursor-pointer bg-primary/10 hover:bg-primary/20 border-primary/30"
-          >
-            <Sparkles className="w-4 h-4 mr-2 text-primary" />
-            <span className="text-primary font-medium">Generate with AI</span>
-          </Button>
-        </div>
-
-        {/* Hero-like summary card */}
-        <Card className="w-full mb-6 shadow-lg border-2 backdrop-blur-sm">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 text-primary rounded-full p-4 flex items-center justify-center shadow-sm">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div className="flex-1">
-                <div className="text-lg font-semibold text-primary">Design a great learning experience</div>
-                <div className="text-sm text-muted-foreground">Add questions, options and mark the correct answers. Keep it clear and concise.</div>
+    <div className="min-h-full w-full pb-16">
+      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+            <ComponentIcon className="h-3.5 w-3.5 text-primary" />
+            Instructor hub
+          </div>
+          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Create Quiz</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+            Build clear assessments, set strong questions, and publish faster with AI assistance.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowAIGenerator(true)}
+              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-primary" />
+              Generate with AI
+            </Button>
+          </div>
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{questions.length}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Draft Questions
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{noOfQuestions || "-"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Target Count
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl truncate">{topic || "-"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
+                Topic
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {/* Form card centered */}
+      <div className="mx-auto max-w-6xl px-4 pt-10">
         <Card className="w-full shadow-xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl">Quiz Details</CardTitle>

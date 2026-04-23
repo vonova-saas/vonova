@@ -25,6 +25,7 @@ import {
   CreateGuideDto,
   UpdateGuideDto,
   PublishGuideDto,
+  Level,
 } from './dto/guide.dto';
 
 @ApiTags('LMS Library Guides')

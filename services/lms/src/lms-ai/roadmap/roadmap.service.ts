@@ -46,8 +46,8 @@ export class RoadmapService {
       .replace('https://localhost', 'https://127.0.0.1');
     this.FALLBACK_PYTHON_SERVICE_URL = fallback
       ? fallback
-          .replace('http://localhost', 'http://127.0.0.1')
-          .replace('https://localhost', 'https://127.0.0.1')
+        .replace('http://localhost', 'http://127.0.0.1')
+        .replace('https://localhost', 'https://127.0.0.1')
       : undefined;
 
     this.logger.log(
@@ -287,9 +287,9 @@ export class RoadmapService {
 
     return similar.length > 0
       ? {
-          ...similar[0].toObject(),
-          userId: similar[0].userId.toString(),
-        }
+        ...similar[0].toObject(),
+        userId: similar[0].userId.toString(),
+      }
       : null;
   }
 
@@ -302,7 +302,7 @@ export class RoadmapService {
     return (
       existingRoadmap.topic.toLowerCase() === request.topic.toLowerCase() &&
       existingRoadmap.skill_level.toLowerCase() ===
-        request.skill_level.toLowerCase() &&
+      request.skill_level.toLowerCase() &&
       Math.abs(existingRoadmap.duration_weeks - request.duration_weeks) <= 2
     );
   }
