@@ -8,6 +8,7 @@ import {
   LibraryAsset,
   LibraryAssetSchema,
 } from '../schema/library-asset.schema';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import {
       { name: Guide.name, schema: GuideSchema },
       { name: LibraryAsset.name, schema: LibraryAssetSchema },
     ]),
+    UploadModule,
   ],
   controllers: [GuideController],
   providers: [GuideService, S3Service],

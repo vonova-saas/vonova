@@ -141,4 +141,20 @@ export class UploadController {
       objectKey,
     );
   }
+
+  @MessagePattern({ cmd: 'library.upload.generateAndStorePresignedUrl' })
+  async generateAndStorePresignedUrl(@Payload() data: { assetId: string }) {
+    const { assetId } = data;
+    if (!assetId) throw new Error('assetId is required');
+
+    return this.uploadService.generateAndStorePresignedUrl(assetId);
+  }
+
+  @MessagePattern({ cmd: 'library.upload.getValidPresignedUrl' })
+  async getValidPresignedUrl(@Payload() data: { assetId: string }) {
+    const { assetId } = data;
+    if (!assetId) throw new Error('assetId is required');
+
+    return this.uploadService.getValidPresignedUrl(assetId);
+  }
 }

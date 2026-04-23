@@ -103,8 +103,52 @@ export class PresentationService {
       this.presentationModel.countDocuments(filter),
     ]);
 
+    // Generate or retrieve presigned URLs for presentations with fileAssetId
+    const presentationsWithUrls = await Promise.all(
+      items.map(async (presentation) => {
+        const presentationObj = presentation.toObject();
+        
+        if (presentation.fileAssetId) {
+          try {
+            const asset = await this.assetModel.findById(presentation.fileAssetId);
+            if (asset?.objectKey) {
+              let contentUrl: string | undefined;
+              
+              // Check if we have a valid stored presigned URL
+              if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+                const now = new Date();
+                const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
+                
+                if (now < expiresAt) {
+                  contentUrl = asset.urls.presignedUrl;
+                }
+              }
+              
+              // Generate new presigned URL if none exists or expired
+              if (!contentUrl) {
+                contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+                // Store the new presigned URL in database with 1 hour expiration
+                const expiresAt = new Date(Date.now() + 3600 * 1000);
+                await this.assetModel.findByIdAndUpdate(presentation.fileAssetId, {
+                  'urls.presignedUrl': contentUrl,
+                  'urls.presignedUrlExpiresAt': expiresAt,
+                });
+              }
+              
+              (presentationObj as any).contentUrl = contentUrl;
+            }
+          } catch (error) {
+            console.error(`Failed to generate presigned URL for presentation ${presentation._id}:`, error);
+            // Continue without presigned URL
+          }
+        }
+        
+        return presentationObj;
+      })
+    );
+
     return {
-      items,
+      items: presentationsWithUrls,
       total,
       page,
       limit,
@@ -115,7 +159,45 @@ export class PresentationService {
   async findById(id: string) {
     const doc = await this.presentationModel.findById(id);
     if (!doc) throw new NotFoundException('Presentation not found');
-    return doc;
+    
+    const presentationObj = doc.toObject();
+    
+    if (doc.fileAssetId) {
+      try {
+        const asset = await this.assetModel.findById(doc.fileAssetId);
+        if (asset?.objectKey) {
+          let contentUrl: string | undefined;
+          
+          // Check if we have a valid stored presigned URL
+          if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+            const now = new Date();
+            const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
+            
+            if (now < expiresAt) {
+              contentUrl = asset.urls.presignedUrl;
+            }
+          }
+          
+          // Generate new presigned URL if none exists or expired
+          if (!contentUrl) {
+            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            // Store the new presigned URL in database with 1 hour expiration
+            const expiresAt = new Date(Date.now() + 3600 * 1000);
+            await this.assetModel.findByIdAndUpdate(doc.fileAssetId, {
+              'urls.presignedUrl': contentUrl,
+              'urls.presignedUrlExpiresAt': expiresAt,
+            });
+          }
+          
+          (presentationObj as any).contentUrl = contentUrl;
+        }
+      } catch (error) {
+        console.error(`Failed to generate presigned URL for presentation ${doc._id}:`, error);
+        // Continue without presigned URL
+      }
+    }
+    
+    return presentationObj;
   }
 
   async getContent(id: string) {
@@ -150,6 +232,48 @@ export class PresentationService {
       language: pres.language,
       contentUrl,
       posterUrl,
+    };
+  }
+
+  async getAllPresentationLinksService() {
+    const presentations = await this.presentationModel.find({ fileAssetId: { $exists: true, $ne: null } });
+    
+    const links = await Promise.all(
+      presentations.map(async (presentation) => {
+        try {
+          if (presentation.fileAssetId) {
+            const asset = await this.assetModel.findById(presentation.fileAssetId);
+            if (asset?.objectKey) {
+              const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+              return {
+                id: presentation._id,
+                title: presentation.title,
+                slug: presentation.slug,
+                fileName: asset.originalFileName || asset.objectKey.split('/').pop(),
+                objectKey: asset.objectKey,
+                presignedUrl,
+                uploadedAt: (presentation as any).createdAt,
+                contentType: asset.mimeType,
+                size: asset.size
+              };
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to generate presigned URL for presentation ${presentation._id}:`, error);
+          return {
+            id: presentation._id,
+            title: presentation.title,
+            slug: presentation.slug,
+            error: 'Failed to generate presigned URL'
+          };
+        }
+        return null;
+      })
+    );
+
+    return {
+      links: links.filter(link => link !== null),
+      total: links.filter(link => link !== null).length
     };
   }
 }

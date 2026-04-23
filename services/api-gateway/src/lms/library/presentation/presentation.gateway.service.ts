@@ -61,4 +61,11 @@ export class PresentationGatewayService {
       { presentationId },
     );
   }
+
+  getAllLinks() {
+    return this.client.send(
+      { cmd: 'library.presentation.getAllLinks' },
+      {},
+    );
+  }
 }

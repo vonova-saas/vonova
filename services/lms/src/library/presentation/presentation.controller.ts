@@ -75,4 +75,9 @@ export class PresentationController {
 
     return this.service.getContent(presentationId);
   }
+
+  @MessagePattern({ cmd: 'library.presentation.getAllLinks' })
+  async getAllPresentationLinks() {
+    return this.service.getAllPresentationLinksService();
+  }
 }

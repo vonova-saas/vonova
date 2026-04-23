@@ -574,4 +574,41 @@ export class GuideGatewayController {
     
     return firstValueFrom(this.guideService.deleteGuide(id, userId));
   }
+
+  @ApiOperation({
+    summary: 'Get all guide file links',
+    description:
+      'Retrieves all uploaded file links for guides with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Guide links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'Complete JavaScript Learning Guide' },
+              slug: { type: 'string', example: 'complete-javascript-learning-guide' },
+              fileName: { type: 'string', example: 'javascript-guide.pdf' },
+              objectKey: { type: 'string', example: 'library/guide/123456/javascript-guide.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 1024000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 25 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllGuideLinks() {
+    return firstValueFrom(this.guideService.getAllLinks());
+  }
 }

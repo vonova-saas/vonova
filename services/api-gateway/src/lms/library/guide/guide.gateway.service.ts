@@ -44,4 +44,8 @@ export class GuideGatewayService {
   deleteGuide(id: string, userId: string) {
     return this.client.send({ cmd: 'library.guides.delete' }, { id, userId });
   }
+
+  getAllLinks() {
+    return this.client.send({ cmd: 'library.guides.getAllLinks' }, {});
+  }
 }

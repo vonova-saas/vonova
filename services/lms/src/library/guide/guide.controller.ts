@@ -101,4 +101,9 @@ export class GuideController {
 
     return this.guideService.deleteGuideService(id, createdBy);
   }
+
+  @MessagePattern({ cmd: 'library.guides.getAllLinks' })
+  async getAllGuideLinks() {
+    return this.guideService.getAllGuideLinksService();
+  }
 }

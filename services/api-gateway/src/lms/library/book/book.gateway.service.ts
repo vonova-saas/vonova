@@ -57,4 +57,8 @@ export class BookGatewayService {
   deleteBook(id: string, userId: string) {
     return this.client.send({ cmd: 'book.delete' }, { id, userId });
   }
+
+  getAllLinks() {
+    return this.client.send({ cmd: 'book.getAllLinks' }, {});
+  }
 }

@@ -592,4 +592,41 @@ export class BookGatewayController {
     
     return firstValueFrom(this.bookService.deleteBook(id, userId));
   }
+
+  @ApiOperation({
+    summary: 'Get all book file links',
+    description:
+      'Retrieves all uploaded file links for books with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+              slug: { type: 'string', example: 'javascript-complete-guide' },
+              fileName: { type: 'string', example: 'javascript-book.pdf' },
+              objectKey: { type: 'string', example: 'library/book/123456/javascript-book.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 2048000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 15 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllBookLinks() {
+    return firstValueFrom(this.bookService.getAllLinks());
+  }
 }

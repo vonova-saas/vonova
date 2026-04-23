@@ -88,4 +88,9 @@ export class BookController {
 
     return this.bookService.deleteBookService(id, createdBy);
   }
+
+  @MessagePattern({ cmd: 'book.getAllLinks' })
+  async getAllBookLinks() {
+    return this.bookService.getAllBookLinksService();
+  }
 }
