@@ -43,12 +43,13 @@ export class Problem {
   testCases: ProblemTestCase[];
 
   @Prop({
+    type: String,
     required: true,
     enum: PROBLEM_DIFFICULTIES,
     lowercase: true,
     index: true,
   })
-  difficulty: (typeof PROBLEM_DIFFICULTIES)[number];
+  difficulty: string;
 
   @Prop({
     type: [String],
@@ -57,7 +58,7 @@ export class Problem {
     lowercase: true,
     index: true,
   })
-  categories: (typeof PROBLEM_CATEGORIES)[number][];
+  categories: string[];
 
   @Prop({ required: true, trim: true, index: true })
   createdBy: string;
