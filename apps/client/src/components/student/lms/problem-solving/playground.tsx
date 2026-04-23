@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { Lightbulb, Loader2, WandSparkles } from "lucide-react";
+import { Lightbulb, Loader2, Sparkles, WandSparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,23 @@ export default function Playground({ problem }: PlaygroundProps) {
   const parsedSolution = useMemo(() => {
     if (!solution?.response) return { code: "", explanation: "" };
     const response = solution.response;
+
+    try {
+      const parsed = JSON.parse(response) as {
+        solution?: string;
+        code?: string;
+        explanation?: string;
+        response?: string;
+      };
+      const code = parsed.solution ?? parsed.code ?? parsed.response ?? "";
+      const explanation = parsed.explanation ?? "";
+      if (code || explanation) {
+        return { code, explanation };
+      }
+    } catch {
+      // not JSON payload
+    }
+
     if (response.includes("```")) {
       const sections = response
         .split("```")
@@ -83,10 +100,11 @@ export default function Playground({ problem }: PlaygroundProps) {
         .filter(Boolean);
       return {
         code: sections[1] ?? sections[0] ?? response,
-        explanation: sections.length > 2 ? sections.slice(2).join("\n\n") : response,
+        explanation: sections.length > 2 ? sections.slice(2).join("\n\n") : "",
       };
     }
-    return { code: response, explanation: response };
+
+    return { code: response, explanation: "" };
   }, [solution]);
 
   const formatHintResponse = (raw: string) => {
@@ -436,13 +454,34 @@ export default function Playground({ problem }: PlaygroundProps) {
                 Solution will appear here after clicking "Show Solution".
               </p>
             ) : (
-              <div className="space-y-3">
-                <pre className="max-h-64 overflow-auto rounded-md bg-black p-3 text-[11px] text-green-200">
-                  {parsedSolution.code}
-                </pre>
-                <p className="whitespace-pre-wrap text-xs leading-5 text-zinc-400">
-                  {parsedSolution.explanation}
-                </p>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-zinc-700/80 bg-zinc-900/40 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-violet-300" />
+                    <p className="text-sm font-semibold text-zinc-100">AI Generated Solution</p>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Review the code first, then read the explanation to understand the approach.
+                  </p>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-zinc-700 bg-zinc-900/60 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    Solution Code
+                  </p>
+                  <pre className="max-h-72 overflow-auto rounded-lg border border-zinc-700 bg-[#0c0f14] p-4 text-[12px] leading-6 text-emerald-200">
+                    {parsedSolution.code}
+                  </pre>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-zinc-700 bg-zinc-900/60 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    Explanation
+                  </p>
+                  <p className="whitespace-pre-wrap rounded-lg border border-zinc-700 bg-[#12141a] px-4 py-3 text-sm leading-7 text-zinc-200">
+                    {parsedSolution.explanation || "No explanation returned by AI."}
+                  </p>
+                </div>
               </div>
             )}
           </div>
