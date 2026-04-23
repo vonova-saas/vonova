@@ -3,51 +3,54 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useUserId } from "@/hooks";
-import { PROBLEMS } from "./problems-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, RefreshCcw } from "lucide-react";
+import { Search, Filter, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
+import { useProblemsQuery } from "@/hooks/student/use-problem-solving";
 
 export default function ProblemsList() {
   const userId = useUserId();
+  const { data: problems = [], isLoading, refetch, isRefetching } = useProblemsQuery();
 
   const [search, setSearch] = useState("");
-  const [difficulty, setDifficulty] = useState("All");
+  const [difficulty, setDifficulty] = useState("all");
 
   const difficulties = useMemo(
     () => [
-      "All",
-      ...Array.from(new Set(PROBLEMS.map((p) => p.difficulty))),
+      "all",
+      ...Array.from(new Set(problems.map((p) => p.createdBy ? "community" : "official"))),
     ],
-    []
+    [problems]
   );
 
-  const totalExamples = useMemo(
-    () => PROBLEMS.reduce((sum, p) => sum + p.examples.length, 0),
-    []
+  const totalCases = useMemo(
+    () => problems.reduce((sum, p) => sum + (p.testCases?.length ?? 0), 0),
+    [problems]
   );
 
   const filteredProblems = useMemo(() => {
-    return PROBLEMS.filter((problem) => {
+    return problems.filter((problem) => {
       const matchesDifficulty =
-        difficulty === "All" || problem.difficulty === difficulty;
+        difficulty === "all" ||
+        (difficulty === "official" && !problem.createdBy) ||
+        (difficulty === "community" && Boolean(problem.createdBy));
       const q = search.toLowerCase();
       const matchesSearch =
         !q ||
         problem.title.toLowerCase().includes(q) ||
-        problem.category.toLowerCase().includes(q) ||
-        problem.problemStatement.toLowerCase().includes(q);
+        problem.description.toLowerCase().includes(q);
       return matchesDifficulty && matchesSearch;
     });
-  }, [difficulty, search]);
+  }, [difficulty, search, problems]);
 
   const handleRefresh = () => {
     setSearch("");
-    setDifficulty("All");
+    setDifficulty("all");
+    void refetch();
   };
 
   return (
@@ -84,7 +87,7 @@ export default function ProblemsList() {
           </div>
           <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
             <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{PROBLEMS.length}</div>
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{problems.length}</div>
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
                 Problems
               </div>
@@ -96,9 +99,9 @@ export default function ProblemsList() {
               </div>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalExamples}</div>
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{totalCases}</div>
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                Examples
+                Test Cases
               </div>
             </div>
           </div>
@@ -125,7 +128,7 @@ export default function ProblemsList() {
             <SelectContent>
               {difficulties.map((d) => (
                 <SelectItem key={d} value={d}>
-                  {d}
+                  {d === "all" ? "All" : d}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -136,11 +139,22 @@ export default function ProblemsList() {
 
       {/* Problems grid */}
       <div className="w-full max-w-3xl">
-        {filteredProblems.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            No problems found.
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading problems...
           </div>
-        ) : (
+        ) : null}
+        {!isLoading && isRefetching ? (
+          <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Refreshing...
+          </div>
+        ) : null}
+        {!isLoading && filteredProblems.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">No problems found.</div>
+        ) : null}
+        {filteredProblems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredProblems.map((problem) => (
               <Card
@@ -152,28 +166,22 @@ export default function ProblemsList() {
                     <span>{problem.title}</span>
                     <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                          problem.difficulty === "Easy"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                            : problem.difficulty === "Medium"
-                            ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
-                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
-                        }`}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
                       >
-                        {problem.difficulty}
+                        {problem.testCases?.length ?? 0} cases
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-muted text-[11px] font-medium border text-muted-foreground">
-                        {problem.category}
+                        {problem.createdBy ? "Community" : "Official"}
                       </span>
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1 justify-between">
                   <p className="mb-4 text-sm text-muted-foreground min-h-[40px] line-clamp-3">
-                    {problem.problemStatement}
+                    {problem.description}
                   </p>
                   <Link
-                    href={`/student/${userId}/problem-solving/${problem.id}`}
+                    href={`/student/${userId}/problem-solving/${problem._id}`}
                     className="w-full mt-auto"
                   >
                     <Button className="w-full cursor-pointer">Solve Problem</Button>
@@ -182,7 +190,7 @@ export default function ProblemsList() {
               </Card>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
       </div>
     </div>

@@ -1,0 +1,49 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { PROBLEM_PATTERNS } from './constants/message-patterns';
+import {
+  CreateProblemDto,
+  CreateSubmissionDto,
+  RequestHintDto,
+  RequestSolutionDto,
+} from './dto/problem-solving.dto';
+
+@Injectable()
+export class ProblemSolvingGatewayService {
+  constructor(
+    @Inject('NATS_SERVICE')
+    private readonly client: ClientProxy,
+  ) {}
+
+  createProblem(userId: string, dto: CreateProblemDto) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.CREATE }, { userId, dto });
+  }
+
+  listProblems() {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.LIST }, {});
+  }
+
+  getProblem(id: string) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.GET }, { id });
+  }
+
+  deleteProblem(userId: string, id: string) {
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.DELETE },
+      { userId, dto: { id } },
+    );
+  }
+
+  createSubmission(userId: string, dto: CreateSubmissionDto) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.SUBMIT }, { userId, dto });
+  }
+
+  requestHint(userId: string, dto: RequestHintDto) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.AI_HINT }, { userId, dto });
+  }
+
+  requestSolution(userId: string, dto: RequestSolutionDto) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.AI_SOLUTION }, { userId, dto });
+  }
+}
+

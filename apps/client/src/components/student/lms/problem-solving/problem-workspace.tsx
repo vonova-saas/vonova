@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { PROBLEMS } from "./problems-data";
 import ProblemDescription from "./problem-description";
 import Playground from "./playground";
+import { Loader2 } from "lucide-react";
+import { useProblemQuery } from "@/hooks/student/use-problem-solving";
 
 type ProblemWorkspaceProps = {
   problemId: string;
@@ -13,21 +14,21 @@ type ProblemWorkspaceProps = {
 export default function ProblemWorkspace({ problemId }: ProblemWorkspaceProps) {
   const router = useRouter();
   const pathname = usePathname();
+  let finalProblemId = problemId;
+  if (pathname) {
+    const segments = pathname.split("/").filter(Boolean);
+    finalProblemId = decodeURIComponent(segments[segments.length - 1] ?? problemId);
+  }
+  const { data: problem, isLoading } = useProblemQuery(finalProblemId);
 
-  const problem = useMemo(() => {
-    // Prefer reading the last segment from the URL to avoid any mismatch
-    // between route params and actual path segments.
-    let rawId = problemId;
-    if (pathname) {
-      const segments = pathname.split("/").filter(Boolean);
-      const last = segments[segments.length - 1];
-      if (last) rawId = last;
-    }
-
-    const normalizedId = decodeURIComponent(rawId).trim().toLowerCase();
-    return PROBLEMS.find((p) => p.id.toLowerCase() === normalizedId);
-  }, [problemId, pathname]);
-  const [success, setSuccess] = useState(false);
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Loading problem...
+      </div>
+    );
+  }
 
   if (!problem) {
     return (
@@ -66,7 +67,6 @@ export default function ProblemWorkspace({ problemId }: ProblemWorkspaceProps) {
         <ProblemDescription problem={problem} />
       </div>
 
-      {/* Right: playground */}
       <div className="md:w-1/2 w-full flex flex-col gap-3">
         <Playground problem={problem} />
       </div>
