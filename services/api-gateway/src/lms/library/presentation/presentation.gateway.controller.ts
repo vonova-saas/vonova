@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { PresentationGatewayService } from './presentation.gateway.service';
 import {
   CreatePresentationDto,
@@ -30,7 +33,7 @@ import {
 @ApiTags('LMS Library Presentations')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/presentation')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class PresentationGatewayController {
   constructor(
     private readonly presentationService: PresentationGatewayService,
@@ -108,6 +111,11 @@ export class PresentationGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only INSTRUCTOR_USER role can create presentations',
+  })
+  @Roles(Role.INSTRUCTOR_USER)
   @Post('createPresentation')
   async create(@Body() dto: CreatePresentationDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
@@ -116,7 +124,13 @@ export class PresentationGatewayController {
       throw new Error('Authentication required - No user found');
     }
     
-    return firstValueFrom(this.presentationService.create(dto, userId));
+    // Ensure status is set from request body or default to PUBLISHED
+    const presentationData = {
+      ...dto,
+      status: dto.status || 'PUBLISHED'
+    };
+    
+    return firstValueFrom(this.presentationService.create(presentationData, userId));
   }
 
   @ApiOperation({
@@ -392,8 +406,18 @@ export class PresentationGatewayController {
     },
   })
   @Get('getAllPresentations')
-  async getAll(@Query() query: any) {
-    return firstValueFrom(this.presentationService.getAll(query));
+  async getAll(@Query() query: any, @Request() req?: any) {
+    const user = req?.user;
+    const userRole = user?.role;
+    const userId = user?.id || user?.sub || user?._id;
+    
+    const queryWithUser = {
+      ...query,
+      userRole,
+      userId
+    };
+    
+    return firstValueFrom(this.presentationService.getAll(queryWithUser));
   }
 
   @ApiOperation({
@@ -553,5 +577,42 @@ export class PresentationGatewayController {
   @Get(':presentationId/content')
   async getContent(@Param('presentationId') presentationId: string) {
     return firstValueFrom(this.presentationService.getContent(presentationId));
+  }
+
+  @ApiOperation({
+    summary: 'Get all presentation file links',
+    description:
+      'Retrieves all uploaded file links for presentations with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presentation links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript Fundamentals Presentation' },
+              slug: { type: 'string', example: 'javascript-fundamentals-presentation' },
+              fileName: { type: 'string', example: 'javascript-presentation.pdf' },
+              objectKey: { type: 'string', example: 'library/presentation/123456/javascript-presentation.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 5120000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 8 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllPresentationLinks() {
+    return firstValueFrom(this.presentationService.getAllLinks());
   }
 }

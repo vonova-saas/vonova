@@ -1,8 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
-export type LibraryStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-export type Level = 'Beginner' | 'Intermediate' | 'Advanced';
+import type { LibraryStatus, Level } from './library.schema';
+import { LibraryTopics } from './library.schema';
 
 export class Author {
   @Prop({ required: true })
@@ -46,7 +45,7 @@ export class Guide {
   @Prop({ type: [Object], default: [] })
   authors: Author[];
 
-  @Prop({ type: [String], default: [] })
+  @Prop({ type: [String], enum: Object.values(LibraryTopics), default: [] })
   topics: string[];
 
   @Prop({ enum: ['Beginner', 'Intermediate', 'Advanced'], default: 'Beginner' })
@@ -69,6 +68,9 @@ export class Guide {
 
   @Prop({ type: Types.ObjectId, ref: 'LibraryAsset', default: null })
   fileAssetId?: Types.ObjectId | null;
+
+  @Prop({ enum: ['book', 'guide', 'presentation'], default: 'guide' })
+  type: string;
 }
 
 export type GuideDocument = Guide & Document;

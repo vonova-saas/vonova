@@ -1,85 +1,86 @@
 "use client";
 
-import { Problem } from "./problems-data";
+import { Badge } from "@/components/ui/badge";
+import type { ProblemEntity } from "@/types/api/student/lms/problem-solving/problem-solving.type";
 
 type ProblemDescriptionProps = {
-  problem: Problem;
+  problem: ProblemEntity;
 };
 
 export default function ProblemDescription({ problem }: ProblemDescriptionProps) {
+  const categories = deriveCategories(problem.title, problem.description);
+
   return (
-    <div className="flex flex-col h-full bg-background/90 rounded-md border overflow-hidden">
-      {/* Tab header */}
-      <div className="flex items-center h-11 px-4 bg-muted text-xs font-medium tracking-wide">
-        <div className="px-4 py-2 rounded-t-md bg-background text-foreground">
-          Description
-        </div>
+    <div className="flex h-full min-h-0 flex-col bg-[#1a1a1a]">
+      <div className="border-b border-zinc-800 bg-[#151515] px-4 py-3">
+        <p className="text-xs font-medium text-zinc-300">Description</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 text-sm">
-        {/* Title & meta */}
-        <div>
-          <h1 className="text-lg md:text-xl font-semibold mb-2">
-            {problem.title}
-          </h1>
-          <div className="flex items-center gap-2 text-xs">
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                problem.difficulty === "Easy"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                  : problem.difficulty === "Medium"
-                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
-                  : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
-              }`}
-            >
-              {problem.difficulty}
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-muted text-[11px] font-medium border text-muted-foreground">
-              {problem.category}
-            </span>
-          </div>
-        </div>
-
-        {/* Problem statement */}
-        <div className="space-y-2 leading-relaxed">
-          <p className="whitespace-pre-line text-sm text-foreground">
-            {problem.problemStatement}
-          </p>
-        </div>
-
-        {/* Examples */}
-        <div>
-          <h2 className="font-semibold mb-2 text-sm">Examples</h2>
-          <div className="space-y-3 text-xs md:text-sm">
-            {problem.examples.map((ex, index) => (
-              <div key={ex.id} className="space-y-1">
-                <p className="font-medium text-foreground">Example {index + 1}:</p>
-                <div className="rounded-md border bg-muted/50 px-3 py-2 font-mono text-[11px] md:text-xs">
-                  <div>
-                    <span className="font-semibold">Input:</span> {ex.inputText}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Output:</span> {ex.outputText}
-                  </div>
-                  {ex.explanation && (
-                    <div className="mt-1 text-[11px] md:text-xs text-muted-foreground">
-                      <span className="font-semibold">Explanation:</span> {ex.explanation}
-                    </div>
-                  )}
-                </div>
-              </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">{problem.title}</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge className="border-emerald-500/40 bg-emerald-600/20 text-emerald-300">
+              Medium
+            </Badge>
+            {categories.map((category) => (
+              <Badge
+                key={category}
+                variant="outline"
+                className="border-zinc-700 text-zinc-300"
+              >
+                {category}
+              </Badge>
             ))}
           </div>
         </div>
 
-        {/* Constraints */}
-        <div className="pb-4">
-          <h2 className="font-semibold mb-2 text-sm">Constraints</h2>
-          <ul className="ml-4 list-disc text-xs md:text-sm text-muted-foreground whitespace-pre-line">
+        <p className="whitespace-pre-line leading-7 text-zinc-300">{problem.description}</p>
+
+        <div className="mt-6 space-y-3">
+          <h3 className="text-base font-semibold text-zinc-100">Examples</h3>
+          {problem.testCases?.map((testCase, index) => (
+            <div
+              key={`${testCase.input}-${index}`}
+              className="rounded-md border border-zinc-700 bg-zinc-900/50 p-3"
+            >
+              <p className="text-xs font-semibold text-zinc-200">Example {index + 1}</p>
+              <p className="mt-2 font-mono text-xs text-zinc-300">
+                <span className="text-zinc-100">Input:</span> {testCase.input}
+              </p>
+              <p className="mt-1 font-mono text-xs text-zinc-300">
+                <span className="text-zinc-100">Output:</span> {testCase.output}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          <h3 className="mb-2 text-base font-semibold text-zinc-100">Constraints</h3>
+          <p className="whitespace-pre-line text-sm leading-7 text-zinc-400">
             {problem.constraints}
-          </ul>
+          </p>
         </div>
       </div>
     </div>
   );
+}
+
+function deriveCategories(title: string, description: string): string[] {
+  const text = `${title} ${description}`.toLowerCase();
+  const tags: string[] = [];
+
+  if (text.includes("array")) tags.push("Array");
+  if (text.includes("string")) tags.push("String");
+  if (text.includes("linked")) tags.push("Linked List");
+  if (text.includes("tree")) tags.push("Tree");
+  if (text.includes("graph")) tags.push("Graph");
+  if (text.includes("stack")) tags.push("Stack");
+  if (text.includes("queue")) tags.push("Queue");
+  if (text.includes("dynamic")) tags.push("Dynamic Programming");
+  if (text.includes("hash")) tags.push("Hash Table");
+  if (text.includes("two")) tags.push("Two Pointers");
+
+  if (tags.length === 0) tags.push("Algorithms");
+  return tags.slice(0, 3);
 }

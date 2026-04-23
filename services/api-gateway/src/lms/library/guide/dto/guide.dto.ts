@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LibraryTopics } from '../../library/dto/topics.dto';
 
 export class AuthorDto {
   @ApiProperty({
@@ -89,12 +90,13 @@ export class CreateGuideDto {
 
   @ApiPropertyOptional({
     description: 'Array of topics covered in the guide',
-    example: ['javascript', 'programming', 'web-development'],
-    type: [String],
+    example: ['Programming Basics', 'Web Development', 'Data Structure'],
+    enum: LibraryTopics,
+    isArray: true,
   })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsEnum(LibraryTopics, { each: true })
   topics: string[] = [];
 
   @ApiPropertyOptional({
@@ -134,6 +136,16 @@ export class CreateGuideDto {
   @IsArray()
   @IsString({ each: true })
   badges?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Publication status of the guide',
+    enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
+    example: 'PUBLISHED',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdateGuideDto extends CreateGuideDto {}

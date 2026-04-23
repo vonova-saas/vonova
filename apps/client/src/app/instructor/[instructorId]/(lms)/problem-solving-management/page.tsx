@@ -1,7 +1,5 @@
-import DashboardComingSoon from "@/components/global/dashboard-coming-soon";
+import ProblemSolvingManagement from "@/components/instructor/lms/problem-solving-management/problem-solving-management";
 
 export default function ProblemSolvingManagementPage() {
-  return (
-    <DashboardComingSoon pageName="Problem Solving Management" />
-  );
+  return <ProblemSolvingManagement />;
 }

@@ -31,52 +31,80 @@ import {
 import { RichTextEditor } from "../rich-text-editor/editor";
 import { Uploader } from "../file-uploader/uploader";
 import { useTransition } from "react";
-import { tryCatch } from "@/hooks";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
-import { editCourse } from "./actions";
-import { AdminCourseSingularType } from "../data/admin-get-course";
+import { updateCourseMutationFn } from "@/services/instructor/course-managment/courses.api";
+import { UpdateCourseDto, Course } from "@/types/api/lms/courses.type";
+import { queryClient } from "@/providers/providers";
+import { useUserId } from "@/hooks";
 
 interface iAppProps {
-  data: AdminCourseSingularType
+  data: Course
 }
 
 export function EditCourseForm({ data } : iAppProps) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const userId = useUserId();
 
   const form = useForm<CourseSchemaType>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title: data.title,
-      description: data.description,
-      fileKey: data.fileKey!,
-      price: data.price,
-      duration: data.duration,
-      level:  data.level,
-      category: data.category as CourseSchemaType['category'],
-      status: data.status,
+      description: data.description || "",
+      fileKey: data.thumbnailUrl || "",
+      price: data.price?.amount || 0,
+      duration: 0, // Not in API response
+      level: data.difficulty === "INTERMEDIATE" ? "Intermidate" : data.difficulty === "BEGINNER" ? "Beginner" : "Advanced",
+      category: "Development" as CourseSchemaType['category'], // Default since not in API
+      status: data.status === "DRAFT" ? "Draft" : data.status === "PUBLISHED" ? "Published" : "Archive",
       slug: data.slug,
-      smallDescription: data.smallDescription,
+      smallDescription: data.smallDescription || "",
     },
   });
 
-  function onSubmit(values: CourseSchemaType) {
+  async function onSubmit(values: CourseSchemaType) {
     startTransition(async () => {
-      const { data: result, error } = await tryCatch(editCourse(values, data.id));
+      try {
+        // Validate form data
+        const validation = courseSchema.safeParse(values);
+        if (!validation.success) {
+          toast.error("Invalid Form Data");
+          return;
+        }
 
-      if (error) {
-        toast.error("An unexpected error occured. Please try again.");
-        return;
-      }
+        // Map form values to API DTO
+        const updateData: UpdateCourseDto = {
+          title: values.title,
+          slug: values.slug,
+          smallDescription: values.smallDescription,
+          description: values.description,
+          difficulty: values.level === "Intermidate" ? "Intermediate" : values.level === "Beginner" ? "Beginner" : "Advanced",
+          tags: [],
+          thumbnailUrl: values.fileKey || undefined,
+          language: "English",
+          price: {
+            amount: Number(values.price),
+            currency: "USD",
+            isFree: Number(values.price) === 0,
+          },
+          status: values.status === "Draft" ? "DRAFT" : values.status === "Published" ? "PUBLISHED" : "ARCHIVED",
+        };
 
-      if (result.status === "success") {
-        toast.success(result.message);
+        // Call API directly
+        await updateCourseMutationFn(data._id, updateData);
+
+        // Invalidate cache to refresh course data
+        queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+        queryClient.invalidateQueries({ queryKey: ["instructor-course", data._id] });
+
+        toast.success("Course updated successfully");
         form.reset();
-        router.push("/courses-management");
-      } else if (result.status === "error") {
-        toast.error(result.message);
+        router.push(`/instructor/${userId}/courses-management`);
+      } catch (error) {
+        console.error("Error updating course:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to update course. Please try again.");
       }
     });
   }

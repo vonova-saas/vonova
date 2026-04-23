@@ -23,6 +23,9 @@ import {
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { BookGatewayService } from './book.gateway.service';
 import {
   CreateBookDto,
@@ -35,7 +38,7 @@ import {
 @ApiTags('LMS Library Books')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/books')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class BookGatewayController {
   constructor(private readonly bookService: BookGatewayService) {}
 
@@ -108,6 +111,11 @@ export class BookGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only INSTRUCTOR_USER role can create books',
+  })
+  @Roles(Role.INSTRUCTOR_USER)
   @Post('createBook')
   async createBook(@Body() dto: CreateBookDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
@@ -116,7 +124,13 @@ export class BookGatewayController {
       throw new Error('Authentication required - No user found');
     }
     
-    return firstValueFrom(this.bookService.createBook(dto, userId));
+    // Ensure status is set from request body or default to PUBLISHED
+    const bookData = {
+      ...dto,
+      status: dto.status || 'PUBLISHED'
+    };
+    
+    return firstValueFrom(this.bookService.createBook(bookData, userId));
   }
 
   @ApiOperation({
@@ -278,8 +292,12 @@ export class BookGatewayController {
     },
   })
   @Get()
-  async getBooks(@Query() query: GetBooksQueryDto) {
-    return firstValueFrom(this.bookService.getBooks(query));
+  async getBooks(@Query() query: GetBooksQueryDto, @Request() req: any) {
+    const user = req.user;
+    const userRole = user?.role;
+    const userId = user?.id || user?.sub || user?._id;
+    
+    return firstValueFrom(this.bookService.getBooks(query, { userRole, userId }));
   }
 
   @ApiOperation({
@@ -591,5 +609,42 @@ export class BookGatewayController {
     }
     
     return firstValueFrom(this.bookService.deleteBook(id, userId));
+  }
+
+  @ApiOperation({
+    summary: 'Get all book file links',
+    description:
+      'Retrieves all uploaded file links for books with presigned URLs for direct access.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Book links retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              title: { type: 'string', example: 'JavaScript: The Complete Guide' },
+              slug: { type: 'string', example: 'javascript-complete-guide' },
+              fileName: { type: 'string', example: 'javascript-book.pdf' },
+              objectKey: { type: 'string', example: 'library/book/123456/javascript-book.pdf' },
+              presignedUrl: { type: 'string', example: 'https://...' },
+              uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              contentType: { type: 'string', example: 'application/pdf' },
+              size: { type: 'number', example: 2048000 },
+            },
+          },
+        },
+        total: { type: 'number', example: 15 },
+      },
+    },
+  })
+  @Get('links')
+  async getAllBookLinks() {
+    return firstValueFrom(this.bookService.getAllLinks());
   }
 }

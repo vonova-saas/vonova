@@ -34,7 +34,8 @@ import {
   UploadQueryDto, 
   ErrorResponseDto 
 } from './dto/upload-swagger.dto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 
 @ApiTags('LMS Library Upload')
@@ -87,7 +88,28 @@ export class UploadGatewayController {
   @ApiResponse({
     status: 200,
     description: 'File uploaded successfully',
-    type: UploadResponseDto,
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'File uploaded successfully' },
+        presignedUrl: { 
+          type: 'string', 
+          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
+          description: 'Presigned URL for accessing the uploaded file (expires in 1 hour)'
+        },
+        fileUrl: { 
+          type: 'string', 
+          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf',
+          description: 'Direct S3 URL for reference'
+        },
+        objectKey: { type: 'string', example: 'library/guide/123456/file.pdf' },
+        size: { type: 'number', example: 1024000 },
+        assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        fileName: { type: 'string', example: 'document.pdf' },
+        mimeType: { type: 'string', example: 'application/pdf' },
+        expiresInSeconds: { type: 'number', example: 3600 },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -147,6 +169,13 @@ export class UploadGatewayController {
       await this.s3Client.send(command);
       console.log('S3 upload successful:', objectKey);
 
+      // Generate presigned URL for downloading the uploaded file
+      const getCommand = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: objectKey,
+      });
+      const presignedUrl = await getSignedUrl(this.s3Client, getCommand, { expiresIn: 3600 }); // 1 hour expiry
+
       // Create asset record via LMS service (only metadata)
       const result = await firstValueFrom(
         this.uploadService.createAssetRecord(
@@ -163,14 +192,16 @@ export class UploadGatewayController {
         ),
       ) as { assetId: string; itemId: string; objectKey: string; fileName: string; size: number; mimeType: string; fileUrl: string };
 
-      const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
-
       return {
         message: 'File uploaded successfully',
-        fileUrl,
+        presignedUrl, // This is the presigned URL for accessing the file
+        fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`, // Direct URL for reference
         objectKey,
         size: file.size,
         assetId: result.assetId,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        expiresInSeconds: 3600,
       };
     } catch (error) {
       console.error('File upload error:', error);
@@ -203,15 +234,17 @@ export class UploadGatewayController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'File upload completed successfully' },
-        fileUrl: {
-          type: 'string',
-          example: 'https://s3.amazonaws.com/bucket/uploads/javascript-guide.pdf',
+        assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+        itemId: { type: 'string', example: '507f1f77bcf86cd799439012' },
+        presignedUrl: { 
+          type: 'string', 
+          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
+          description: 'Presigned URL for accessing the uploaded file (expires in 1 hour)'
         },
         fileName: { type: 'string', example: 'javascript-guide.pdf' },
-        fileSize: { type: 'number', example: 5242880 },
         mimeType: { type: 'string', example: 'application/pdf' },
-        uploadedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+        size: { type: 'number', example: 5242880 },
+        expiresInSeconds: { type: 'number', example: 3600 },
       },
     },
   })

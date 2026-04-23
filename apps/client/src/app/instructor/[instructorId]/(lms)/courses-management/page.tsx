@@ -1,13 +1,18 @@
-import { adminGetCourses } from "@/components/instructor/lms/courses-management/data/admin-get-courses";
+"use client"
+
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { AdminCourseCard, AdminCourseCardSkeleton } from "@/components/instructor/lms/courses-management/admin-course-card";
 import EmptyState from "@/components/instructor/lms/courses-management/general/empty-state";
-import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Component, Plus } from "lucide-react";
+import { useUserId } from "@/hooks";
+import { useInstructorCourses } from "@/hooks/instructor/use-courses";
 
 export default function CoursesManagementPage() {
+  const userId = useUserId();
+  const { data: courses, isLoading, error } = useInstructorCourses();
+
   return (
     <div className="min-h-full w-full pb-16">
       <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
@@ -29,7 +34,7 @@ export default function CoursesManagementPage() {
             Create, edit, and organize your courses in one clear workspace.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link className={buttonVariants({ className: "cursor-pointer rounded-full px-8" })} href={`courses-management/create`}>
+            <Link className={buttonVariants({ className: "cursor-pointer rounded-full px-8" })} href={`/instructor/${userId}/courses-management/create`}>
               <Plus className="w-4 h-4 mr-2" />
               Create Course
             </Link>
@@ -67,34 +72,28 @@ export default function CoursesManagementPage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 pt-10 w-full">
-      <Suspense fallback={<AdminCourseCardSkeletonLayout />}>
-        <RenderCourses />
-      </Suspense>
+        {isLoading ? (
+          <AdminCourseCardSkeletonLayout />
+        ) : error ? (
+          <div className="text-center py-10 text-red-500">
+            Error loading courses: {error.message}
+          </div>
+        ) : courses && courses.length === 0 ? (
+          <EmptyState
+            title="No Courses found"
+            description="Create a new course to get started"
+            buttonText="Create Course"
+            href={`/instructor/${userId}/courses-management/create`}
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-6">
+            {courses?.map((course) => (
+              <AdminCourseCard key={course._id} data={course} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  );
-}
-
-async function RenderCourses() {
-  const data = await adminGetCourses();
-
-  return (
-    <>
-      {data.length === 0 ? (
-        <EmptyState
-          title="No Courses found"
-          description="Create a new course to get started"
-          buttonText="Create Course"
-          href={`courses-management/create`}
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-6">
-          {data.map((course) => (
-            <AdminCourseCard key={course.id} data={course} />
-          ))}
-        </div>
-      )}
-    </>
   );
 }
 
@@ -105,5 +104,5 @@ function AdminCourseCardSkeletonLayout() {
         <AdminCourseCardSkeleton key={index} />
       ))}
     </div>
-  )
+  );
 }

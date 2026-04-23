@@ -30,13 +30,6 @@ export type currentUserResponseType = {
     _id: string,
     name: string,
     email: string,
-    profilePicture: string | null,
     role: string,
-    permissions?: string[],
-    isVerified: boolean,
-    isActive: boolean,
-    lastLogin: string,
-    createdAt: string,
-    updatedAt: string,
   }
 };

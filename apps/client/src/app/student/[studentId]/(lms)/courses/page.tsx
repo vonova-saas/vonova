@@ -1,6 +1,6 @@
 import EmptyState from "@/components/student/lms/courses/general/empty-state";
-import { getAllCourses } from "@/components/student/lms/courses/data/get-all-courses";
-import { getEnrolledCourses } from "@/components/student/lms/courses/data/get-enrolled-courses";
+import { getAllCourses, PublicCourseType } from "@/components/student/lms/courses/data/get-all-courses";
+import { getEnrolledCourses, EnrolledCourseType } from "@/components/student/lms/courses/data/get-enrolled-courses";
 import { PublicCourseCard } from "@/components/student/lms/courses/public-course-card";
 import { CourseProgressCard } from "@/components/student/lms/courses/course-progress-card";
 import { BookOpen } from "lucide-react";
@@ -9,12 +9,12 @@ export default async function CoursesPage() {
   const [courses, enrolledCourses] = await Promise.all([
     getAllCourses(),
     getEnrolledCourses(),
-  ]);
+  ]) as [PublicCourseType[], EnrolledCourseType[]];
 
   const availableCourses = courses.filter(
     (course) =>
       !enrolledCourses.some(
-        ({ Course: enrolled }) => enrolled.id === course.id
+        ({ Course: enrolled }) => enrolled._id === course._id
       ),
   );
 
@@ -79,14 +79,14 @@ export default async function CoursesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {enrolledCourses.map((course) => (
-             <CourseProgressCard  key={course.Course.id} data={course}/>
+             <CourseProgressCard  key={course.Course._id} data={course}/>
           ))}
         </div>
       )}
 
       <section className="mt-10">
         <div className="flex flex-col gap-2 mb-5">
-          <h2 className="text-3xl font-bold">Avaliable Courses</h2>
+          <h2 className="text-3xl font-bold">Available Courses</h2>
           <p className="text-muted-foreground">
             Here you can see all the courses you can purchase
           </p>
@@ -95,14 +95,14 @@ export default async function CoursesPage() {
         {availableCourses.length === 0 ? (
           <EmptyState
             title="No courses available"
-            description="You have purchases all available courses"
+            description="You have purchased all available courses"
             buttonText="Browse Courses"
             href="/courses"
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {availableCourses.map((course) => (
-                <PublicCourseCard key={course.id} data={course} />
+                <PublicCourseCard key={course._id} data={course} />
               ))}
           </div>
         )}

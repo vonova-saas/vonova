@@ -31,17 +31,11 @@ export class Course {
   @Prop()
   difficulty?: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Category', default: null })
-  categoryId?: Types.ObjectId | null;
-
   @Prop({ type: [String], default: [] })
   tags?: string[];
 
   @Prop()
   thumbnailUrl?: string;
-
-  @Prop()
-  trailerUrl?: string;
 
   @Prop({ default: 'en' })
   language?: string;

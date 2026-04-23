@@ -27,7 +27,7 @@ export const courseSchema = z.object({
     .string()
     .min(3, { message: "Description must be at least 3 characters long" }),
 
-  fileKey: z.string().min(1, { message: "File is required" }),
+  fileKey: z.string().optional(),
 
   // price: z.number().min(1, { message: "Price must be positive number" }),
 
@@ -41,7 +41,7 @@ export const courseSchema = z.object({
       if (typeof val === "string") return parseFloat(val);
       return val;
     },
-    z.number().min(1, { message: "Price must be positive number" })
+    z.number().min(0, { message: "Price must be 0 or greater" })
   ) as unknown as z.ZodNumber,
 
   duration: z.preprocess(
@@ -51,8 +51,9 @@ export const courseSchema = z.object({
     },
     z
       .number()
-      .min(1, { message: "Duration must be at least 1 hour" })
+      .min(0, { message: "Duration must be 0 or greater" })
       .max(500, { message: "Duration must be at most 500 hours" })
+      .optional()
   ) as unknown as z.ZodNumber,
 
   level: z.enum(courseLevels, { message: "level is required" }),
@@ -79,15 +80,15 @@ export const chapterSchema = z.object({
   name: z
     .string()
     .min(3, { message: "Name must be at least 3 characters long" }),
-  courseId: z.string().uuid({ message: "Invalid courseId" }),
+  courseId: z.string().min(1, { message: "Course ID is required" }),
 });
 
 export const lessonSchema = z.object({
   name: z
     .string()
     .min(3, { message: "Name must be at least 3 characters long" }),
-  courseId: z.string().uuid({ message: "Invalid course id" }),
-  chapterId: z.string().uuid({ message: "Invalid chapter id" }),
+  courseId: z.string().min(1, { message: "Course ID is required" }),
+  chapterId: z.string().min(1, { message: "Chapter ID is required" }),
   description: z
     .string()
     .min(3, { message: "Description must be at least 3 characters long" })

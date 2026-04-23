@@ -342,7 +342,7 @@ export class AdminAuthService {
 
   async getCurrentUser(
     accessToken: string,
-  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+  ): Promise<{ message: string; user: { _id: string; name: string; email: string; role: string } }> {
     try {
       const payload = this.jwtService.verify<{ sub: string; role: string }>(
         accessToken,
@@ -360,6 +360,7 @@ export class AdminAuthService {
         message: 'Current admin fetched successfully',
         user: {
           _id: admin._id.toString(),
+          name: admin.name,
           email: admin.email,
           role: admin.role,
         },

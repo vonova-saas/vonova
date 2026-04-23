@@ -12,10 +12,17 @@ export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
   @MessagePattern({ cmd: 'app.courses.create' })
-  createCourse(@Payload() data: { dto: CreateCourseDto; createdBy?: string; user?: { id?: string; sub?: string } }) {
+  createCourse(
+    @Payload()
+    data: {
+      dto: CreateCourseDto;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
     const { dto, createdBy, user } = data;
     if (!dto) throw new Error('dto is required');
-    
+
     // Extract createdBy from multiple possible sources
     const userId = createdBy || user?.id || user?.sub;
     if (!userId) throw new Error('User identification is required');
@@ -35,7 +42,7 @@ export class CourseController {
   ) {
     const { courseId, dto, ownerId, user } = data;
     if (!courseId || !dto) throw new Error('courseId and dto are required');
-    
+
     // Extract ownerId from multiple possible sources
     const userId = ownerId || user?.id || user?.sub;
     if (!userId) throw new Error('User identification is required');
@@ -55,7 +62,7 @@ export class CourseController {
   ) {
     const { courseId, dto, ownerId, user } = data;
     if (!courseId || !dto) throw new Error('courseId and dto are required');
-    
+
     // Extract ownerId from multiple possible sources
     const userId = ownerId || user?.id || user?.sub;
     if (!userId) throw new Error('User identification is required');
@@ -64,10 +71,17 @@ export class CourseController {
   }
 
   @MessagePattern({ cmd: 'app.courses.delete' })
-  deleteCourse(@Payload() data: { courseId: string; ownerId?: string; user?: { id?: string; sub?: string } }) {
+  deleteCourse(
+    @Payload()
+    data: {
+      courseId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
     const { courseId, ownerId, user } = data;
     if (!courseId) throw new Error('courseId is required');
-    
+
     // Extract ownerId from multiple possible sources
     const userId = ownerId || user?.id || user?.sub;
     if (!userId) throw new Error('User identification is required');

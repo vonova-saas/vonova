@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import {
   CreateCourseDto,
   UpdateCourseDto,
@@ -87,15 +88,13 @@ export class CourseService {
 
   async getAllCourses(query: {
     q?: string;
-    categoryId?: string;
     status?: string;
     page?: number;
     limit?: number;
   }) {
-    const { q, categoryId, status, page = 1, limit = 12 } = query;
+    const { q, status, page = 1, limit = 12 } = query;
     const filter: any = {};
     if (status) filter.status = status;
-    if (categoryId) filter.categoryId = categoryId;
     if (q) filter.$text = { $search: q };
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([

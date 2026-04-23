@@ -133,60 +133,31 @@ export type submitQuizTypeResponse = {
   }
 }
 
+/** One graded quiz attempt returned by GET student quiz attempts. */
+export type StudentQuizAttempt = {
+  id: string;
+  quiz: string;
+  userId: string;
+  score: number;
+  total: number;
+  percentage: number;
+  answers: {
+    questionId: string;
+    selectedOptionId: string;
+    correct: boolean;
+  }[];
+  submittedAt: string;
+  gradedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type getAttemptsTypeResponse = {
   message: string;
-  data: {
-    id: string;
-    quiz: string;
-    userId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers: {
-      questionId: string;
-      selectedOptionId: string;
-      correct: boolean;
-    }[],
-    submittedAt: string;
-    gradedAt: string;
-    createdAt: string;
-    updatedAt: string;
-  } | {
-    id: string;
-    quiz: string;
-    userId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers: {
-      questionId: string;
-      selectedOptionId: string;
-      correct: boolean;
-    }[];
-    submittedAt: string;
-    gradedAt: string;
-    createdAt: string;
-    updatedAt: string;
-  }[]
-}
+  data: StudentQuizAttempt[];
+};
 
 export type getSpecificAttemptTypeResponse = {
   message: string;
-  data: {
-    id: string;
-    quiz: string;
-    userId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers: {
-      questionId: string;
-      selectedOptionId: string;
-      correct: boolean;
-    }[],
-    submittedAt: string;
-    gradedAt: string;
-    createdAt: string;
-    updatedAt: string;
-  }
-}
+  data: StudentQuizAttempt;
+};

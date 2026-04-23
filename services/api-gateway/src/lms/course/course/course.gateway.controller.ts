@@ -63,7 +63,6 @@ export class CourseGatewayController {
           example: 'Comprehensive JavaScript course.',
         },
         difficulty: { type: 'string', example: 'Intermediate' },
-        categoryId: { type: 'string', example: '507f1f77bcf86cd799439011' },
         tags: {
           type: 'array',
           items: { type: 'string' },
@@ -72,10 +71,6 @@ export class CourseGatewayController {
         thumbnailUrl: {
           type: 'string',
           example: 'https://example.com/thumbnail.jpg',
-        },
-        trailerUrl: {
-          type: 'string',
-          example: 'https://example.com/trailer.mp4',
         },
         language: { type: 'string', example: 'English' },
         price: {

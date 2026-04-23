@@ -20,6 +20,11 @@ import { tryCatch } from "./courses/try-catch";
 import { useConfetti } from "./courses/use-confetti";
 import useConstructUrl from "./courses/use-construct-url";
 
+//? =========== Instructor hooks imports ===========
+import { useInstructorCourses } from "./instructor/use-courses";
+import { useInstructorCourse } from "./instructor/use-course";
+import { useLesson } from "./instructor/use-lesson";
+
 export {
   // App Hooks
   useIsMobile,
@@ -42,4 +47,9 @@ export {
   tryCatch,
   useConfetti,
   useConstructUrl,
+  useLesson,
+
+  // Instructor Hooks
+  useInstructorCourses,
+  useInstructorCourse,
 }

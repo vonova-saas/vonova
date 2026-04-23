@@ -4,6 +4,7 @@ import {
   CreateGuideDto,
   UpdateGuideDto,
   PublishGuideDto,
+  GetGuidesQueryDto,
 } from './dto/guide.dto';
 import { GuideService } from './guide.service';
 
@@ -26,17 +27,9 @@ export class GuideController {
   @MessagePattern({ cmd: 'library.guides.getAll' })
   async listGuides(
     @Payload()
-    data: {
-      q?: string;
-      topics?: string;
-      level?: string;
-      sort?: string;
-      page?: number;
-      limit?: number;
-      status?: string;
-    },
+    data: GetGuidesQueryDto & { topics?: string[]; page?: number; limit?: number },
   ) {
-    const { q, topics, level, sort, page, limit, status } = data || {};
+    const { q, topics, level, sort, page, limit, status, userRole, userId } = data || {};
     const topicsArray = topics ? topics.split(',') : undefined;
 
     return this.guideService.listGuidesService({
@@ -47,6 +40,8 @@ export class GuideController {
       page,
       limit,
       status,
+      userRole,
+      userId,
     });
   }
 
@@ -100,5 +95,10 @@ export class GuideController {
     if (!createdBy) throw new Error('User identification is required');
 
     return this.guideService.deleteGuideService(id, createdBy);
+  }
+
+  @MessagePattern({ cmd: 'library.guides.getAllLinks' })
+  async getAllGuideLinks() {
+    return this.guideService.getAllGuideLinksService();
   }
 }
