@@ -3,10 +3,17 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Lightbulb, Loader2, WandSparkles, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   problemSolvingKeys,
   useHintMutation,
@@ -28,28 +35,35 @@ const DEFAULT_LANGUAGE = "typescript";
 
 export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
-  const [activeTestCaseIndex, setActiveTestCaseIndex] = useState(0);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
   const [hints, setHints] = useState<AIInteractionEntity[]>([]);
   const [solution, setSolution] = useState<AIInteractionEntity | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "accepted" | "wrong_answer">("idle");
-  const [failedCase, setFailedCase] = useState<{ input: string; output: string } | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiModalMode, setAiModalMode] = useState<"hint" | "solution">("hint");
+  const [submissionStatus, setSubmissionStatus] = useState<
+    "idle" | "accepted" | "wrong_answer"
+  >("idle");
+  const [failedCase, setFailedCase] = useState<{
+    input: string;
+    output: string;
+  } | null>(null);
 
   const submitMutation = useSubmitSolutionMutation();
   const hintMutation = useHintMutation();
   const solutionMutation = useSolutionMutation();
 
   const hintLimitReached = hints.length >= 3;
-  const activeCase = problem.testCases?.[activeTestCaseIndex];
-  const highlightHint = submissionStatus === "wrong_answer";
-  const hintLevels = ["General", "Detailed", "Strong"];
+  const hintLevels = ["General", "Focused", "Advanced"];
 
   const parsedSolution = useMemo(() => {
     if (!solution?.response) return { code: "", explanation: "" };
     const response = solution.response;
     if (response.includes("```")) {
-      const sections = response.split("```").map((s) => s.trim()).filter(Boolean);
+      const sections = response
+        .split("```")
+        .map((s) => s.trim())
+        .filter(Boolean);
       return {
         code: sections[1] ?? sections[0] ?? response,
         explanation: sections.length > 2 ? sections.slice(2).join("\n\n") : response,
@@ -82,13 +96,15 @@ export default function Playground({ problem }: PlaygroundProps) {
     } catch (error: unknown) {
       toast.error("Submission failed", {
         description:
-          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          "Please try again.",
+          (error as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ?? "Please try again.",
       });
     }
   };
 
   const handleGetHint = async () => {
+    setAiModalMode("hint");
+    setAiModalOpen(true);
     try {
       const response = await hintMutation.mutateAsync({
         problemId: problem._id,
@@ -100,13 +116,15 @@ export default function Playground({ problem }: PlaygroundProps) {
     } catch (error: unknown) {
       toast.error("Hint request failed", {
         description:
-          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          "Unable to generate hint right now.",
+          (error as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ?? "Unable to generate hint right now.",
       });
     }
   };
 
   const handleShowSolution = async () => {
+    setAiModalMode("solution");
+    setAiModalOpen(true);
     try {
       const response = await solutionMutation.mutateAsync({
         problemId: problem._id,
@@ -117,199 +135,194 @@ export default function Playground({ problem }: PlaygroundProps) {
     } catch (error: unknown) {
       toast.error("Solution request failed", {
         description:
-          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          (error as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ??
           "You need at least one failed submission before requesting solution.",
       });
     }
   };
 
   return (
-    <div className="flex flex-col h-full rounded-xl border bg-background/95 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/60 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-foreground">Code</span>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="h-7 rounded-md border bg-background px-2 text-[11px]"
-          >
-            <option value="typescript">TypeScript</option>
-            <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
-            <option value="java">Java</option>
-          </select>
-        </div>
-        <div className="text-[11px] text-muted-foreground">Monaco Editor</div>
-      </div>
-
-      <div className="grid flex-1 grid-rows-[1fr_auto_auto] overflow-hidden">
-        <div className="border-b overflow-hidden">
-          <MonacoEditor
-            language={language}
-            value={code}
-            onChange={(value) => setCode(value ?? "")}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-            }}
-          />
-        </div>
-
-        <div className="px-4 py-3 space-y-3 text-xs md:text-sm bg-muted/40 border-b">
+    <>
+      <Card className="h-full overflow-hidden border-0 bg-[#1a1a1a] py-0 shadow-none">
+        <CardHeader className="border-b border-zinc-800 bg-[#151515] py-3">
           <div className="flex items-center justify-between">
-            <div className="relative flex h-7 flex-col justify-center">
-              <span className="text-xs font-medium text-foreground">Testcases</span>
-              <span className="absolute bottom-0 h-0.5 w-14 rounded-full bg-foreground/80" />
-            </div>
+            <CardTitle className="text-sm text-zinc-100">Code Workspace</CardTitle>
+            <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+              Monaco Editor
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <div className="flex items-center justify-between border-b border-zinc-800 bg-[#151515] px-4 py-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-zinc-300">Language</span>
+            <select
+              aria-label="Programming language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="h-7 rounded-md border border-zinc-700 bg-zinc-900 px-2 text-[11px] text-zinc-200"
+            >
+              <option value="typescript">TypeScript</option>
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="java">Java</option>
+            </select>
+          </div>
+          <div className="text-[11px] text-zinc-500">Auto</div>
+        </div>
+
+        <CardContent className="grid h-[calc(100%-110px)] grid-rows-[1fr_auto] overflow-hidden p-0">
+          <div className="overflow-hidden bg-[#0f1117] ring-1 ring-inset ring-white/5">
+            <MonacoEditor
+              language={language}
+              value={code}
+              onChange={(value) => setCode(value ?? "")}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+              }}
+            />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {problem.testCases?.map((testCase, index) => (
-              <button
-                key={`${testCase.input}-${index}`}
-                onClick={() => setActiveTestCaseIndex(index)}
-                className={`px-4 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-                  activeTestCaseIndex === index
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+          <div className="space-y-3 border-t border-zinc-800 bg-[#151515] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={handleSubmit}
+                disabled={submitMutation.isPending}
+                size="sm"
+                className="h-8 bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-500"
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleGetHint}
+                disabled={hintMutation.isPending || hintLimitReached}
+                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+              >
+                {hintMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating hint...
+                  </>
+                ) : (
+                  <>
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    Get Hint ({hints.length}/3)
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleShowSolution}
+                disabled={solutionMutation.isPending}
+                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+              >
+                {solutionMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating solution...
+                  </>
+                ) : (
+                  <>
+                    <WandSparkles className="mr-2 h-4 w-4" />
+                    Show Solution
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <p className="text-xs text-zinc-400">
+              Result:{" "}
+              <span
+                className={`font-semibold ${
+                  submissionStatus === "accepted"
+                    ? "text-emerald-400"
+                    : submissionStatus === "wrong_answer"
+                    ? "text-rose-400"
+                    : "text-zinc-200"
                 }`}
               >
-                Case {index + 1}
-              </button>
-            ))}
+                {submissionStatus === "idle" ? "Not submitted" : submissionStatus}
+              </span>
+              {failedCase ? (
+                <span className="ml-2 text-rose-300">
+                  Failed case: {failedCase.input} {"->"} {failedCase.output}
+                </span>
+              ) : null}
+            </p>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="mt-3 space-y-2 font-mono">
-            <div>
-              <p className="text-xs font-medium text-foreground">Input:</p>
-              <div className="mt-1 rounded-md bg-background border px-3 py-2 text-[11px] md:text-xs text-foreground">
-                {activeCase?.input}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-foreground">Expected Output:</p>
-              <div className="mt-1 rounded-md bg-background border px-3 py-2 text-[11px] md:text-xs text-foreground">
-                {activeCase?.output}
-              </div>
-            </div>
-            {failedCase ? (
-              <div>
-                <p className="text-xs font-medium text-rose-500">Failed Case:</p>
-                <div className="mt-1 rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-[11px] md:text-xs text-rose-600 dark:text-rose-300">
-                  input: {failedCase.input} | output: {failedCase.output}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="px-4 py-3 bg-background">
-          <div className="flex flex-wrap items-center gap-2">
+      <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <DialogContent
+          overlayClassName="bg-black/60 backdrop-blur-sm"
+          className="max-h-[85vh] overflow-hidden border-zinc-700 bg-[#171717] p-0 sm:max-w-2xl"
+        >
+          <DialogHeader className="flex-row items-center justify-between border-b border-zinc-700 px-4 py-3">
+            <DialogTitle className="text-sm text-zinc-100">
+              {aiModalMode === "hint" ? "AI Hints" : "AI Solution"}
+            </DialogTitle>
             <Button
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-              className="cursor-pointer"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              onClick={() => setAiModalOpen(false)}
             >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Submit Solution"
-              )}
+              <X className="h-4 w-4" />
             </Button>
+          </DialogHeader>
 
-            <Button
-              variant={highlightHint ? "default" : "outline"}
-              onClick={handleGetHint}
-              disabled={hintMutation.isPending || hintLimitReached}
-              className={highlightHint ? "ring-2 ring-amber-500/60 animate-pulse" : ""}
-            >
-              {hintMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating hint...
-                </>
+          <div className="max-h-[72vh] space-y-3 overflow-y-auto px-4 py-4">
+            {aiModalMode === "hint" ? (
+              hints.length === 0 ? (
+                <p className="text-xs text-zinc-500">No hints yet. Click "Get Hint".</p>
               ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Get Hint ({hints.length}/3)
-                </>
-              )}
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={handleShowSolution}
-              disabled={solutionMutation.isPending}
-            >
-              {solutionMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating solution...
-                </>
-              ) : (
-                "Show Solution"
-              )}
-            </Button>
-          </div>
-
-          <p className="mt-3 text-xs text-muted-foreground">
-            Status:{" "}
-            <span className="font-medium text-foreground">
-              {submissionStatus === "idle" ? "Not submitted" : submissionStatus}
-            </span>
-          </p>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <Card className="border-dashed">
-              <CardContent className="p-4 space-y-3">
-                <h3 className="text-sm font-semibold">AI Hints</h3>
-                {hints.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No hints yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {hints.map((hint, index) => (
-                      <div key={hint._id ?? `${hint.createdAt}-${index}`} className="rounded-lg border bg-muted/40 p-3">
-                        <p className="mb-1 text-xs font-semibold">
-                          Hint {index + 1} ({hintLevels[index] ?? "Strong"})
-                        </p>
-                        <p className="text-xs leading-5 text-muted-foreground whitespace-pre-wrap">
-                          {hint.response}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-dashed">
-              <CardContent className="p-4 space-y-3">
-                <h3 className="text-sm font-semibold">AI Solution</h3>
-                {!solution ? (
-                  <p className="text-xs text-muted-foreground">
-                    Submit at least one failing answer, then request solution.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    <pre className="max-h-48 overflow-auto rounded-md bg-black p-3 text-[11px] text-green-200">
-                      {parsedSolution.code}
-                    </pre>
-                    <p className="text-xs leading-5 text-muted-foreground whitespace-pre-wrap">
-                      {parsedSolution.explanation}
+                hints.map((hint, index) => (
+                  <div
+                    key={hint._id ?? `${hint.createdAt}-${index}`}
+                    className="ml-auto max-w-[95%] rounded-xl rounded-br-sm border border-zinc-700 bg-zinc-800 px-3 py-2"
+                  >
+                    <p className="mb-1 text-[11px] font-semibold text-zinc-100">
+                      Hint {index + 1} ({hintLevels[index] ?? "Advanced"})
+                    </p>
+                    <p className="whitespace-pre-wrap text-xs leading-5 text-zinc-300">
+                      {hint.response}
                     </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                ))
+              )
+            ) : !solution ? (
+              <p className="text-xs text-zinc-500">
+                Solution will appear here after clicking "Show Solution".
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <pre className="max-h-64 overflow-auto rounded-md bg-black p-3 text-[11px] text-green-200">
+                  {parsedSolution.code}
+                </pre>
+                <p className="whitespace-pre-wrap text-xs leading-5 text-zinc-400">
+                  {parsedSolution.explanation}
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

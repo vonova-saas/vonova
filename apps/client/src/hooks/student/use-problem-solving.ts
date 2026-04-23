@@ -9,6 +9,7 @@ import {
 } from "@/services/student/lms/problem-solving/problem-solving.api";
 import type {
   HintRequest,
+  ProblemsFilter,
   SolutionRequest,
   SubmissionRequest,
 } from "@/types/api/student/lms/problem-solving/problem-solving.type";
@@ -16,17 +17,18 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 export const problemSolvingKeys = {
   all: ["problem-solving"] as const,
-  problems: () => [...problemSolvingKeys.all, "problems"] as const,
+  problems: (filters?: ProblemsFilter) =>
+    [...problemSolvingKeys.all, "problems", filters ?? {}] as const,
   problem: (problemId: string) =>
     [...problemSolvingKeys.all, "problem", problemId] as const,
   submissions: (problemId: string) =>
     [...problemSolvingKeys.all, "submissions", problemId] as const,
 };
 
-export const useProblemsQuery = () =>
+export const useProblemsQuery = (filters?: ProblemsFilter) =>
   useQuery({
-    queryKey: problemSolvingKeys.problems(),
-    queryFn: getProblemsQueryFn,
+    queryKey: problemSolvingKeys.problems(filters),
+    queryFn: () => getProblemsQueryFn(filters),
   });
 
 export const useProblemQuery = (problemId: string) =>

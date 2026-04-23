@@ -1,7 +1,13 @@
 "use client";
 
+import { use } from "react";
 import ProblemWorkspace from "@/components/student/lms/problem-solving/problem-workspace";
 
-export default function ProblemPage({ params }: { params: { studentId: string; problemId: string } }) {
-  return <ProblemWorkspace problemId={params.problemId} />;
+export default function ProblemPage({
+  params,
+}: {
+  params: Promise<{ studentId: string; problemId: string }>;
+}) {
+  const resolvedParams = use(params);
+  return <ProblemWorkspace problemId={resolvedParams.problemId} />;
 }

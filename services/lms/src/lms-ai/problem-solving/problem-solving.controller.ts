@@ -4,7 +4,11 @@ import { PROBLEM_PATTERNS } from './constants/message-patterns';
 import { ProblemService } from './problem.service';
 import { SubmissionService } from './submission.service';
 import { AiService } from './ai.service';
-import { CreateProblemDto, DeleteProblemDto } from './dto/problem.dto';
+import {
+  CreateProblemDto,
+  DeleteProblemDto,
+  ListProblemsDto,
+} from './dto/problem.dto';
 import { CreateSubmissionDto } from './dto/submission.dto';
 import { RequestHintDto, RequestSolutionDto } from './dto/ai.dto';
 
@@ -31,9 +35,9 @@ export class ProblemSolvingController {
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.LIST })
-  async listProblems() {
+  async listProblems(@Payload() data?: { dto?: ListProblemsDto }) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.LIST} received`);
-    return this.problemService.listProblems();
+    return this.problemService.listProblems(data?.dto);
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.GET })

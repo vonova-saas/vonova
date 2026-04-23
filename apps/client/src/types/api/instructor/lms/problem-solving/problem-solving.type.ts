@@ -9,6 +9,16 @@ export type InstructorProblemEntity = {
   description: string;
   constraints: string;
   testCases: InstructorProblemTestCase[];
+  difficulty: "easy" | "medium" | "hard";
+  categories: (
+    | "arrays"
+    | "strings"
+    | "hashmap"
+    | "math"
+    | "dp"
+    | "recursion"
+    | "sorting"
+  )[];
   createdBy: string;
   createdAt?: string;
   updatedAt?: string;
@@ -19,6 +29,8 @@ export type CreateInstructorProblemRequest = {
   description: string;
   constraints: string;
   testCases: InstructorProblemTestCase[];
+  difficulty: InstructorProblemEntity["difficulty"];
+  categories: InstructorProblemEntity["categories"];
 };
 
 export type DeleteInstructorProblemResponse = {

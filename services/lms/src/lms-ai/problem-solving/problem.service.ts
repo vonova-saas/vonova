@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateProblemDto } from './dto/problem.dto';
+import { CreateProblemDto, ListProblemsDto } from './dto/problem.dto';
 import { Problem, ProblemDocument } from './schemas/problem.schema';
 
 @Injectable()
@@ -39,8 +39,18 @@ export class ProblemService {
     return { success: true, message: 'Problem deleted successfully' };
   }
 
-  async listProblems() {
-    return this.problemModel.find().sort({ createdAt: -1 }).lean();
+  async listProblems(filters?: ListProblemsDto) {
+    const query: Record<string, unknown> = {};
+
+    if (filters?.difficulty) {
+      query.difficulty = filters.difficulty;
+    }
+
+    if (filters?.category) {
+      query.categories = filters.category;
+    }
+
+    return this.problemModel.find(query).sort({ createdAt: -1 }).lean();
   }
 
   async getProblem(problemId: string) {

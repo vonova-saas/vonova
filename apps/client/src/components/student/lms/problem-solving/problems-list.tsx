@@ -11,21 +11,42 @@ import { Search, Filter, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { useProblemsQuery } from "@/hooks/student/use-problem-solving";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const CATEGORY_OPTIONS = [
+  { value: "arrays", label: "Arrays" },
+  { value: "strings", label: "Strings" },
+  { value: "hashmap", label: "Hashmap" },
+  { value: "math", label: "Math" },
+  { value: "dp", label: "DP" },
+  { value: "recursion", label: "Recursion" },
+  { value: "sorting", label: "Sorting" },
+] as const;
 
 export default function ProblemsList() {
   const userId = useUserId();
-  const { data: problems = [], isLoading, refetch, isRefetching } = useProblemsQuery();
-
   const [search, setSearch] = useState("");
-  const [difficulty, setDifficulty] = useState("all");
-
-  const difficulties = useMemo(
-    () => [
-      "all",
-      ...Array.from(new Set(problems.map((p) => p.createdBy ? "community" : "official"))),
-    ],
-    [problems]
-  );
+  const [difficulty, setDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { data: problems = [], isLoading, refetch, isRefetching } = useProblemsQuery({
+    difficulty: difficulty === "all" ? undefined : difficulty,
+    category: selectedCategories[0] as
+      | "arrays"
+      | "strings"
+      | "hashmap"
+      | "math"
+      | "dp"
+      | "recursion"
+      | "sorting"
+      | undefined,
+  });
 
   const totalCases = useMemo(
     () => problems.reduce((sum, p) => sum + (p.testCases?.length ?? 0), 0),
@@ -34,23 +55,42 @@ export default function ProblemsList() {
 
   const filteredProblems = useMemo(() => {
     return problems.filter((problem) => {
-      const matchesDifficulty =
-        difficulty === "all" ||
-        (difficulty === "official" && !problem.createdBy) ||
-        (difficulty === "community" && Boolean(problem.createdBy));
       const q = search.toLowerCase();
       const matchesSearch =
         !q ||
         problem.title.toLowerCase().includes(q) ||
         problem.description.toLowerCase().includes(q);
-      return matchesDifficulty && matchesSearch;
+      const matchesCategories =
+        selectedCategories.length === 0 ||
+        selectedCategories.every((category) =>
+          problem.categories.includes(
+            category as
+              | "arrays"
+              | "strings"
+              | "hashmap"
+              | "math"
+              | "dp"
+              | "recursion"
+              | "sorting",
+          ),
+        );
+      return matchesSearch && matchesCategories;
     });
-  }, [difficulty, search, problems]);
+  }, [search, problems, selectedCategories]);
 
   const handleRefresh = () => {
     setSearch("");
     setDifficulty("all");
+    setSelectedCategories([]);
     void refetch();
+  };
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((item) => item !== category)
+        : [...prev, category],
+    );
   };
 
   return (
@@ -93,7 +133,7 @@ export default function ProblemsList() {
               </div>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{difficulties.length - 1}</div>
+              <div className="text-2xl font-semibold tabular-nums md:text-3xl">3</div>
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
                 Difficulties
               </div>
@@ -121,20 +161,45 @@ export default function ProblemsList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
         </div>
         <div className="relative w-[120px]">
-          <Select value={difficulty} onValueChange={setDifficulty}>
+          <Select
+            value={difficulty}
+            onValueChange={(value) =>
+              setDifficulty(value as "all" | "easy" | "medium" | "hard")
+            }
+          >
             <SelectTrigger className="pl-10">
               <SelectValue placeholder="Difficulty" />
             </SelectTrigger>
             <SelectContent>
-              {difficulties.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d === "all" ? "All" : d}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="easy">Easy</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="hard">Hard</SelectItem>
             </SelectContent>
           </Select>
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="min-w-[180px] justify-start">
+              Categories
+              {selectedCategories.length > 0 ? ` (${selectedCategories.length})` : ""}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuLabel>Filter by categories</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {CATEGORY_OPTIONS.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={selectedCategories.includes(option.value)}
+                onCheckedChange={() => toggleCategory(option.value)}
+              >
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Problems grid */}
@@ -156,9 +221,9 @@ export default function ProblemsList() {
         ) : null}
         {filteredProblems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredProblems.map((problem) => (
+            {filteredProblems.map((problem, index) => (
               <Card
-                key={problem.id}
+                key={problem._id ?? `${problem.title}-${index}`}
                 className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
               >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -170,9 +235,17 @@ export default function ProblemsList() {
                       >
                         {problem.testCases?.length ?? 0} cases
                       </span>
-                      <span className="px-2 py-0.5 rounded-full bg-muted text-[11px] font-medium border text-muted-foreground">
-                        {problem.createdBy ? "Community" : "Official"}
-                      </span>
+                      <Badge
+                        className={
+                          problem.difficulty === "easy"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                            : problem.difficulty === "medium"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                              : "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300"
+                        }
+                      >
+                        {problem.difficulty}
+                      </Badge>
                     </span>
                   </CardTitle>
                 </CardHeader>
@@ -180,6 +253,13 @@ export default function ProblemsList() {
                   <p className="mb-4 text-sm text-muted-foreground min-h-[40px] line-clamp-3">
                     {problem.description}
                   </p>
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {problem.categories.map((category) => (
+                      <Badge key={category} variant="outline">
+                        {category}
+                      </Badge>
+                    ))}
+                  </div>
                   <Link
                     href={`/student/${userId}/problem-solving/${problem._id}`}
                     className="w-full mt-auto"

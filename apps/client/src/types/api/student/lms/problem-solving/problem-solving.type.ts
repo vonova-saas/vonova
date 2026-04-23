@@ -9,9 +9,24 @@ export type ProblemEntity = {
   description: string;
   constraints: string;
   testCases: ProblemTestCase[];
+  difficulty: "easy" | "medium" | "hard";
+  categories: (
+    | "arrays"
+    | "strings"
+    | "hashmap"
+    | "math"
+    | "dp"
+    | "recursion"
+    | "sorting"
+  )[];
   createdBy: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type ProblemsFilter = {
+  difficulty?: "easy" | "medium" | "hard";
+  category?: ProblemEntity["categories"][number];
 };
 
 export type SubmissionRequest = {

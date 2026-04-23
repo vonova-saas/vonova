@@ -17,6 +17,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +43,27 @@ const emptyDraft = {
   title: "",
   description: "",
   constraints: "",
+  difficulty: "easy" as "easy" | "medium" | "hard",
+  categories: [] as (
+    | "arrays"
+    | "strings"
+    | "hashmap"
+    | "math"
+    | "dp"
+    | "recursion"
+    | "sorting"
+  )[],
 };
+
+const CATEGORY_OPTIONS = [
+  { value: "arrays", label: "Arrays" },
+  { value: "strings", label: "Strings" },
+  { value: "hashmap", label: "Hashmap" },
+  { value: "math", label: "Math" },
+  { value: "dp", label: "DP" },
+  { value: "recursion", label: "Recursion" },
+  { value: "sorting", label: "Sorting" },
+] as const;
 
 export default function ProblemSolvingManagement() {
   const queryClient = useQueryClient();
@@ -90,6 +113,7 @@ export default function ProblemSolvingManagement() {
       !draft.title.trim() ||
       !draft.description.trim() ||
       !draft.constraints.trim() ||
+      draft.categories.length === 0 ||
       validTestCases.length === 0
     ) {
       toast.error("Please complete all required fields.");
@@ -102,7 +126,18 @@ export default function ProblemSolvingManagement() {
         description: draft.description.trim(),
         constraints: draft.constraints.trim(),
         testCases: validTestCases,
+        difficulty: draft.difficulty,
+        categories: draft.categories,
       });
+  const toggleCategory = (category: (typeof CATEGORY_OPTIONS)[number]["value"]) => {
+    setDraft((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter((item) => item !== category)
+        : [...prev.categories, category],
+    }));
+  };
+
 
       await queryClient.invalidateQueries({
         queryKey: instructorProblemSolvingKeys.list(),
@@ -226,6 +261,44 @@ export default function ProblemSolvingManagement() {
                       setDraft((prev) => ({ ...prev, constraints: e.target.value }))
                     }
                   />
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Difficulty</p>
+                    <RadioGroup
+                      value={draft.difficulty}
+                      onValueChange={(value: "easy" | "medium" | "hard") =>
+                        setDraft((prev) => ({ ...prev, difficulty: value }))
+                      }
+                      className="flex flex-wrap gap-5"
+                    >
+                      {(["easy", "medium", "hard"] as const).map((level) => (
+                        <div key={level} className="flex items-center gap-2">
+                          <RadioGroupItem value={level} id={`difficulty-${level}`} />
+                          <Label htmlFor={`difficulty-${level}`} className="capitalize">
+                            {level}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Categories</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {CATEGORY_OPTIONS.map((option) => (
+                        <label
+                          key={option.value}
+                          className="flex items-center gap-2 rounded-md border px-3 py-2"
+                        >
+                          <Checkbox
+                            checked={draft.categories.includes(option.value)}
+                            onCheckedChange={() => toggleCategory(option.value)}
+                          />
+                          <span className="text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -379,15 +452,35 @@ export default function ProblemSolvingManagement() {
                         <CardTitle className="line-clamp-2 text-lg">
                           {problem.title}
                         </CardTitle>
-                        <Badge variant="secondary">
-                          {problem.testCases?.length ?? 0} cases
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            className={
+                              problem.difficulty === "easy"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : problem.difficulty === "medium"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-rose-100 text-rose-800"
+                            }
+                          >
+                            {problem.difficulty}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {problem.testCases?.length ?? 0} cases
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <p className="line-clamp-3 text-sm text-muted-foreground">
                         {problem.description}
                       </p>
+                      <div className="flex flex-wrap gap-2">
+                        {problem.categories?.map((category) => (
+                          <Badge key={category} variant="outline">
+                            {category}
+                          </Badge>
+                        ))}
+                      </div>
 
                       <div className="flex items-center gap-2">
                         <Dialog>

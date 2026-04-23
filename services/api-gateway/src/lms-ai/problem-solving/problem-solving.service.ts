@@ -4,6 +4,7 @@ import { PROBLEM_PATTERNS } from './constants/message-patterns';
 import {
   CreateProblemDto,
   CreateSubmissionDto,
+  ListProblemsQueryDto,
   RequestHintDto,
   RequestSolutionDto,
 } from './dto/problem-solving.dto';
@@ -19,8 +20,8 @@ export class ProblemSolvingGatewayService {
     return this.client.send({ cmd: PROBLEM_PATTERNS.CREATE }, { userId, dto });
   }
 
-  listProblems() {
-    return this.client.send({ cmd: PROBLEM_PATTERNS.LIST }, {});
+  listProblems(filters?: ListProblemsQueryDto) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.LIST }, { dto: filters ?? {} });
   }
 
   getProblem(id: string) {

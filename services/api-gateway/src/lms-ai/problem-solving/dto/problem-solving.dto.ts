@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsArray,
   IsMongoId,
   IsNotEmpty,
@@ -8,6 +9,17 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export const PROBLEM_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+export const PROBLEM_CATEGORIES = [
+  'arrays',
+  'strings',
+  'hashmap',
+  'math',
+  'dp',
+  'recursion',
+  'sorting',
+] as const;
 
 export class ProblemTestCaseDto {
   @ApiProperty({
@@ -66,6 +78,48 @@ export class CreateProblemDto {
   @ValidateNested({ each: true })
   @Type(() => ProblemTestCaseDto)
   testCases: ProblemTestCaseDto[];
+
+  @ApiProperty({
+    description: 'Problem difficulty level.',
+    enum: PROBLEM_DIFFICULTIES,
+    example: 'easy',
+  })
+  @IsString()
+  @IsIn(PROBLEM_DIFFICULTIES)
+  difficulty: (typeof PROBLEM_DIFFICULTIES)[number];
+
+  @ApiProperty({
+    description: 'Problem categories/tags.',
+    enum: PROBLEM_CATEGORIES,
+    isArray: true,
+    example: ['arrays', 'hashmap'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsIn(PROBLEM_CATEGORIES, { each: true })
+  categories: (typeof PROBLEM_CATEGORIES)[number][];
+}
+
+export class ListProblemsQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter by difficulty.',
+    enum: PROBLEM_DIFFICULTIES,
+    example: 'easy',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(PROBLEM_DIFFICULTIES)
+  difficulty?: (typeof PROBLEM_DIFFICULTIES)[number];
+
+  @ApiPropertyOptional({
+    description: 'Filter by category.',
+    enum: PROBLEM_CATEGORIES,
+    example: 'arrays',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(PROBLEM_CATEGORIES)
+  category?: (typeof PROBLEM_CATEGORIES)[number];
 }
 
 export class CreateSubmissionDto {

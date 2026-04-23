@@ -4,7 +4,8 @@ import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import ProblemDescription from "./problem-description";
 import Playground from "./playground";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useProblemQuery } from "@/hooks/student/use-problem-solving";
 
 type ProblemWorkspaceProps = {
@@ -46,29 +47,36 @@ export default function ProblemWorkspace({ problemId }: ProblemWorkspaceProps) {
   }
 
   return (
-    <div
-      className="h-full w-full flex flex-col md:flex-row gap-4 p-4 md:p-6 overflow-auto"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(120,120,120,0.2) 1.5px, transparent 1.5px)",
-        backgroundSize: "18px 18px",
-      }}
-    >
-      {/* Left: description */}
-      <div className="md:w-1/2 w-full flex flex-col gap-3">
-        <div className="flex items-center gap-2 mb-2">
-          <button
+    <div className="h-[calc(100vh-170px)] w-full overflow-hidden rounded-xl border border-zinc-800 bg-[#1a1a1a] text-zinc-100 shadow-lg shadow-black/20">
+      <div className="flex h-12 items-center justify-between border-b border-zinc-800 bg-[#151515] px-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="ghost"
             onClick={() => router.back()}
-            className="text-xs px-2 py-1 rounded-md border bg-background hover:bg-muted"
+            className="h-7 w-7 text-zinc-300 hover:bg-zinc-800 hover:text-white"
           >
-            Back
-          </button>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-zinc-400">Problem List</span>
+          <span className="text-zinc-600">|</span>
+          <h1 className="max-w-[240px] truncate text-sm font-semibold md:max-w-sm">
+            {problem.title}
+          </h1>
+          <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">
+            {problem.testCases?.length ?? 0} cases
+          </span>
         </div>
-        <ProblemDescription problem={problem} />
+        <div className="text-[11px] text-zinc-500">Problem Solving Workspace</div>
       </div>
 
-      <div className="md:w-1/2 w-full flex flex-col gap-3">
-        <Playground problem={problem} />
+      <div className="grid h-[calc(100%-48px)] grid-cols-1 gap-0 md:grid-cols-5">
+        <div className="h-full min-h-0 border-r border-zinc-800 md:col-span-2">
+          <ProblemDescription problem={problem} />
+        </div>
+        <div className="h-full min-h-0 md:col-span-3">
+          <Playground problem={problem} />
+          </div>
       </div>
     </div>
   );

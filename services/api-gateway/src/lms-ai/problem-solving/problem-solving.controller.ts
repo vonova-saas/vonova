@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Request,
   UnauthorizedException,
   UseGuards,
@@ -23,6 +24,7 @@ import {
 import {
   CreateProblemDto,
   CreateSubmissionDto,
+  ListProblemsQueryDto,
   RequestHintDto,
   RequestSolutionDto,
 } from './dto/problem-solving.dto';
@@ -138,8 +140,8 @@ export class ProblemSolvingGatewayController {
     status: 200,
     description: 'Problems retrieved successfully.',
   })
-  async listProblemsForStudent() {
-    return firstValueFrom(this.problemSolvingService.listProblems());
+  async listProblemsForStudent(@Query() query: ListProblemsQueryDto) {
+    return firstValueFrom(this.problemSolvingService.listProblems(query));
   }
 
   @Get('student/problems/:id')

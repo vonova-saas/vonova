@@ -1,20 +1,24 @@
 "use client";
 
+import API from "@/services/axios-client";
 import type {
   AIInteractionEntity,
   HintRequest,
   ProblemEntity,
+  ProblemsFilter,
   SolutionRequest,
   SubmissionEntity,
   SubmissionRequest,
 } from "@/types/api/student/lms/problem-solving/problem-solving.type";
-import { problemSolvingClient } from "./problem-solving.client";
 
-const STUDENT_BASE = "/api/v1/student";
+const STUDENT_BASE = "/student";
 
-export const getProblemsQueryFn = async (): Promise<ProblemEntity[]> => {
-  const response = await problemSolvingClient.get<ProblemEntity[]>(
+export const getProblemsQueryFn = async (
+  filters?: ProblemsFilter,
+): Promise<ProblemEntity[]> => {
+  const response = await API.get<ProblemEntity[]>(
     `${STUDENT_BASE}/problems`,
+    { params: filters },
   );
   return response.data;
 };
@@ -22,7 +26,7 @@ export const getProblemsQueryFn = async (): Promise<ProblemEntity[]> => {
 export const getProblemByIdQueryFn = async (
   problemId: string,
 ): Promise<ProblemEntity> => {
-  const response = await problemSolvingClient.get<ProblemEntity>(
+  const response = await API.get<ProblemEntity>(
     `${STUDENT_BASE}/problems/${problemId}`,
   );
   return response.data;
@@ -31,7 +35,7 @@ export const getProblemByIdQueryFn = async (
 export const createSubmissionMutationFn = async (
   payload: SubmissionRequest,
 ): Promise<SubmissionEntity> => {
-  const response = await problemSolvingClient.post<SubmissionEntity>(
+  const response = await API.post<SubmissionEntity>(
     `${STUDENT_BASE}/submissions`,
     payload,
   );
@@ -41,7 +45,7 @@ export const createSubmissionMutationFn = async (
 export const requestHintMutationFn = async (
   payload: HintRequest,
 ): Promise<AIInteractionEntity> => {
-  const response = await problemSolvingClient.post<AIInteractionEntity>(
+  const response = await API.post<AIInteractionEntity>(
     `${STUDENT_BASE}/problems/${payload.problemId}/hint`,
     {
       code: payload.code,
@@ -54,7 +58,7 @@ export const requestHintMutationFn = async (
 export const requestSolutionMutationFn = async (
   payload: SolutionRequest,
 ): Promise<AIInteractionEntity> => {
-  const response = await problemSolvingClient.post<AIInteractionEntity>(
+  const response = await API.post<AIInteractionEntity>(
     `${STUDENT_BASE}/problems/${payload.problemId}/solution`,
     {
       language: payload.language ?? "typescript",

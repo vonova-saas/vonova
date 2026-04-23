@@ -165,7 +165,12 @@ export default function DashboardLayout({ children }: Props) {
                       const href = userId
                         ? `/student/${userId}/${crumbSegments.slice(0, index + 1).join("/")}`
                         : `/student/${crumbSegments.slice(0, index + 1).join("/")}`;
-                      const displayName = currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
+                      const previousSegment = index > 0 ? crumbSegments[index - 1] : "";
+                      const isProblemDetailsSegment =
+                        previousSegment === "problem-solving";
+                      const displayName = isProblemDetailsSegment
+                        ? "Problem Details"
+                        : currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
                       const isLast = index === crumbSegments.length - 1;
                       const isMobile =
                         mounted &&
