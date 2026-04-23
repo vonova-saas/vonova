@@ -3,13 +3,28 @@ import type { NextFunction, Request, Response } from 'express';
 
 type JsonLike = Record<string, unknown> | unknown[] | unknown;
 
+/** Field names whose string values may contain `<` / `>` legitimately (code, math, markup). */
+const STRING_FIELDS_PRESERVE_ANGLE_BRACKETS = new Set([
+  'code',
+  'constraints',
+  'description',
+  'response',
+  'hint',
+  'explanation',
+  'content',
+  'body',
+  'message',
+  'text',
+  'markdown',
+]);
+
 function sanitizeString(value: string): string {
   return value.replace(/[<>]/g, '');
 }
 
-function sanitizeObject(value: JsonLike): JsonLike {
+function sanitizeObject(value: JsonLike, fieldName?: string): JsonLike {
   if (Array.isArray(value)) {
-    return value.map((item) => sanitizeObject(item));
+    return value.map((item) => sanitizeObject(item, fieldName));
   }
 
   if (value !== null && typeof value === 'object') {
@@ -19,12 +34,15 @@ function sanitizeObject(value: JsonLike): JsonLike {
         continue;
       }
       const key = sanitizeString(rawKey);
-      result[key] = sanitizeObject(rawVal);
+      result[key] = sanitizeObject(rawVal, rawKey);
     }
     return result;
   }
 
   if (typeof value === 'string') {
+    if (fieldName && STRING_FIELDS_PRESERVE_ANGLE_BRACKETS.has(fieldName)) {
+      return value;
+    }
     return sanitizeString(value);
   }
 

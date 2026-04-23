@@ -11,7 +11,14 @@ export class CodeExecutionError extends Error {
 
 function isSupportedLanguage(language: string): boolean {
   const normalized = language.trim().toLowerCase();
-  return normalized === 'javascript' || normalized === 'js' || normalized === 'typescript' || normalized === 'ts';
+  return (
+    normalized === 'javascript' ||
+    normalized === 'js' ||
+    normalized === 'node' ||
+    normalized === 'nodejs' ||
+    normalized === 'typescript' ||
+    normalized === 'ts'
+  );
 }
 
 export function executeUserFunction(params: {

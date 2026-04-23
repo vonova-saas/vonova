@@ -42,7 +42,9 @@ const LANGUAGE_IMAGES: Record<string, string> = {
 };
 
 function normalizeLanguage(language: string): string {
-  return language.trim().toLowerCase();
+  return String(language ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function createRunnerScript(language: string): string {
@@ -194,9 +196,58 @@ function isVmRunnableLanguage(normalized: string): boolean {
   return (
     normalized === 'javascript' ||
     normalized === 'js' ||
+    normalized === 'node' ||
+    normalized === 'nodejs' ||
     normalized === 'typescript' ||
     normalized === 'ts'
   );
+}
+
+/**
+ * Without Docker, only the Node VM runner is available. Students sometimes leave
+ * "Python" selected while pasting JS — infer JS/TS from source when safe.
+ */
+function vmLanguageForNoDocker(params: {
+  declared: string;
+  code: string;
+  functionName: string;
+}): string {
+  const { declared, code, functionName } = params;
+  if (isVmRunnableLanguage(declared)) {
+    return declared === 'js' || declared === 'node' || declared === 'nodejs'
+      ? 'javascript'
+      : declared === 'ts'
+        ? 'typescript'
+        : declared;
+  }
+
+  const fn = functionName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hasProblemFunction =
+    fn.length > 0 && new RegExp(`function\\s+${fn}\\s*\\(`, 'm').test(code);
+  const looksLikeJs =
+    hasProblemFunction ||
+    /\bfunction\s+\w+\s*\(/.test(code) ||
+    /\b(?:const|let|var)\s+\w+\s*=\s*(?:async\s+)?\([^)]*\)\s*=>/.test(code) ||
+    (/\b=>\s*\{/.test(code) && /\breturn\b/.test(code));
+
+  const looksLikePy =
+    /^\s*def\s+\w+\s*\(/m.test(code) ||
+    /if\s+__name__\s*==\s*['"]__main__['"]/m.test(code);
+  const looksLikeJava =
+    /\bpublic\s+(?:static\s+)?(?:void|int|boolean|double|String)\s+\w+\s*\(/m.test(
+      code,
+    );
+  const looksLikeCpp =
+    /#include\s*[</]/m.test(code) ||
+    /\b(int|void|bool|auto)\s+\w+\s*\([^)]*\)\s*\{/.test(code);
+
+  if (looksLikeJs && !looksLikePy && !looksLikeJava && !looksLikeCpp) {
+    return declared === 'typescript' || declared === 'ts'
+      ? 'typescript'
+      : 'javascript';
+  }
+
+  return declared;
 }
 
 function runWithVm(params: {
@@ -261,26 +312,20 @@ export async function runInDocker(params: {
   const { code, language, functionName, input, timeLimitMs, memoryLimitMb } =
     params;
   const normalizedLanguage = normalizeLanguage(language);
-  const image = LANGUAGE_IMAGES[normalizedLanguage];
-  if (!image) {
-    return {
-      status: 'runtime_error',
-      error: `Unsupported language: ${language}`,
-      executionTime: 0,
-      memoryUsed: 0,
-      stdout: '',
-      stderr: '',
-    };
-  }
-
   const useDocker = await isDockerCliAvailable();
+  const vmLanguage = vmLanguageForNoDocker({
+    declared: normalizedLanguage,
+    code,
+    functionName,
+  });
+
   if (!useDocker) {
-    if (isVmRunnableLanguage(normalizedLanguage)) {
+    if (isVmRunnableLanguage(vmLanguage)) {
       return runWithVm({
         code,
         functionName,
         input,
-        language,
+        language: vmLanguage,
         timeLimitMs,
       });
     }
@@ -288,6 +333,18 @@ export async function runInDocker(params: {
       status: 'runtime_error',
       error:
         'Docker is not available in this deployment. Only JavaScript/TypeScript can be judged here. For Python/C++/Java, run LMS with Docker (e.g. mount /var/run/docker.sock) or set JUDGE_USE_DOCKER=false and use JS/TS only.',
+      executionTime: 0,
+      memoryUsed: 0,
+      stdout: '',
+      stderr: '',
+    };
+  }
+
+  const image = LANGUAGE_IMAGES[normalizedLanguage];
+  if (!image) {
+    return {
+      status: 'runtime_error',
+      error: `Unsupported language: ${language}`,
       executionTime: 0,
       memoryUsed: 0,
       stdout: '',
@@ -335,12 +392,17 @@ export async function runInDocker(params: {
 
     if (result.spawnError) {
       dockerCliAvailable = false;
-      if (isVmRunnableLanguage(normalizedLanguage)) {
+      const fallbackVmLang = vmLanguageForNoDocker({
+        declared: normalizedLanguage,
+        code,
+        functionName,
+      });
+      if (isVmRunnableLanguage(fallbackVmLang)) {
         return runWithVm({
           code,
           functionName,
           input,
-          language,
+          language: fallbackVmLang,
           timeLimitMs,
         });
       }
