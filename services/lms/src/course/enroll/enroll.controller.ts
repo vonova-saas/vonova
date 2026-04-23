@@ -8,7 +8,14 @@ export class EnrollController {
 
   @MessagePattern({ cmd: 'app.courses.enroll' })
   enroll(
-    @Payload() data: { courseId: string; userId: string; createdBy?: string; user?: { id?: string; sub?: string }; couponCode?: string },
+    @Payload()
+    data: {
+      courseId: string;
+      userId: string;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
+      couponCode?: string;
+    },
   ) {
     const { courseId, userId, createdBy, user, couponCode } = data;
     if (!courseId || !userId)
@@ -16,8 +23,13 @@ export class EnrollController {
 
     // Extract createdBy from multiple possible sources
     const creatorId = createdBy || user?.id || user?.sub || userId;
-    
-    return this.enrollService.enrollCourse(courseId, userId, creatorId, couponCode);
+
+    return this.enrollService.enrollCourse(
+      courseId,
+      userId,
+      creatorId,
+      couponCode,
+    );
   }
 
   @MessagePattern({ cmd: 'app.courses.enrollment.get' })

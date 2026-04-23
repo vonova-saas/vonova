@@ -51,8 +51,8 @@ export class AiService {
       userId,
       dto.problemId,
     );
-    const failedTestCase = latestSubmission?.failedTestCase
-      ? JSON.stringify(latestSubmission.failedTestCase)
+    const failedTestCase = latestSubmission?.failedCases?.[0]
+      ? JSON.stringify(latestSubmission.failedCases[0])
       : 'No failed testcase available';
 
     const normalizedHintLanguage = this.normalizeHintLanguage(dto.languageHint);

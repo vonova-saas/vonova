@@ -79,7 +79,7 @@ export class RoadmapGatewayController {
   @ApiOperation({
     summary: 'Get service statistics and metrics',
     description:
-      'Returns roadmap statistics for the authenticated user. When authenticated, only that user\'s roadmaps and generations are counted.',
+      "Returns roadmap statistics for the authenticated user. When authenticated, only that user's roadmaps and generations are counted.",
   })
   @ApiResponse({
     status: 200,

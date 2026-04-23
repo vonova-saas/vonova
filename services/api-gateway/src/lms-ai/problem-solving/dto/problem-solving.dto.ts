@@ -1,4 +1,6 @@
 import {
+  IsBoolean,
+  IsDefined,
   IsIn,
   IsArray,
   IsMongoId,
@@ -23,20 +25,36 @@ export const PROBLEM_CATEGORIES = [
 
 export class ProblemTestCaseDto {
   @ApiProperty({
-    description: 'Input string for a single test case.',
-    example: 'nums = [2,7,11,15], target = 9',
+    description:
+      'Input payload passed into the target function. Can be object, array, or primitive.',
+    example: { nums: [2, 7, 11, 15], target: 9 },
   })
-  @IsString()
-  @IsNotEmpty()
-  input: string;
+  @IsDefined()
+  input: unknown;
 
   @ApiProperty({
-    description: 'Expected output for the input test case.',
-    example: '[0,1]',
+    description: 'Expected output for this test case.',
+    example: [0, 1],
   })
-  @IsString()
-  @IsNotEmpty()
-  output: string;
+  @IsDefined()
+  expected: unknown;
+
+  @ApiPropertyOptional({
+    description:
+      'If true, output arrays are compared as unordered multisets for this case.',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  ignoreArrayOrder?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Hide this case from student-facing APIs.',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isHidden?: boolean;
 }
 
 export class CreateProblemDto {
@@ -70,14 +88,47 @@ export class CreateProblemDto {
     description: 'List of test cases used for judging submissions.',
     type: [ProblemTestCaseDto],
     example: [
-      { input: 'nums = [2,7,11,15], target = 9', output: '[0,1]' },
-      { input: 'nums = [3,2,4], target = 6', output: '[1,2]' },
+      { input: { nums: [2, 7, 11, 15], target: 9 }, expected: [0, 1] },
+      { input: { nums: [3, 2, 4], target: 6 }, expected: [1, 2] },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProblemTestCaseDto)
   testCases: ProblemTestCaseDto[];
+
+  @ApiProperty({
+    description: 'Entry function name expected in user submissions.',
+    example: 'twoSum',
+  })
+  @IsString()
+  @IsNotEmpty()
+  functionName: string;
+
+  @ApiPropertyOptional({
+    description:
+      'If true, output arrays are compared as unordered multisets by default.',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowUnorderedArrayOutput?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Per-test time limit in milliseconds.',
+    example: 2000,
+    default: 2000,
+  })
+  @IsOptional()
+  timeLimit?: number;
+
+  @ApiPropertyOptional({
+    description: 'Per-test memory limit in MB.',
+    example: 128,
+    default: 128,
+  })
+  @IsOptional()
+  memoryLimit?: number;
 
   @ApiProperty({
     description: 'Problem difficulty level.',

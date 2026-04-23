@@ -1,6 +1,8 @@
 export type InstructorProblemTestCase = {
-  input: string;
-  output: string;
+  input: unknown;
+  expected: unknown;
+  ignoreArrayOrder?: boolean;
+  isHidden?: boolean;
 };
 
 export type InstructorProblemEntity = {
@@ -8,6 +10,10 @@ export type InstructorProblemEntity = {
   title: string;
   description: string;
   constraints: string;
+  functionName: string;
+  allowUnorderedArrayOutput?: boolean;
+  timeLimit?: number;
+  memoryLimit?: number;
   testCases: InstructorProblemTestCase[];
   difficulty: "easy" | "medium" | "hard";
   categories: (
@@ -28,6 +34,10 @@ export type CreateInstructorProblemRequest = {
   title: string;
   description: string;
   constraints: string;
+  functionName: string;
+  allowUnorderedArrayOutput?: boolean;
+  timeLimit?: number;
+  memoryLimit?: number;
   testCases: InstructorProblemTestCase[];
   difficulty: InstructorProblemEntity["difficulty"];
   categories: InstructorProblemEntity["categories"];

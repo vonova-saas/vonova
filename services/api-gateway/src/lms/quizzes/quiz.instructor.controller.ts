@@ -83,10 +83,7 @@ export class QuizInstructorController {
     description: 'Forbidden - Only instructors can create quizzes',
   })
   @Post()
-  async createQuiz(
-    @Request() req,
-    @Body() dto: CreateQuizDto,
-  ) {
+  async createQuiz(@Request() req, @Body() dto: CreateQuizDto) {
     const userId = req.user._id;
     return firstValueFrom(this.quizService.createInstructorQuiz(dto, userId));
   }
@@ -100,7 +97,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Update quiz (Instructor only)',
-    description: 'Updates an existing quiz with new information. Only instructors can update quizzes they created.',
+    description:
+      'Updates an existing quiz with new information. Only instructors can update quizzes they created.',
   })
   @ApiResponse({
     status: 200,
@@ -121,7 +119,9 @@ export class QuizInstructorController {
     @Body() dto: UpdateQuizDto,
   ) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.updateInstructorQuiz(quizId, dto, userId));
+    return firstValueFrom(
+      this.quizService.updateInstructorQuiz(quizId, dto, userId),
+    );
   }
 
   /**
@@ -131,7 +131,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Get instructor quizzes (Instructor only)',
-    description: 'Retrieves all quizzes created by the authenticated instructor.',
+    description:
+      'Retrieves all quizzes created by the authenticated instructor.',
   })
   @ApiResponse({
     status: 200,
@@ -155,7 +156,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Get quiz by ID (Instructor only)',
-    description: 'Retrieves a specific quiz by its ID. Only instructors can access quizzes they created.',
+    description:
+      'Retrieves a specific quiz by its ID. Only instructors can access quizzes they created.',
   })
   @ApiResponse({
     status: 200,
@@ -170,12 +172,11 @@ export class QuizInstructorController {
     description: 'Forbidden - Only instructors can access quizzes',
   })
   @Get('/:quizId')
-  async getQuizById(
-    @Request() req,
-    @Param('quizId') quizId: string,
-  ) {
+  async getQuizById(@Request() req, @Param('quizId') quizId: string) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.getInstructorQuizById(quizId, userId));
+    return firstValueFrom(
+      this.quizService.getInstructorQuizById(quizId, userId),
+    );
   }
 
   /**
@@ -186,7 +187,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Delete quiz (Instructor only)',
-    description: 'Permanently deletes a quiz and all associated data. Only instructors can delete quizzes they created.',
+    description:
+      'Permanently deletes a quiz and all associated data. Only instructors can delete quizzes they created.',
   })
   @ApiResponse({
     status: 200,
@@ -201,12 +203,11 @@ export class QuizInstructorController {
     description: 'Forbidden - Only instructors can delete quizzes',
   })
   @Delete('/:quizId')
-  async deleteQuiz(
-    @Request() req,
-    @Param('quizId') quizId: string,
-  ) {
+  async deleteQuiz(@Request() req, @Param('quizId') quizId: string) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.deleteInstructorQuiz(quizId, userId));
+    return firstValueFrom(
+      this.quizService.deleteInstructorQuiz(quizId, userId),
+    );
   }
 
   /**
@@ -217,7 +218,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Get quiz attempts (Instructor only)',
-    description: 'Retrieves all attempts made for a particular quiz. Only instructors can view attempts for their quizzes.',
+    description:
+      'Retrieves all attempts made for a particular quiz. Only instructors can view attempts for their quizzes.',
   })
   @ApiResponse({
     status: 200,
@@ -232,12 +234,11 @@ export class QuizInstructorController {
     description: 'Forbidden - Only instructors can view quiz attempts',
   })
   @Get('/:quizId/attempts')
-  async getQuizAttempts(
-    @Request() req,
-    @Param('quizId') quizId: string,
-  ) {
+  async getQuizAttempts(@Request() req, @Param('quizId') quizId: string) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.getInstructorQuizAttempts(quizId, userId));
+    return firstValueFrom(
+      this.quizService.getInstructorQuizAttempts(quizId, userId),
+    );
   }
 
   /**
@@ -248,7 +249,8 @@ export class QuizInstructorController {
    */
   @ApiOperation({
     summary: 'Get quiz statistics (Instructor only)',
-    description: 'Retrieves detailed statistics and analytics for a quiz. Only instructors can view statistics for their quizzes.',
+    description:
+      'Retrieves detailed statistics and analytics for a quiz. Only instructors can view statistics for their quizzes.',
   })
   @ApiResponse({
     status: 200,
@@ -263,11 +265,10 @@ export class QuizInstructorController {
     description: 'Forbidden - Only instructors can view quiz statistics',
   })
   @Get('/:quizId/statistics')
-  async getQuizStatistics(
-    @Request() req,
-    @Param('quizId') quizId: string,
-  ) {
+  async getQuizStatistics(@Request() req, @Param('quizId') quizId: string) {
     const userId = req.user._id;
-    return firstValueFrom(this.quizService.getInstructorQuizStatistics(quizId, userId));
+    return firstValueFrom(
+      this.quizService.getInstructorQuizStatistics(quizId, userId),
+    );
   }
 }

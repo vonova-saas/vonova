@@ -28,7 +28,7 @@ export class PresentationService {
     const presentationData = {
       ...dto,
       createdBy: userId,
-      status: dto.status || 'PUBLISHED'
+      status: dto.status || 'PUBLISHED',
     };
     return await this.presentationModel.create(presentationData);
   }
@@ -78,27 +78,24 @@ export class PresentationService {
     } = query;
 
     const filter: any = {};
-    
+
     // Role-based filtering logic
     if (userRole === 'INSTRUCTOR_USER') {
       // Instructors can see all presentations they created, plus all published presentations
       if (userId) {
-        filter.$or = [
-          { createdBy: userId },
-          { status: 'PUBLISHED' }
-        ];
+        filter.$or = [{ createdBy: userId }, { status: 'PUBLISHED' }];
       }
     } else {
       // Students and other roles only see published presentations
       filter.status = 'PUBLISHED';
     }
-    
+
     // Apply explicit status filter if provided (but don't override role-based logic for students)
     if (status && userRole === 'INSTRUCTOR_USER') {
       if (userId) {
         filter.$or = [
           { createdBy: userId, status: status },
-          { status: 'PUBLISHED' }
+          { status: 'PUBLISHED' },
         ];
       }
     }
@@ -136,44 +133,57 @@ export class PresentationService {
     const presentationsWithUrls = await Promise.all(
       items.map(async (presentation) => {
         const presentationObj = presentation.toObject();
-        
+
         if (presentation.fileAssetId) {
           try {
-            const asset = await this.assetModel.findById(presentation.fileAssetId);
+            const asset = await this.assetModel.findById(
+              presentation.fileAssetId,
+            );
             if (asset?.objectKey) {
               let contentUrl: string | undefined;
-              
+
               // Check if we have a valid stored presigned URL
-              if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+              if (
+                asset.urls?.presignedUrl &&
+                asset.urls?.presignedUrlExpiresAt
+              ) {
                 const now = new Date();
                 const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-                
+
                 if (now < expiresAt) {
                   contentUrl = asset.urls.presignedUrl;
                 }
               }
-              
+
               // Generate new presigned URL if none exists or expired
               if (!contentUrl) {
-                contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+                contentUrl = await this.s3Service.getPresignedGetUrl(
+                  asset.objectKey,
+                );
                 // Store the new presigned URL in database with 1 hour expiration
                 const expiresAt = new Date(Date.now() + 3600 * 1000);
-                await this.assetModel.findByIdAndUpdate(presentation.fileAssetId, {
-                  'urls.presignedUrl': contentUrl,
-                  'urls.presignedUrlExpiresAt': expiresAt,
-                });
+                await this.assetModel.findByIdAndUpdate(
+                  presentation.fileAssetId,
+                  {
+                    'urls.presignedUrl': contentUrl,
+                    'urls.presignedUrlExpiresAt': expiresAt,
+                  },
+                );
               }
-              
+
               (presentationObj as any).contentUrl = contentUrl;
             }
           } catch (error) {
-            console.error(`Failed to generate presigned URL for presentation ${presentation._id}:`, error);
+            console.error(
+              `Failed to generate presigned URL for presentation ${presentation._id}:`,
+              error,
+            );
             // Continue without presigned URL
           }
         }
-        
+
         return presentationObj;
-      })
+      }),
     );
 
     return {
@@ -188,28 +198,30 @@ export class PresentationService {
   async findById(id: string) {
     const doc = await this.presentationModel.findById(id);
     if (!doc) throw new NotFoundException('Presentation not found');
-    
+
     const presentationObj = doc.toObject();
-    
+
     if (doc.fileAssetId) {
       try {
         const asset = await this.assetModel.findById(doc.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
-          
+
           // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-            
+
             if (now < expiresAt) {
               contentUrl = asset.urls.presignedUrl;
             }
           }
-          
+
           // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+            contentUrl = await this.s3Service.getPresignedGetUrl(
+              asset.objectKey,
+            );
             // Store the new presigned URL in database with 1 hour expiration
             const expiresAt = new Date(Date.now() + 3600 * 1000);
             await this.assetModel.findByIdAndUpdate(doc.fileAssetId, {
@@ -217,15 +229,18 @@ export class PresentationService {
               'urls.presignedUrlExpiresAt': expiresAt,
             });
           }
-          
+
           (presentationObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
-        console.error(`Failed to generate presigned URL for presentation ${doc._id}:`, error);
+        console.error(
+          `Failed to generate presigned URL for presentation ${doc._id}:`,
+          error,
+        );
         // Continue without presigned URL
       }
     }
-    
+
     return presentationObj;
   }
 
@@ -265,44 +280,54 @@ export class PresentationService {
   }
 
   async getAllPresentationLinksService() {
-    const presentations = await this.presentationModel.find({ fileAssetId: { $exists: true, $ne: null } });
-    
+    const presentations = await this.presentationModel.find({
+      fileAssetId: { $exists: true, $ne: null },
+    });
+
     const links = await Promise.all(
       presentations.map(async (presentation) => {
         try {
           if (presentation.fileAssetId) {
-            const asset = await this.assetModel.findById(presentation.fileAssetId);
+            const asset = await this.assetModel.findById(
+              presentation.fileAssetId,
+            );
             if (asset?.objectKey) {
-              const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+              const presignedUrl = await this.s3Service.getPresignedGetUrl(
+                asset.objectKey,
+              );
               return {
                 id: presentation._id,
                 title: presentation.title,
                 slug: presentation.slug,
-                fileName: asset.originalFileName || asset.objectKey.split('/').pop(),
+                fileName:
+                  asset.originalFileName || asset.objectKey.split('/').pop(),
                 objectKey: asset.objectKey,
                 presignedUrl,
                 uploadedAt: (presentation as any).createdAt,
                 contentType: asset.mimeType,
-                size: asset.size
+                size: asset.size,
               };
             }
           }
         } catch (error) {
-          console.error(`Failed to generate presigned URL for presentation ${presentation._id}:`, error);
+          console.error(
+            `Failed to generate presigned URL for presentation ${presentation._id}:`,
+            error,
+          );
           return {
             id: presentation._id,
             title: presentation.title,
             slug: presentation.slug,
-            error: 'Failed to generate presigned URL'
+            error: 'Failed to generate presigned URL',
           };
         }
         return null;
-      })
+      }),
     );
 
     return {
-      links: links.filter(link => link !== null),
-      total: links.filter(link => link !== null).length
+      links: links.filter((link) => link !== null),
+      total: links.filter((link) => link !== null).length,
     };
   }
 }

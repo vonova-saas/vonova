@@ -126,7 +126,7 @@ describe('RoadmapService', () => {
           roadmapId: data.roadmapId,
           toObject: () => data,
           userId: { toString: () => data.userId },
-        } as any),
+        }),
       );
 
       for (const skill_level of levels) {

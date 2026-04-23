@@ -74,10 +74,23 @@ export class Roadmap {
 
   @Prop({
     required: true,
-    enum: ['beginner', 'intermediate', 'advanced', 'Beginner', 'Intermediate', 'Advanced'],
+    enum: [
+      'beginner',
+      'intermediate',
+      'advanced',
+      'Beginner',
+      'Intermediate',
+      'Advanced',
+    ],
     index: true,
   })
-  skill_level: 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
+  skill_level:
+    | 'beginner'
+    | 'intermediate'
+    | 'advanced'
+    | 'Beginner'
+    | 'Intermediate'
+    | 'Advanced';
 
   @Prop({
     required: true,

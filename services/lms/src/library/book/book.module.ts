@@ -7,7 +7,10 @@ import {
   BookProgress,
   BookProgressSchema,
 } from '../schema/book/book-progress.schema';
-import { LibraryAsset, LibraryAssetSchema } from '../schema/library-asset.schema';
+import {
+  LibraryAsset,
+  LibraryAssetSchema,
+} from '../schema/library-asset.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 
 @Module({

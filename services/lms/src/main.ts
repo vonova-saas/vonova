@@ -21,9 +21,9 @@ async function bootstrap() {
         queue: 'vonova-lms-queue',
         ...(config.NATS_USER &&
           config.NATS_PASSWORD && {
-          user: config.NATS_USER,
-          pass: config.NATS_PASSWORD,
-        }),
+            user: config.NATS_USER,
+            pass: config.NATS_PASSWORD,
+          }),
       },
     },
   );

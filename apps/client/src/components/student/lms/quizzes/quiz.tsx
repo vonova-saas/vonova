@@ -4,19 +4,22 @@ import QuizList from "./quiz-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllQuizzesMutationFn } from "@/services/student/lms/quizzes/quiz.api";
-import { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
+import { getAllQuizzesMutationFn, getStudentQuizAttemptsMutationFn } from "@/services/student/lms/quizzes/quiz.api";
+import { QuizType, StudentQuizAttempt } from "@/types/api/student/lms/quizzes/quiz.type";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from "@/components/ui/pagination";
 import { BookOpen, Search, Filter, Component, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUserId } from "@/hooks";
 
 export default function Quiz() {
+  const userId = useUserId();
   const [search, setSearch] = useState("");
   const [topic, setTopic] = useState("All");
   const [page, setPage] = useState(1);
   const [quizzes, setQuizzes] = useState<QuizType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<StudentQuizAttempt[]>([]);
   const pageSize = 6;
 
   const loadQuizzes = async () => {
@@ -27,7 +30,30 @@ export default function Quiz() {
       const list = Array.isArray(res)
         ? res
         : (res as { data?: QuizType[] })?.data ?? [];
-      setQuizzes(list);
+      let completedQuizIds = new Set<string>();
+      if (userId) {
+        const attemptsRes = await getStudentQuizAttemptsMutationFn();
+        const rawAttempts = Array.isArray((attemptsRes as { data?: unknown[] })?.data)
+          ? ((attemptsRes as { data?: StudentQuizAttempt[] }).data ?? [])
+          : [];
+        setAttempts(rawAttempts);
+        completedQuizIds = new Set(
+          rawAttempts
+            .map((attempt) => {
+              const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
+                ?? (attempt as { quizId?: unknown }).quizId;
+              return quizRef && typeof quizRef === "object"
+                ? String((quizRef as { _id?: string })._id ?? "")
+                : String(quizRef ?? "");
+            })
+            .filter(Boolean),
+        );
+      }
+      const withStatus = list.map((quiz) => ({
+        ...quiz,
+        alreadyAttempted: completedQuizIds.has(quiz._id),
+      }));
+      setQuizzes(withStatus);
     } catch (e: unknown) {
       let msg = "Failed to load quizzes";
       if (e && typeof e === "object" && "message" in e) msg = String((e as { message?: string }).message) || msg;
@@ -61,8 +87,17 @@ export default function Quiz() {
     });
   }, [search, topic, quizzes]);
 
-  const totalPages = Math.ceil(filteredQuizzes.length / pageSize);
-  const paginatedQuizzes = filteredQuizzes.slice((page - 1) * pageSize, page * pageSize);
+  const availableQuizzes = useMemo(
+    () => filteredQuizzes.filter((quiz) => !quiz.alreadyAttempted),
+    [filteredQuizzes],
+  );
+  const completedQuizzes = useMemo(
+    () => filteredQuizzes.filter((quiz) => quiz.alreadyAttempted),
+    [filteredQuizzes],
+  );
+
+  const totalPages = Math.ceil(availableQuizzes.length / pageSize);
+  const paginatedQuizzes = availableQuizzes.slice((page - 1) * pageSize, page * pageSize);
 
   // Reset to first page when filter/search changes
   useEffect(() => {
@@ -160,16 +195,33 @@ export default function Quiz() {
           <span className="text-lg font-semibold text-destructive mb-2">{error}</span>
           <span className="text-sm text-muted-foreground">Please try again later.</span>
         </div>
-      ) : filteredQuizzes.length === 0 ? (
+      ) : availableQuizzes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <BookOpen className="w-16 h-16 text-primary/20 mb-4" />
           <span className="text-lg font-semibold text-muted-foreground mb-2">No quizzes found</span>
           <span className="text-sm text-muted-foreground">Try adjusting your search or filter to find quizzes.</span>
         </div>
       ) : (
-        <QuizList quizzes={paginatedQuizzes} />
+        <div className="space-y-10">
+          <section>
+            <h2 className="text-xl font-semibold mb-4">Available Quizzes</h2>
+            <QuizList quizzes={paginatedQuizzes} mode="available" />
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold mb-4">Completed Quizzes</h2>
+            {completedQuizzes.length > 0 ? (
+              <QuizList quizzes={completedQuizzes} mode="completed" />
+            ) : (
+              <Card>
+                <CardContent className="py-6 text-muted-foreground">
+                  No completed quizzes yet.
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        </div>
       )}
-      {totalPages > 1 && filteredQuizzes.length > 0 && (
+      {totalPages > 1 && availableQuizzes.length > 0 && (
         <div className="mt-8 flex justify-center">
           <Pagination>
             <PaginationContent>

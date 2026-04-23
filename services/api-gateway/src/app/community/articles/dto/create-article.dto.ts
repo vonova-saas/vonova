@@ -100,7 +100,11 @@ export class CreateArticleDto {
       'api',
       'microservices',
     ],
-    { each: true, message: 'Each category must be one of: architecture, devops, backend, nestjs, databases, frontend, mobile, ai, security, typescript, javascript, nodejs, webdev, api, microservices' },
+    {
+      each: true,
+      message:
+        'Each category must be one of: architecture, devops, backend, nestjs, databases, frontend, mobile, ai, security, typescript, javascript, nodejs, webdev, api, microservices',
+    },
   )
   category: string[];
 

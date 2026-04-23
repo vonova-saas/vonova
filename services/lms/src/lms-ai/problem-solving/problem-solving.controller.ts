@@ -23,13 +23,17 @@ export class ProblemSolvingController {
   ) {}
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.CREATE })
-  async createProblem(@Payload() data: { userId: string; dto: CreateProblemDto }) {
+  async createProblem(
+    @Payload() data: { userId: string; dto: CreateProblemDto },
+  ) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.CREATE} received`);
     return this.problemService.createProblem(data.dto, data.userId);
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.DELETE })
-  async deleteProblem(@Payload() data: { userId: string; dto: DeleteProblemDto }) {
+  async deleteProblem(
+    @Payload() data: { userId: string; dto: DeleteProblemDto },
+  ) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.DELETE} received`);
     return this.problemService.deleteProblem(data.dto.id, data.userId);
   }
@@ -54,6 +58,17 @@ export class ProblemSolvingController {
     return this.submissionService.createSubmission(data.dto, data.userId);
   }
 
+  @MessagePattern({ cmd: PROBLEM_PATTERNS.SUBMIT_STATUS })
+  async getSubmissionStatus(
+    @Payload() data: { userId: string; submissionId: string },
+  ) {
+    this.logger.log(`NATS ${PROBLEM_PATTERNS.SUBMIT_STATUS} received`);
+    return this.submissionService.getSubmissionStatus(
+      data.submissionId,
+      data.userId,
+    );
+  }
+
   @MessagePattern({ cmd: PROBLEM_PATTERNS.AI_HINT })
   async requestHint(@Payload() data: { userId: string; dto: RequestHintDto }) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.AI_HINT} received`);
@@ -74,4 +89,3 @@ export class ProblemSolvingController {
     return this.aiService.requestSolution(data.dto, data.userId);
   }
 }
-

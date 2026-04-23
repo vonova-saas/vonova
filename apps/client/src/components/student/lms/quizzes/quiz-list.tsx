@@ -9,9 +9,10 @@ import { useUserId } from "@/hooks";
 
 type QuizListProps = {
   quizzes: QuizType[];
+  mode?: "available" | "completed";
 };
 
-export default function QuizList({ quizzes }: QuizListProps) {
+export default function QuizList({ quizzes, mode = "available" }: QuizListProps) {
   const userId = useUserId();
   const { fetchAttempts, getLatestAttempt } = useQuizStore();
 
@@ -75,12 +76,25 @@ export default function QuizList({ quizzes }: QuizListProps) {
                   <span>No attempts yet.</span>
                 )}
               </div>
-              <Link
-                href={`/student/${userId}/quizzes/${quiz._id}`}
-                className="w-full mt-4"
-              >
-                <Button className="w-full cursor-pointer">Attempt Now</Button>
-              </Link>
+              {mode === "available" ? (
+                <Link
+                  href={`/student/${userId}/quizzes/${quiz._id}`}
+                  className="w-full mt-4"
+                >
+                  <Button className="w-full cursor-pointer" disabled={Boolean(quiz.alreadyAttempted)}>
+                    {quiz.alreadyAttempted ? "You already completed this quiz" : "Attempt Now"}
+                  </Button>
+                </Link>
+              ) : (
+                <Link
+                  href={getLatestAttempt(quiz._id)?.id ? `/student/${userId}/quizzes/attempts/${getLatestAttempt(quiz._id)?.id}` : `/student/${userId}/quizzes/${quiz._id}`}
+                  className="w-full mt-4"
+                >
+                  <Button className="w-full cursor-pointer" variant="outline">
+                    View Attempt
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         ))

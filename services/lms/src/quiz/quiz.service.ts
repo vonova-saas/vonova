@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Quiz } from './schema/quiz.schema';
@@ -17,7 +21,6 @@ export class QuizService {
     @InjectModel(QuizAnswer.name) private answerModel: Model<QuizAnswer>,
   ) {}
 
-  
   // ===== INSTRUCTOR-SPECIFIC METHODS =====
 
   async createInstructorQuiz(dto: CreateQuizDto, userId: string) {
@@ -25,7 +28,11 @@ export class QuizService {
     return quiz;
   }
 
-  async updateInstructorQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
+  async updateInstructorQuiz(
+    quizId: string,
+    dto: UpdateQuizDto,
+    userId: string,
+  ) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
@@ -90,9 +97,7 @@ export class QuizService {
       throw new NotFoundException('Quiz not found or access denied');
     }
 
-    return this.answerModel
-      .find({ quiz: quizId })
-      .sort({ createdAt: -1 });
+    return this.answerModel.find({ quiz: quizId }).sort({ createdAt: -1 });
   }
 
   async getInstructorQuizStatistics(quizId: string, userId: string) {
@@ -106,7 +111,7 @@ export class QuizService {
 
     const attempts = await this.answerModel.find({ quiz: quizId });
     const totalAttempts = attempts.length;
-    
+
     if (totalAttempts === 0) {
       return {
         totalAttempts: 0,
@@ -118,11 +123,15 @@ export class QuizService {
       };
     }
 
-    const scores = attempts.map(attempt => attempt.percentage);
-    const averageScore = scores.reduce((sum, score) => sum + score, 0) / totalAttempts;
+    const scores = attempts.map((attempt) => attempt.percentage);
+    const averageScore =
+      scores.reduce((sum, score) => sum + score, 0) / totalAttempts;
     const highestScore = Math.max(...scores);
     const lowestScore = Math.min(...scores);
-    const passRate = (attempts.filter(attempt => attempt.percentage >= 70).length / totalAttempts) * 100;
+    const passRate =
+      (attempts.filter((attempt) => attempt.percentage >= 70).length /
+        totalAttempts) *
+      100;
 
     return {
       totalAttempts,
@@ -138,20 +147,22 @@ export class QuizService {
 
   async getAvailableQuizzesForStudents(userId?: string) {
     // Return quizzes with completion status
-    const quizzes = await this.quizModel.find().select('-questions.correctOptionId');
-    
+    const quizzes = await this.quizModel
+      .find()
+      .select('-questions.correctOptionId');
+
     if (!userId) {
       return quizzes;
     }
-    
+
     // Add completion status for authenticated user
     const quizzesWithStatus = await Promise.all(
       quizzes.map(async (quiz) => {
-        const existingAttempt = await this.answerModel.findOne({ 
-          quiz: quiz._id, 
-          userId 
+        const existingAttempt = await this.answerModel.findOne({
+          quiz: quiz._id,
+          userId,
         });
-        
+
         const quizObj = quiz.toObject();
         return {
           ...quizObj,
@@ -160,9 +171,9 @@ export class QuizService {
           score: existingAttempt?.score || null,
           percentage: existingAttempt?.percentage || null,
         };
-      })
+      }),
     );
-    
+
     return quizzesWithStatus;
   }
 
@@ -171,7 +182,10 @@ export class QuizService {
     if (!quiz) throw new NotFoundException('Quiz not found');
 
     // Check if student has already attempted this quiz
-    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+    const existingAttempt = await this.answerModel.findOne({
+      quiz: quizId,
+      userId,
+    });
 
     // If student hasn't attempted, return quiz without correct answers
     if (!existingAttempt) {
@@ -179,10 +193,10 @@ export class QuizService {
       // Remove correct answers from questions
       const quizWithoutAnswers = {
         ...quizObj,
-        questions: quizObj.questions.map(q => {
+        questions: quizObj.questions.map((q) => {
           const { correctOptionId, ...questionWithoutAnswer } = q;
           return questionWithoutAnswer;
-        })
+        }),
       };
       return {
         ...quizWithoutAnswers,
@@ -196,8 +210,10 @@ export class QuizService {
     const attemptObj = existingAttempt.toObject();
 
     // Map student's answers to questions
-    const questionsWithAnswers = quizObj.questions.map(question => {
-      const studentAnswer = attemptObj.answers.find(ans => ans.questionId === question.id);
+    const questionsWithAnswers = quizObj.questions.map((question) => {
+      const studentAnswer = attemptObj.answers.find(
+        (ans) => ans.questionId === question.id,
+      );
       return {
         ...question,
         studentSelectedOptionId: studentAnswer?.selectedOptionId || null,
@@ -215,18 +231,25 @@ export class QuizService {
         total: attemptObj.total,
         percentage: attemptObj.percentage,
         submittedAt: attemptObj.submittedAt,
-      }
+      },
     };
   }
 
-  async submitStudentQuiz(quizId: string, answers: SubmitAnswerItemDto[], userId: string) {
+  async submitStudentQuiz(
+    quizId: string,
+    answers: SubmitAnswerItemDto[],
+    userId: string,
+  ) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
 
     // Check if student has already attempted this quiz
-    const existingAttempt = await this.answerModel.findOne({ quiz: quizId, userId });
+    const existingAttempt = await this.answerModel.findOne({
+      quiz: quizId,
+      userId,
+    });
     if (existingAttempt) {
-      throw new Error(' QUIZ ALREADY COMPLETED - This quiz allows only ONE attempt. You have already submitted this quiz on ' + existingAttempt.submittedAt.toDateString() + '. You can only view your results now.');
+      throw new ConflictException('You already attempted this quiz');
     }
 
     const totalQuestions = quiz.questions.length;
@@ -239,16 +262,19 @@ export class QuizService {
     }[] = [];
 
     // Process all questions with student answers and correct info
-    const questionsWithResults = quiz.questions.map(question => {
-      const studentAnswer = answers.find(ans => ans.questionId === question.id);
+    const questionsWithResults = quiz.questions.map((question) => {
+      const studentAnswer = answers.find(
+        (ans) => ans.questionId === question.id,
+      );
       const selectedOptionId = studentAnswer?.selectedOptionId || null;
-      
+
       // Only count as answered if student provided an answer
       const isAnswered = selectedOptionId !== null;
       if (isAnswered) answeredQuestions++;
-      
+
       // Only count as correct if answered and matches
-      const correct = isAnswered && question.correctOptionId === selectedOptionId;
+      const correct =
+        isAnswered && question.correctOptionId === selectedOptionId;
       if (correct) score++;
 
       // Add all questions to formatted answers (including unanswered)
@@ -269,7 +295,9 @@ export class QuizService {
 
       // If answer is wrong, add correct answer info
       if (!correct && selectedOptionId) {
-        const correctOption = question.options.find(opt => opt.id === question.correctOptionId);
+        const correctOption = question.options.find(
+          (opt) => opt.id === question.correctOptionId,
+        );
         questionResult.correctOptionId = question.correctOptionId;
         questionResult.correctOptionText = correctOption?.text || '';
       }
@@ -277,16 +305,28 @@ export class QuizService {
       return questionResult;
     });
 
-    const percentage = answeredQuestions ? Math.round((score / answeredQuestions) * 10000) / 100 : 0;
+    const percentage = answeredQuestions
+      ? Math.round((score / answeredQuestions) * 10000) / 100
+      : 0;
 
-    const attempt = await this.answerModel.create({
-      quiz: quiz._id,
-      userId,
-      answers: formatted,
-      score,
-      total: answeredQuestions, // Store answered questions count
-      percentage,
-    });
+    let attempt: QuizAnswer;
+    try {
+      attempt = await this.answerModel.create({
+        quiz: quiz._id,
+        userId,
+        answers: formatted,
+        score,
+        total: answeredQuestions, // Store answered questions count
+        percentage,
+      });
+    } catch (error: unknown) {
+      const mongoError = error as { code?: number };
+      // Compound unique index (quiz + userId) guarantees one attempt only even under concurrency.
+      if (mongoError?.code === 11000) {
+        throw new ConflictException('You already attempted this quiz');
+      }
+      throw error;
+    }
 
     // Return attempt with all questions and results
     return {
@@ -318,7 +358,10 @@ export class QuizService {
   async getStudentQuizAttempts(userId: string) {
     const attempts = await this.answerModel
       .find({ userId })
-      .populate('quiz', 'title description topic noOfQuestions createdAt questions')
+      .populate(
+        'quiz',
+        'title description topic noOfQuestions createdAt questions',
+      )
       .sort({ createdAt: -1 });
 
     // Enhance attempts with correct answers for incorrect responses
@@ -327,13 +370,17 @@ export class QuizService {
         const quiz = await this.quizModel.findById(attempt.quiz);
         if (!quiz) return attempt;
 
-        const answersWithCorrectInfo = attempt.answers.map(answer => {
-          const question = quiz.questions.find(q => q.id === answer.questionId);
+        const answersWithCorrectInfo = attempt.answers.map((answer) => {
+          const question = quiz.questions.find(
+            (q) => q.id === answer.questionId,
+          );
           if (!question) return answer;
 
           // If answer is incorrect, add correct answer info
           if (!answer.correct) {
-            const correctOption = question.options.find(opt => opt.id === question.correctOptionId);
+            const correctOption = question.options.find(
+              (opt) => opt.id === question.correctOptionId,
+            );
             return {
               ...answer,
               correctOptionId: question.correctOptionId,
@@ -349,11 +396,9 @@ export class QuizService {
         const attemptObj = attempt.toObject();
         attemptObj.answers = answersWithCorrectInfo;
         return attemptObj;
-      })
+      }),
     );
 
     return enhancedAttempts;
   }
-
-  
-  }
+}

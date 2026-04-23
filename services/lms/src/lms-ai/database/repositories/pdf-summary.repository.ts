@@ -9,13 +9,16 @@ export class PdfSummaryRepository {
   constructor(
     @InjectModel(PdfSummary.name, LMS_AI_CONNECTION_NAME)
     private pdfSummaryModel: Model<PdfSummaryDocument>,
-  ) { }
+  ) {}
 
   /**
    * Builds a query that matches user_id as either string or ObjectId (24-char hex).
    * Ensures sessions are found regardless of how user_id was stored in the DB.
    */
-  private userMatch(userId: string): { user_id?: string; $or?: Array<{ user_id: string | Types.ObjectId }> } {
+  private userMatch(userId: string): {
+    user_id?: string;
+    $or?: Array<{ user_id: string | Types.ObjectId }>;
+  } {
     const strId = String(userId).trim();
     try {
       if (/^[a-fA-F0-9]{24}$/.test(strId)) {
@@ -125,11 +128,11 @@ export class PdfSummaryRepository {
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage });
     }
-    pipeline.push({ $group: { _id: null, avg: { $avg: '$processing_time_ms' } } });
+    pipeline.push({
+      $group: { _id: null, avg: { $avg: '$processing_time_ms' } },
+    });
 
-    const result = await this.pdfSummaryModel
-      .aggregate(pipeline)
-      .exec();
+    const result = await this.pdfSummaryModel.aggregate(pipeline).exec();
     return result.length > 0 ? result[0].avg || 0 : 0;
   }
 

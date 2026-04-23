@@ -5,6 +5,7 @@ import {
   getHintsHistoryQueryFn,
   getProblemByIdQueryFn,
   getProblemsQueryFn,
+  getSubmissionStatusQueryFn,
   requestHintMutationFn,
   requestSolutionMutationFn,
 } from "@/services/student/lms/problem-solving/problem-solving.api";
@@ -25,6 +26,8 @@ export const problemSolvingKeys = {
   hints: (problemId: string) => [...problemSolvingKeys.all, "hints", problemId] as const,
   submissions: (problemId: string) =>
     [...problemSolvingKeys.all, "submissions", problemId] as const,
+  submissionStatus: (jobId: string) =>
+    [...problemSolvingKeys.all, "submission-status", jobId] as const,
 };
 
 export const useProblemsQuery = (filters?: ProblemsFilter) =>
@@ -60,5 +63,14 @@ export const useHintsHistoryQuery = (problemId: string) =>
 export const useSolutionMutation = () =>
   useMutation({
     mutationFn: (payload: SolutionRequest) => requestSolutionMutationFn(payload),
+  });
+
+export const useSubmissionStatusQuery = (jobId: string) =>
+  useQuery({
+    queryKey: problemSolvingKeys.submissionStatus(jobId),
+    queryFn: () => getSubmissionStatusQueryFn(jobId),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) =>
+      query.state.data?.status === "pending" ? 1200 : false,
   });
 

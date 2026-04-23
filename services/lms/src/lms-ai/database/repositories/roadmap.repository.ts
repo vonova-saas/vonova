@@ -9,13 +9,16 @@ export class RoadmapRepository {
   constructor(
     @InjectModel(Roadmap.name, LMS_AI_CONNECTION_NAME)
     private roadmapModel: Model<RoadmapDocument>,
-  ) { }
+  ) {}
 
   /**
    * Build query to match userId as string or ObjectId (24-char hex),
    * to support legacy docs where userId may have been stored as ObjectId.
    */
-  private userMatch(userId: string): { userId?: string; $or?: Array<{ userId: string | Types.ObjectId }> } {
+  private userMatch(userId: string): {
+    userId?: string;
+    $or?: Array<{ userId: string | Types.ObjectId }>;
+  } {
     const strId = String(userId).trim();
     try {
       if (/^[a-fA-F0-9]{24}$/.test(strId)) {

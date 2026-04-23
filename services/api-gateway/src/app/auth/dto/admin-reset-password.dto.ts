@@ -3,7 +3,8 @@ import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class AdminResetPasswordBodyDto {
   @ApiProperty({
-    description: 'Current password (for seeded admins, the temporary password from ops)',
+    description:
+      'Current password (for seeded admins, the temporary password from ops)',
     example: 'Temp@12345',
   })
   @IsString()

@@ -24,9 +24,7 @@ export class UploadController {
   ) {
     const { itemType, itemId, metadata, user } = data;
     if (!itemType || !itemId || !metadata)
-      throw new Error(
-        'itemType, itemId and metadata are required',
-      );
+      throw new Error('itemType, itemId and metadata are required');
 
     // Extract userId from multiple possible sources like course module
     const userId = user?.id || user?.sub || user?._id;
@@ -61,9 +59,7 @@ export class UploadController {
   ) {
     const { itemType, itemId, file, user } = data;
     if (!itemType || !itemId || !file)
-      throw new Error(
-        'itemType, itemId and file are required',
-      );
+      throw new Error('itemType, itemId and file are required');
 
     // Extract userId from multiple possible sources like course module
     const userId = user?.id || user?.sub || user?._id;
@@ -125,9 +121,7 @@ export class UploadController {
   ) {
     const { itemType, itemId, assetId, objectKey, user } = data;
     if (!itemType || !itemId || !assetId || !objectKey)
-      throw new Error(
-        'itemType, itemId, assetId and objectKey are required',
-      );
+      throw new Error('itemType, itemId, assetId and objectKey are required');
 
     // Extract userId from multiple possible sources like course module
     const userId = user?.id || user?.sub || user?._id;

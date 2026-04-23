@@ -9,11 +9,8 @@ import { QuizGatewayService } from './quiz.gateway.service';
 
 @Module({
   imports: [NatsClientModule, AuthGatewayModule],
-  controllers: [
-    QuizInstructorController,
-    QuizStudentController,
-  ],
+  controllers: [QuizInstructorController, QuizStudentController],
   providers: [QuizGatewayService, JwtAuthGuard, RolesGuard],
   exports: [JwtAuthGuard, RolesGuard],
 })
-export class QuizGatewayModule { }
+export class QuizGatewayModule {}

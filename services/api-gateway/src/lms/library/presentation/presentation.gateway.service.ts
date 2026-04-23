@@ -45,7 +45,7 @@ export class PresentationGatewayService {
     const queryWithUser = {
       ...query,
       userRole: query?.userRole,
-      userId: query?.userId
+      userId: query?.userId,
     };
     return this.client.send(
       { cmd: 'library.presentation.getAll' },
@@ -68,9 +68,6 @@ export class PresentationGatewayService {
   }
 
   getAllLinks() {
-    return this.client.send(
-      { cmd: 'library.presentation.getAllLinks' },
-      {},
-    );
+    return this.client.send({ cmd: 'library.presentation.getAllLinks' }, {});
   }
 }

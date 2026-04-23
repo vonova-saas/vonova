@@ -14,11 +14,14 @@ export class CourseGatewayService {
   ) {}
 
   createCourse(dto: CreateCourseDto, createdBy: string) {
-    return this.client.send({ cmd: 'app.courses.create' }, { 
-      dto, 
-      createdBy,
-      user: { id: createdBy }
-    });
+    return this.client.send(
+      { cmd: 'app.courses.create' },
+      {
+        dto,
+        createdBy,
+        user: { id: createdBy },
+      },
+    );
   }
 
   updateCourse(courseId: string, dto: UpdateCourseDto, ownerId: string) {

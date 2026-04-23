@@ -4,7 +4,10 @@ import { LibraryController } from './library.controller';
 import { LibraryService } from './library.service';
 import { Book, BookSchema } from '../schema/book/book.schema';
 import { Guide, GuideSchema } from '../schema/guide.schema';
-import { Presentation, PresentationSchema } from '../schema/presentation.schema';
+import {
+  Presentation,
+  PresentationSchema,
+} from '../schema/presentation.schema';
 
 @Module({
   imports: [

@@ -21,7 +21,10 @@ export class ProblemSolvingGatewayService {
   }
 
   listProblems(filters?: ListProblemsQueryDto) {
-    return this.client.send({ cmd: PROBLEM_PATTERNS.LIST }, { dto: filters ?? {} });
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.LIST },
+      { dto: filters ?? {} },
+    );
   }
 
   getProblem(id: string) {
@@ -39,16 +42,28 @@ export class ProblemSolvingGatewayService {
     return this.client.send({ cmd: PROBLEM_PATTERNS.SUBMIT }, { userId, dto });
   }
 
+  getSubmissionStatus(userId: string, submissionId: string) {
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.SUBMIT_STATUS },
+      { userId, submissionId },
+    );
+  }
+
   requestHint(userId: string, dto: RequestHintDto) {
     return this.client.send({ cmd: PROBLEM_PATTERNS.AI_HINT }, { userId, dto });
   }
 
   getHints(userId: string, problemId: string) {
-    return this.client.send({ cmd: PROBLEM_PATTERNS.AI_HINTS }, { userId, problemId });
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.AI_HINTS },
+      { userId, problemId },
+    );
   }
 
   requestSolution(userId: string, dto: RequestSolutionDto) {
-    return this.client.send({ cmd: PROBLEM_PATTERNS.AI_SOLUTION }, { userId, dto });
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.AI_SOLUTION },
+      { userId, dto },
+    );
   }
 }
-

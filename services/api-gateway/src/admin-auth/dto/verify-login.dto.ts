@@ -6,7 +6,7 @@ export class VerifyLoginDto {
     description: 'Admin email address',
     example: 'admin@vonova.com',
     type: String,
-    format: 'email'
+    format: 'email',
   })
   @IsEmail()
   @IsNotEmpty()
@@ -18,7 +18,7 @@ export class VerifyLoginDto {
     type: String,
     minLength: 6,
     maxLength: 6,
-    pattern: '^[0-9]{6}$'
+    pattern: '^[0-9]{6}$',
   })
   @IsString()
   @IsNotEmpty()

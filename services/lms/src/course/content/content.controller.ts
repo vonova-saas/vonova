@@ -8,10 +8,11 @@ export class ContentController {
 
   @MessagePattern({ cmd: 'app.courses.content.getTree' })
   async getCourseContentTree(
-    @Payload() data: { 
-      courseId: string; 
-      userId: string; 
-      user?: { id?: string; sub?: string } 
+    @Payload()
+    data: {
+      courseId: string;
+      userId: string;
+      user?: { id?: string; sub?: string };
     },
   ) {
     const { courseId, userId, user } = data;
@@ -26,31 +27,38 @@ export class ContentController {
 
   @MessagePattern({ cmd: 'app.courses.content.getLesson' })
   async getLessonContent(
-    @Payload() data: { 
-      courseId: string; 
-      lessonId: string; 
-      userId: string; 
-      user?: { id?: string; sub?: string } 
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      user?: { id?: string; sub?: string };
     },
   ) {
     const { courseId, lessonId, userId, user } = data;
-    if (!courseId || !lessonId) throw new Error('courseId and lessonId are required');
+    if (!courseId || !lessonId)
+      throw new Error('courseId and lessonId are required');
 
     // Extract userId from multiple possible sources
     const extractedUserId = userId || user?.id || user?.sub;
     if (!extractedUserId) throw new Error('User identification is required');
 
-    return this.contentService.getLessonContent(courseId, lessonId, extractedUserId);
+    return this.contentService.getLessonContent(
+      courseId,
+      lessonId,
+      extractedUserId,
+    );
   }
 
   @MessagePattern({ cmd: 'course.content.createAsset' })
   async createAssetRecord(
-    @Payload() data: { 
+    @Payload()
+    data: {
       courseId: string;
       contentType: string;
       contentId: string;
       metadata: any;
-      user?: { id?: string; sub?: string } 
+      user?: { id?: string; sub?: string };
     },
   ) {
     const { courseId, contentType, contentId, metadata, user } = data;
@@ -62,6 +70,12 @@ export class ContentController {
     const extractedUserId = user?.id || user?.sub;
     if (!extractedUserId) throw new Error('User identification is required');
 
-    return this.contentService.createAssetRecord(courseId, contentType, contentId, extractedUserId, metadata);
+    return this.contentService.createAssetRecord(
+      courseId,
+      contentType,
+      contentId,
+      extractedUserId,
+      metadata,
+    );
   }
 }

@@ -1,4 +1,7 @@
 import {
+  IsInt,
+  IsBoolean,
+  IsDefined,
   IsIn,
   IsArray,
   IsMongoId,
@@ -14,13 +17,19 @@ import {
 } from '../schemas/problem.schema';
 
 export class ProblemTestCaseDto {
-  @IsString()
-  @IsNotEmpty()
-  input: string;
+  @IsDefined()
+  input: unknown;
 
-  @IsString()
-  @IsNotEmpty()
-  output: string;
+  @IsDefined()
+  expected: unknown;
+
+  @IsOptional()
+  @IsBoolean()
+  ignoreArrayOrder?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isHidden?: boolean;
 }
 
 export class CreateProblemDto {
@@ -40,6 +49,22 @@ export class CreateProblemDto {
   @ValidateNested({ each: true })
   @Type(() => ProblemTestCaseDto)
   testCases: ProblemTestCaseDto[];
+
+  @IsString()
+  @IsNotEmpty()
+  functionName: string;
+
+  @IsOptional()
+  @IsBoolean()
+  allowUnorderedArrayOutput?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  timeLimit?: number;
+
+  @IsOptional()
+  @IsInt()
+  memoryLimit?: number;
 
   @IsString()
   @IsIn(PROBLEM_DIFFICULTIES)
@@ -67,4 +92,3 @@ export class ListProblemsDto {
   @IsIn(PROBLEM_CATEGORIES)
   category?: (typeof PROBLEM_CATEGORIES)[number];
 }
-

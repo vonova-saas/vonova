@@ -21,9 +21,13 @@ export class ProblemService {
   async createProblem(dto: CreateProblemDto, createdBy: string) {
     const created = await this.problemModel.create({
       ...dto,
+      timeLimit: dto.timeLimit ?? 2000,
+      memoryLimit: dto.memoryLimit ?? 128,
       createdBy,
     });
-    this.logger.log(`Problem created: ${created._id.toString()} by ${createdBy}`);
+    this.logger.log(
+      `Problem created: ${created._id.toString()} by ${createdBy}`,
+    );
     return created;
   }
 
@@ -61,4 +65,3 @@ export class ProblemService {
     return problem;
   }
 }
-

@@ -41,15 +41,17 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
           <h3 className="text-base font-semibold text-zinc-100">Examples</h3>
           {problem.testCases?.map((testCase, index) => (
             <div
-              key={`${testCase.input}-${index}`}
+              key={`example-${index}`}
               className="rounded-md border border-zinc-700 bg-zinc-900/50 p-3"
             >
               <p className="text-xs font-semibold text-zinc-200">Example {index + 1}</p>
               <p className="mt-2 font-mono text-xs text-zinc-300">
-                <span className="text-zinc-100">Input:</span> {testCase.input}
+                <span className="text-zinc-100">Input:</span>{" "}
+                {JSON.stringify(testCase.input)}
               </p>
               <p className="mt-1 font-mono text-xs text-zinc-300">
-                <span className="text-zinc-100">Output:</span> {testCase.output}
+                <span className="text-zinc-100">Expected:</span>{" "}
+                {JSON.stringify(testCase.expected)}
               </p>
             </div>
           ))}

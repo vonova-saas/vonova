@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
 
 export const PROBLEM_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 export const PROBLEM_CATEGORIES = [
@@ -14,14 +15,21 @@ export const PROBLEM_CATEGORIES = [
 
 @Schema({ _id: false })
 export class ProblemTestCase {
-  @Prop({ required: true, trim: true })
-  input: string;
+  @Prop({ required: true, type: MongooseSchema.Types.Mixed })
+  input: unknown;
 
-  @Prop({ required: true, trim: true })
-  output: string;
+  @Prop({ required: true, type: MongooseSchema.Types.Mixed })
+  expected: unknown;
+
+  @Prop({ default: false })
+  ignoreArrayOrder?: boolean;
+
+  @Prop({ default: false })
+  isHidden?: boolean;
 }
 
-export const ProblemTestCaseSchema = SchemaFactory.createForClass(ProblemTestCase);
+export const ProblemTestCaseSchema =
+  SchemaFactory.createForClass(ProblemTestCase);
 
 export type ProblemDocument = Problem & Document;
 
@@ -41,6 +49,18 @@ export class Problem {
 
   @Prop({ type: [ProblemTestCaseSchema], default: [] })
   testCases: ProblemTestCase[];
+
+  @Prop({ required: true, trim: true })
+  functionName: string;
+
+  @Prop({ default: false })
+  allowUnorderedArrayOutput: boolean;
+
+  @Prop({ required: true, default: 2000, min: 100, max: 20000 })
+  timeLimit: number;
+
+  @Prop({ required: true, default: 128, min: 16, max: 1024 })
+  memoryLimit: number;
 
   @Prop({
     type: String,
@@ -67,4 +87,3 @@ export class Problem {
 export const ProblemSchema = SchemaFactory.createForClass(Problem);
 ProblemSchema.index({ createdBy: 1, createdAt: -1 });
 ProblemSchema.index({ difficulty: 1, categories: 1, createdAt: -1 });
-

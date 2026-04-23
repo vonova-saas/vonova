@@ -37,12 +37,21 @@ import {
 } from "@/hooks/instructor/use-problem-solving-management";
 import type { InstructorProblemEntity } from "@/types/api/instructor/lms/problem-solving/problem-solving.type";
 
-type TestCaseDraft = { input: string; output: string };
+type TestCaseDraft = {
+  input: string;
+  expected: string;
+  ignoreArrayOrder?: boolean;
+  isHidden?: boolean;
+};
 
 const emptyDraft = {
   title: "",
   description: "",
   constraints: "",
+  functionName: "",
+  allowUnorderedArrayOutput: false,
+  timeLimit: 2000,
+  memoryLimit: 128,
   difficulty: "easy" as "easy" | "medium" | "hard",
   categories: [] as (
     | "arrays"
@@ -78,7 +87,7 @@ export default function ProblemSolvingManagement() {
     useState<InstructorProblemEntity | null>(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [testCases, setTestCases] = useState<TestCaseDraft[]>([
-    { input: "", output: "" },
+    { input: "", expected: "", ignoreArrayOrder: false, isHidden: false },
   ]);
 
   const filteredProblems = useMemo(() => {
@@ -98,21 +107,32 @@ export default function ProblemSolvingManagement() {
 
   const resetForm = () => {
     setDraft(emptyDraft);
-    setTestCases([{ input: "", output: "" }]);
+    setTestCases([{ input: "", expected: "", ignoreArrayOrder: false, isHidden: false }]);
+  };
+
+  const tryParseJson = (value: string): { ok: true; data: unknown } | { ok: false } => {
+    try {
+      return { ok: true, data: JSON.parse(value) as unknown };
+    } catch {
+      return { ok: false };
+    }
   };
 
   const handleCreateProblem = async () => {
     const validTestCases = testCases
       .map((item) => ({
         input: item.input.trim(),
-        output: item.output.trim(),
+        expected: item.expected.trim(),
+        ignoreArrayOrder: Boolean(item.ignoreArrayOrder),
+        isHidden: Boolean(item.isHidden),
       }))
-      .filter((item) => item.input.length > 0 && item.output.length > 0);
+      .filter((item) => item.input.length > 0 && item.expected.length > 0);
 
     if (
       !draft.title.trim() ||
       !draft.description.trim() ||
       !draft.constraints.trim() ||
+      !draft.functionName.trim() ||
       draft.categories.length === 0 ||
       validTestCases.length === 0
     ) {
@@ -120,12 +140,37 @@ export default function ProblemSolvingManagement() {
       return;
     }
 
+    const parsedCases: Array<{
+      input: unknown;
+      expected: unknown;
+      ignoreArrayOrder?: boolean;
+      isHidden?: boolean;
+    }> = [];
+    for (const [index, testCase] of validTestCases.entries()) {
+      const parsedInput = tryParseJson(testCase.input);
+      const parsedExpected = tryParseJson(testCase.expected);
+      if (!parsedInput.ok || !parsedExpected.ok) {
+        toast.error(`Test case ${index + 1} must contain valid JSON for input and expected.`);
+        return;
+      }
+      parsedCases.push({
+        input: parsedInput.data,
+        expected: parsedExpected.data,
+        ignoreArrayOrder: testCase.ignoreArrayOrder,
+        isHidden: testCase.isHidden,
+      });
+    }
+
     try {
       await createMutation.mutateAsync({
         title: draft.title.trim(),
         description: draft.description.trim(),
         constraints: draft.constraints.trim(),
-        testCases: validTestCases,
+        functionName: draft.functionName.trim(),
+        allowUnorderedArrayOutput: draft.allowUnorderedArrayOutput,
+        timeLimit: Number(draft.timeLimit) || 2000,
+        memoryLimit: Number(draft.memoryLimit) || 128,
+        testCases: parsedCases,
         difficulty: draft.difficulty,
         categories: draft.categories,
       });
@@ -172,7 +217,10 @@ export default function ProblemSolvingManagement() {
   };
 
   const addTestCase = () => {
-    setTestCases((prev) => [...prev, { input: "", output: "" }]);
+    setTestCases((prev) => [
+      ...prev,
+      { input: "", expected: "", ignoreArrayOrder: false, isHidden: false },
+    ]);
   };
 
   const updateTestCase = (
@@ -261,6 +309,43 @@ export default function ProblemSolvingManagement() {
                       setDraft((prev) => ({ ...prev, constraints: e.target.value }))
                     }
                   />
+                  <Input
+                    placeholder="Function name (e.g., twoSum)"
+                    value={draft.functionName}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, functionName: e.target.value }))
+                    }
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Time limit (ms)"
+                      value={draft.timeLimit}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, timeLimit: Number(e.target.value) }))
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Memory limit (MB)"
+                      value={draft.memoryLimit}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, memoryLimit: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 rounded-md border px-3 py-2">
+                    <Checkbox
+                      checked={draft.allowUnorderedArrayOutput}
+                      onCheckedChange={(checked) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          allowUnorderedArrayOutput: Boolean(checked),
+                        }))
+                      }
+                    />
+                    <span className="text-sm">Allow unordered array outputs by default</span>
+                  </label>
 
                   <div className="space-y-2">
                     <p className="text-sm font-semibold">Difficulty</p>
@@ -318,19 +403,53 @@ export default function ProblemSolvingManagement() {
                       <Card key={`case-${index}`} className="py-4">
                         <CardContent className="space-y-3 px-4">
                           <Input
-                            placeholder={`Case ${index + 1} input`}
+                            placeholder={`Case ${index + 1} input (JSON)`}
                             value={testCase.input}
                             onChange={(e) =>
                               updateTestCase(index, "input", e.target.value)
                             }
                           />
                           <Input
-                            placeholder={`Case ${index + 1} output`}
-                            value={testCase.output}
+                            placeholder={`Case ${index + 1} expected output (JSON)`}
+                            value={testCase.expected}
                             onChange={(e) =>
-                              updateTestCase(index, "output", e.target.value)
+                              updateTestCase(index, "expected", e.target.value)
                             }
                           />
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={Boolean(testCase.ignoreArrayOrder)}
+                              onCheckedChange={(checked) =>
+                                setTestCases((prev) =>
+                                  prev.map((item, idx) =>
+                                    idx === index
+                                      ? { ...item, ignoreArrayOrder: Boolean(checked) }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              Ignore array order for this case
+                            </span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={Boolean(testCase.isHidden)}
+                              onCheckedChange={(checked) =>
+                                setTestCases((prev) =>
+                                  prev.map((item, idx) =>
+                                    idx === index
+                                      ? { ...item, isHidden: Boolean(checked) }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              Hidden test case (not shown to students)
+                            </span>
+                          </label>
                           {testCases.length > 1 ? (
                             <Button
                               variant="destructive"
@@ -535,13 +654,13 @@ export default function ProblemSolvingManagement() {
                                         <p>
                                           <span className="font-semibold">Input:</span>{" "}
                                           <span className="font-mono text-xs">
-                                            {testCase.input}
+                                            {JSON.stringify(testCase.input)}
                                           </span>
                                         </p>
                                         <p>
-                                          <span className="font-semibold">Output:</span>{" "}
+                                          <span className="font-semibold">Expected:</span>{" "}
                                           <span className="font-mono text-xs">
-                                            {testCase.output}
+                                            {JSON.stringify(testCase.expected)}
                                           </span>
                                         </p>
                                       </CardContent>

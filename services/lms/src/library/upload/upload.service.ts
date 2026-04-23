@@ -52,7 +52,7 @@ export class UploadService {
       size,
       status: 'UPLOADED',
       provider: 'S3',
-      urls: { 
+      urls: {
         sourceUrl: fileUrl,
         streamUrl: fileUrl,
       },
@@ -72,8 +72,8 @@ export class UploadService {
         fileAssetId: asset._id,
       });
 
-    return { 
-      assetId: asset.id, 
+    return {
+      assetId: asset.id,
       itemId,
       objectKey,
       fileName,
@@ -117,7 +117,7 @@ export class UploadService {
       size,
       status: 'UPLOADED',
       provider: 'S3',
-      urls: { 
+      urls: {
         sourceUrl: uploadResult.location,
         streamUrl: uploadResult.location,
       },
@@ -141,8 +141,8 @@ export class UploadService {
         fileUrl: fileUrl,
       });
 
-    return { 
-      assetId: asset.id, 
+    return {
+      assetId: asset.id,
       itemId,
       objectKey,
       fileName,
@@ -228,26 +228,28 @@ export class UploadService {
 
     // Generate presigned URL for the uploaded file
     try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
-      return { 
-        assetId: asset.id, 
+      const presignedUrl = await this.s3Service.getPresignedGetUrl(
+        asset.objectKey,
+      );
+      return {
+        assetId: asset.id,
         itemId,
         presignedUrl,
         fileName: asset.originalFileName,
         mimeType: asset.mimeType,
         size: asset.size,
-        expiresInSeconds: 3600
+        expiresInSeconds: 3600,
       };
     } catch (error) {
       console.error('Failed to generate presigned URL:', error);
       // Return basic info even if presigned URL fails
-      return { 
-        assetId: asset.id, 
+      return {
+        assetId: asset.id,
         itemId,
         fileName: asset.originalFileName,
         mimeType: asset.mimeType,
         size: asset.size,
-        error: 'Failed to generate presigned URL'
+        error: 'Failed to generate presigned URL',
       };
     }
   }
@@ -279,7 +281,9 @@ export class UploadService {
     }
 
     try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+      const presignedUrl = await this.s3Service.getPresignedGetUrl(
+        asset.objectKey,
+      );
       return {
         presignedUrl,
         fileName: asset.originalFileName,
@@ -288,7 +292,9 @@ export class UploadService {
         uploadedAt: (asset as any).createdAt,
       };
     } catch (error) {
-      throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -302,7 +308,9 @@ export class UploadService {
       throw new ForbiddenException('Not owner of this asset');
 
     try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
+      const presignedUrl = await this.s3Service.getPresignedGetUrl(
+        asset.objectKey,
+      );
       return {
         presignedUrl,
         fileName: asset.originalFileName,
@@ -313,7 +321,9 @@ export class UploadService {
         itemId: asset.itemId,
       };
     } catch (error) {
-      throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -324,8 +334,10 @@ export class UploadService {
     }
 
     try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(asset.objectKey);
-      
+      const presignedUrl = await this.s3Service.getPresignedGetUrl(
+        asset.objectKey,
+      );
+
       // Store presigned URL in database with expiration time (1 hour from now)
       const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour from now
       await this.assetModel.findByIdAndUpdate(assetId, {
@@ -336,7 +348,9 @@ export class UploadService {
       return presignedUrl;
     } catch (error) {
       console.error('Failed to generate presigned URL:', error);
-      throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -350,7 +364,7 @@ export class UploadService {
     if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
       const now = new Date();
       const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-      
+
       if (now < expiresAt) {
         return asset.urls.presignedUrl;
       }

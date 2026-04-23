@@ -14,7 +14,10 @@ export class StudentGuard implements CanActivate {
 
     const role = String(request.user?.role ?? '').toLowerCase();
     const isStudent =
-      role === 'student' || role === 'student_user' || role === 'student user' || role === 'STUDENT_USER';
+      role === 'student' ||
+      role === 'student_user' ||
+      role === 'student user' ||
+      role === 'STUDENT_USER';
 
     if (!isStudent) {
       throw new ForbiddenException('Student access required');
@@ -23,4 +26,3 @@ export class StudentGuard implements CanActivate {
     return true;
   }
 }
-

@@ -80,14 +80,20 @@ export class ProgressGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const createdBy = userId;
     return firstValueFrom(
-      this.progressService.markLessonComplete(courseId, lessonId, userId, createdBy, dto),
+      this.progressService.markLessonComplete(
+        courseId,
+        lessonId,
+        userId,
+        createdBy,
+        dto,
+      ),
     );
   }
 
@@ -119,7 +125,10 @@ export class ProgressGatewayController {
           items: {
             type: 'object',
             properties: {
-              chapterId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+              chapterId: {
+                type: 'string',
+                example: '507f1f77bcf86cd799439011',
+              },
               title: { type: 'string', example: 'Introduction to JavaScript' },
               progress: { type: 'number', example: 1.0 },
               completedLessons: { type: 'number', example: 5 },

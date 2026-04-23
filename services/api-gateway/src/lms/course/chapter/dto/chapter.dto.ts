@@ -62,7 +62,9 @@ export class ReorderChapterItemDto {
     type: String,
   })
   @IsString()
-  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for chapterId' })
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for chapterId',
+  })
   chapterId: string;
 
   @ApiProperty({
@@ -116,7 +118,7 @@ export class PaginationDto {
   @IsOptional()
   @Transform(({ value }) => {
     const num = parseInt(value, 10);
-    return isNaN(num) || num < 1 ? 10 : (num > 100 ? 100 : num);
+    return isNaN(num) || num < 1 ? 10 : num > 100 ? 100 : num;
   })
   @IsInt()
   @Min(1)

@@ -21,11 +21,11 @@ export class GuideGatewayService {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
     return this.client.send(
       { cmd: 'library.guides.getAll' },
-      { 
-        ...query, 
+      {
+        ...query,
         topics: topicsArray,
         userRole: query.userRole,
-        userId: query.userId
+        userId: query.userId,
       },
     );
   }
@@ -39,11 +39,17 @@ export class GuideGatewayService {
   }
 
   updateGuide(id: string, dto: UpdateGuideDto, userId: string) {
-    return this.client.send({ cmd: 'library.guides.update' }, { id, dto, userId });
+    return this.client.send(
+      { cmd: 'library.guides.update' },
+      { id, dto, userId },
+    );
   }
 
   publishGuide(id: string, dto: PublishGuideDto, userId: string) {
-    return this.client.send({ cmd: 'library.guides.publish' }, { id, dto, userId });
+    return this.client.send(
+      { cmd: 'library.guides.publish' },
+      { id, dto, userId },
+    );
   }
 
   deleteGuide(id: string, userId: string) {

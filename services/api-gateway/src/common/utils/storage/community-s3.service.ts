@@ -33,19 +33,19 @@ export class CommunityS3Service {
       if (!file) {
         throw new Error('No file provided');
       }
-      
+
       if (!file.buffer) {
         throw new Error('File buffer is missing');
       }
-      
+
       if (!file.originalname) {
         throw new Error('File originalname is missing');
       }
-      
+
       // Handle both Buffer and string (base64) cases
       let body: Buffer;
       let contentLength: number;
-      
+
       if (typeof file.buffer === 'string') {
         // Convert base64 string to Buffer
         body = Buffer.from(file.buffer, 'base64');
@@ -55,10 +55,14 @@ export class CommunityS3Service {
         body = file.buffer;
         contentLength = file.buffer.length;
       }
-      
+
       const bucketName = process.env.AWS_S3_BUCKET_APP_COMM!;
-      const objectKey = this.generateObjectKey(file.originalname, folder, itemId);
-      
+      const objectKey = this.generateObjectKey(
+        file.originalname,
+        folder,
+        itemId,
+      );
+
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: objectKey,
@@ -68,9 +72,9 @@ export class CommunityS3Service {
       });
 
       await this.s3.send(command);
-      
+
       const location = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_APP_COMM}.amazonaws.com/${objectKey}`;
-      
+
       return {
         location,
         key: objectKey,
@@ -81,9 +85,8 @@ export class CommunityS3Service {
         originalname: file?.originalname,
         mimetype: file?.mimetype,
         bufferType: typeof file?.buffer,
-        bufferSize: file?.buffer ? 
-          Buffer.byteLength(file.buffer) : 0,
-        hasBuffer: !!file?.buffer
+        bufferSize: file?.buffer ? Buffer.byteLength(file.buffer) : 0,
+        hasBuffer: !!file?.buffer,
       });
       throw new Error(`Failed to upload file to S3: ${error.message}`);
     }
@@ -98,14 +101,18 @@ export class CommunityS3Service {
       return [];
     }
 
-    const uploadPromises = files.map(file => this.uploadFile(file, folder, itemId));
-    
+    const uploadPromises = files.map((file) =>
+      this.uploadFile(file, folder, itemId),
+    );
+
     try {
       const results = await Promise.all(uploadPromises);
       return results;
     } catch (error) {
       console.error('Error uploading multiple files to S3:', error);
-      throw new Error(`Failed to upload multiple files to S3: ${error.message}`);
+      throw new Error(
+        `Failed to upload multiple files to S3: ${error.message}`,
+      );
     }
   }
 
@@ -118,7 +125,7 @@ export class CommunityS3Service {
     try {
       // Delete old file first
       await this.deleteFile(oldKey);
-      
+
       // Upload new file
       return this.uploadFile(file, folder, itemId);
     } catch (error) {
@@ -130,23 +137,23 @@ export class CommunityS3Service {
   async deleteFile(key: string): Promise<boolean> {
     try {
       const bucketName = process.env.AWS_S3_BUCKET_APP_COMM!;
-      
+
       console.log(`Deleting S3 object: ${key} from bucket: ${bucketName}`);
-      
+
       // Check if object exists first
       const exists = await this.fileExists(key);
       if (!exists) {
         console.log(`S3 object ${key} does not exist, skipping deletion`);
         return true;
       }
-      
+
       const result = await this.s3.send(
         new DeleteObjectCommand({
           Bucket: bucketName,
           Key: key,
         }),
       );
-      
+
       console.log(`Successfully deleted S3 object: ${key}`);
       return true;
     } catch (error) {
@@ -178,8 +185,10 @@ export class CommunityS3Service {
         Bucket: process.env.AWS_S3_BUCKET_APP_COMM!,
         Key: key,
       });
-      
-      const url = await getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
+
+      const url = await getSignedUrl(this.s3, command, {
+        expiresIn: expiresInSeconds,
+      });
       return url;
     } catch (error) {
       console.error('Error generating presigned GET URL:', error);
@@ -194,7 +203,7 @@ export class CommunityS3Service {
   ): string {
     const sanitized = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const timestamp = Date.now();
-    
+
     if (folder === 'articles') {
       return `articles/${timestamp}_${sanitized}`;
     } else if (folder === 'posts') {
@@ -203,7 +212,7 @@ export class CommunityS3Service {
       }
       return `posts/${timestamp}_${sanitized}`;
     }
-    
+
     return `${folder}/${timestamp}_${sanitized}`;
   }
 

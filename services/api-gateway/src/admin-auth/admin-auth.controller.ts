@@ -18,7 +18,13 @@ import { VerifyLoginDto } from './dto/verify-login.dto';
 import { AdminResetPasswordDto } from './dto/reset-password.dto';
 import { AdminRefreshTokenDto } from './dto/refresh-token.dto';
 import { AdminLogoutDto } from './dto/logout.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { extractAccessTokenFromRequest } from '../common/utils/extract-access-token';
 
 @ApiTags('Admin')
@@ -26,12 +32,12 @@ import { extractAccessTokenFromRequest } from '../common/utils/extract-access-to
 export class AdminAuthGatewayController {
   constructor(
     @Inject('NATS_SERVICE') private readonly natsClient: ClientProxy,
-  ) { }
+  ) {}
 
   /**
    * Step 1: Request OTP login code
    * Validates admin credentials and sends a 6-digit OTP to admin email
-   * 
+   *
    * Flow: API Gateway → NATS → App Service
    * - Validates admin credentials against database
    * - Generates 6-digit OTP (10-minute expiry)
@@ -42,7 +48,8 @@ export class AdminAuthGatewayController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request admin login OTP',
-    description: 'Validates admin credentials and sends a 6-digit OTP code to admin email for two-factor authentication.'
+    description:
+      'Validates admin credentials and sends a 6-digit OTP code to admin email for two-factor authentication.',
   })
   @ApiBody({
     type: RequestLoginCodeDto,
@@ -52,19 +59,19 @@ export class AdminAuthGatewayController {
         summary: 'Valid admin credentials',
         value: {
           email: 'admin@vonova.com',
-          password: 'SecurePass123!@#'
-        }
-      }
-    }
+          password: 'SecurePass123!@#',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
     description: 'OTP sent successfully',
     schema: {
       example: {
-        message: 'OTP sent to vonovacompany@gmail.com'
-      }
-    }
+        message: 'OTP sent to vonovacompany@gmail.com',
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -73,9 +80,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 401,
         message: 'Invalid credentials',
-        error: 'Unauthorized'
-      }
-    }
+        error: 'Unauthorized',
+      },
+    },
   })
   @ApiResponse({
     status: 403,
@@ -84,9 +91,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 403,
         message: 'Access denied. This email is not authorized as an admin.',
-        error: 'Forbidden'
-      }
-    }
+        error: 'Forbidden',
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -95,9 +102,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 429,
         message: 'Too many OTP requests. Please try again in 2 minute(s)',
-        error: 'Too Many Requests'
-      }
-    }
+        error: 'Too Many Requests',
+      },
+    },
   })
   async requestLoginCode(
     @Body() dto: RequestLoginCodeDto,
@@ -110,7 +117,7 @@ export class AdminAuthGatewayController {
   /**
    * Step 2: Verify OTP and get JWT token
    * Validates the 6-digit OTP and returns a JWT access token
-   * 
+   *
    * Flow: API Gateway → NATS → App Service
    * - Validates OTP code and expiry (10 minutes)
    * - Checks failed attempts (max 5 attempts)
@@ -121,7 +128,8 @@ export class AdminAuthGatewayController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify OTP and get JWT token',
-    description: 'Validates the 6-digit OTP code and returns a JWT access token for authenticated admin access.'
+    description:
+      'Validates the 6-digit OTP code and returns a JWT access token for authenticated admin access.',
   })
   @ApiBody({
     type: VerifyLoginDto,
@@ -131,19 +139,20 @@ export class AdminAuthGatewayController {
         summary: 'Valid OTP code',
         value: {
           email: 'admin@vonova.com',
-          code: '123456'
-        }
-      }
-    }
+          code: '123456',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
     description: 'Login successful',
     schema: {
       example: {
-        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzBhYmNkZWYiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE2OTI1NDQ4MDAsImV4cCI6MTY5MjU0ODQwMH0.signature'
-      }
-    }
+        access_token:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzBhYmNkZWYiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE2OTI1NDQ4MDAsImV4cCI6MTY5MjU0ODQwMH0.signature',
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -152,9 +161,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 401,
         message: 'Invalid or expired OTP',
-        error: 'Unauthorized'
-      }
-    }
+        error: 'Unauthorized',
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -163,9 +172,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 401,
         message: 'OTP has already been used',
-        error: 'Unauthorized'
-      }
-    }
+        error: 'Unauthorized',
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -174,9 +183,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 401,
         message: 'Too many failed attempts. Please request a new OTP.',
-        error: 'Unauthorized'
-      }
-    }
+        error: 'Unauthorized',
+      },
+    },
   })
   async verifyLogin(
     @Body() dto: VerifyLoginDto,
@@ -187,7 +196,7 @@ export class AdminAuthGatewayController {
   /**
    * Step 3: Reset password
    * Allows authenticated admin to change their password
-   * 
+   *
    * Flow: API Gateway → NATS → App Service
    * - Requires valid JWT token in Authorization header
    * - Validates old password against current hash
@@ -200,7 +209,8 @@ export class AdminAuthGatewayController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reset admin password',
-    description: 'Allows authenticated admin to change their password. Requires valid JWT token and current password verification.'
+    description:
+      'Allows authenticated admin to change their password. Requires valid JWT token and current password verification.',
   })
   @ApiBody({
     type: AdminResetPasswordDto,
@@ -210,19 +220,19 @@ export class AdminAuthGatewayController {
         summary: 'Valid password reset',
         value: {
           oldPassword: 'OldSecurePass123!@#',
-          newPassword: 'NewSecurePass456!@#'
-        }
-      }
-    }
+          newPassword: 'NewSecurePass456!@#',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
     description: 'Password reset successful',
     schema: {
       example: {
-        message: 'Password updated successfully'
-      }
-    }
+        message: 'Password updated successfully',
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -231,9 +241,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 400,
         message: 'Old password is incorrect',
-        error: 'Bad Request'
-      }
-    }
+        error: 'Bad Request',
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -242,9 +252,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 400,
         message: 'New password must be different from the old password',
-        error: 'Bad Request'
-      }
-    }
+        error: 'Bad Request',
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -252,10 +262,11 @@ export class AdminAuthGatewayController {
     schema: {
       example: {
         statusCode: 400,
-        message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-        error: 'Bad Request'
-      }
-    }
+        message:
+          'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        error: 'Bad Request',
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -264,9 +275,9 @@ export class AdminAuthGatewayController {
       example: {
         statusCode: 401,
         message: 'Unauthorized',
-        error: 'Unauthorized'
-      }
-    }
+        error: 'Unauthorized',
+      },
+    },
   })
   async resetPassword(
     @Request() req: any,
@@ -303,7 +314,9 @@ export class AdminAuthGatewayController {
   async refreshToken(
     @Body() dto: AdminRefreshTokenDto,
   ): Promise<{ access_token: string; refresh_token: string }> {
-    return firstValueFrom(this.natsClient.send('admin.auth.refresh-token', dto));
+    return firstValueFrom(
+      this.natsClient.send('admin.auth.refresh-token', dto),
+    );
   }
 
   @Post('logout')
@@ -344,9 +357,10 @@ export class AdminAuthGatewayController {
       },
     },
   })
-  async currentUser(
-    @Request() req: any,
-  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+  async currentUser(@Request() req: any): Promise<{
+    message: string;
+    user: { _id: string; email: string; role: string };
+  }> {
     const accessToken = extractAccessTokenFromRequest(req);
     if (!accessToken) {
       throw new BadRequestException(

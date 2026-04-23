@@ -10,20 +10,13 @@ import { CommunityS3Service } from '../../common/utils/storage/community-s3.serv
 
 @Module({
   imports: [NatsClientModule, AuthGatewayModule],
-  controllers: [
-    ArticlesGatewayController,
-    PostsGatewayController,
-  ],
+  controllers: [ArticlesGatewayController, PostsGatewayController],
   providers: [
     ArticlesGatewayService,
     PostsGatewayService,
     CommunityS3Service,
     JwtAuthGuard,
   ],
-  exports: [
-    ArticlesGatewayService,
-    PostsGatewayService,
-    JwtAuthGuard,
-  ],
+  exports: [ArticlesGatewayService, PostsGatewayService, JwtAuthGuard],
 })
 export class CommunityGatewayModule {}

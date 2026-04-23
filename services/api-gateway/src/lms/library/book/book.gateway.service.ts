@@ -23,15 +23,18 @@ export class BookGatewayService {
     return this.client.send({ cmd: 'book.publish' }, { id, dto, userId });
   }
 
-  getBooks(query: GetBooksQueryDto, userContext?: { userRole?: string; userId?: string }) {
+  getBooks(
+    query: GetBooksQueryDto,
+    userContext?: { userRole?: string; userId?: string },
+  ) {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
     return this.client.send(
       { cmd: 'book.getAll' },
-      { 
-        ...query, 
+      {
+        ...query,
         topics: topicsArray,
         userRole: userContext?.userRole,
-        userId: userContext?.userId
+        userId: userContext?.userId,
       },
     );
   }

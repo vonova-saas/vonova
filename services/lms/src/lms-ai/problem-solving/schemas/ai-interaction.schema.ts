@@ -29,4 +29,3 @@ export class AIInteraction {
 
 export const AIInteractionSchema = SchemaFactory.createForClass(AIInteraction);
 AIInteractionSchema.index({ userId: 1, problemId: 1, type: 1, createdAt: -1 });
-

@@ -9,6 +9,7 @@ import type {
   ProblemsFilter,
   SolutionRequest,
   SubmissionEntity,
+  SubmissionJobEntity,
   SubmissionRequest,
 } from "@/types/api/student/lms/problem-solving/problem-solving.type";
 
@@ -35,10 +36,19 @@ export const getProblemByIdQueryFn = async (
 
 export const createSubmissionMutationFn = async (
   payload: SubmissionRequest,
-): Promise<SubmissionEntity> => {
-  const response = await API.post<SubmissionEntity>(
+): Promise<SubmissionJobEntity> => {
+  const response = await API.post<SubmissionJobEntity>(
     `${STUDENT_BASE}/submissions`,
     payload,
+  );
+  return response.data;
+};
+
+export const getSubmissionStatusQueryFn = async (
+  jobId: string,
+): Promise<SubmissionEntity> => {
+  const response = await API.get<SubmissionEntity>(
+    `${STUDENT_BASE}/submissions/${jobId}`,
   );
   return response.data;
 };

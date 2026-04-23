@@ -184,7 +184,10 @@ export class AdminGatewayController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid body or business rule failure' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid body or business rule failure',
+  })
   updateUserStatus(@Body() dto: UpdateAdminUserStatusDto) {
     return firstValueFrom(this.adminService.updateUserStatus(dto));
   }
@@ -216,7 +219,10 @@ export class AdminGatewayController {
       },
     },
   })
-  @ApiResponse({ status: 403, description: 'Caller is not a valid admin in admin DB' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not a valid admin in admin DB',
+  })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
   replySupport(
     @Param('id') id: string,
@@ -330,7 +336,8 @@ export class AdminGatewayController {
                   motivation: 'Help career switchers.',
                 },
               },
-              cvUrl: 'https://bucket.s3.region.amazonaws.com/cvs/507f1f77bcf86cd799439011/cv.pdf',
+              cvUrl:
+                'https://bucket.s3.region.amazonaws.com/cvs/507f1f77bcf86cd799439011/cv.pdf',
             },
           ],
         },

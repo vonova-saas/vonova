@@ -41,12 +41,24 @@ export class ProblemSolvingGatewayController {
   ) {}
 
   private getUser(req: unknown): { id: string; role?: string } {
-    const request = req as { user?: { _id?: unknown; id?: unknown; role?: string } };
+    const request = req as {
+      user?: { _id?: unknown; id?: unknown; role?: string };
+    };
     const raw = request.user?._id ?? request.user?.id;
     if (!raw) {
       throw new UnauthorizedException('Authentication required');
     }
     return { id: String(raw), role: request.user?.role };
+  }
+
+  private sanitizeProblemForStudent(problem: unknown) {
+    const raw = (problem ?? {}) as {
+      testCases?: Array<{ isHidden?: boolean } & Record<string, unknown>>;
+    };
+    return {
+      ...raw,
+      testCases: (raw.testCases ?? []).filter((testCase) => !testCase.isHidden),
+    };
   }
 
   @Post('instructor/problems')
@@ -73,7 +85,9 @@ export class ProblemSolvingGatewayController {
   })
   async createProblem(@Request() req: unknown, @Body() dto: CreateProblemDto) {
     const user = this.getUser(req);
-    return firstValueFrom(this.problemSolvingService.createProblem(user.id, dto));
+    return firstValueFrom(
+      this.problemSolvingService.createProblem(user.id, dto),
+    );
   }
 
   @Get('instructor/problems')
@@ -123,11 +137,15 @@ export class ProblemSolvingGatewayController {
   @ApiResponse({
     status: 200,
     description: 'Problem deleted successfully.',
-    schema: { example: { success: true, message: 'Problem deleted successfully' } },
+    schema: {
+      example: { success: true, message: 'Problem deleted successfully' },
+    },
   })
   async deleteProblem(@Request() req: unknown, @Param('id') id: string) {
     const user = this.getUser(req);
-    return firstValueFrom(this.problemSolvingService.deleteProblem(user.id, id));
+    return firstValueFrom(
+      this.problemSolvingService.deleteProblem(user.id, id),
+    );
   }
 
   @Get('student/problems')
@@ -141,14 +159,18 @@ export class ProblemSolvingGatewayController {
     description: 'Problems retrieved successfully.',
   })
   async listProblemsForStudent(@Query() query: ListProblemsQueryDto) {
-    return firstValueFrom(this.problemSolvingService.listProblems(query));
+    const problems = (await firstValueFrom(
+      this.problemSolvingService.listProblems(query),
+    )) as unknown[];
+    return problems.map((problem) => this.sanitizeProblemForStudent(problem));
   }
 
   @Get('student/problems/:id')
   @UseGuards(StudentGuard)
   @ApiOperation({
     summary: 'Get problem by id (Student)',
-    description: 'Returns a single problem details for student solving workflow.',
+    description:
+      'Returns a single problem details for student solving workflow.',
   })
   @ApiParam({
     name: 'id',
@@ -160,7 +182,8 @@ export class ProblemSolvingGatewayController {
     description: 'Problem retrieved successfully.',
   })
   async getProblemForStudent(@Param('id') id: string) {
-    return firstValueFrom(this.problemSolvingService.getProblem(id));
+    const problem = await firstValueFrom(this.problemSolvingService.getProblem(id));
+    return this.sanitizeProblemForStudent(problem);
   }
 
   @Post('student/submissions')
@@ -190,7 +213,23 @@ export class ProblemSolvingGatewayController {
     @Body() dto: CreateSubmissionDto,
   ) {
     const user = this.getUser(req);
-    return firstValueFrom(this.problemSolvingService.createSubmission(user.id, dto));
+    return firstValueFrom(
+      this.problemSolvingService.createSubmission(user.id, dto),
+    );
+  }
+
+  @Get('student/submissions/:jobId')
+  @UseGuards(StudentGuard)
+  @ApiOperation({
+    summary: 'Get submission job status (Student)',
+    description:
+      'Polls async judging status/result for a previously submitted job.',
+  })
+  async getSubmissionStatus(@Request() req: unknown, @Param('jobId') jobId: string) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getSubmissionStatus(user.id, jobId),
+    );
   }
 
   @Post('student/problems/:id/hint')
@@ -296,4 +335,3 @@ export class ProblemSolvingGatewayController {
     );
   }
 }
-

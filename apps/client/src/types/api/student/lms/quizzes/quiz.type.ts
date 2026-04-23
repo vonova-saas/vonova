@@ -4,8 +4,10 @@ export type QuizType = {
   title: string;
   description: string;
   topic: string;
-  noOfQuestions: string;
+  noOfQuestions: string | number;
   questions: Question[];
+  alreadyAttempted?: boolean;
+  attemptId?: string | null;
 };
 
 export type Question = {

@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -15,7 +9,13 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { LibraryGatewayService } from './library.gateway.service';
-import { GetAllByTypeQueryDto, GetTopicsQueryDto, TopicsResponseDto, LibraryTopics, TotalMaterialsResponseDto } from './dto';
+import {
+  GetAllByTypeQueryDto,
+  GetTopicsQueryDto,
+  TopicsResponseDto,
+  LibraryTopics,
+  TotalMaterialsResponseDto,
+} from './dto';
 
 @ApiTags('LMS Library')
 @ApiBearerAuth()
@@ -80,7 +80,10 @@ export class LibraryGatewayController {
     description: 'Filter by status',
   })
   @Get()
-  async getAllByType(@Query() query: GetAllByTypeQueryDto, @Request() req: any) {
+  async getAllByType(
+    @Query() query: GetAllByTypeQueryDto,
+    @Request() req: any,
+  ) {
     return this.libraryService.getAllByType(query);
   }
 
@@ -173,26 +176,26 @@ export class LibraryGatewayController {
               type: 'object',
               properties: {
                 count: { type: 'number', example: 25 },
-                percentage: { type: 'string', example: '45.45' }
-              }
+                percentage: { type: 'string', example: '45.45' },
+              },
             },
             guides: {
               type: 'object',
               properties: {
                 count: { type: 'number', example: 20 },
-                percentage: { type: 'string', example: '36.36' }
-              }
+                percentage: { type: 'string', example: '36.36' },
+              },
             },
             presentations: {
               type: 'object',
               properties: {
                 count: { type: 'number', example: 10 },
-                percentage: { type: 'string', example: '18.18' }
-              }
-            }
-          }
-        }
-      }
+                percentage: { type: 'string', example: '18.18' },
+              },
+            },
+          },
+        },
+      },
     },
   })
   @Get('total')

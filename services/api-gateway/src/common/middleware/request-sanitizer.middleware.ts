@@ -48,10 +48,7 @@ export class RequestSanitizerMiddleware implements NestMiddleware {
         for (const key of Object.keys(queryObject)) {
           delete queryObject[key];
         }
-        Object.assign(
-          queryObject,
-          sanitizedQuery as Record<string, unknown>,
-        );
+        Object.assign(queryObject, sanitizedQuery as Record<string, unknown>);
       }
     }
     next();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Lightbulb, Loader2, Sparkles, WandSparkles } from "lucide-react";
@@ -19,12 +19,17 @@ import {
   useHintMutation,
   useHintsHistoryQuery,
   useSolutionMutation,
+  useSubmissionStatusQuery,
   useSubmitSolutionMutation,
 } from "@/hooks/student/use-problem-solving";
 import type {
   AIInteractionEntity,
   ProblemEntity,
 } from "@/types/api/student/lms/problem-solving/problem-solving.type";
+import {
+  detectLanguageFromNormalizedCode,
+  normalizeAIResponse,
+} from "@/utils/problem-solving/normalize-ai-response";
 
 type PlaygroundProps = {
   problem: ProblemEntity;
@@ -34,7 +39,8 @@ type HintLanguage = "english" | "arabic";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
-const DEFAULT_LANGUAGE = "typescript";
+const DEFAULT_LANGUAGE = "javascript";
+const SUBMIT_DEBOUNCE_MS = 800;
 
 export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
@@ -45,14 +51,32 @@ export default function Playground({ problem }: PlaygroundProps) {
   const [aiModalMode, setAiModalMode] = useState<"hint" | "solution">("hint");
   const [hintLanguage, setHintLanguage] = useState<HintLanguage>("english");
   const [submissionStatus, setSubmissionStatus] = useState<
-    "idle" | "accepted" | "wrong_answer"
+    | "idle"
+    | "pending"
+    | "accepted"
+    | "wrong_answer"
+    | "runtime_error"
+    | "time_limit_exceeded"
+    | "memory_limit_exceeded"
   >("idle");
-  const [failedCase, setFailedCase] = useState<{
-    input: string;
-    output: string;
+  const [submissionSummary, setSubmissionSummary] = useState<{
+    passed: number;
+    total: number;
+    failedCases: Array<{
+      input: unknown;
+      expected: unknown;
+      userOutput?: unknown;
+      errorMessage?: string;
+    }>;
   } | null>(null);
+  const [normalizationPreview, setNormalizationPreview] = useState<string>("");
+  const [normalizationError, setNormalizationError] = useState<string | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string>("");
+  const lastSubmitAtRef = useRef(0);
+  const lastNotifiedStatusRef = useRef<string>("");
 
   const submitMutation = useSubmitSolutionMutation();
+  const submissionStatusQuery = useSubmissionStatusQuery(currentJobId);
   const hintMutation = useHintMutation();
   const solutionMutation = useSolutionMutation();
   const {
@@ -63,9 +87,9 @@ export default function Playground({ problem }: PlaygroundProps) {
 
   const hintsUsed = hintsHistory?.hintsUsed ?? 0;
   const solutionUsed = hintsHistory?.solutionUsed ?? false;
-  const allHints = hintsHistory?.hints ?? [];
+  const allHints = useMemo(() => hintsHistory?.hints ?? [], [hintsHistory?.hints]);
   const hintLimitReached = hintsUsed >= 3;
-  const visibleHints = useMemo(() => allHints, [allHints]);
+  const visibleHints = allHints;
   const hintLevels = ["General", "Focused", "Advanced"];
   const hintLevelHelp: Record<string, string> = {
     General: "High-level direction without revealing the approach.",
@@ -120,26 +144,51 @@ export default function Playground({ problem }: PlaygroundProps) {
   };
 
   const handleSubmit = async () => {
+    const now = Date.now();
+    if (submitMutation.isPending) return;
+    if (now - lastSubmitAtRef.current < SUBMIT_DEBOUNCE_MS) {
+      toast.message("Please wait a moment before resubmitting.");
+      return;
+    }
+    lastSubmitAtRef.current = now;
+
     try {
+      const fallbackAiCode = normalizeAIResponse(parsedSolution.code);
+      const normalizedCode = normalizeAIResponse(code);
+      const payloadCode =
+        normalizedCode || (solutionUsed && fallbackAiCode ? fallbackAiCode : "");
+      if (!payloadCode) {
+        setNormalizationError("Unable to detect runnable code from your current input.");
+        toast.error("Submission failed", {
+          description: "Please enter solution code before submitting.",
+        });
+        return;
+      }
+      setNormalizationError(null);
+      setNormalizationPreview(payloadCode);
+
+      const detectedLanguage = detectLanguageFromNormalizedCode(code, payloadCode);
+      if (detectedLanguage && detectedLanguage !== language) {
+        setLanguage(detectedLanguage);
+        toast.warning(
+          `Detected ${detectedLanguage} code. Language switched automatically.`,
+        );
+      }
+
       const response = await submitMutation.mutateAsync({
         problemId: problem._id,
-        code,
+        code: payloadCode,
         language,
       });
-      setSubmissionStatus(response.status);
-      setFailedCase(response.failedTestCase);
+      setCurrentJobId(response.jobId);
+      setSubmissionStatus("pending");
+      setSubmissionSummary(null);
 
       await queryClient.invalidateQueries({
         queryKey: problemSolvingKeys.submissions(problem._id),
       });
 
-      if (response.status === "accepted") {
-        toast.success("Accepted");
-      } else {
-        toast.error("Wrong Answer", {
-          description: "Review failed case and ask AI for hints.",
-        });
-      }
+      toast.message("Submission queued. Running judge...");
     } catch (error: unknown) {
       toast.error("Submission failed", {
         description:
@@ -178,6 +227,23 @@ export default function Playground({ problem }: PlaygroundProps) {
         language,
       });
       setSolution(response);
+      const aiCode = normalizeAIResponse(response.response);
+      if (aiCode) {
+        setCode(aiCode);
+        setNormalizationPreview(aiCode);
+        const detectedLanguage = detectLanguageFromNormalizedCode(response.response, aiCode);
+        if (detectedLanguage && detectedLanguage !== language) {
+          setLanguage(detectedLanguage);
+          toast.warning(
+            `Detected ${detectedLanguage} code in AI response. Switched language.`,
+          );
+        }
+      } else {
+        setNormalizationError("AI response did not contain runnable code.");
+        toast.error("Normalization failed", {
+          description: "AI response could not be converted into runnable code.",
+        });
+      }
       await refetchHintsHistory();
       toast.success("AI solution ready");
     } catch (error: unknown) {
@@ -195,6 +261,37 @@ export default function Playground({ problem }: PlaygroundProps) {
     setAiModalOpen(true);
     void refetchHintsHistory();
   };
+
+  useEffect(() => {
+    const result = submissionStatusQuery.data;
+    if (!result) return;
+    if (lastNotifiedStatusRef.current === result.status) return;
+    if (result.status === "pending") return;
+    lastNotifiedStatusRef.current = result.status;
+    if (result.status === "accepted") {
+      toast.success(
+        `Accepted in ${result.executionTime}ms, ${result.memoryUsed}MB`,
+      );
+    } else if (result.status !== "pending") {
+      toast.error("Submission failed", {
+        description: `${result.status} • ${result.executionTime}ms • ${result.memoryUsed}MB`,
+      });
+    }
+  }, [submissionStatusQuery.data]);
+
+  const displayStatus = submissionStatusQuery.data?.status ?? submissionStatus;
+  const displaySummary = submissionStatusQuery.data
+    ? {
+        passed: submissionStatusQuery.data.passed ?? 0,
+        total: submissionStatusQuery.data.total ?? 0,
+        failedCases: (submissionStatusQuery.data.failedCases ?? []).map((item) => ({
+          input: item.input,
+          expected: item.expected,
+          userOutput: item.output,
+          errorMessage: item.error,
+        })),
+      }
+    : submissionSummary;
 
   return (
     <>
@@ -246,7 +343,7 @@ export default function Playground({ problem }: PlaygroundProps) {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={handleSubmit}
-                disabled={submitMutation.isPending}
+                disabled={submitMutation.isPending || displayStatus === "pending"}
                 size="sm"
                 className="h-8 bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-500"
               >
@@ -256,7 +353,7 @@ export default function Playground({ problem }: PlaygroundProps) {
                     Submitting...
                   </>
                 ) : (
-                  "Submit"
+                  displayStatus === "pending" ? "Judging..." : "Submit"
                 )}
               </Button>
 
@@ -313,21 +410,61 @@ export default function Playground({ problem }: PlaygroundProps) {
               Result:{" "}
               <span
                 className={`font-semibold ${
-                  submissionStatus === "accepted"
+                  displayStatus === "accepted"
                     ? "text-emerald-400"
-                    : submissionStatus === "wrong_answer"
+                    : displayStatus === "wrong_answer" ||
+                        displayStatus === "runtime_error" ||
+                        displayStatus === "time_limit_exceeded" ||
+                        displayStatus === "memory_limit_exceeded"
                     ? "text-rose-400"
                     : "text-zinc-200"
                 }`}
               >
-                {submissionStatus === "idle" ? "Not submitted" : submissionStatus}
+                {displayStatus === "idle" ? "Not submitted" : displayStatus}
               </span>
-              {failedCase ? (
+              {displaySummary ? (
                 <span className="ml-2 text-rose-300">
-                  Failed case: {failedCase.input} {"->"} {failedCase.output}
+                  Passed {displaySummary.passed} / {displaySummary.total}
                 </span>
               ) : null}
             </p>
+            {displaySummary?.failedCases?.length ? (
+              <div className="max-h-40 overflow-auto rounded-md border border-zinc-700 bg-zinc-900/40 p-2 text-xs">
+                {displaySummary.failedCases.slice(0, 3).map((failed, index) => (
+                  <div key={`failed-${index}`} className="mb-2 border-b border-zinc-800 pb-2 last:border-b-0">
+                    <p>
+                      <span className="text-zinc-300">Input:</span>{" "}
+                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.input)}</span>
+                    </p>
+                    <p>
+                      <span className="text-zinc-300">Expected:</span>{" "}
+                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.expected)}</span>
+                    </p>
+                    <p>
+                      <span className="text-zinc-300">Your output:</span>{" "}
+                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.userOutput)}</span>
+                    </p>
+                    {failed.errorMessage ? (
+                      <p className="text-rose-300">Error: {failed.errorMessage}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {normalizationPreview ? (
+              <p className="text-xs text-emerald-300">
+                Detected runnable code ({normalizationPreview.length} chars)
+              </p>
+            ) : null}
+            {normalizationError ? (
+              <p className="text-xs text-rose-300">{normalizationError}</p>
+            ) : null}
+            {submissionStatusQuery.data ? (
+              <p className="text-xs text-zinc-400">
+                Runtime: {submissionStatusQuery.data.executionTime}ms | Memory:{" "}
+                {submissionStatusQuery.data.memoryUsed}MB
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

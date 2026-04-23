@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
@@ -96,5 +95,4 @@ export class JwtAuthGuard implements CanActivate {
       method === 'POST' && path.includes('/api/v1/auth/admin/reset-password')
     );
   }
-
 }

@@ -12,4 +12,3 @@ export class CreateSubmissionDto {
   @IsNotEmpty()
   language: string;
 }
-

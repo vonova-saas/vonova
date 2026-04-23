@@ -28,13 +28,17 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { UploadGatewayService } from './upload.gateway.service';
 import { CompleteDto } from './dto/upload.dto';
-import { 
-  FileUploadDto, 
-  UploadResponseDto, 
-  UploadQueryDto, 
-  ErrorResponseDto 
+import {
+  FileUploadDto,
+  UploadResponseDto,
+  UploadQueryDto,
+  ErrorResponseDto,
 } from './dto/upload-swagger.dto';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -55,7 +59,8 @@ export class UploadGatewayController {
 
   @ApiOperation({
     summary: 'Upload file to library',
-    description: 'Uploads a file directly to AWS S3 storage and returns the direct link. Works with any file size by bypassing NATS limitations.',
+    description:
+      'Uploads a file directly to AWS S3 storage and returns the direct link. Works with any file size by bypassing NATS limitations.',
   })
   @ApiQuery({
     name: 'itemType',
@@ -92,15 +97,18 @@ export class UploadGatewayController {
       type: 'object',
       properties: {
         message: { type: 'string', example: 'File uploaded successfully' },
-        presignedUrl: { 
-          type: 'string', 
-          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
-          description: 'Presigned URL for accessing the uploaded file (expires in 1 hour)'
+        presignedUrl: {
+          type: 'string',
+          example:
+            'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
+          description:
+            'Presigned URL for accessing the uploaded file (expires in 1 hour)',
         },
-        fileUrl: { 
-          type: 'string', 
-          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf',
-          description: 'Direct S3 URL for reference'
+        fileUrl: {
+          type: 'string',
+          example:
+            'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf',
+          description: 'Direct S3 URL for reference',
         },
         objectKey: { type: 'string', example: 'library/guide/123456/file.pdf' },
         size: { type: 'number', example: 1024000 },
@@ -142,11 +150,11 @@ export class UploadGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!ownerId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     if (!file) {
       throw new Error('File is required');
     }
@@ -156,7 +164,7 @@ export class UploadGatewayController {
       const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `library/${itemType}/${itemId}/${uniqueId}-${file.originalname}`;
-      
+
       // Upload directly to S3
       const bucketName = process.env.AWS_S3_BUCKET_LMS;
       const command = new PutObjectCommand({
@@ -174,10 +182,12 @@ export class UploadGatewayController {
         Bucket: bucketName,
         Key: objectKey,
       });
-      const presignedUrl = await getSignedUrl(this.s3Client, getCommand, { expiresIn: 3600 }); // 1 hour expiry
+      const presignedUrl = await getSignedUrl(this.s3Client, getCommand, {
+        expiresIn: 3600,
+      }); // 1 hour expiry
 
       // Create asset record via LMS service (only metadata)
-      const result = await firstValueFrom(
+      const result = (await firstValueFrom(
         this.uploadService.createAssetRecord(
           itemType.toUpperCase() as 'BOOK' | 'PRESENTATION' | 'GUIDE',
           itemId,
@@ -188,9 +198,17 @@ export class UploadGatewayController {
             size: file.size,
             objectKey,
             fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
-          }
+          },
         ),
-      ) as { assetId: string; itemId: string; objectKey: string; fileName: string; size: number; mimeType: string; fileUrl: string };
+      )) as {
+        assetId: string;
+        itemId: string;
+        objectKey: string;
+        fileName: string;
+        size: number;
+        mimeType: string;
+        fileUrl: string;
+      };
 
       return {
         message: 'File uploaded successfully',
@@ -206,7 +224,9 @@ export class UploadGatewayController {
     } catch (error) {
       console.error('File upload error:', error);
       if (error.message.includes('credential')) {
-        throw new Error('AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.');
+        throw new Error(
+          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
+        );
       }
       throw new Error(`Failed to upload file: ${error.message}`);
     }
@@ -236,10 +256,12 @@ export class UploadGatewayController {
       properties: {
         assetId: { type: 'string', example: '507f1f77bcf86cd799439011' },
         itemId: { type: 'string', example: '507f1f77bcf86cd799439012' },
-        presignedUrl: { 
-          type: 'string', 
-          example: 'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
-          description: 'Presigned URL for accessing the uploaded file (expires in 1 hour)'
+        presignedUrl: {
+          type: 'string',
+          example:
+            'https://vonova-lms.s3.eu-north-1.amazonaws.com/library/guide/123456/file.pdf?X-Amz-Algorithm=...',
+          description:
+            'Presigned URL for accessing the uploaded file (expires in 1 hour)',
         },
         fileName: { type: 'string', example: 'javascript-guide.pdf' },
         mimeType: { type: 'string', example: 'application/pdf' },
@@ -270,11 +292,11 @@ export class UploadGatewayController {
     @Request() req: any,
   ) {
     const ownerId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!ownerId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     return firstValueFrom(
       this.uploadService.completeUpload(itemType, itemId, ownerId, body),
     );

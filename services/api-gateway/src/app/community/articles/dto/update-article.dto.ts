@@ -57,7 +57,11 @@ export class UpdateArticleDto {
       'api',
       'microservices',
     ],
-    { each: true, message: 'Each category must be one of: architecture, devops, backend, nestjs, databases, frontend, mobile, ai, security, typescript, javascript, nodejs, webdev, api, microservices' },
+    {
+      each: true,
+      message:
+        'Each category must be one of: architecture, devops, backend, nestjs, databases, frontend, mobile, ai, security, typescript, javascript, nodejs, webdev, api, microservices',
+    },
   )
   @IsOptional()
   category?: string[];

@@ -22,7 +22,10 @@ import { LMS_AI_CONNECTION_NAME } from './constants';
 
 const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
 
-function pickUri(configService: ConfigService, key: string): string | undefined {
+function pickUri(
+  configService: ConfigService,
+  key: string,
+): string | undefined {
   const v = configService.get<string>(key)?.trim();
   return v && v.length > 0 ? v : undefined;
 }
@@ -93,4 +96,4 @@ function resolveLmsAiMongoUri(configService: ConfigService): string {
     VoiceAskIdempotencyRepository,
   ],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

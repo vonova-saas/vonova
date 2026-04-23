@@ -69,7 +69,9 @@ export class UpdateLessonDto {
 
 export class ReorderLessonItemDto {
   @IsString()
-  @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid ObjectId format for lessonId' })
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for lessonId',
+  })
   lessonId: string;
 
   @IsNumber()

@@ -6,7 +6,7 @@ export class RequestLoginCodeDto {
     description: 'Admin email address',
     example: 'admin@vonova.com',
     type: String,
-    format: 'email'
+    format: 'email',
   })
   @IsEmail()
   @IsNotEmpty()
@@ -16,7 +16,7 @@ export class RequestLoginCodeDto {
     description: 'Admin password',
     example: 'SecurePass123!@#',
     type: String,
-    minLength: 1
+    minLength: 1,
   })
   @IsString()
   @IsNotEmpty()

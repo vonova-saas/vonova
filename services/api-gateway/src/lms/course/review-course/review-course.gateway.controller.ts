@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
@@ -85,11 +85,11 @@ export class ReviewCourseGatewayController {
     @Request() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
-    
+
     if (!userId) {
       throw new Error('Authentication required - No user found');
     }
-    
+
     const createdBy = userId;
     return firstValueFrom(
       this.reviewService.createReview(courseId, userId, createdBy, dto),
@@ -98,8 +98,7 @@ export class ReviewCourseGatewayController {
 
   @ApiOperation({
     summary: 'Get course reviews',
-    description:
-      'Retrieves a paginated list of reviews for a specific course.',
+    description: 'Retrieves a paginated list of reviews for a specific course.',
   })
   @ApiParam({
     name: 'courseId',
@@ -133,20 +132,33 @@ export class ReviewCourseGatewayController {
               courseId: { type: 'string', example: '507f1f77bcf86cd799439011' },
               userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
               rating: { type: 'number', example: 5 },
-              title: { type: 'string', example: 'Excellent JavaScript Course!' },
+              title: {
+                type: 'string',
+                example: 'Excellent JavaScript Course!',
+              },
               body: {
                 type: 'string',
-                example: 'This course provided comprehensive coverage of JavaScript concepts.',
+                example:
+                  'This course provided comprehensive coverage of JavaScript concepts.',
               },
               user: {
                 type: 'object',
                 properties: {
                   name: { type: 'string', example: 'John Doe' },
-                  avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                  avatarUrl: {
+                    type: 'string',
+                    example: 'https://example.com/avatar.jpg',
+                  },
                 },
               },
-              createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
-              updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
+              createdAt: {
+                type: 'string',
+                example: '2023-01-01T00:00:00.000Z',
+              },
+              updatedAt: {
+                type: 'string',
+                example: '2023-01-01T00:00:00.000Z',
+              },
             },
           },
         },
@@ -200,7 +212,8 @@ export class ReviewCourseGatewayController {
         title: { type: 'string', example: 'Excellent JavaScript Course!' },
         body: {
           type: 'string',
-          example: 'This course provided comprehensive coverage of JavaScript concepts.',
+          example:
+            'This course provided comprehensive coverage of JavaScript concepts.',
         },
         createdAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },
         updatedAt: { type: 'string', example: '2023-01-01T00:00:00.000Z' },

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Chapter, ChapterDocument } from './schema/chapter.schema';
@@ -49,8 +53,11 @@ export class ChapterService {
     // Check if user is the course owner or chapter creator
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
-    
-    if (course.ownerId.toString() !== userId && chapter.createdBy.toString() !== userId)
+
+    if (
+      course.ownerId.toString() !== userId &&
+      chapter.createdBy.toString() !== userId
+    )
       throw new NotFoundException('Chapter not found or no permission');
 
     Object.assign(chapter, dto);
@@ -77,23 +84,25 @@ export class ChapterService {
     // Check if user is course owner - use string comparison for courseId
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
-    
+
     if (course.ownerId.toString() !== userId)
       throw new ForbiddenException('Only course owner can reorder chapters');
 
     // Validate all chapterIds exist before processing
-    const chapterIds = order.map(o => o.chapterId);
+    const chapterIds = order.map((o) => o.chapterId);
     console.log('Looking for chapters with IDs:', chapterIds);
-    
-    const existingChapters = await this.chapterModel.find({ 
-      _id: { $in: chapterIds }, 
-      courseId 
+
+    const existingChapters = await this.chapterModel.find({
+      _id: { $in: chapterIds },
+      courseId,
     });
-    
+
     if (existingChapters.length !== chapterIds.length) {
-      const foundIds = existingChapters.map(c => c._id.toString());
-      const missingIds = chapterIds.filter(id => !foundIds.includes(id));
-      throw new NotFoundException(`Chapters not found: ${missingIds.join(', ')}`);
+      const foundIds = existingChapters.map((c) => c._id.toString());
+      const missingIds = chapterIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundException(
+        `Chapters not found: ${missingIds.join(', ')}`,
+      );
     }
 
     const ops = order.map((o) => {
@@ -131,15 +140,21 @@ export class ChapterService {
     // Check if user is the course owner or chapter creator
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
-    
-    if (course.ownerId.toString() !== userId && chapter.createdBy.toString() !== userId)
+
+    if (
+      course.ownerId.toString() !== userId &&
+      chapter.createdBy.toString() !== userId
+    )
       throw new NotFoundException('Chapter not found or no permission');
 
     await chapter.deleteOne();
     return { message: 'Chapter deleted successfully' };
   }
 
-  async getAllChapters(courseId: string, pagination: { page?: number; limit?: number }) {
+  async getAllChapters(
+    courseId: string,
+    pagination: { page?: number; limit?: number },
+  ) {
     const page = pagination.page || 1;
     const limit = pagination.limit || 10;
     const skip = (page - 1) * limit;

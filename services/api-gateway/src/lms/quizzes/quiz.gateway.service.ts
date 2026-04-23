@@ -13,7 +13,6 @@ export class QuizGatewayService {
     private readonly client: ClientProxy,
   ) {}
 
-  
   // ===== INSTRUCTOR-SPECIFIC METHODS =====
 
   createInstructorQuiz(dto: CreateQuizDto, userId: string) {
@@ -21,7 +20,10 @@ export class QuizGatewayService {
   }
 
   updateInstructorQuiz(quizId: string, dto: UpdateQuizDto, userId: string) {
-    return this.client.send({ cmd: 'quiz.updateInstructor' }, { quizId, dto, userId });
+    return this.client.send(
+      { cmd: 'quiz.updateInstructor' },
+      { quizId, dto, userId },
+    );
   }
 
   getInstructorQuizzes(userId: string) {
@@ -29,29 +31,47 @@ export class QuizGatewayService {
   }
 
   getInstructorQuizById(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getInstructorQuizById' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getInstructorQuizById' },
+      { quizId, userId },
+    );
   }
 
   deleteInstructorQuiz(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.deleteInstructor' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.deleteInstructor' },
+      { quizId, userId },
+    );
   }
 
   getInstructorQuizAttempts(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getInstructorAttempts' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getInstructorAttempts' },
+      { quizId, userId },
+    );
   }
 
   getInstructorQuizStatistics(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getInstructorStatistics' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getInstructorStatistics' },
+      { quizId, userId },
+    );
   }
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
   getAvailableQuizzesForStudents(userId?: string) {
-    return this.client.send({ cmd: 'quiz.getAvailableForStudents' }, { userId });
+    return this.client.send(
+      { cmd: 'quiz.getAvailableForStudents' },
+      { userId },
+    );
   }
 
   getQuizForStudent(quizId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getQuizForStudent' }, { quizId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getQuizForStudent' },
+      { quizId, userId },
+    );
   }
 
   submitStudentQuiz(quizId: string, dto: SubmitQuizAnswersDto, userId: string) {
@@ -66,12 +86,13 @@ export class QuizGatewayService {
   }
 
   getStudentAttempt(attemptId: string, userId: string) {
-    return this.client.send({ cmd: 'quiz.getStudentAttempt' }, { attemptId, userId });
+    return this.client.send(
+      { cmd: 'quiz.getStudentAttempt' },
+      { attemptId, userId },
+    );
   }
 
   getStudentQuizAttempts(userId: string) {
     return this.client.send({ cmd: 'quiz.getStudentAttempts' }, { userId });
   }
-
-  
-  }
+}

@@ -14,7 +14,10 @@ export class InstructorGuard implements CanActivate {
 
     const role = String(request.user?.role ?? '').toLowerCase();
     const isInstructor =
-      role === 'instructor' || role === 'instructor_user' || role === 'instructor user' || role === 'INSTRUCTOR_USER';
+      role === 'instructor' ||
+      role === 'instructor_user' ||
+      role === 'instructor user' ||
+      role === 'INSTRUCTOR_USER';
 
     if (!isInstructor) {
       throw new ForbiddenException('Instructor access required');
@@ -23,4 +26,3 @@ export class InstructorGuard implements CanActivate {
     return true;
   }
 }
-

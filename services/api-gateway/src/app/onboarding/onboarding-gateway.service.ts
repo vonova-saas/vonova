@@ -7,17 +7,20 @@ export class OnboardingGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) { }
+  ) {}
 
   submitStudent(userId: string, dto: StudentOnboardingBodyDto) {
-    return this.client.send({ cmd: 'onboarding.student.submit' }, {
-      userId,
-      track: dto.track,
-      level: dto.level,
-      goal: dto.goal,
-      experience: dto.experience,
-      timeCommitment: dto.timeCommitment,
-    });
+    return this.client.send(
+      { cmd: 'onboarding.student.submit' },
+      {
+        userId,
+        track: dto.track,
+        level: dto.level,
+        goal: dto.goal,
+        experience: dto.experience,
+        timeCommitment: dto.timeCommitment,
+      },
+    );
   }
 
   submitInstructor(payload: {

@@ -12,14 +12,18 @@ export class ProblemSolvingAiClient {
   private readonly client: AxiosInstance;
 
   constructor(private readonly configService: ConfigService) {
-    const baseURL = this.configService.get<string>('PROBLEM_SOLVING_AI_BASE_URL');
+    const baseURL = this.configService.get<string>(
+      'PROBLEM_SOLVING_AI_BASE_URL',
+    );
     if (!baseURL?.trim()) {
       throw new Error('PROBLEM_SOLVING_AI_BASE_URL is required');
     }
 
     this.client = axios.create({
       baseURL: baseURL.trim(),
-      timeout: Number(this.configService.get('PROBLEM_SOLVING_AI_TIMEOUT_MS') || 15000),
+      timeout: Number(
+        this.configService.get('PROBLEM_SOLVING_AI_TIMEOUT_MS') || 15000,
+      ),
     });
   }
 
@@ -49,7 +53,9 @@ export class ProblemSolvingAiClient {
       const { data } = await this.client.post('/generate/solution', payload);
       return this.extractResponseText(data);
     } catch (error) {
-      this.logger.error(`Solution generation failed: ${this.extractError(error)}`);
+      this.logger.error(
+        `Solution generation failed: ${this.extractError(error)}`,
+      );
       throw new InternalServerErrorException('Failed to generate solution');
     }
   }
@@ -74,4 +80,3 @@ export class ProblemSolvingAiClient {
     return String(error);
   }
 }
-

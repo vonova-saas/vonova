@@ -1,6 +1,8 @@
 export type ProblemTestCase = {
-  input: string;
-  output: string;
+  input: unknown;
+  expected: unknown;
+  ignoreArrayOrder?: boolean;
+  isHidden?: boolean;
 };
 
 export type ProblemEntity = {
@@ -8,6 +10,10 @@ export type ProblemEntity = {
   title: string;
   description: string;
   constraints: string;
+  functionName: string;
+  allowUnorderedArrayOutput?: boolean;
+  timeLimit?: number;
+  memoryLimit?: number;
   testCases: ProblemTestCase[];
   difficulty: "easy" | "medium" | "hard";
   categories: (
@@ -41,9 +47,31 @@ export type SubmissionEntity = {
   problemId: string;
   code: string;
   language: string;
-  status: "accepted" | "wrong_answer";
-  failedTestCase: ProblemTestCase | null;
+  status:
+    | "pending"
+    | "accepted"
+    | "wrong_answer"
+    | "runtime_error"
+    | "time_limit_exceeded"
+    | "memory_limit_exceeded";
+  success: boolean;
+  passed: number;
+  total: number;
+  failedCases: Array<{
+    input: unknown;
+    expected: unknown;
+    output?: unknown;
+    error?: string;
+  }>;
+  executionTime: number;
+  memoryUsed: number;
+  judgeLogs?: string[];
   createdAt: string;
+};
+
+export type SubmissionJobEntity = {
+  jobId: string;
+  status: "pending";
 };
 
 export type HintRequest = {

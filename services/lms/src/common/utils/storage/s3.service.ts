@@ -131,21 +131,29 @@ export class S3Service {
       return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
     } catch (error) {
       console.error('Error generating presigned URL:', error);
-      
+
       // Provide specific guidance for common AWS issues
       if (error instanceof Error) {
         if (error.message.includes('AccessDenied')) {
-          throw new Error('AWS Access Denied: Please check AWS credentials and IAM permissions. See AWS-SETUP-INSTRUCTIONS.md for configuration.');
+          throw new Error(
+            'AWS Access Denied: Please check AWS credentials and IAM permissions. See AWS-SETUP-INSTRUCTIONS.md for configuration.',
+          );
         }
         if (error.message.includes('InvalidAccessKeyId')) {
-          throw new Error('AWS Access Key Invalid: Please check AWS_S3_ACCESS_KEY_ID_LMS in your .env file.');
+          throw new Error(
+            'AWS Access Key Invalid: Please check AWS_S3_ACCESS_KEY_ID_LMS in your .env file.',
+          );
         }
         if (error.message.includes('NoSuchBucket')) {
-          throw new Error(`S3 Bucket Not Found: Bucket '${this.resolveBucket()}' does not exist. Please check AWS_S3_BUCKET_LMS configuration.`);
+          throw new Error(
+            `S3 Bucket Not Found: Bucket '${this.resolveBucket()}' does not exist. Please check AWS_S3_BUCKET_LMS configuration.`,
+          );
         }
       }
-      
-      throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}. Please check AWS credentials and configuration.`);
+
+      throw new Error(
+        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}. Please check AWS credentials and configuration.`,
+      );
     }
   }
 
@@ -203,7 +211,7 @@ export class S3Service {
       Body: fileBuffer,
       ContentType: contentType,
     });
-    
+
     await client.send(command);
     return { location: `https://${bucket}.s3.amazonaws.com/${objectKey}` };
   }
