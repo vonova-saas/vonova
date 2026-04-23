@@ -81,15 +81,6 @@ export class CreateCourseDto {
   difficulty?: string;
 
   @ApiPropertyOptional({
-    description: 'Category ID for the course',
-    example: '507f1f77bcf86cd799439011',
-    type: String,
-  })
-  @IsOptional()
-  @IsString()
-  categoryId?: string;
-
-  @ApiPropertyOptional({
     description: 'Array of tags for the course',
     example: ['javascript', 'web-development', 'programming'],
     type: [String],
@@ -107,15 +98,6 @@ export class CreateCourseDto {
   @IsOptional()
   @IsUrl()
   thumbnailUrl?: string;
-
-  @ApiPropertyOptional({
-    description: 'URL for the course trailer video',
-    example: 'https://example.com/trailer.mp4',
-    type: String,
-  })
-  @IsOptional()
-  @IsUrl()
-  trailerUrl?: string;
 
   @ApiPropertyOptional({
     description: 'Language of the course content',
