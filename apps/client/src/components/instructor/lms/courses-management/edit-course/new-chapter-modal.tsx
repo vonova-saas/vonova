@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,18 +19,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { tryCatch } from "@/hooks";
 import { chapterSchema, ChapterSchemaType } from "@/lib/courses/zodSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { createChapter } from "./actions";
+import { useCourseManagementStore } from "@/lib/stores";
+import { CreateChapterDto } from "@/types/api/lms/courses.type";
 import { toast } from "sonner";
 
-export function NewChapterModal({ courseId }: { courseId: string }) {
+interface NewChapterModalProps {
+  courseId: string;
+}
+
+export function NewChapterModal({ courseId }: NewChapterModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const { createChapter, actionLoading, error } = useCourseManagementStore();
 
   const form = useForm<ChapterSchemaType>({
     resolver: zodResolver(chapterSchema),
@@ -39,22 +45,26 @@ export function NewChapterModal({ courseId }: { courseId: string }) {
   });
 
   async function onSubmit(values: ChapterSchemaType) {
-    startTransition(async () => {
-      const { data: result, error } = await tryCatch(createChapter(values));
+    const validation = chapterSchema.safeParse(values);
+    if (!validation.success) {
+      toast.error("Invalid chapter name");
+      return;
+    }
 
-      if (error) {
-        toast.error("An unexpected error occured. Please try again");
-        return;
-      }
+    const chapterData: CreateChapterDto = {
+      title: values.name,
+      index: 1,
+    };
 
-      if (result.status === "success") {
-        toast.success(result.message);
-        form.reset();
-        setIsOpen(false);
-      } else if (result.status === "error") {
-        toast.error(result.message);
-      }
-    });
+    const result = await createChapter(courseId, chapterData);
+    
+    if (result) {
+      toast.success("Chapter created successfully");
+      form.reset();
+      setIsOpen(false);
+    } else if (error) {
+      toast.error(error);
+    }
   }
 
   function handleOpenChange(open: boolean) {
@@ -94,8 +104,8 @@ export function NewChapterModal({ courseId }: { courseId: string }) {
             />
 
             <DialogFooter>
-              <Button disabled={pending} type="submit">
-                {pending ? "Saving..." : "Save Change"}
+              <Button disabled={actionLoading} type="submit">
+                {actionLoading ? "Saving..." : "Save Change"}
               </Button>
             </DialogFooter>
           </form>

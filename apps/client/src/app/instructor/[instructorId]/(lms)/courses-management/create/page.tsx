@@ -39,9 +39,9 @@ import {
 import { RichTextEditor } from "@/components/instructor/lms/courses-management/rich-text-editor/editor";
 import { Uploader } from "@/components/instructor/lms/courses-management/file-uploader/uploader";
 import { useTransition } from "react";
-import { tryCatch } from "@/hooks";
-import { CreateCourse } from "./actions";
 import { toast } from "sonner";
+import { createCourseMutationFn } from "@/services/instructor/course-managment/courses.api";
+import { CreateCourseDto } from "@/types/api/lms/courses.type";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfetti } from "@/hooks";
@@ -70,22 +70,43 @@ export default function CourseCreationPage() {
   });
 
   // 2. Define a submit handler.
-  function onSubmit(values: CourseSchemaType) {
+  async function onSubmit(values: CourseSchemaType) {
     startTransition(async () => {
-      const { data: result, error } = await tryCatch(CreateCourse(values));
+      try {
+        // Validate form data
+        const validation = courseSchema.safeParse(values);
+        if (!validation.success) {
+          toast.error("Invalid Form Data");
+          return;
+        }
 
-      if (error) {
-        toast.error("An unexpected error occured. Please try again.");
-        return;
-      }
+        // Map form values to API DTO
+        const courseData: CreateCourseDto = {
+          title: values.title,
+          slug: values.slug,
+          smallDescription: values.smallDescription,
+          description: values.description,
+          difficulty: values.level === "Intermidate" ? "Intermediate" : values.level === "Beginner" ? "Beginner" : "Advanced",
+          tags: [],
+          thumbnailUrl: values.fileKey || "https://images.unsplash.com/photo-1593720213428-28a5b9e94613?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          language: "English",
+          price: {
+            amount: Number(values.price),
+            currency: "USD",
+            isFree: Number(values.price) === 0,
+          },
+        };
 
-      if (result.status === "success") {
-        toast.success(result.message);
+        // Call API directly
+        await createCourseMutationFn(courseData);
+
+        toast.success("Course created successfully");
         triggerConfetti();
         form.reset();
-        router.push(`${userId}/courses-management`);
-      } else if (result.status === "error") {
-        toast.error(result.message);
+        router.push(`/instructor/${userId}/courses-management`);
+      } catch (error) {
+        console.error("Error creating course:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to create course. Please try again.");
       }
     });
   }
@@ -94,7 +115,7 @@ export default function CourseCreationPage() {
     <>
       <div className="flex items-center gap-4">
         <Link
-          href={`${userId}/courses-management`}
+          href={`/instructor/${userId}/courses-management`}
           className={buttonVariants({ variant: "outline", size: "icon" })}
         >
           <ArrowLeft className="size-4" />

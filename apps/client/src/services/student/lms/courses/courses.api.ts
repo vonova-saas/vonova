@@ -26,7 +26,7 @@ export const getAllCoursesQueryFn = async (
     limit?: number;
   }
 ): Promise<CoursesResponse> => {
-  const response = await API.get("/api/v1/lms/courses", { params });
+  const response = await API.get("/lms/courses", { params });
   return response.data;
 };
 
@@ -34,7 +34,7 @@ export const getAllCoursesQueryFn = async (
 export const getCourseBySlugQueryFn = async (
   slug: string
 ): Promise<Course> => {
-  const response = await API.get(`/api/v1/lms/courses/slug/${slug}`);
+  const response = await API.get(`/lms/courses/slug/${slug}`);
   return response.data;
 };
 
@@ -42,7 +42,7 @@ export const getCourseBySlugQueryFn = async (
 export const getCourseByIdQueryFn = async (
   courseId: string
 ): Promise<Course> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}`);
+  const response = await API.get(`/lms/courses/${courseId}`);
   return response.data;
 };
 
@@ -54,7 +54,7 @@ export const enrollCourseMutationFn = async (
   data?: EnrollCourseDto
 ): Promise<Enrollment> => {
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/enroll`,
+    `/lms/courses/${courseId}/enroll`,
     data || {}
   );
   return response.data;
@@ -64,7 +64,7 @@ export const enrollCourseMutationFn = async (
 export const getEnrollmentStatusQueryFn = async (
   courseId: string
 ): Promise<Enrollment> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}/enrollment`);
+  const response = await API.get(`/lms/courses/${courseId}/enrollment`);
   return response.data;
 };
 
@@ -74,7 +74,7 @@ export const getLessonAccessQueryFn = async (
   lessonId: string
 ): Promise<LessonAccess> => {
   const response = await API.get(
-    `/api/v1/lms/courses/${courseId}/lessons/${lessonId}/access`
+    `/lms/courses/${courseId}/lessons/${lessonId}/access`
   );
   return response.data;
 };
@@ -85,7 +85,7 @@ export const getLessonAccessQueryFn = async (
 export const getCourseContentTreeQueryFn = async (
   courseId: string
 ): Promise<CourseContentTree> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}/content`);
+  const response = await API.get(`/lms/courses/${courseId}/content`);
   return response.data;
 };
 
@@ -95,7 +95,7 @@ export const getLessonContentQueryFn = async (
   lessonId: string
 ): Promise<LessonContent> => {
   const response = await API.get(
-    `/api/v1/lms/courses/${courseId}/content/lessons/${lessonId}/content`
+    `/lms/courses/${courseId}/content/lessons/${lessonId}/content`
   );
   return response.data;
 };
@@ -111,7 +111,7 @@ export const uploadContentFileMutationFn = async (
   formData.append("file", file);
 
   const response = await API.post(
-    `/api/v1/lms/courses/${courseId}/content/upload`,
+    `/lms/courses/${courseId}/content/upload`,
     formData,
     {
       params: {
@@ -135,7 +135,7 @@ export const markLessonCompleteMutationFn = async (
   data: MarkLessonCompleteDto
 ): Promise<LessonProgress> => {
   const response = await API.patch(
-    `/api/v1/lms/courses/${courseId}/lessons/${lessonId}/complete`,
+    `/lms/courses/${courseId}/lessons/${lessonId}/complete`,
     data
   );
   return response.data;
@@ -145,7 +145,7 @@ export const markLessonCompleteMutationFn = async (
 export const getCourseProgressQueryFn = async (
   courseId: string
 ): Promise<CourseProgress> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}/progress/me`);
+  const response = await API.get(`/lms/courses/${courseId}/progress/me`);
   return response.data;
 };
 
@@ -156,7 +156,7 @@ export const createReviewMutationFn = async (
   courseId: string,
   data: CreateReviewDto
 ): Promise<CourseReview> => {
-  const response = await API.post(`/api/v1/lms/courses/${courseId}/reviews`, data);
+  const response = await API.post(`/lms/courses/${courseId}/reviews`, data);
   return response.data;
 };
 
@@ -168,7 +168,7 @@ export const getCourseReviewsQueryFn = async (
     limit?: number;
   }
 ): Promise<ReviewsResponse> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}/reviews`, {
+  const response = await API.get(`/lms/courses/${courseId}/reviews`, {
     params,
   });
   return response.data;
@@ -178,6 +178,6 @@ export const getCourseReviewsQueryFn = async (
 export const getMyReviewQueryFn = async (
   courseId: string
 ): Promise<CourseReview> => {
-  const response = await API.get(`/api/v1/lms/courses/${courseId}/reviews/my`);
+  const response = await API.get(`/lms/courses/${courseId}/reviews/my`);
   return response.data;
 };

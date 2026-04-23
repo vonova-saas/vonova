@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUserId } from "@/hooks";
 import {
   ArrowRight,
   Eye,
@@ -30,6 +31,7 @@ export function AdminCourseCard({ data }: iAppProps) {
   const status = data.status || "DRAFT";
   const isFree = data.price?.isFree || false;
   const price = isFree ? "Free" : `${data.price?.amount || 0} ${data.price?.currency || "USD"}`;
+  const userId = useUserId();
 
   const statusColors = {
     DRAFT: "bg-yellow-500/10 text-yellow-600",
@@ -38,9 +40,9 @@ export function AdminCourseCard({ data }: iAppProps) {
   };
 
   return (
-    <Card className="group relative py-0 gap-0">
+    <Card className="group relative py-0 gap-0" >
       {/* absolute dropdown */}
-      <div className="absolute top-2 right-2 z-10">
+      < div className="absolute top-2 right-2 z-10" >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon">
@@ -49,7 +51,7 @@ export function AdminCourseCard({ data }: iAppProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem asChild>
-              <Link href={`/instructor/courses-management/${data._id}/edit`}>
+              <Link href={`/instructor/${userId}/courses-management/${data._id}/edit`}>
                 <Pencil className="size-4 mr-2" />
                 Edit Course
               </Link>
@@ -64,7 +66,7 @@ export function AdminCourseCard({ data }: iAppProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>
-              <Link href={`/instructor/courses-management/${data._id}/delete`}>
+              <Link href={`/instructor/${userId}/courses-management/${data._id}/delete`}>
                 <Trash2 className="size-4 mr-2 text-destructive" />
                 Delete Course
               </Link>
@@ -85,7 +87,7 @@ export function AdminCourseCard({ data }: iAppProps) {
       />
       <CardContent className="p-4">
         <Link
-          href={`/instructor/courses-management/${data._id}/edit`}
+          href={`/instructor/${userId}/courses-management/${data._id}/edit`}
           className="font-medium text-lg line-clamp-2 hover:underline group-hover:text-primary transition-colors"
         >
           {data.title}
@@ -112,43 +114,43 @@ export function AdminCourseCard({ data }: iAppProps) {
               className: "mt-2",
               size: "sm",
             })}
-            href={`/instructor/courses-management/${data._id}/edit`}
+            href={`/instructor/${userId}/courses-management/${data._id}/edit`}
           >
             Edit Course
             <ArrowRight className="size-4 ml-2" />
           </Link>
         </div>
       </CardContent>
-    </Card>
+    </Card >
   );
 }
 
 export function AdminCourseCardSkeleton() {
   return (
     <Card className="group relative py-0 gap-0">
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-2"> 
-        <Skeleton className="h-6 w-16 rounded-full"/>
-        <Skeleton className="size-8 rounded-md"/>
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        <Skeleton className="size-8 rounded-md" />
       </div>
       <div className="w-full relative h-fit">
-         <Skeleton className="w-full rounded-t-lg aspect-video h-[250px] object-cover"/>
+        <Skeleton className="w-full rounded-t-lg aspect-video h-[250px] object-cover" />
       </div>
       <CardContent className="p-4">
-        <Skeleton className="h-6 w-3/4 mb-2 rounded"/>
-        <Skeleton className="h-4 w-full mb-4 rounded"/>
+        <Skeleton className="h-6 w-3/4 mb-2 rounded" />
+        <Skeleton className="h-4 w-full mb-4 rounded" />
         <div className="mt-4 flex items-center gap-x-5">
           <div className="flex items-center gap-x-2">
-            <Skeleton className="size-6 rounded-md"/>
-            <Skeleton className="h-4 w-10 rounded"/>
+            <Skeleton className="size-6 rounded-md" />
+            <Skeleton className="h-4 w-10 rounded" />
           </div>
 
           <div className="flex items-center gap-x-2">
-            <Skeleton className="size-6 rounded-md"/>
-            <Skeleton className="h-4 w-10 rounded"/>
+            <Skeleton className="size-6 rounded-md" />
+            <Skeleton className="h-4 w-10 rounded" />
           </div>
         </div>
 
-        <Skeleton className="mt-4 h-10 w-full rounded"/>
+        <Skeleton className="mt-4 h-10 w-full rounded" />
       </CardContent>
     </Card>
   )

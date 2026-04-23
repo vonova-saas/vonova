@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -10,41 +12,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { deleteLesson } from "./actions";
-import { tryCatch } from "@/hooks";
+import { useState } from "react";
+import { useCourseManagementStore } from "@/lib/stores";
 import { toast } from "sonner";
 
-export function DeleteLesson({
-  chapterId,
-  courseId,
-  lessonId,
-}: {
+interface DeleteLessonProps {
   chapterId: string;
   courseId: string;
   lessonId: string;
-}) {
+}
+
+export function DeleteLesson({ chapterId, courseId, lessonId }: DeleteLessonProps) {
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const { deleteLesson, actionLoading, error } = useCourseManagementStore();
 
   async function onSubmit() {
-    startTransition(async () => {
-      const { data: result, error } = await tryCatch(
-        deleteLesson({ chapterId, courseId, lessonId })
-      );
-
-      if (error) {
-        toast.error("An unexpected error occured. Please try again");
-        return;
-      }
-
-      if (result.status === "success") {
-        toast.success(result.message);
-        setOpen(false);
-      } else if (result.status === "error") {
-        toast.error(result.message);
-      }
-    });
+    const result = await deleteLesson(courseId, chapterId, lessonId);
+    
+    if (result) {
+      toast.success("Lesson deleted successfully");
+      setOpen(false);
+    } else if (error) {
+      toast.error(error);
+    }
   }
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -63,8 +53,8 @@ export function DeleteLesson({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button onClick={onSubmit} disabled={pending}>
-            {pending ? "Deleting..." : "Delete"}
+          <Button onClick={onSubmit} disabled={actionLoading}>
+            {actionLoading ? "Deleting..." : "Delete"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

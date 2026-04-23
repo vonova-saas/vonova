@@ -48,6 +48,8 @@ export interface Lesson {
   type?: "VIDEO" | "ARTICLE" | "QUIZ";
   previewable?: boolean;
   content?: string;
+  videoKey?: string;
+  thumbnailKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,13 +84,11 @@ export interface PublishCourseDto {
 }
 
 export interface CoursesResponse {
-  courses: Course[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  items: Course[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface CourseAggregatesResponse {
@@ -141,6 +141,8 @@ export interface UpdateLessonDto {
   type?: "VIDEO" | "ARTICLE" | "QUIZ";
   previewable?: boolean;
   content?: string;
+  videoKey?: string;
+  thumbnailKey?: string;
 }
 
 export interface ReorderLessonsDto {

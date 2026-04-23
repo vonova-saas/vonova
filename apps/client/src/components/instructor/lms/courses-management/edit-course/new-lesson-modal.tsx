@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,24 +19,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { tryCatch } from "@/hooks";
 import { lessonSchema, LessonSchemaType } from "@/lib/courses/zodSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { createLesson } from "./actions";
+import { useCourseManagementStore } from "@/lib/stores";
+import { CreateLessonDto } from "@/types/api/lms/courses.type";
 import { toast } from "sonner";
 
-export function NewLessonModal({
-  courseId,
-  chapterId,
-}: {
+interface NewLessonModalProps {
   courseId: string;
   chapterId: string;
-}) {
+}
+
+export function NewLessonModal({ courseId, chapterId }: NewLessonModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const { createLesson, actionLoading, error } = useCourseManagementStore();
 
   const form = useForm<LessonSchemaType>({
     resolver: zodResolver(lessonSchema),
@@ -46,34 +47,41 @@ export function NewLessonModal({
   });
 
   async function onSubmit(values: LessonSchemaType) {
-    startTransition(async () => {
-      const { data: result, error } = await tryCatch(createLesson(values));
+    const validation = lessonSchema.safeParse(values);
+    if (!validation.success) {
+      toast.error("Invalid lesson name");
+      return;
+    }
 
-      if (error) {
-        toast.error("An unexpected error occured. Please try again");
-        return;
-      }
+    const lessonData: CreateLessonDto = {
+      title: values.name,
+      index: 1,
+      type: "VIDEO",
+      previewable: false,
+    };
 
-      if (result.status === "success") {
-        toast.success(result.message);
-        form.reset();
-        setIsOpen(false);
-      } else if (result.status === "error") {
-        toast.error(result.message);
-      }
-    });
+    const result = await createLesson(courseId, chapterId, lessonData);
+    
+    if (result) {
+      toast.success("Lesson created successfully");
+      form.reset();
+      setIsOpen(false);
+    } else if (error) {
+      toast.error(error);
+    }
   }
 
   function handleOpenChange(open: boolean) {
-     if(!open) {
-      form.reset()
-     }
+    if (!open) {
+      form.reset();
+    }
     setIsOpen(open);
   }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full  justify-center gap-1">
+        <Button variant="outline" className="w-full justify-center gap-1">
           <Plus className="size-4" /> New Lesson
         </Button>
       </DialogTrigger>
@@ -81,7 +89,7 @@ export function NewLessonModal({
         <DialogHeader>
           <DialogTitle>Create New Lesson</DialogTitle>
           <DialogDescription>
-            what would you like to name your lesson?
+            What would you like to name your lesson?
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -101,8 +109,8 @@ export function NewLessonModal({
             />
 
             <DialogFooter>
-              <Button disabled={pending} type="submit">
-                {pending ? "Saving..." : "Save Change"}
+              <Button disabled={actionLoading} type="submit">
+                {actionLoading ? "Saving..." : "Save Change"}
               </Button>
             </DialogFooter>
           </form>
