@@ -1,7 +1,15 @@
 import { randomUUID } from 'crypto';
-import { promises as fs } from 'fs';
-import { join } from 'path';
 import { spawn } from 'child_process';
+import { promises as fs } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+/** Writable temp root for judge bind-mounts. Do not use process.cwd() — /app is often read-only in Docker. */
+function judgeTempRoot(): string {
+  const fromEnv = process.env.JUDGE_TMP_DIR?.trim();
+  if (fromEnv) return fromEnv;
+  return join(tmpdir(), 'vonova-judge');
+}
 
 export type JudgeStatus =
   | 'accepted'
@@ -166,7 +174,7 @@ export async function runInDocker(params: {
     };
   }
 
-  const tempDir = join(process.cwd(), '.judge-tmp', randomUUID());
+  const tempDir = join(judgeTempRoot(), randomUUID());
   await fs.mkdir(tempDir, { recursive: true });
   const source = buildSourceFile(normalizedLanguage, code);
   await fs.writeFile(join(tempDir, source.name), source.content, 'utf8');
