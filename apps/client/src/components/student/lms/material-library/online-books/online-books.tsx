@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search } from "lucide-react";
-import { fakeBooks, topics } from "./fake-data";
+import { Search, RefreshCcw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchLibraryItemsQueryFn } from "@/services/api/shared/material-library/material.api";
 import { OverviewCard } from "./overview-card";
 import { SearchFilter } from "./search-filter";
 import { BookCard } from "./book-card";
@@ -11,6 +12,7 @@ import { PaginationControls } from "./pagination-controls";
 import { Book } from "./types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function OnlineBooks() {
   const [search, setSearch] = useState("");
@@ -27,19 +29,23 @@ export default function OnlineBooks() {
     );
   };
 
+  // Fetch published materials from API
+  const { data: materialsData, isLoading, error, refetch } = useQuery({
+    queryKey: ['student-library'],
+    queryFn: () => fetchLibraryItemsQueryFn(undefined, 'PUBLISHED'),
+  });
+
   // Filter books by search and topic
   const filteredBooks = useMemo(() => {
-    return fakeBooks.filter((book) => {
-      const matchesTopic = topic === "All" || book.topic === topic;
+    if (!materialsData?.items) return [];
+    return materialsData.items.filter((book: any) => {
+      const matchesTopic = topic === "All" || book.topics.includes(topic);
       const matchesSearch =
         book.title.toLowerCase().includes(search.toLowerCase()) ||
-        book.description.toLowerCase().includes(search.toLowerCase()) ||
-        book.authors.some((author) =>
-          author.name.toLowerCase().includes(search.toLowerCase()),
-        );
+        (book.description && book.description.toLowerCase().includes(search.toLowerCase()));
       return matchesTopic && matchesSearch;
     });
-  }, [search, topic]);
+  }, [search, topic, materialsData]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredBooks.length / pageSize);
@@ -55,9 +61,9 @@ export default function OnlineBooks() {
   }, [search, topic]);
 
   // Overview stats
-  const totalBooks = fakeBooks.length;
+  const totalBooks = materialsData?.items?.length || 0;
   const uniqueTopics = Array.from(
-    new Set(fakeBooks.map((b) => b.topic)),
+    new Set(materialsData?.items?.flatMap((b: any) => b.topics) || []),
   ).length;
 
   return (
@@ -76,16 +82,28 @@ export default function OnlineBooks() {
         setSearch={setSearch}
         topic={topic}
         setTopic={setTopic}
-        topics={topics}
+        topics={Array.from(new Set(materialsData?.items?.flatMap((b: any) => b.topics) || []))}
       />
 
       <div className="w-full max-w-6xl mx-auto mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
         <span>
           Page {page} of {totalPages}
         </span>
-        <span>
-          Showing {paginatedBooks.length} of {filteredBooks.length} books
-        </span>
+        <div className="flex items-center gap-4">
+          <span>
+            Showing {paginatedBooks.length} of {filteredBooks.length} books
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="cursor-pointer"
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {filteredBooks.length === 0 ? (
@@ -105,7 +123,7 @@ export default function OnlineBooks() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {paginatedBooks.map((book) => (
                   <BookCard
-                    key={book.id}
+                    key={book._id}
                     book={book}
                     onQuickView={setQuickViewBook}
                     favorites={favorites}

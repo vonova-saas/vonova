@@ -12,6 +12,21 @@ const API = axios.create(options);
 let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;
 
+// Add request interceptor to include Authorization header
+API.interceptors.request.use(
+  (config) => {
+    // Get token from localStorage or cookies
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 const isMissingAccessTokenCookieError = (status: number, data: unknown) => {
   const message = (data as { message?: string })?.message ?? "";
   return status === 400 && message.toLowerCase().includes("access token cookie is required");

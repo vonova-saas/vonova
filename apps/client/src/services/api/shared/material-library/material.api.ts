@@ -1,121 +1,105 @@
 import API from "@/services/axios-client";
 import type { 
-  Material, 
-  MaterialCategory, 
-  MaterialStatus,
   CreateMaterialRequest, 
-  MaterialsListResponse,
   CreateMaterialResponse,
   DeleteMaterialResponse 
 } from "@/types/api/shared/material-library/material.type";
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
-// Request Logger Interceptor for debugging (silenced)
-API.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    console.log('🔍 API Request:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-    });
-    return config;
-  },
-  (error: AxiosError) => {
-    console.error('🔍 API Request Error:', error);
-    return Promise.reject(error);
-  }
-);
+// Unified LMS Library API Functions
 
-// Response Logger Interceptor for debugging (silenced)
-API.interceptors.response.use(
-  (response: AxiosResponse) => {
-    console.log('🔍 API Response:', {
-      status: response.status,
-      url: response.config.url,
-    });
-    return response;
-  },
-  (error: AxiosError) => {
-    console.error('🔍 API Response Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Material API Functions
-
-export const fetchMaterialsQueryFn = async (
-  filters?: Partial<MaterialFilters>
-): Promise<MaterialsListResponse> => {
+/**
+ * Fetch library items from Unified LMS API
+ * @param type - Optional filter by type (e.g., 'book', 'video', etc.)
+ * @returns Promise with library items response
+ */
+export const fetchLibraryItemsQueryFn = async (
+  type?: string,
+  status?: string
+): Promise<any> => {
   const params = new URLSearchParams();
-  if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          value.forEach(v => params.append(key, v.toString()));
-        } else {
-          params.append(key, value.toString());
-        }
-      }
-    });
+  if (type) {
+    params.append('type', type);
+  }
+  if (status) {
+    params.append('status', status);
   }
 
-  const response = await API.get(`/materials?${params.toString()}`);
+  const response = await API.get(`/lms/library?${params.toString()}`);
   return response.data;
 };
 
-export const createMaterialMutationFn = async (
+/**
+ * Create a new library book in Unified LMS API
+ * @param data - Book creation data
+ * @returns Promise with creation response
+ */
+export const createLibraryBookMutationFn = async (
   data: CreateMaterialRequest
 ): Promise<CreateMaterialResponse> => {
-  const response = await API.post("/materials", data);
-  return response.data;
-};
-
-export const updateMaterialMutationFn = async (
-  id: string,
-  data: UpdateMaterialRequest
-): Promise<{ material: Material; message: string }> => {
-  const response = await API.put(`/materials/${id}`, data);
-  return response.data;
-};
-
-export const deleteMaterialMutationFn = async (
-  id: string
-): Promise<DeleteMaterialResponse> => {
-  const response = await API.delete(`/materials/${id}`);
-  return response.data;
-};
-
-export const getMaterialByIdQueryFn = async (
-  id: string
-): Promise<Material> => {
-  const response = await API.get(`/materials/${id}`);
-  return response.data;
-};
-
-export const uploadMaterialFileMutationFn = async (
-  file: File,
-  materialData: Omit<CreateMaterialRequest, 'file'>
-): Promise<CreateMaterialResponse> => {
-  const formData = new FormData();
-  formData.append('file', file);
+  // Map frontend fields to backend expected format
+  const { type, isPublished, ...rest } = data; // Remove type and isPublished as backend doesn't accept them
   
-  Object.entries(materialData).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      formData.append(key, value.toString());
-    }
-  });
+  // Ensure slug exists, generate from title if missing
+  const slug = rest.title.toLowerCase()
+    .replace(/ /g, '-')           // Replace spaces with hyphens
+    .replace(/[^\w-]+/g, '')      // Remove special characters except letters, numbers, hyphens, underscores
+    .replace(/--+/g, '-')         // Replace multiple hyphens with single hyphen
+    .trim();                      // Remove leading/trailing spaces
+  
+  const finalPayload = {
+    title: rest.title,
+    description: rest.description,
+    topics: rest.topicId ? [rest.topicId] : [], // Send as array
+    fileUrl: rest.fileUrl,
+    slug: slug,
+    status: 'PUBLISHED' // Set default status to PUBLISHED for student visibility
+  };
 
-  const response = await API.post("/materials/upload", formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // Use different endpoints based on content type
+  let endpoint = "/lms/library/books/createBook";
+  if (data.type === 'presentation') {
+    endpoint = "/lms/library/presentation/create";
+  } else if (data.type === 'visual-guide') {
+    endpoint = "/lms/library/guides/create";
+  }
+
+  const response = await API.post(endpoint, finalPayload);
   return response.data;
 };
 
-export const getMaterialStatsQueryFn = async (): Promise<MaterialStats> => {
-  const response = await API.get("/materials/stats");
+// Complete upload function to finalize file processing
+export const completeUploadMutationFn = async (
+  id: string,
+  type: string,
+  assetId?: string,
+  objectKey?: string
+): Promise<any> => {
+  // Use uppercase type names for the endpoint as required
+  let endpoint = `/lms/library/items/${type.toUpperCase()}/${id}/file/complete`;
+  
+  // Include payload with assetId and objectKey if provided
+  const payload = assetId && objectKey ? {
+    assetId: assetId,
+    objectKey: objectKey
+  } : {};
+  
+  const response = await API.post(endpoint, payload);
   return response.data;
 };
 
-// Import missing types
-import type { UpdateMaterialRequest, MaterialFilters, MaterialStats } from "@/types/api/shared/material-library/material.type";
+// Delete function with support for multiple content types
+export const deleteMaterialMutationFn = async (
+  id: string,
+  type?: string
+): Promise<DeleteMaterialResponse> => {
+  // Use different endpoints based on content type
+  let endpoint = `/lms/library/books/${id}`;
+  if (type === 'presentation') {
+    endpoint = `/lms/library/presentation/${id}`;
+  } else if (type === 'visual-guide') {
+    endpoint = `/lms/library/guides/${id}`;
+  }
+
+  const response = await API.delete(endpoint);
+  return response.data;
+};

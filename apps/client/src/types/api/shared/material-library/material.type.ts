@@ -7,11 +7,13 @@ export interface Material {
   fileUrl?: string;
   thumbnailUrl?: string;
   author?: string;
+  topicId?: string;
   createdAt: string;
   updatedAt: string;
   tags?: string[];
   category?: string;
   isPublic?: boolean;
+  isPublished?: boolean;
   downloadCount?: number;
   viewCount?: number;
 }
@@ -32,10 +34,13 @@ export interface CreateMaterialRequest {
   description?: string;
   type: Material['type'];
   url?: string;
+  fileUrl?: string;
   file?: File;
   tags?: string[];
   category?: string;
   isPublic?: boolean;
+  topicId?: string;
+  isPublished?: boolean;
 }
 
 export interface UpdateMaterialRequest {
@@ -46,6 +51,8 @@ export interface UpdateMaterialRequest {
   tags?: string[];
   category?: string;
   isPublic?: boolean;
+  topicId?: string;
+  isPublished?: boolean;
 }
 
 export interface MaterialFilters {
@@ -68,8 +75,6 @@ export interface MaterialStats {
   totalMaterials: number;
   totalCategories: number;
   totalDownloads: number;
-  totalViews: number;
-  recentUploads: Material[];
 }
 
 export enum MaterialCategory {
