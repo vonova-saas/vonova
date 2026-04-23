@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { CodeExecutionError, executeUserFunction } from './code-execution.util';
 
 /** Writable temp root for judge bind-mounts. Do not use process.cwd() — /app is often read-only in Docker. */
 function judgeTempRoot(): string {
@@ -122,11 +123,25 @@ async function execCommand(command: string, args: string[], timeoutMs: number) {
     stderr: string;
     exitCode: number | null;
     timedOut: boolean;
+    spawnError?: string;
   }>((resolve) => {
     const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    let settled = false;
+    const finish = (payload: {
+      stdout: string;
+      stderr: string;
+      exitCode: number | null;
+      timedOut: boolean;
+      spawnError?: string;
+    }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(payload);
+    };
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGKILL');
@@ -138,11 +153,101 @@ async function execCommand(command: string, args: string[], timeoutMs: number) {
     child.stderr.on('data', (chunk) => {
       stderr += String(chunk);
     });
+    child.on('error', (err) => {
+      finish({
+        stdout,
+        stderr,
+        exitCode: null,
+        timedOut: false,
+        spawnError: err.message,
+      });
+    });
     child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ stdout, stderr, exitCode: code, timedOut });
+      finish({ stdout, stderr, exitCode: code, timedOut });
     });
   });
+}
+
+/** Cached: is `docker` CLI usable (Railway LMS image often has no Docker). */
+let dockerCliAvailable: boolean | undefined;
+
+async function isDockerCliAvailable(): Promise<boolean> {
+  if (dockerCliAvailable !== undefined) return dockerCliAvailable;
+  if (process.env.JUDGE_USE_DOCKER === 'false') {
+    dockerCliAvailable = false;
+    return false;
+  }
+  const probe = await execCommand(
+    'docker',
+    ['version', '--format', '{{.Client.Version}}'],
+    4000,
+  );
+  if (probe.spawnError || probe.exitCode !== 0) {
+    dockerCliAvailable = false;
+    return false;
+  }
+  dockerCliAvailable = true;
+  return true;
+}
+
+function isVmRunnableLanguage(normalized: string): boolean {
+  return (
+    normalized === 'javascript' ||
+    normalized === 'js' ||
+    normalized === 'typescript' ||
+    normalized === 'ts'
+  );
+}
+
+function runWithVm(params: {
+  code: string;
+  functionName: string;
+  input: unknown;
+  language: string;
+  timeLimitMs: number;
+}): RunResult {
+  const startedAt = Date.now();
+  try {
+    const output = executeUserFunction({
+      code: params.code,
+      functionName: params.functionName,
+      input: params.input,
+      language: params.language,
+      timeoutMs: params.timeLimitMs,
+    });
+    return {
+      status: 'accepted',
+      output,
+      executionTime: Date.now() - startedAt,
+      memoryUsed: 0,
+      stdout: '',
+      stderr: '',
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isTimeout =
+      message.includes('Script execution timed out') ||
+      message.includes('timed out');
+    if (isTimeout) {
+      return {
+        status: 'time_limit_exceeded',
+        error: message,
+        executionTime: Date.now() - startedAt,
+        memoryUsed: 0,
+        stdout: '',
+        stderr: '',
+      };
+    }
+    const isCodeExec = error instanceof CodeExecutionError;
+    return {
+      status: 'runtime_error',
+      error: message,
+      executionTime: Date.now() - startedAt,
+      memoryUsed: 0,
+      stdout: '',
+      stderr: isCodeExec ? message : '',
+    };
+  }
 }
 
 export async function runInDocker(params: {
@@ -153,20 +258,36 @@ export async function runInDocker(params: {
   timeLimitMs: number;
   memoryLimitMb: number;
 }): Promise<RunResult> {
-  const {
-    code,
-    language,
-    functionName,
-    input,
-    timeLimitMs,
-    memoryLimitMb,
-  } = params;
+  const { code, language, functionName, input, timeLimitMs, memoryLimitMb } =
+    params;
   const normalizedLanguage = normalizeLanguage(language);
   const image = LANGUAGE_IMAGES[normalizedLanguage];
   if (!image) {
     return {
       status: 'runtime_error',
       error: `Unsupported language: ${language}`,
+      executionTime: 0,
+      memoryUsed: 0,
+      stdout: '',
+      stderr: '',
+    };
+  }
+
+  const useDocker = await isDockerCliAvailable();
+  if (!useDocker) {
+    if (isVmRunnableLanguage(normalizedLanguage)) {
+      return runWithVm({
+        code,
+        functionName,
+        input,
+        language,
+        timeLimitMs,
+      });
+    }
+    return {
+      status: 'runtime_error',
+      error:
+        'Docker is not available in this deployment. Only JavaScript/TypeScript can be judged here. For Python/C++/Java, run LMS with Docker (e.g. mount /var/run/docker.sock) or set JUDGE_USE_DOCKER=false and use JS/TS only.',
       executionTime: 0,
       memoryUsed: 0,
       stdout: '',
@@ -211,6 +332,27 @@ export async function runInDocker(params: {
     );
     const elapsed = Date.now() - startedAt;
     const memoryUsed = 0;
+
+    if (result.spawnError) {
+      dockerCliAvailable = false;
+      if (isVmRunnableLanguage(normalizedLanguage)) {
+        return runWithVm({
+          code,
+          functionName,
+          input,
+          language,
+          timeLimitMs,
+        });
+      }
+      return {
+        status: 'runtime_error',
+        error: `Docker failed: ${result.spawnError}`,
+        executionTime: elapsed,
+        memoryUsed,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
+    }
 
     if (result.timedOut) {
       return {
