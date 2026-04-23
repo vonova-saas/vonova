@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LibraryTopics } from '../../library/dto/topics.dto';
 
 export class AuthorDto {
   @ApiProperty({
@@ -85,12 +86,13 @@ export class CreateBookDto {
 
   @ApiPropertyOptional({
     description: 'Array of topics covered in the book',
-    example: ['javascript', 'programming', 'web-development'],
-    type: [String],
+    example: ['Programming Basics', 'Web Development', 'Data Structure'],
+    enum: LibraryTopics,
+    isArray: true,
   })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsEnum(LibraryTopics, { each: true })
   topics: string[] = [];
 
   @ApiPropertyOptional({
@@ -178,7 +180,7 @@ export class GetBooksQueryDto {
 
   @ApiPropertyOptional({
     description: 'Comma-separated topics to filter by',
-    example: 'programming,javascript',
+    example: 'Programming Basics,Web Development,Data Structure',
     type: String,
   })
   @IsOptional()

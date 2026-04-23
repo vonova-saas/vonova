@@ -1,7 +1,20 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import type { LibraryStatus, Level } from './library.schema';
-import { LibraryTopics } from './library.schema';
+
+export type LibraryStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type Level = 'Beginner' | 'Intermediate' | 'Advanced';
+export type LibraryType = 'book' | 'guide' | 'presentation';
+
+export enum LibraryTopics {
+  PROGRAMMING_BASICS = 'Programming Basics',
+  WEB_DEVELOPMENT = 'Web Development',
+  DATA_STRUCTURE = 'Data Structure',
+  ALGORITHMS = 'Algorithms',
+  DATABASE_DESIGN = 'Database Design',
+  MACHINE_LEARNING = 'Machine Learning',
+  MOBILE_DEVELOPMENT = 'Mobile Development',
+  CLOUD_COMPUTING = 'Cloud Computing',
+}
 
 export class Author {
   @Prop({ required: true })
@@ -11,7 +24,7 @@ export class Author {
   avatarUrl?: string;
 }
 
-export class GuideMetrics {
+export class LibraryMetrics {
   @Prop({ default: 0 })
   views: number;
 
@@ -25,12 +38,12 @@ export class GuideMetrics {
   ratingCount: number;
 }
 
-@Schema({ timestamps: true })
-export class Guide {
+@Schema({ timestamps: true, discriminatorKey: 'type' })
+export class LibraryItem {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
 
-  @Prop({ required: true, trim: true, unique: true, index: true })
+  @Prop({ required: true, trim: true })
   title: string;
 
   @Prop({ required: true, unique: true, index: true })
@@ -45,7 +58,7 @@ export class Guide {
   @Prop({ type: [Object], default: [] })
   authors: Author[];
 
-  @Prop({ type: [String], enum: Object.values(LibraryTopics), default: [] })
+  @Prop({ type: [String], default: [] })
   topics: string[];
 
   @Prop({ enum: ['Beginner', 'Intermediate', 'Advanced'], default: 'Beginner' })
@@ -61,7 +74,7 @@ export class Guide {
   status: LibraryStatus;
 
   @Prop({ type: Object, default: {} })
-  metrics: GuideMetrics;
+  metrics: LibraryMetrics;
 
   @Prop({ type: [String], default: [] })
   badges?: string[];
@@ -69,10 +82,11 @@ export class Guide {
   @Prop({ type: Types.ObjectId, ref: 'LibraryAsset', default: null })
   fileAssetId?: Types.ObjectId | null;
 
-  @Prop({ enum: ['book', 'guide', 'presentation'], default: 'guide' })
-  type: string;
+  @Prop({ enum: ['book', 'guide', 'presentation'], required: true })
+  type: LibraryType;
 }
 
-export type GuideDocument = Guide & Document;
-export const GuideSchema = SchemaFactory.createForClass(Guide);
-GuideSchema.index({ title: 'text', summary: 'text', description: 'text' });
+export const LibrarySchema = SchemaFactory.createForClass(LibraryItem);
+LibrarySchema.index({ title: 'text', summary: 'text', description: 'text' });
+
+export type LibraryDocument = LibraryItem & Document;

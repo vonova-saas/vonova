@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { IsArray, IsEnum, IsOptional, IsString, IsUrl } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LibraryTopics } from '../../library/dto/topics.dto';
 
 export class AuthorDto {
   @ApiProperty({
@@ -67,11 +68,13 @@ export class CreatePresentationDto {
 
   @ApiPropertyOptional({
     description: 'Array of topics covered in the presentation',
-    example: ['javascript', 'programming', 'web-development'],
-    type: [String],
+    example: ['Programming Basics', 'Web Development', 'Data Structure'],
+    enum: LibraryTopics,
+    isArray: true,
   })
   @IsOptional()
   @IsArray()
+  @IsEnum(LibraryTopics, { each: true })
   topics?: string[];
 
   @ApiPropertyOptional({
