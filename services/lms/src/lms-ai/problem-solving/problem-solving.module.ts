@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
 import { ProblemSolvingController } from './problem-solving.controller';
 import { ProblemService } from './problem.service';
 import { SubmissionService } from './submission.service';
@@ -20,7 +19,6 @@ import { SubmissionJudgeQueue } from './submission-judge.queue';
 
 @Module({
   imports: [
-    ConfigModule,
     MongooseModule.forFeature(
       [
         { name: Problem.name, schema: ProblemSchema },
