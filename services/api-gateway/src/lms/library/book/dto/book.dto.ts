@@ -152,6 +152,16 @@ export class CreateBookDto {
   @IsInt()
   @Type(() => Number)
   readingTimeMin?: number = 0;
+
+  @ApiPropertyOptional({
+    description: 'Publication status of the book',
+    enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
+    example: 'PUBLISHED',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdateBookDto extends PartialType(CreateBookDto) {}

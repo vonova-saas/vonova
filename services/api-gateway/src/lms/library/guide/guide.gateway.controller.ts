@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { GuideGatewayService } from './guide.gateway.service';
 import {
   CreateGuideDto,
@@ -31,7 +34,7 @@ import {
 @ApiTags('LMS Library Guides')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/guides')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class GuideGatewayController {
   constructor(private readonly guideService: GuideGatewayService) {}
 
@@ -103,6 +106,11 @@ export class GuideGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only INSTRUCTOR_USER role can create guides',
+  })
+  @Roles(Role.INSTRUCTOR_USER)
   @Post()
   async createGuide(@Body() dto: CreateGuideDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
@@ -111,7 +119,13 @@ export class GuideGatewayController {
       throw new Error('Authentication required - No user found');
     }
     
-    return firstValueFrom(this.guideService.createGuide(dto, userId));
+    // Ensure status is set from request body or default to PUBLISHED
+    const guideData = {
+      ...dto,
+      status: dto.status || 'PUBLISHED'
+    };
+    
+    return firstValueFrom(this.guideService.createGuide(guideData, userId));
   }
 
   @ApiOperation({
@@ -242,7 +256,12 @@ export class GuideGatewayController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: string,
+    @Request() req?: any,
   ) {
+    const user = req?.user;
+    const userRole = user?.role;
+    const userId = user?.id || user?.sub || user?._id;
+    
     const topicsArray = topics ? topics.split(',') : undefined;
     return firstValueFrom(
       this.guideService.listGuides({
@@ -253,6 +272,8 @@ export class GuideGatewayController {
         page,
         limit,
         status,
+        userRole,
+        userId,
       }),
     );
   }

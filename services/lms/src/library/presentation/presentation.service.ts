@@ -25,7 +25,12 @@ export class PresentationService {
   ) {}
 
   async create(dto: CreatePresentationDto, userId: string) {
-    return await this.presentationModel.create({ ...dto, createdBy: userId });
+    const presentationData = {
+      ...dto,
+      createdBy: userId,
+      status: dto.status || 'PUBLISHED'
+    };
+    return await this.presentationModel.create(presentationData);
   }
 
   async update(id: string, dto: UpdatePresentationDto, userId: string) {
@@ -68,11 +73,35 @@ export class PresentationService {
       page = 1,
       limit = 12,
       status,
+      userRole,
+      userId,
     } = query;
 
     const filter: any = {};
-
-    if (status) filter.status = status;
+    
+    // Role-based filtering logic
+    if (userRole === 'INSTRUCTOR_USER') {
+      // Instructors can see all presentations they created, plus all published presentations
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    } else {
+      // Students and other roles only see published presentations
+      filter.status = 'PUBLISHED';
+    }
+    
+    // Apply explicit status filter if provided (but don't override role-based logic for students)
+    if (status && userRole === 'INSTRUCTOR_USER') {
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId, status: status },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    }
     if (q) filter.$text = { $search: q };
 
     // Fix topics parsing

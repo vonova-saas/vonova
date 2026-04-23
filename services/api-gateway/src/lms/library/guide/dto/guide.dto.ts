@@ -136,6 +136,16 @@ export class CreateGuideDto {
   @IsArray()
   @IsString({ each: true })
   badges?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Publication status of the guide',
+    enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
+    example: 'PUBLISHED',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdateGuideDto extends CreateGuideDto {}

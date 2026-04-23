@@ -27,6 +27,7 @@ export class GuideService {
     const guideData = {
       ...payload,
       createdBy: userId,
+      status: payload.status || 'PUBLISHED',
     };
     const guide = await this.guideModel.create(guideData);
     if (!guide) throw new BadRequestException('Guide not created');
@@ -54,6 +55,8 @@ export class GuideService {
     page?: number;
     limit?: number;
     status?: string;
+    userRole?: string;
+    userId?: string;
   }) {
     const {
       q,
@@ -62,9 +65,35 @@ export class GuideService {
       sort = 'new',
       page = 1,
       limit = 12,
-      status = 'PUBLISHED',
+      status,
+      userRole,
+      userId,
     } = query;
-    const filter: any = { status };
+    const filter: any = {};
+    
+    // Role-based filtering logic
+    if (userRole === 'INSTRUCTOR_USER') {
+      // Instructors can see all guides they created, plus all published guides
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    } else {
+      // Students and other roles only see published guides
+      filter.status = 'PUBLISHED';
+    }
+    
+    // Apply explicit status filter if provided (but don't override role-based logic for students)
+    if (status && userRole === 'INSTRUCTOR_USER') {
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId, status: status },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    }
 
     if (q) filter.$text = { $search: q };
     if (topics && topics.length) filter.topics = { $in: topics };

@@ -71,6 +71,10 @@ export class CreateGuideDto {
   @IsArray()
   @IsString({ each: true })
   badges?: string[];
+
+  @IsOptional()
+  @IsEnum(GuideStatus)
+  status?: GuideStatus = GuideStatus.PUBLISHED;
 }
 
 export class UpdateGuideDto extends CreateGuideDto {}
@@ -78,4 +82,42 @@ export class UpdateGuideDto extends CreateGuideDto {}
 export class PublishGuideDto {
   @IsEnum(GuideStatus)
   status: GuideStatus = GuideStatus.PUBLISHED;
+}
+
+export class GetGuidesQueryDto {
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
+  @IsString()
+  topics?: string;
+
+  @IsOptional()
+  @IsString()
+  level?: string;
+
+  @IsOptional()
+  @IsString()
+  sort?: string;
+
+  @IsOptional()
+  @IsString()
+  page?: string;
+
+  @IsOptional()
+  @IsString()
+  limit?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  userRole?: string;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }

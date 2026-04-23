@@ -32,7 +32,12 @@ export class BookService {
   ) {}
 
   async createBookService(data: CreateBookDto, userId: string) {
-    const book = await this.bookModel.create({ ...data, createdBy: userId });
+    const bookData = {
+      ...data,
+      createdBy: userId,
+      status: data.status || 'PUBLISHED'
+    };
+    const book = await this.bookModel.create(bookData);
     if (!book) throw new BadRequestException('Book not created');
     return book;
   }
@@ -61,6 +66,8 @@ export class BookService {
     page?: number;
     limit?: number;
     status?: string;
+    userRole?: string;
+    userId?: string;
   }) {
     const {
       q,
@@ -70,9 +77,35 @@ export class BookService {
       page = 1,
       limit = 12,
       status,
+      userRole,
+      userId,
     } = query;
     const filter: any = {};
-    if (status) filter.status = status;
+    
+    // Role-based filtering logic
+    if (userRole === 'INSTRUCTOR_USER') {
+      // Instructors can see all books they created, plus all published books
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    } else {
+      // Students and other roles only see published books
+      filter.status = 'PUBLISHED';
+    }
+    
+    // Apply explicit status filter if provided (but don't override role-based logic for students)
+    if (status && userRole === 'INSTRUCTOR_USER') {
+      if (userId) {
+        filter.$or = [
+          { createdBy: userId, status: status },
+          { status: 'PUBLISHED' }
+        ];
+      }
+    }
+    
     if (q) filter.$text = { $search: q };
     if (topics && topics.length) filter.topics = { $in: topics };
     if (level) filter.level = level;

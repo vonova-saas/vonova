@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/enums/role.enum';
 import { PresentationGatewayService } from './presentation.gateway.service';
 import {
   CreatePresentationDto,
@@ -30,7 +33,7 @@ import {
 @ApiTags('LMS Library Presentations')
 @ApiBearerAuth()
 @Controller('api/v1/lms/library/presentation')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class PresentationGatewayController {
   constructor(
     private readonly presentationService: PresentationGatewayService,
@@ -108,6 +111,11 @@ export class PresentationGatewayController {
     status: 401,
     description: 'Unauthorized - JWT token is required',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only INSTRUCTOR_USER role can create presentations',
+  })
+  @Roles(Role.INSTRUCTOR_USER)
   @Post('createPresentation')
   async create(@Body() dto: CreatePresentationDto, @Request() req: any) {
     const userId = req.user?.id || req.user?.sub || req.user?._id;
@@ -116,7 +124,13 @@ export class PresentationGatewayController {
       throw new Error('Authentication required - No user found');
     }
     
-    return firstValueFrom(this.presentationService.create(dto, userId));
+    // Ensure status is set from request body or default to PUBLISHED
+    const presentationData = {
+      ...dto,
+      status: dto.status || 'PUBLISHED'
+    };
+    
+    return firstValueFrom(this.presentationService.create(presentationData, userId));
   }
 
   @ApiOperation({
@@ -392,8 +406,18 @@ export class PresentationGatewayController {
     },
   })
   @Get('getAllPresentations')
-  async getAll(@Query() query: any) {
-    return firstValueFrom(this.presentationService.getAll(query));
+  async getAll(@Query() query: any, @Request() req?: any) {
+    const user = req?.user;
+    const userRole = user?.role;
+    const userId = user?.id || user?.sub || user?._id;
+    
+    const queryWithUser = {
+      ...query,
+      userRole,
+      userId
+    };
+    
+    return firstValueFrom(this.presentationService.getAll(queryWithUser));
   }
 
   @ApiOperation({

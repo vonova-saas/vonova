@@ -56,8 +56,9 @@ export class PresentationController {
   }
 
   @MessagePattern({ cmd: 'library.presentation.getAll' })
-  getAll(@Payload() data: any) {
-    return this.service.findAll(data || {});
+  getAll(@Payload() data: any & { userRole?: string; userId?: string }) {
+    const { userRole, userId, ...query } = data || {};
+    return this.service.findAll({ ...query, userRole, userId });
   }
 
   @MessagePattern({ cmd: 'library.presentation.getById' })

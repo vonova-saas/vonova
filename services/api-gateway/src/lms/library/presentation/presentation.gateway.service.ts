@@ -42,9 +42,14 @@ export class PresentationGatewayService {
   }
 
   getAll(query?: any) {
+    const queryWithUser = {
+      ...query,
+      userRole: query?.userRole,
+      userId: query?.userId
+    };
     return this.client.send(
       { cmd: 'library.presentation.getAll' },
-      query || {},
+      queryWithUser,
     );
   }
 

@@ -113,6 +113,16 @@ export class CreatePresentationDto {
   @IsOptional()
   @IsArray()
   badges?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Publication status of the presentation',
+    enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
+    example: 'PUBLISHED',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}
