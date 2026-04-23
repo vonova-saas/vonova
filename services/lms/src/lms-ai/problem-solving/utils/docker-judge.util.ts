@@ -29,6 +29,15 @@ type RunResult = {
   status: JudgeStatus;
 };
 
+/** Languages that must use Docker — never run their source through the JS VM. */
+const DOCKER_ONLY_LANGUAGES = new Set([
+  'python',
+  'py',
+  'cpp',
+  'c++',
+  'java',
+]);
+
 const LANGUAGE_IMAGES: Record<string, string> = {
   javascript: 'node:20-alpine',
   js: 'node:20-alpine',
@@ -213,6 +222,10 @@ function vmLanguageForNoDocker(params: {
   functionName: string;
 }): string {
   const { declared, code, functionName } = params;
+  if (DOCKER_ONLY_LANGUAGES.has(declared)) {
+    return declared;
+  }
+
   if (isVmRunnableLanguage(declared)) {
     return declared === 'js' || declared === 'node' || declared === 'nodejs'
       ? 'javascript'
@@ -329,10 +342,14 @@ export async function runInDocker(params: {
         timeLimitMs,
       });
     }
+    const langHint = DOCKER_ONLY_LANGUAGES.has(vmLanguage)
+      ? ` Your language is set to "${language}"; without Docker that cannot run on this host. Either switch the language menu to JavaScript (or TypeScript) to match your code, or deploy LMS with Docker.`
+      : '';
     return {
       status: 'runtime_error',
       error:
-        'Docker is not available in this deployment. Only JavaScript/TypeScript can be judged here. For Python/C++/Java, run LMS with Docker (e.g. mount /var/run/docker.sock) or set JUDGE_USE_DOCKER=false and use JS/TS only.',
+        'Docker is not available in this deployment. Only JavaScript/TypeScript can be judged here. For Python/C++/Java, run LMS with Docker (e.g. mount /var/run/docker.sock) or set JUDGE_USE_DOCKER=false and use JS/TS only.' +
+        langHint,
       executionTime: 0,
       memoryUsed: 0,
       stdout: '',
