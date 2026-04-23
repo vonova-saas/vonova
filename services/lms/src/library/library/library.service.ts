@@ -5,6 +5,7 @@ import { Book, BookDocument } from '../schema/book/book.schema';
 import { Guide, GuideDocument } from '../schema/guide.schema';
 import { Presentation, PresentationDocument } from '../schema/presentation.schema';
 import { LibraryType, LibraryTopics } from '../schema/library.schema';
+import { UploadService } from '../upload/upload.service';
 
 export interface GetAllByTypeQuery {
   /** Filter by content type ('book' | 'guide' | 'presentation') */
@@ -43,6 +44,7 @@ export class LibraryService {
     @InjectModel(Book.name) private bookModel: Model<BookDocument>,
     @InjectModel(Guide.name) private guideModel: Model<GuideDocument>,
     @InjectModel(Presentation.name) private presentationModel: Model<PresentationDocument>,
+    private readonly uploadService: UploadService,
   ) {}
 
   /**
@@ -126,8 +128,40 @@ export class LibraryService {
       model.countDocuments(filter)
     ]);
 
+    // Add presigned URLs for items with fileAssetId
+    const itemsWithUrls = await Promise.all(
+      items.map(async (item: any) => {
+        if (item.fileAssetId) {
+          try {
+            const presignedUrl = await this.uploadService.getValidPresignedUrl(item.fileAssetId._id?.toString() || item.fileAssetId.toString());
+            
+            // Remove presigned URLs from nested fileAssetId to avoid duplication
+            const cleanedFileAssetId = {
+              ...item.fileAssetId,
+              urls: {
+                ...item.fileAssetId.urls,
+                presignedUrl: undefined,
+                presignedUrlExpiresAt: undefined,
+              },
+            };
+            
+            return {
+              ...item,
+              fileAssetId: cleanedFileAssetId,
+              presignedUrl,
+            };
+          } catch (error) {
+            // If presigned URL generation fails, return item without URL
+            console.error(`Failed to generate presigned URL for item ${item._id}:`, error);
+            return item;
+          }
+        }
+        return item;
+      })
+    );
+
     return {
-      items,
+      items: itemsWithUrls,
       total,
       page: page || 1,
       limit: limit || 10,
