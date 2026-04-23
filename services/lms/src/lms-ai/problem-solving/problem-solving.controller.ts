@@ -60,6 +60,12 @@ export class ProblemSolvingController {
     return this.aiService.requestHint(data.dto, data.userId);
   }
 
+  @MessagePattern({ cmd: PROBLEM_PATTERNS.AI_HINTS })
+  async getHints(@Payload() data: { userId: string; problemId: string }) {
+    this.logger.log(`NATS ${PROBLEM_PATTERNS.AI_HINTS} received`);
+    return this.aiService.getHints(data.userId, data.problemId);
+  }
+
   @MessagePattern({ cmd: PROBLEM_PATTERNS.AI_SOLUTION })
   async requestSolution(
     @Payload() data: { userId: string; dto: RequestSolutionDto },

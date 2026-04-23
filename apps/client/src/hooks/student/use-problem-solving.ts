@@ -2,6 +2,7 @@
 
 import {
   createSubmissionMutationFn,
+  getHintsHistoryQueryFn,
   getProblemByIdQueryFn,
   getProblemsQueryFn,
   requestHintMutationFn,
@@ -21,6 +22,7 @@ export const problemSolvingKeys = {
     [...problemSolvingKeys.all, "problems", filters ?? {}] as const,
   problem: (problemId: string) =>
     [...problemSolvingKeys.all, "problem", problemId] as const,
+  hints: (problemId: string) => [...problemSolvingKeys.all, "hints", problemId] as const,
   submissions: (problemId: string) =>
     [...problemSolvingKeys.all, "submissions", problemId] as const,
 };
@@ -46,6 +48,13 @@ export const useSubmitSolutionMutation = () =>
 export const useHintMutation = () =>
   useMutation({
     mutationFn: (payload: HintRequest) => requestHintMutationFn(payload),
+  });
+
+export const useHintsHistoryQuery = (problemId: string) =>
+  useQuery({
+    queryKey: problemSolvingKeys.hints(problemId),
+    queryFn: () => getHintsHistoryQueryFn(problemId),
+    enabled: Boolean(problemId),
   });
 
 export const useSolutionMutation = () =>

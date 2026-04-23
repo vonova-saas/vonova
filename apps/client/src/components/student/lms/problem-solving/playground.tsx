@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { Lightbulb, Loader2, WandSparkles, X } from "lucide-react";
+import { Lightbulb, Loader2, WandSparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
 import {
   problemSolvingKeys,
   useHintMutation,
+  useHintsHistoryQuery,
   useSolutionMutation,
   useSubmitSolutionMutation,
 } from "@/hooks/student/use-problem-solving";
@@ -29,6 +30,8 @@ type PlaygroundProps = {
   problem: ProblemEntity;
 };
 
+type HintLanguage = "english" | "arabic";
+
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 const DEFAULT_LANGUAGE = "typescript";
@@ -37,10 +40,10 @@ export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
-  const [hints, setHints] = useState<AIInteractionEntity[]>([]);
   const [solution, setSolution] = useState<AIInteractionEntity | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiModalMode, setAiModalMode] = useState<"hint" | "solution">("hint");
+  const [hintLanguage, setHintLanguage] = useState<HintLanguage>("english");
   const [submissionStatus, setSubmissionStatus] = useState<
     "idle" | "accepted" | "wrong_answer"
   >("idle");
@@ -52,9 +55,23 @@ export default function Playground({ problem }: PlaygroundProps) {
   const submitMutation = useSubmitSolutionMutation();
   const hintMutation = useHintMutation();
   const solutionMutation = useSolutionMutation();
+  const {
+    data: hintsHistory,
+    refetch: refetchHintsHistory,
+    isFetching: isFetchingHintsHistory,
+  } = useHintsHistoryQuery(problem._id);
 
-  const hintLimitReached = hints.length >= 3;
+  const hintsUsed = hintsHistory?.hintsUsed ?? 0;
+  const solutionUsed = hintsHistory?.solutionUsed ?? false;
+  const allHints = hintsHistory?.hints ?? [];
+  const hintLimitReached = hintsUsed >= 3;
+  const visibleHints = useMemo(() => allHints, [allHints]);
   const hintLevels = ["General", "Focused", "Advanced"];
+  const hintLevelHelp: Record<string, string> = {
+    General: "High-level direction without revealing the approach.",
+    Focused: "More specific guidance toward the right strategy.",
+    Advanced: "Near-final guidance to help you finish the solution.",
+  };
 
   const parsedSolution = useMemo(() => {
     if (!solution?.response) return { code: "", explanation: "" };
@@ -71,6 +88,18 @@ export default function Playground({ problem }: PlaygroundProps) {
     }
     return { code: response, explanation: response };
   }, [solution]);
+
+  const formatHintResponse = (raw: string) => {
+    if (!raw) return "";
+    try {
+      const parsed = JSON.parse(raw) as { hint?: string; response?: string };
+      if (typeof parsed.hint === "string" && parsed.hint.trim()) return parsed.hint;
+      if (typeof parsed.response === "string" && parsed.response.trim()) return parsed.response;
+    } catch {
+      // Raw value is not JSON, so show as-is.
+    }
+    return raw;
+  };
 
   const handleSubmit = async () => {
     try {
@@ -109,10 +138,10 @@ export default function Playground({ problem }: PlaygroundProps) {
       const response = await hintMutation.mutateAsync({
         problemId: problem._id,
         code,
-        languageHint: "english",
+        languageHint: hintLanguage,
       });
-      setHints((prev) => [...prev, response]);
-      toast.success(`Hint ${response.level ?? hints.length + 1} generated`);
+      await refetchHintsHistory();
+      toast.success(`Hint ${response.hintsUsed ?? hintsUsed + 1}/3 generated`);
     } catch (error: unknown) {
       toast.error("Hint request failed", {
         description:
@@ -131,6 +160,7 @@ export default function Playground({ problem }: PlaygroundProps) {
         language,
       });
       setSolution(response);
+      await refetchHintsHistory();
       toast.success("AI solution ready");
     } catch (error: unknown) {
       toast.error("Solution request failed", {
@@ -140,6 +170,12 @@ export default function Playground({ problem }: PlaygroundProps) {
           "You need at least one failed submission before requesting solution.",
       });
     }
+  };
+
+  const handleViewHints = () => {
+    setAiModalMode("hint");
+    setAiModalOpen(true);
+    void refetchHintsHistory();
   };
 
   return (
@@ -220,15 +256,25 @@ export default function Playground({ problem }: PlaygroundProps) {
                 ) : (
                   <>
                     <Lightbulb className="mr-2 h-4 w-4" />
-                    Get Hint ({hints.length}/3)
+                    Get Hint ({hintsUsed}/3)
                   </>
                 )}
               </Button>
 
               <Button
                 variant="outline"
+                onClick={handleViewHints}
+                disabled={allHints.length === 0}
+                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+              >
+                <Lightbulb className="mr-2 h-4 w-4" />
+                View Hints ({visibleHints.length})
+              </Button>
+
+              <Button
+                variant="outline"
                 onClick={handleShowSolution}
-                disabled={solutionMutation.isPending}
+                disabled={solutionMutation.isPending || solutionUsed}
                 className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
               >
                 {solutionMutation.isPending ? (
@@ -239,7 +285,7 @@ export default function Playground({ problem }: PlaygroundProps) {
                 ) : (
                   <>
                     <WandSparkles className="mr-2 h-4 w-4" />
-                    Show Solution
+                    {solutionUsed ? "Solution Unlocked" : "Show Solution"}
                   </>
                 )}
               </Button>
@@ -271,41 +317,120 @@ export default function Playground({ problem }: PlaygroundProps) {
       <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
         <DialogContent
           overlayClassName="bg-black/60 backdrop-blur-sm"
-          className="max-h-[85vh] overflow-hidden border-zinc-700 bg-[#171717] p-0 sm:max-w-2xl"
+          className="max-h-[90vh] overflow-hidden border-zinc-700 bg-[#171717] p-0 sm:max-w-3xl"
         >
           <DialogHeader className="flex-row items-center justify-between border-b border-zinc-700 px-4 py-3">
             <DialogTitle className="text-sm text-zinc-100">
               {aiModalMode === "hint" ? "AI Hints" : "AI Solution"}
             </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-              onClick={() => setAiModalOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </DialogHeader>
 
-          <div className="max-h-[72vh] space-y-3 overflow-y-auto px-4 py-4">
+          <div className="max-h-[80vh] space-y-4 overflow-y-auto px-5 py-5">
             {aiModalMode === "hint" ? (
-              hints.length === 0 ? (
-                <p className="text-xs text-zinc-500">No hints yet. Click "Get Hint".</p>
-              ) : (
-                hints.map((hint, index) => (
-                  <div
-                    key={hint._id ?? `${hint.createdAt}-${index}`}
-                    className="ml-auto max-w-[95%] rounded-xl rounded-br-sm border border-zinc-700 bg-zinc-800 px-3 py-2"
-                  >
-                    <p className="mb-1 text-[11px] font-semibold text-zinc-100">
-                      Hint {index + 1} ({hintLevels[index] ?? "Advanced"})
-                    </p>
-                    <p className="whitespace-pre-wrap text-xs leading-5 text-zinc-300">
-                      {hint.response}
+              <div className="space-y-4">
+                {isFetchingHintsHistory ? (
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Syncing hints...
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-700/80 bg-zinc-900/50 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-zinc-400">Hint language</p>
+                    <p className="text-sm text-zinc-200">
+                      Choose your preferred language for upcoming hints.
                     </p>
                   </div>
-                ))
-              )
+                  <div className="inline-flex rounded-lg border border-zinc-700 bg-zinc-900 p-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={hintLanguage === "english" ? "default" : "ghost"}
+                      onClick={() => setHintLanguage("english")}
+                      className="h-7 px-3 text-xs"
+                    >
+                      English
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={hintLanguage === "arabic" ? "default" : "ghost"}
+                      onClick={() => setHintLanguage("arabic")}
+                      className="h-7 px-3 text-xs"
+                    >
+                      العربية
+                    </Button>
+                  </div>
+                </div>
+                {visibleHints.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-6 text-center">
+                    <p className="text-sm text-zinc-300">No hints yet.</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Click <span className="font-medium text-zinc-400">Get Hint</span> to generate
+                      Hint 1 (General) in{" "}
+                      <span className="font-semibold text-zinc-300">
+                        {hintLanguage === "english" ? "English" : "Arabic"}
+                      </span>
+                      .
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {visibleHints.map((hint, index) => {
+                      const level = hintLevels[(hint.level ?? index + 1) - 1] ?? "Advanced";
+                      return (
+                        <div
+                          key={`${hint.createdAt}-${hint.level}-${index}`}
+                          className="rounded-xl border border-zinc-700 bg-linear-to-b from-zinc-800 to-zinc-900 px-4 py-4"
+                          dir={hint.language === "arabic" ? "rtl" : "ltr"}
+                        >
+                          <div className="mb-2 flex items-center gap-2">
+                            <Badge className="bg-indigo-600/20 text-indigo-200">
+                              Hint {index + 1}
+                            </Badge>
+                            <span className="text-sm font-semibold text-zinc-100">{level}</span>
+                            <Badge variant="outline" className="text-[10px] uppercase">
+                              {hint.language}
+                            </Badge>
+                          </div>
+                          <p className="mb-2 text-xs text-zinc-400">{hintLevelHelp[level]}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-200">
+                            {formatHintResponse(hint.response)}
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    {!hintLimitReached ? (
+                      <div className="rounded-xl border border-dashed border-zinc-600 bg-zinc-900/40 px-4 py-3">
+                        <p className="text-sm font-medium text-zinc-200">
+                          Upcoming hint{3 - hintsUsed > 1 ? "s" : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Next level:{" "}
+                          <span className="font-semibold text-zinc-200">
+                            {hintLevels[hintsUsed] ?? "Advanced"}
+                          </span>{" "}
+                          ({Math.max(0, 3 - hintsUsed)} remaining)
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-700/40 bg-emerald-900/10 px-4 py-3">
+                        <p className="text-sm font-medium text-emerald-300">
+                          Hint limit reached (3/3)
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-zinc-500">
+                      New hints will be generated in{" "}
+                      <span className="font-medium text-zinc-400">
+                        {hintLanguage === "english" ? "English" : "Arabic"}
+                      </span>
+                      .
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : !solution ? (
               <p className="text-xs text-zinc-500">
                 Solution will appear here after clicking "Show Solution".

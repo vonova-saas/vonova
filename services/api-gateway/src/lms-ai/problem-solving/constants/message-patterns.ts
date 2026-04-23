@@ -5,6 +5,7 @@ export const PROBLEM_PATTERNS = {
   GET: 'problem.get',
   SUBMIT: 'submission.create',
   AI_HINT: 'ai.hint',
+  AI_HINTS: 'ai.hints',
   AI_SOLUTION: 'ai.solution',
 } as const;
 

@@ -234,6 +234,27 @@ export class ProblemSolvingGatewayController {
     );
   }
 
+  @Get('student/problems/:id/hints')
+  @UseGuards(StudentGuard)
+  @ApiOperation({
+    summary: 'View AI hints history (Student)',
+    description:
+      'Returns backend persisted hint progress for current user and problem (hints list, hintsUsed, solutionUsed).',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Problem Mongo ObjectId',
+    example: '665f7d4a3f0f8d0f42c5b8a1',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hints history retrieved successfully.',
+  })
+  async getHints(@Request() req: unknown, @Param('id') id: string) {
+    const user = this.getUser(req);
+    return firstValueFrom(this.problemSolvingService.getHints(user.id, id));
+  }
+
   @Post('student/problems/:id/solution')
   @UseGuards(StudentGuard)
   @ApiOperation({

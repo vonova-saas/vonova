@@ -65,5 +65,24 @@ export type AIInteractionEntity = {
   level?: 1 | 2 | 3;
   response: string;
   createdAt: string;
+  hintsUsed?: number;
+  hintsRemaining?: number;
+  solutionUsed?: boolean;
+};
+
+export type StoredHintEntity = {
+  level: 1 | 2 | 3;
+  response: string;
+  language: "english" | "arabic";
+  createdAt: string;
+};
+
+export type HintsHistoryEntity = {
+  userId: string;
+  problemId: string;
+  hintsUsed: number;
+  hintsRemaining: number;
+  solutionUsed: boolean;
+  hints: StoredHintEntity[];
 };
 

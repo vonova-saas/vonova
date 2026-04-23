@@ -129,15 +129,6 @@ export default function ProblemSolvingManagement() {
         difficulty: draft.difficulty,
         categories: draft.categories,
       });
-  const toggleCategory = (category: (typeof CATEGORY_OPTIONS)[number]["value"]) => {
-    setDraft((prev) => ({
-      ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter((item) => item !== category)
-        : [...prev.categories, category],
-    }));
-  };
-
 
       await queryClient.invalidateQueries({
         queryKey: instructorProblemSolvingKeys.list(),
@@ -169,6 +160,15 @@ export default function ProblemSolvingManagement() {
             ?.message ?? "Please try again.",
       });
     }
+  };
+
+  const toggleCategory = (category: (typeof CATEGORY_OPTIONS)[number]["value"]) => {
+    setDraft((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter((item) => item !== category)
+        : [...prev.categories, category],
+    }));
   };
 
   const addTestCase = () => {

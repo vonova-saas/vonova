@@ -43,6 +43,10 @@ export class ProblemSolvingGatewayService {
     return this.client.send({ cmd: PROBLEM_PATTERNS.AI_HINT }, { userId, dto });
   }
 
+  getHints(userId: string, problemId: string) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.AI_HINTS }, { userId, problemId });
+  }
+
   requestSolution(userId: string, dto: RequestSolutionDto) {
     return this.client.send({ cmd: PROBLEM_PATTERNS.AI_SOLUTION }, { userId, dto });
   }

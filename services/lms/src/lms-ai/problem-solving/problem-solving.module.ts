@@ -8,6 +8,10 @@ import { ProblemSolvingAiClient } from './problem-solving.ai-client';
 import { Problem, ProblemSchema } from './schemas/problem.schema';
 import { Submission, SubmissionSchema } from './schemas/submission.schema';
 import { AIInteraction, AIInteractionSchema } from './schemas/ai-interaction.schema';
+import {
+  ProblemSolvingProgress,
+  ProblemSolvingProgressSchema,
+} from './schemas/problem-solving-progress.schema';
 
 @Module({
   imports: [
@@ -16,6 +20,7 @@ import { AIInteraction, AIInteractionSchema } from './schemas/ai-interaction.sch
         { name: Problem.name, schema: ProblemSchema },
         { name: Submission.name, schema: SubmissionSchema },
         { name: AIInteraction.name, schema: AIInteractionSchema },
+        { name: ProblemSolvingProgress.name, schema: ProblemSolvingProgressSchema },
       ],
       'lms-ai',
     ),

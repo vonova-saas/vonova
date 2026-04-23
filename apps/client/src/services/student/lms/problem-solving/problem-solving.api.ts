@@ -4,6 +4,7 @@ import API from "@/services/axios-client";
 import type {
   AIInteractionEntity,
   HintRequest,
+  HintsHistoryEntity,
   ProblemEntity,
   ProblemsFilter,
   SolutionRequest,
@@ -51,6 +52,15 @@ export const requestHintMutationFn = async (
       code: payload.code,
       languageHint: payload.languageHint ?? "english",
     },
+  );
+  return response.data;
+};
+
+export const getHintsHistoryQueryFn = async (
+  problemId: string,
+): Promise<HintsHistoryEntity> => {
+  const response = await API.get<HintsHistoryEntity>(
+    `${STUDENT_BASE}/problems/${problemId}/hints`,
   );
   return response.data;
 };
