@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminLessonType } from "../data/admin-get-lesson";
+import { Lesson, UpdateLessonDto } from "@/types/api/lms/courses.type";
 import { Uploader } from "../file-uploader/uploader";
 import { RichTextEditor } from "../rich-text-editor/editor";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -20,18 +20,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { tryCatch } from "@/hooks";
 import { lessonSchema, LessonSchemaType } from "@/lib/courses/zodSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { updateLesson } from "./actions";
+import { updateLessonMutationFn } from "@/services/instructor/course-managment/courses.api";
+import { queryClient } from "@/providers/providers";
 import { toast } from "sonner";
+import useUserId from "@/hooks/user/use-user-id";
 
 interface iAppProps {
-  data: AdminLessonType;
+  data: Lesson;
   chapterId: string;
   courseId: string;
 }
@@ -39,31 +40,47 @@ interface iAppProps {
 export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
   const [pending, startTransition] = useTransition();
 
+  const userId = useUserId();
   const form = useForm<LessonSchemaType>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
       name: data.title,
       chapterId: chapterId,
       courseId: courseId,
-      description: data.description ?? undefined,
+      description: data.content ?? undefined,
       videoKey: data.videoKey ?? undefined,
-      thumbnailKey: data?.thumbnailKey ?? undefined,
+      thumbnailKey: data.thumbnailKey ?? undefined,
     },
   });
 
   function onSubmit(values: LessonSchemaType) {
     startTransition(async () => {
-      const { data: result, error } = await tryCatch(updateLesson(values, data.id));
+      try {
+        // Validate form data
+        const validation = lessonSchema.safeParse(values);
+        if (!validation.success) {
+          toast.error("Invalid form data");
+          return;
+        }
 
-      if (error) {
-        toast.error("An unexpected error occured. Please try again.");
-        return;
-      }
+        // Prepare update data
+        const updateData: UpdateLessonDto = {
+          title: values.name,
+          content: values.description,
+          videoKey: values.videoKey,
+          thumbnailKey: values.thumbnailKey,
+        };
 
-      if (result.status === "success") {
-        toast.success(result.message);
-      } else if (result.status === "error") {
-        toast.error(result.message);
+        // Call API directly
+        await updateLessonMutationFn(courseId, chapterId, data._id, updateData);
+
+        // Refetch lesson data
+        await queryClient.refetchQueries({ queryKey: ["lesson", courseId, chapterId, data._id], type: 'active' });
+
+        toast.success("Lesson updated successfully");
+      } catch (error) {
+        console.error("Error updating lesson:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to update lesson. Please try again.");
       }
     });
   }
@@ -72,7 +89,7 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
     <div>
       <Link
         className={buttonVariants({ variant: "outline", className: "mb-6" })}
-        href={`/courses-management/${courseId}/edit`}
+        href={`/instructor/${userId}/courses-management/${courseId}/edit`}
       >
         <ArrowLeft className="size-4" />
         <span>Go Back</span>
@@ -127,6 +144,9 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
                         onChange={field.onChange}
                         value={field.value}
                         fileTypeAccepted="image"
+                        courseId={courseId}
+                        contentType="lesson"
+                        contentId={data._id}
                       />
                     </FormControl>
                     <FormMessage />
@@ -145,6 +165,9 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
                         onChange={field.onChange}
                         value={field.value}
                         fileTypeAccepted="video"
+                        courseId={courseId}
+                        contentType="lesson"
+                        contentId={data._id}
                       />
                     </FormControl>
                     <FormMessage />

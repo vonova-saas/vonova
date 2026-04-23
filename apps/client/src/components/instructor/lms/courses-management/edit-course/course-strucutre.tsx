@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { ReactNode, useEffect, useState } from "react";
 import { CSS } from "@dnd-kit/utilities";
-import { AdminCourseSingularType } from "../data/admin-get-course";
+import { Course } from "@/types/api/lms/courses.type";
 import { cn } from "@/lib/utils";
 import {
   Collapsible,
@@ -36,14 +36,15 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { toast } from "sonner";
-import { reorderChapters, reorderLessons } from "./actions";
+import { useCourseManagementStore } from "@/lib/stores";
 import { NewChapterModal } from "./new-chapter-modal";
 import { NewLessonModal } from "./new-lesson-modal";
 import { DeleteLesson } from "./delete-lesson";
 import { DeleteChapter } from "./delete-chapter";
 
 interface iAppProps {
-  data: AdminCourseSingularType;
+  data: Course;
+  instructorId: string;
 }
 
 interface SortableItemProps {
@@ -56,7 +57,9 @@ interface SortableItemProps {
   };
 }
 
-export function CourseStrucutre({ data }: iAppProps) {
+export function CourseStrucutre({ data, instructorId }: iAppProps) {
+  const { reorderChapters, reorderLessons } = useCourseManagementStore();
+  
   const initialItems =
     (data.chapters || []).map((chapter) => ({
       id: chapter._id,
@@ -173,19 +176,18 @@ export function CourseStrucutre({ data }: iAppProps) {
           position: chapter.order,
         }));
 
-        const reorderPromise = () =>
-          reorderChapters(courseId, chaptersToUpdate);
-
-        toast.promise(reorderPromise(), {
-          loading: "Reordering chapters...",
-          success: (result) => {
-            if (result.status === "success") return result.message;
-            throw new Error(result.message);
-          },
-          error: () => {
+        // Call store action
+        const reorderData = {
+          order: chaptersToUpdate.map(c => ({ chapterId: c.id, index: c.position }))
+        };
+        
+        reorderChapters(courseId, reorderData).then((success) => {
+          if (success) {
+            toast.success("Chapters reordered successfully");
+          } else {
             setItems(previousItems);
-            return "Failed to reorder chapters.";
-          },
+            toast.error("Failed to reorder chapters");
+          }
         });
       }
 
@@ -247,24 +249,20 @@ export function CourseStrucutre({ data }: iAppProps) {
       setItems(newItems);
 
       if (courseId) {
-        const lessonsToUpdate = updatedLessonForState.map((lesson) => ({
-          id: lesson.id,
-          position: lesson.order,
-        }));
-
-        const reorderLessonsPromise = () =>
-          reorderLessons(chapterId, lessonsToUpdate, courseId);
-        toast.promise(reorderLessonsPromise(), {
-          loading: "Reordering lessons...",
-          success: (result) => {
-            if (result.status === "success")
-              return toast.success(result.message);
-            throw new Error(result.message);
-          },
-          error: () => {
+        const reorderData = {
+          order: updatedLessonForState.map((lesson) => ({
+            lessonId: lesson.id,
+            index: lesson.order,
+          })),
+        };
+        
+        reorderLessons(courseId, chapterId, reorderData).then((success) => {
+          if (success) {
+            toast.success("Lessons reordered successfully");
+          } else {
             setItems(previousItems);
-            return "Failed to reorder lessons.";
-          },
+            toast.error("Failed to reorder lessons");
+          }
         });
       }
 
@@ -364,7 +362,7 @@ export function CourseStrucutre({ data }: iAppProps) {
                                       </Button>
                                       <FileText className="size-4" />
                                       <Link
-                                        href={`/courses-management/${data._id}/${item.id}/${lesson.id}`}
+                                        href={`/instructor/${instructorId}/courses-management/${data._id}/${item.id}/${lesson.id}`}
                                       >
                                         {lesson.title}
                                       </Link>

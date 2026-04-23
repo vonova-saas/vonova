@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useConstructUrl } from "@/hooks";
+import { uploadContentFileMutationFn } from "@/services/student/lms/courses/courses.api";
 
 interface UploaderState {
   id: string | null;
@@ -29,9 +30,12 @@ interface iAppProps {
   value?: string;
   onChange?: (value: string) => void;
   fileTypeAccepted: "image" | "video";
+  courseId?: string;
+  contentType?: "lesson" | "chapter" | "course";
+  contentId?: string;
 }
 
-export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
+export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentType, contentId }: iAppProps) {
   const fileUrl = useConstructUrl(value || "");
   const [fileState, setFileState] = useState<UploaderState>({
     error: false,
@@ -54,67 +58,84 @@ export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
       }));
 
       try {
-        // 1. Get Presigned URL
-        const presignedResponse = await fetch("/api/s3/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: file.name,
-            contentType: file.type,
-            size: file.size,
-          }),
-        });
-        if (!presignedResponse.ok) {
-          toast.error("Failed to get presigned URL");
+        // Check if we have LMS context for content upload
+        if (courseId && contentType && contentId) {
+          // Use LMS Content Upload API
+          const result = await uploadContentFileMutationFn(
+            courseId,
+            file,
+            contentType,
+            contentId
+          );
+
           setFileState((prev) => ({
             ...prev,
+            progress: 100,
             uploading: false,
-            progress: 0,
-            error: true,
+            key: result.objectKey,
           }));
-          return;
+          onChange?.(result.fileUrl);
+          toast.success("File uploaded successfully");
+        } else {
+          // Fallback to legacy S3 upload
+          const presignedResponse = await fetch("/api/s3/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileName: file.name,
+              contentType: file.type,
+              size: file.size,
+            }),
+          });
+          if (!presignedResponse.ok) {
+            toast.error("Failed to get presigned URL");
+            setFileState((prev) => ({
+              ...prev,
+              uploading: false,
+              progress: 0,
+              error: true,
+            }));
+            return;
+          }
+          const { presignedUrl, key } = await presignedResponse.json();
+
+          const presignedUrlObj = new URL(presignedUrl);
+          const publicUrl = `${presignedUrlObj.protocol}//${presignedUrlObj.host}/${key}`;
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const percentageComplete = (event.loaded / event.total) * 100;
+                setFileState((prev) => ({
+                  ...prev,
+                  progress: Math.round(percentageComplete),
+                }));
+              }
+            };
+            xhr.onload = () => {
+              if (xhr.status === 200 || xhr.status === 204) {
+                setFileState((prev) => ({
+                  ...prev,
+                  progress: 100,
+                  uploading: false,
+                  key: key,
+                }));
+                onChange?.(publicUrl);
+                toast.success("File uploaded successfully");
+                resolve();
+              } else {
+                reject(new Error("upload Failed..."));
+              }
+            };
+            xhr.onerror = () => {
+              reject(new Error("upload Failed"));
+            };
+            xhr.open("PUT", presignedUrl);
+            xhr.setRequestHeader("Content-Type", file.type);
+            xhr.send(file);
+          });
         }
-        const { presignedUrl, key } = await presignedResponse.json();
-
-        // Construct the public S3 URL from the presigned URL
-        // Presigned URL format: https://bucket.s3.region.amazonaws.com/key?signature=...
-        // We need to extract the base URL without the query params
-        const presignedUrlObj = new URL(presignedUrl);
-        const publicUrl = `${presignedUrlObj.protocol}//${presignedUrlObj.host}/${key}`;
-
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percentageComplete = (event.loaded / event.total) * 100;
-              setFileState((prev) => ({
-                ...prev,
-                progress: Math.round(percentageComplete),
-              }));
-            }
-          };
-          xhr.onload = () => {
-            if (xhr.status === 200 || xhr.status === 204) {
-              setFileState((prev) => ({
-                ...prev,
-                progress: 100,
-                uploading: false,
-                key: key,
-              }));
-              onChange?.(publicUrl);
-              toast.success("File uploaded successfully");
-              resolve();
-            } else {
-              reject(new Error("upload Failed..."));
-            }
-          };
-          xhr.onerror = () => {
-            reject(new Error("upload Failed"));
-          };
-          xhr.open("PUT", presignedUrl);
-          xhr.setRequestHeader("Content-Type", file.type);
-          xhr.send(file);
-        });
       } catch {
         toast.error("something went wrong");
         setFileState((prev) => ({
@@ -125,7 +146,7 @@ export function Uploader({ value, onChange, fileTypeAccepted }: iAppProps) {
         }));
       }
     },
-    [fileTypeAccepted, onChange]
+    [fileTypeAccepted, onChange, courseId, contentType, contentId]
   );
 
   const onDrop = useCallback(
