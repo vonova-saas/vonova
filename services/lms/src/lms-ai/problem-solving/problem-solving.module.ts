@@ -16,6 +16,7 @@ import {
   ProblemSolvingProgressSchema,
 } from './schemas/problem-solving-progress.schema';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
+import { SubmissionJob, SubmissionJobSchema } from './schemas/submission-job.schema';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SubmissionJudgeQueue } from './submission-judge.queue';
       [
         { name: Problem.name, schema: ProblemSchema },
         { name: Submission.name, schema: SubmissionSchema },
+        { name: SubmissionJob.name, schema: SubmissionJobSchema },
         { name: AIInteraction.name, schema: AIInteractionSchema },
         {
           name: ProblemSolvingProgress.name,

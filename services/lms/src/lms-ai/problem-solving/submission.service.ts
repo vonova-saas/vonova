@@ -5,10 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateSubmissionDto } from './dto/submission.dto';
 import { Problem, ProblemDocument } from './schemas/problem.schema';
 import { Submission, SubmissionDocument } from './schemas/submission.schema';
+import { SubmissionJob, SubmissionJobDocument } from './schemas/submission-job.schema';
 import { normalizeAIResponse } from './utils/normalize-ai-response.util';
 import { compareOutputs } from './utils/output-compare.util';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
@@ -17,12 +18,15 @@ import { runInDocker } from './utils/docker-judge.util';
 @Injectable()
 export class SubmissionService {
   private readonly logger = new Logger(SubmissionService.name);
+  private readonly maxRetries = 2;
 
   constructor(
     @InjectModel(Problem.name, 'lms-ai')
     private readonly problemModel: Model<ProblemDocument>,
     @InjectModel(Submission.name, 'lms-ai')
     private readonly submissionModel: Model<SubmissionDocument>,
+    @InjectModel(SubmissionJob.name, 'lms-ai')
+    private readonly submissionJobModel: Model<SubmissionJobDocument>,
     private readonly judgeQueue: SubmissionJudgeQueue,
   ) {}
 
@@ -59,28 +63,114 @@ export class SubmissionService {
       memoryUsed: 0,
       judgeLogs: [],
     });
-    await this.judgeQueue.enqueue({ submissionId: submission._id.toString() });
+    const job = await this.submissionJobModel.create({
+      submissionId: submission._id.toString(),
+      userId,
+      problemId: dto.problemId,
+      code: normalizedCode,
+      language: dto.language,
+      status: 'pending',
+      retryCount: 0,
+      result: null,
+    });
+    await this.judgeQueue.enqueue({ jobId: job._id.toString() });
 
     this.logger.log(
-      `Submission queued: ${submission._id.toString()} status=${submission.status}`,
+      `Submission queued: ${submission._id.toString()} job=${job._id.toString()} status=${submission.status}`,
     );
     return {
-      jobId: submission._id.toString(),
-      status: submission.status,
+      jobId: job._id.toString(),
+      status: 'pending',
     };
   }
 
   async getSubmissionStatus(submissionId: string, userId: string) {
-    const submission = await this.submissionModel
+    const job = await this.submissionJobModel
       .findOne({ _id: submissionId, userId })
       .lean();
-    if (!submission) {
+    if (!job) {
       throw new NotFoundException('Submission not found');
     }
-    return submission;
+    if (job.status === 'pending' || job.status === 'processing') {
+      return {
+        _id: submissionId,
+        status: 'pending',
+        passed: 0,
+        total: 0,
+        failedCases: [],
+        executionTime: 0,
+        memoryUsed: 0,
+      };
+    }
+    const result = job.result;
+    if (!result) {
+      return {
+        _id: submissionId,
+        status: 'runtime_error',
+        passed: 0,
+        total: 0,
+        failedCases: [],
+        executionTime: 0,
+        memoryUsed: 0,
+      };
+    }
+    return {
+      _id: submissionId,
+      status: result.status,
+      passed: result.passed,
+      total: result.total,
+      failedCases: result.failedCases,
+      executionTime: result.executionTime,
+      memoryUsed: result.memoryUsed,
+    };
   }
 
-  async processSubmissionJob(submissionId: string) {
+  async recoverStuckJobs() {
+    const reset = await this.submissionJobModel.updateMany(
+      { status: 'processing' },
+      { $set: { status: 'pending' }, $unset: { startedAt: 1 } },
+    );
+    if ((reset.modifiedCount ?? 0) > 0) {
+      this.logger.warn(
+        `Recovered ${reset.modifiedCount} stuck processing jobs back to pending`,
+      );
+    }
+  }
+
+  async processNextPendingJob(): Promise<boolean> {
+    const now = new Date();
+    const job = await this.submissionJobModel.findOneAndUpdate(
+      {
+        status: 'pending',
+        retryCount: { $lte: this.maxRetries },
+      },
+      { $set: { status: 'processing', startedAt: now } },
+      { sort: { createdAt: 1 }, new: true },
+    );
+    if (!job) return false;
+    await this.processSubmissionJob(job);
+    return true;
+  }
+
+  async processJobById(jobId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(jobId)) return false;
+    const now = new Date();
+    const job = await this.submissionJobModel.findOneAndUpdate(
+      {
+        _id: jobId,
+        status: 'pending',
+        retryCount: { $lte: this.maxRetries },
+      },
+      { $set: { status: 'processing', startedAt: now } },
+      { new: true },
+    );
+    if (!job) return false;
+    await this.processSubmissionJob(job);
+    return true;
+  }
+
+  private async processSubmissionJob(job: SubmissionJobDocument) {
+    const submissionId = job.submissionId;
     const submission = await this.submissionModel.findById(submissionId);
     if (!submission) return;
     const problem = await this.problemModel.findById(submission.problemId).lean();
@@ -92,35 +182,121 @@ export class SubmissionService {
           failedCases: [{ input: null, expected: null, error: 'Problem not found' }],
         },
       );
+      await this.submissionJobModel.updateOne(
+        { _id: job._id },
+        {
+          $set: {
+            status: 'failed',
+            finishedAt: new Date(),
+            result: {
+              passed: 0,
+              total: 0,
+              status: 'runtime_error',
+              failedCases: [
+                { input: null, expected: null, error: 'Problem not found' },
+              ],
+              executionTime: 0,
+              memoryUsed: 0,
+            },
+          },
+        },
+      );
       return;
     }
 
-    const evaluation = await this.evaluateSubmission({
-      testCases: problem.testCases,
-      code: submission.code,
-      language: submission.language,
-      functionName: String((problem as { functionName?: string }).functionName ?? ''),
-      allowUnorderedArrayOutput: Boolean(
-        (problem as { allowUnorderedArrayOutput?: boolean }).allowUnorderedArrayOutput,
-      ),
-      timeLimit: Number((problem as { timeLimit?: number }).timeLimit ?? 2000),
-      memoryLimit: Number((problem as { memoryLimit?: number }).memoryLimit ?? 128),
-      submissionId,
-    });
+    try {
+      const evaluation = await this.evaluateSubmission({
+        testCases: problem.testCases,
+        code: submission.code,
+        language: submission.language,
+        functionName: String((problem as { functionName?: string }).functionName ?? ''),
+        allowUnorderedArrayOutput: Boolean(
+          (problem as { allowUnorderedArrayOutput?: boolean })
+            .allowUnorderedArrayOutput,
+        ),
+        timeLimit: Number((problem as { timeLimit?: number }).timeLimit ?? 2000),
+        memoryLimit: Number((problem as { memoryLimit?: number }).memoryLimit ?? 128),
+        submissionId,
+      });
 
-    await this.submissionModel.updateOne(
-      { _id: submissionId },
-      {
-        status: evaluation.status,
-        success: evaluation.success,
-        passed: evaluation.passed,
-        total: evaluation.total,
-        failedCases: evaluation.failedCases,
-        executionTime: evaluation.executionTime,
-        memoryUsed: evaluation.memoryUsed,
-        judgeLogs: evaluation.judgeLogs,
-      },
-    );
+      await this.submissionModel.updateOne(
+        { _id: submissionId },
+        {
+          status: evaluation.status,
+          success: evaluation.success,
+          passed: evaluation.passed,
+          total: evaluation.total,
+          failedCases: evaluation.failedCases,
+          executionTime: evaluation.executionTime,
+          memoryUsed: evaluation.memoryUsed,
+          judgeLogs: evaluation.judgeLogs,
+        },
+      );
+      await this.submissionJobModel.updateOne(
+        { _id: job._id },
+        {
+          $set: {
+            status: 'done',
+            finishedAt: new Date(),
+            result: {
+              passed: evaluation.passed,
+              total: evaluation.total,
+              status: evaluation.status,
+              failedCases: evaluation.failedCases,
+              executionTime: evaluation.executionTime,
+              memoryUsed: evaluation.memoryUsed,
+            },
+          },
+        },
+      );
+    } catch (error) {
+      const nextRetry = (job.retryCount ?? 0) + 1;
+      const shouldRetry = nextRetry <= this.maxRetries;
+      await this.submissionJobModel.updateOne(
+        { _id: job._id },
+        {
+          $set: {
+            status: shouldRetry ? 'pending' : 'failed',
+            finishedAt: shouldRetry ? undefined : new Date(),
+            result: shouldRetry
+              ? null
+              : {
+                  passed: 0,
+                  total: 0,
+                  status: 'runtime_error',
+                  failedCases: [
+                    {
+                      input: null,
+                      expected: null,
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                    },
+                  ],
+                  executionTime: 0,
+                  memoryUsed: 0,
+                },
+          },
+          $inc: { retryCount: 1 },
+          ...(shouldRetry ? { $unset: { startedAt: 1 } } : {}),
+        },
+      );
+      if (!shouldRetry) {
+        await this.submissionModel.updateOne(
+          { _id: submissionId },
+          {
+            status: 'runtime_error',
+            success: false,
+            failedCases: [
+              {
+                input: null,
+                expected: null,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            ],
+          },
+        );
+      }
+    }
   }
 
   async hasFailedSubmission(

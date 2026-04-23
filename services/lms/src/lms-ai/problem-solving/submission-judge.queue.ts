@@ -3,16 +3,15 @@ import { ModuleRef } from '@nestjs/core';
 import { SubmissionService } from './submission.service';
 
 export type JudgeJobPayload = {
-  submissionId: string;
+  jobId: string;
 };
 
 @Injectable()
 export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SubmissionJudgeQueue.name);
   private readonly queueName = 'problem-solving-memory-queue';
-  private readonly maxConcurrentJobs = 3;
-  private readonly pollIntervalMs = 150;
-  private readonly jobs: JudgeJobPayload[] = [];
+  private readonly maxConcurrentJobs = 2;
+  private readonly pollIntervalMs = 300;
   private runningJobs = 0;
   private loopHandle?: NodeJS.Timeout;
   private submissionService?: SubmissionService;
@@ -23,6 +22,7 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
     this.submissionService = this.moduleRef.get(SubmissionService, {
       strict: false,
     });
+    await this.submissionService?.recoverStuckJobs();
     this.loopHandle = setInterval(() => {
       void this.processNext();
     }, this.pollIntervalMs);
@@ -40,7 +40,7 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
     if (!this.submissionService) {
       throw new Error('SubmissionService is unavailable');
     }
-    this.jobs.push(payload);
+    void this.processSpecific(payload.jobId);
   }
 
   async onModuleDestroy() {
@@ -52,16 +52,30 @@ export class SubmissionJudgeQueue implements OnModuleInit, OnModuleDestroy {
 
   private async processNext() {
     if (this.runningJobs >= this.maxConcurrentJobs) return;
-    const job = this.jobs.shift();
-    if (!job) return;
     if (!this.submissionService) return;
 
     this.runningJobs += 1;
     try {
-      await this.submissionService.processSubmissionJob(job.submissionId);
+      await this.submissionService.processNextPendingJob();
     } catch (error) {
       this.logger.error(
-        `Judge job failed: ${job.submissionId} - ${(error as Error).message}`,
+        `Judge worker loop failed: ${(error as Error).message}`,
+      );
+    } finally {
+      this.runningJobs -= 1;
+    }
+  }
+
+  private async processSpecific(jobId: string) {
+    if (this.runningJobs >= this.maxConcurrentJobs) return;
+    if (!this.submissionService) return;
+
+    this.runningJobs += 1;
+    try {
+      await this.submissionService.processJobById(jobId);
+    } catch (error) {
+      this.logger.error(
+        `Judge specific job failed: ${jobId} - ${(error as Error).message}`,
       );
     } finally {
       this.runningJobs -= 1;

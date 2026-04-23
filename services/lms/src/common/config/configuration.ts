@@ -3,7 +3,6 @@ export default () => ({
   NATS_URL: process.env.NATS_URL,
   NATS_USER: process.env.NATS_USER,
   NATS_PASSWORD: process.env.NATS_PASSWORD,
-  REDIS_URL: process.env.REDIS_URL,
   NODE_ENV: process.env.NODE_ENV,
 
   //* Database configuration (MongoDB),
