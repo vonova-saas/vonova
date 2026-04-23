@@ -38,6 +38,7 @@ export type AdminCurrentUserResponseType = {
   message: string;
   user: {
     _id: string;
+    name: string;
     email: string;
     role: string;
   };

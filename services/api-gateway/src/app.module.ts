@@ -33,6 +33,7 @@ import { ReviewCourseGatewayModule } from './lms/course/review-course/review-cou
 import { BookGatewayModule } from './lms/library/book/book.gateway.module';
 import { PresentationGatewayModule } from './lms/library/presentation/presentation.gateway.module';
 import { GuideGatewayModule } from './lms/library/guide/guide.gateway.module';
+import { LibraryGatewayModule } from './lms/library/library/library.gateway.module';
 import { FavoriteGatewayModule } from './lms/library/favorite/favorite.gateway.module';
 import { ReviewGatewayModule } from './lms/library/review/review.gateway.module';
 import { ReaderGatewayModule } from './lms/library/reader/reader.gateway.module';
@@ -72,6 +73,7 @@ import { CommunityGatewayModule } from './app/community/community.module';
     BookGatewayModule,
     PresentationGatewayModule,
     GuideGatewayModule,
+    LibraryGatewayModule,
     FavoriteGatewayModule,
     ReviewGatewayModule,
     ReaderGatewayModule,

@@ -34,6 +34,40 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { logoutMutationFn, getCurrentUserQueryFn } from "@/services";
 import { getAccountMutationFn } from "@/services/app/settings/account.api";
 
+/** Only pass URLs the browser can load; invalid strings avoid a broken <img> request. */
+function isDisplayableImageSrc(src: string): boolean {
+  const s = src.trim();
+  if (!s) return false;
+  return (
+    s.startsWith("https://") ||
+    s.startsWith("http://") ||
+    s.startsWith("blob:") ||
+    s.startsWith("data:image/")
+  );
+}
+
+/**
+ * S3 objects often block hotlinked browser requests (Referer / ACL). Load via same-origin proxy.
+ * Blob/data URLs and non-S3 https stay as-is.
+ */
+function avatarImgSrcForDisplay(url: string): string {
+  const s = url.trim();
+  if (!s || s.startsWith("blob:") || s.startsWith("data:")) return s;
+  try {
+    const u = new URL(s);
+    if (
+      u.protocol === "https:" &&
+      u.hostname.toLowerCase().endsWith(".amazonaws.com") &&
+      u.hostname.toLowerCase().includes(".s3.")
+    ) {
+      return `/api/avatar?url=${encodeURIComponent(s)}`;
+    }
+  } catch {
+    return s;
+  }
+  return s;
+}
+
 function normalizeAvatarUrl(value?: string | null): string | undefined {
   const raw = value?.trim();
   if (!raw) return undefined;
@@ -140,14 +174,12 @@ export function NavStudent({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                {userAvatar ? (
+                {userAvatar && isDisplayableImageSrc(userAvatar) ? (
                   <AvatarImage
-                    src={userAvatar}
+                    src={avatarImgSrcForDisplay(userAvatar)}
                     alt={userName}
-                    onError={(e) => {
-                      // Hide broken image so fallback initials are visible
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : null}
                 <AvatarFallback className="rounded-lg">{initials || "??"}</AvatarFallback>
@@ -168,14 +200,12 @@ export function NavStudent({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  {userAvatar ? (
+                  {userAvatar && isDisplayableImageSrc(userAvatar) ? (
                     <AvatarImage
-                      src={userAvatar}
+                      src={avatarImgSrcForDisplay(userAvatar)}
                       alt={userName}
-                      onError={(e) => {
-                        // Hide broken image so fallback initials are visible
-                        e.currentTarget.style.display = 'none';
-                      }}
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
                     />
                   ) : null}
                   <AvatarFallback className="rounded-lg">{initials || "??"}</AvatarFallback>

@@ -17,12 +17,12 @@ interface iAppProps {
 }
 
 export function CourseProgressCard({ data }: iAppProps) {
-  const thumbnailUrl = useConstructUrl(data.Course.fileKey);
+  const thumbnailUrl = useConstructUrl(data.Course.thumbnailUrl || "");
   const { totalLessons, completedLessons, progressPercentage } =
     useCourseProgress({ courseData: data.Course as any });
   return (
     <Card className="group relative py-0 gap-0">
-      <Badge className="absolute top-2 right-2 z-10">{data.Course.level}</Badge>
+      <Badge className="absolute top-2 right-2 z-10">{data.Course.difficulty}</Badge>
 
       <Image
         width={600}

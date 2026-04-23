@@ -1,8 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
-export type LibraryStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-export type Level = 'Beginner' | 'Intermediate' | 'Advanced';
+import type { LibraryStatus, Level } from './library.schema';
+import { LibraryTopics } from './library.schema';
 
 export class Author {
   @Prop({ required: true })
@@ -29,7 +28,7 @@ export class Presentation extends Document {
   @Prop({ type: [{ name: String, avatarUrl: String }], default: [] })
   authors: Author[];
 
-  @Prop({ type: [String], default: [] })
+  @Prop({ type: [String], enum: Object.values(LibraryTopics), default: [] })
   topics: string[];
 
   @Prop({
@@ -60,8 +59,12 @@ export class Presentation extends Document {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
+
+  @Prop({ enum: ['book', 'guide', 'presentation'], default: 'presentation' })
+  type: string;
 }
 
+export type PresentationDocument = Presentation & Document;
 export const PresentationSchema = SchemaFactory.createForClass(Presentation);
 PresentationSchema.index({
   title: 'text',

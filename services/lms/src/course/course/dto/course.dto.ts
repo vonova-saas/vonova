@@ -39,10 +39,6 @@ export class CreateCourseDto {
   difficulty?: string;
 
   @IsOptional()
-  @IsString()
-  categoryId?: string;
-
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
@@ -50,10 +46,6 @@ export class CreateCourseDto {
   @IsOptional()
   @IsUrl()
   thumbnailUrl?: string;
-
-  @IsOptional()
-  @IsUrl()
-  trailerUrl?: string;
 
   @IsOptional()
   @IsString()

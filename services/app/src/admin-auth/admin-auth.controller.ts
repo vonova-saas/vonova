@@ -65,7 +65,7 @@ export class AdminAuthController {
   @MessagePattern('admin.auth.current-user')
   async handleCurrentUser(
     @Payload() accessToken: string,
-  ): Promise<{ message: string; user: { _id: string; email: string; role: string } }> {
+  ): Promise<{ message: string; user: { _id: string; name: string; email: string; role: string } }> {
     return this.adminAuthService.getCurrentUser(accessToken);
   }
 }

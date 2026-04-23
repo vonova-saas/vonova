@@ -17,6 +17,11 @@ export class Admin {
   @IsString()
   email: string;
 
+  @Prop({ required: true, trim: true })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
   @Prop({ required: true, select: false })
   @IsNotEmpty()
   @IsString()

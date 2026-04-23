@@ -23,11 +23,16 @@ export class BookGatewayService {
     return this.client.send({ cmd: 'book.publish' }, { id, dto, userId });
   }
 
-  getBooks(query: GetBooksQueryDto) {
+  getBooks(query: GetBooksQueryDto, userContext?: { userRole?: string; userId?: string }) {
     const topicsArray = query.topics ? query.topics.split(',') : undefined;
     return this.client.send(
       { cmd: 'book.getAll' },
-      { ...query, topics: topicsArray },
+      { 
+        ...query, 
+        topics: topicsArray,
+        userRole: userContext?.userRole,
+        userId: userContext?.userId
+      },
     );
   }
 
@@ -56,5 +61,9 @@ export class BookGatewayService {
 
   deleteBook(id: string, userId: string) {
     return this.client.send({ cmd: 'book.delete' }, { id, userId });
+  }
+
+  getAllLinks() {
+    return this.client.send({ cmd: 'book.getAllLinks' }, {});
   }
 }

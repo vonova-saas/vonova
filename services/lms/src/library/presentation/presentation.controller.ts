@@ -56,8 +56,9 @@ export class PresentationController {
   }
 
   @MessagePattern({ cmd: 'library.presentation.getAll' })
-  getAll(@Payload() data: any) {
-    return this.service.findAll(data || {});
+  getAll(@Payload() data: any & { userRole?: string; userId?: string }) {
+    const { userRole, userId, ...query } = data || {};
+    return this.service.findAll({ ...query, userRole, userId });
   }
 
   @MessagePattern({ cmd: 'library.presentation.getById' })
@@ -74,5 +75,10 @@ export class PresentationController {
     if (!presentationId) throw new Error('presentationId is required');
 
     return this.service.getContent(presentationId);
+  }
+
+  @MessagePattern({ cmd: 'library.presentation.getAllLinks' })
+  async getAllPresentationLinks() {
+    return this.service.getAllPresentationLinksService();
   }
 }

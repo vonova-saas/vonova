@@ -9,14 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useConstructUrl } from "@/hooks";
 import {
   ArrowRight,
   Eye,
   MoreVertical,
   Pencil,
-  School,
-  TimerIcon,
+  Users,
+  Star,
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
@@ -27,7 +26,17 @@ interface iAppProps {
 }
 
 export function AdminCourseCard({ data }: iAppProps) {
-  const thumbnailUrl = useConstructUrl(data.fileKey);
+  const thumbnailUrl = data.thumbnailUrl || "/placeholder-course.jpg";
+  const status = data.status || "DRAFT";
+  const isFree = data.price?.isFree || false;
+  const price = isFree ? "Free" : `${data.price?.amount || 0} ${data.price?.currency || "USD"}`;
+
+  const statusColors = {
+    DRAFT: "bg-yellow-500/10 text-yellow-600",
+    PUBLISHED: "bg-green-500/10 text-green-600",
+    ARCHIVED: "bg-gray-500/10 text-gray-600",
+  };
+
   return (
     <Card className="group relative py-0 gap-0">
       {/* absolute dropdown */}
@@ -40,13 +49,13 @@ export function AdminCourseCard({ data }: iAppProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem asChild>
-              <Link href={`/courses-management/${data.id}/edit`}>
+              <Link href={`/instructor/courses-management/${data._id}/edit`}>
                 <Pencil className="size-4 mr-2" />
                 Edit Course
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/courses-management/${data.slug}`}>
+              <Link href={`/student/courses/${data.slug}`}>
                 <Eye className="size-4 mr-2" />
                 Preview
               </Link>
@@ -55,7 +64,7 @@ export function AdminCourseCard({ data }: iAppProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>
-              <Link href={`/courses-management/${data.id}/delete`}>
+              <Link href={`/instructor/courses-management/${data._id}/delete`}>
                 <Trash2 className="size-4 mr-2 text-destructive" />
                 Delete Course
               </Link>
@@ -63,16 +72,20 @@ export function AdminCourseCard({ data }: iAppProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <div className={`absolute top-2 left-2 z-10 px-2 py-1 rounded-full text-xs font-medium ${statusColors[status as keyof typeof statusColors]}`}>
+        {status}
+      </div>
       <Image
         src={thumbnailUrl}
         alt="Thumbnail Url"
         width={600}
         height={400}
         className="w-full rounded-t-lg aspect-video f-ull object-cover"
+        unoptimized
       />
       <CardContent className="p-4">
         <Link
-          href={`/courses-management/${data.id}/edit`}
+          href={`/instructor/courses-management/${data._id}/edit`}
           className="font-medium text-lg line-clamp-2 hover:underline group-hover:text-primary transition-colors"
         >
           {data.title}
@@ -83,24 +96,28 @@ export function AdminCourseCard({ data }: iAppProps) {
 
         <div className="mt-4 flex items-center gap-x-5">
           <div className="flex items-center gap-x-2">
-            <TimerIcon className="size-6 p-1 rounded-md text-primary bg-primary/10" />
-            <p className="text-sm text-muted-foreground">{data.duration} h</p>
+            <Star className="size-6 p-1 rounded-md text-primary bg-primary/10" />
+            <p className="text-sm text-muted-foreground">{data.averageRating || "N/A"}</p>
           </div>
           <div className="flex items-center gap-x-2">
-            <School className="size-6 p-1 rounded-md text-primary bg-primary/10" />
-            <p className="text-sm text-muted-foreground">{data.level}</p>
+            <Users className="size-6 p-1 rounded-md text-primary bg-primary/10" />
+            <p className="text-sm text-muted-foreground">{data.enrollmentCount || 0}</p>
           </div>
         </div>
 
-        <Link
-          className={buttonVariants({
-            className: "w-full mt-4",
-          })}
-          href={`/courses-management/${data.id}/edit`}
-        >
-          Edit Course
-          <ArrowRight className="size-4" />
-        </Link>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-lg font-bold text-primary">{price}</p>
+          <Link
+            className={buttonVariants({
+              className: "mt-2",
+              size: "sm",
+            })}
+            href={`/instructor/courses-management/${data._id}/edit`}
+          >
+            Edit Course
+            <ArrowRight className="size-4 ml-2" />
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

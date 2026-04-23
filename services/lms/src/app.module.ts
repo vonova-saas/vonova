@@ -8,6 +8,7 @@ import { AssignmentModule } from './assignment/assignment.module';
 import { BookModule } from './library/book/book.module';
 import { PresentationModule } from './library/presentation/presentation.module';
 import { GuideModule } from './library/guide/guide.module';
+import { LibraryModule } from './library/library/library.module';
 import { FavoriteModule } from './library/favorite/favorite.module';
 import { ReviewModule } from './library/review/review.module';
 import { CourseModule } from './course/course/course.module';
@@ -51,6 +52,7 @@ import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.m
     BookModule,
     PresentationModule,
     GuideModule,
+    LibraryModule,
     FavoriteModule,
     ReviewModule,
     CourseModule,

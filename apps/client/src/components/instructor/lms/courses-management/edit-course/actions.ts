@@ -9,6 +9,8 @@ import {
   lessonSchema,
   LessonSchemaType,
 } from "@/lib/courses/zodSchema";
+import { updateCourseMutationFn, createChapterMutationFn, deleteChapterMutationFn, reorderChaptersMutationFn, createLessonMutationFn, deleteLessonMutationFn, reorderLessonsMutationFn } from "@/services/instructor/course-managment/courses.api";
+import { UpdateCourseDto, CreateChapterDto, ReorderChaptersDto, CreateLessonDto, ReorderLessonsDto } from "@/types/api/lms/courses.type";
 
 export async function editCourse(
   data: CourseSchemaType,
@@ -23,12 +25,37 @@ export async function editCourse(
     };
   }
 
-  console.log("Demo editCourse called", { courseId, values: result.data });
+  try {
+    const updateData: UpdateCourseDto = {
+      title: data.title,
+      slug: data.slug,
+      smallDescription: data.smallDescription,
+      description: data.description,
+      difficulty: data.level === "Intermidate" ? "INTERMEDIATE" : data.level.toUpperCase(),
+      tags: [],
+      thumbnailUrl: data.fileKey ? undefined : undefined,
+      language: "English",
+      price: {
+        amount: data.price,
+        currency: "USD",
+        isFree: data.price === 0,
+      },
+      status: data.status === "Draft" ? "DRAFT" : data.status === "Published" ? "PUBLISHED" : "ARCHIVED",
+    };
 
-  return {
-    status: "success",
-    message: "Course updated successfully (demo mode)",
-  };
+    await updateCourseMutationFn(courseId, updateData);
+
+    return {
+      status: "success",
+      message: "Course updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating course:", error);
+    return {
+      status: "error",
+      message: "Failed to update course. Please try again.",
+    };
+  }
 }
 
 export async function reorderLessons(
@@ -46,12 +73,27 @@ export async function reorderLessons(
     };
   }
 
-  console.log("Demo reorderLessons called", { chapterId, courseId, lessons });
+  try {
+    const reorderData: ReorderLessonsDto = {
+      order: lessons.map(lesson => ({
+        lessonId: lesson.id,
+        index: lesson.position,
+      })),
+    };
 
-  return {
-    status: "success",
-    message: "Lessons reordered successfully (demo mode).",
-  };
+    await reorderLessonsMutationFn(courseId, chapterId, reorderData);
+
+    return {
+      status: "success",
+      message: "Lessons reordered successfully",
+    };
+  } catch (error) {
+    console.error("Error reordering lessons:", error);
+    return {
+      status: "error",
+      message: "Failed to reorder lessons. Please try again.",
+    };
+  }
 }
 
 export async function reorderChapters(
@@ -65,12 +107,27 @@ export async function reorderChapters(
     };
   }
 
-  console.log("Demo reorderChapters called", { courseId, chapters });
+  try {
+    const reorderData: ReorderChaptersDto = {
+      order: chapters.map(ch => ({
+        chapterId: ch.id,
+        index: ch.position,
+      })),
+    };
 
-  return {
-    status: "success",
-    message: "Chapters reordered successfully (demo mode).",
-  };
+    await reorderChaptersMutationFn(courseId, reorderData);
+
+    return {
+      status: "success",
+      message: "Chapters reordered successfully",
+    };
+  } catch (error) {
+    console.error("Error reordering chapters:", error);
+    return {
+      status: "error",
+      message: "Failed to reorder chapters. Please try again.",
+    };
+  }
 }
 
 export async function createChapter(
@@ -85,12 +142,25 @@ export async function createChapter(
     };
   }
 
-  console.log("Demo createChapter called", { values: result.data });
+  try {
+    const chapterData: CreateChapterDto = {
+      title: values.name,
+      index: 1, // Will be auto-calculated by backend
+    };
 
-  return {
-    status: "success",
-    message: "Chapter created successfully (demo mode)",
-  };
+    await createChapterMutationFn(values.courseId, chapterData);
+
+    return {
+      status: "success",
+      message: "Chapter created successfully",
+    };
+  } catch (error) {
+    console.error("Error creating chapter:", error);
+    return {
+      status: "error",
+      message: "Failed to create chapter. Please try again.",
+    };
+  }
 }
 
 export async function createLesson(
@@ -105,12 +175,27 @@ export async function createLesson(
     };
   }
 
-  console.log("Demo createLesson called", { values: result.data });
+  try {
+    const lessonData: CreateLessonDto = {
+      title: values.name,
+      index: 1, // Will be auto-calculated by backend
+      type: "VIDEO", // Default type
+      previewable: false,
+    };
 
-  return {
-    status: "success",
-    message: "Lesson created successfully (demo mode)",
-  };
+    await createLessonMutationFn(values.courseId, values.chapterId, lessonData);
+
+    return {
+      status: "success",
+      message: "Lesson created successfully",
+    };
+  } catch (error) {
+    console.error("Error creating lesson:", error);
+    return {
+      status: "error",
+      message: "Failed to create lesson. Please try again.",
+    };
+  }
 }
 
 export async function deleteLesson({
@@ -122,12 +207,20 @@ export async function deleteLesson({
   courseId: string;
   lessonId: string;
 }): Promise<ApiResponse> {
-  console.log("Demo deleteLesson called", { chapterId, courseId, lessonId });
+  try {
+    await deleteLessonMutationFn(courseId, chapterId, lessonId);
 
-  return {
-    status: "success",
-    message: "Lesson deleted successfully (demo mode)",
-  };
+    return {
+      status: "success",
+      message: "Lesson deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting lesson:", error);
+    return {
+      status: "error",
+      message: "Failed to delete lesson. Please try again.",
+    };
+  }
 }
 
 export async function deleteChapter({
@@ -137,10 +230,18 @@ export async function deleteChapter({
   chapterId: string;
   courseId: string;
 }): Promise<ApiResponse> {
-  console.log("Demo deleteChapter called", { chapterId, courseId });
+  try {
+    await deleteChapterMutationFn(courseId, chapterId);
 
-  return {
-    status: "success",
-    message: "Chapter deleted successfully (demo mode)",
-  };
+    return {
+      status: "success",
+      message: "Chapter deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting chapter:", error);
+    return {
+      status: "error",
+      message: "Failed to delete chapter. Please try again.",
+    };
+  }
 }

@@ -24,6 +24,10 @@ export class CreatePresentationDto {
   @IsOptional() @IsString() language?: string;
 
   @IsOptional() @IsArray() badges?: string[];
+
+  @IsOptional()
+  @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
 }
 
 export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}
