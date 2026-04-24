@@ -35,16 +35,16 @@ export class Admin {
   @IsString()
   role: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   profilePictureUrl?: string | null;
 
-  @Prop({ default: '' })
+  @Prop({ type: String, default: '' })
   bio?: string;
 
-  @Prop({ default: '' })
+  @Prop({ type: String, default: '' })
   address?: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   dateOfBirth?: string | null;
 
   @Prop()
