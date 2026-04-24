@@ -1,4 +1,5 @@
 import API from "@/services/axios-client";
+import { apiV1Path } from "@/services/gateway-path";
 import {
   currentUserResponseType,
   loginResponseType,
@@ -9,7 +10,7 @@ import {
 export const loginMutationFn = async (
   data: loginType
 ): Promise<loginResponseType> => {
-  const response = await API.post("/admin/auth/request-login-code", data);
+  const response = await API.post(apiV1Path("admin/auth/request-login-code"), data);
   return response.data;
 };
 
@@ -17,14 +18,14 @@ export const loginMutationFn = async (
 export const verifyLoginMutationFn = async (
   data: loginType
 ): Promise<loginResponseType> => {
-  const response = await API.post("/admin/auth/verify-login", data);
+  const response = await API.post(apiV1Path("admin/auth/verify-login"), data);
   return response.data;
 };
 
 export const resetPasswordMutationFn = async (
   data: loginType
 ): Promise<loginResponseType> => {
-  const response = await API.post("/admin/auth/reset-password", data);
+  const response = await API.post(apiV1Path("admin/auth/reset-password"), data);
   return response.data;
 };
 

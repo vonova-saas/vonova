@@ -1,6 +1,7 @@
 import { CustomError } from "@/types/error/custom-error.type";
 import axios from "axios";
 import { baseURL } from "./base-url";
+import { apiV1Path } from "./gateway-path";
 
 const options = {
   baseURL,
@@ -13,13 +14,21 @@ let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;
 const isBrowser = typeof window !== "undefined";
 
+/** Relative URLs after /api/v1 are often `admin/...` (no leading slash before `admin`). */
+function urlNeedsAdminAccessToken(url: string | undefined): boolean {
+  if (!url) return false;
+  if (url.includes("/account/")) return true;
+  if (url.includes("/admin/")) return true;
+  if (url.startsWith("admin/")) return true;
+  return false;
+}
+
 // Add request interceptor to include JWT token for admin endpoints
 API.interceptors.request.use(
   (config) => {
     // Attach admin JWT for protected admin/manage endpoints.
     // Account APIs are also protected and used by the admin dashboard.
-    const needsAdminToken =
-      config.url?.includes('/admin/') || config.url?.includes('/account/');
+    const needsAdminToken = urlNeedsAdminAccessToken(config.url);
 
     if (needsAdminToken && isBrowser) {
       // Get JWT token from localStorage
@@ -51,7 +60,9 @@ API.interceptors.response.use(
     const { data, status } = error.response;
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean });
     const requestUrl = originalRequest?.url ?? "";
-    const isAuthRefreshRequest = requestUrl.includes("/admin/auth/refresh-token");
+    const isAuthRefreshRequest =
+      requestUrl.includes("/admin/auth/refresh-token") ||
+      requestUrl.startsWith("admin/auth/refresh-token");
     const isAuthLoginRequest = requestUrl.includes("/auth/login");
 
     // Check if error message indicates token issues (for admin endpoints that return 403)
@@ -66,7 +77,7 @@ API.interceptors.response.use(
       try {
         if (!isRefreshing) {
           isRefreshing = true;
-          refreshPromise = API.post("/admin/auth/refresh-token", {
+          refreshPromise = API.post(apiV1Path("admin/auth/refresh-token"), {
             refreshToken: isBrowser ? localStorage.getItem("admin_refresh_token") : null,
           })
             .then((response) => {

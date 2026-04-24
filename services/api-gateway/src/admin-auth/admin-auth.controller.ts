@@ -10,6 +10,7 @@ import {
   Inject,
   Request,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -26,6 +27,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { extractAccessTokenFromRequest } from '../common/utils/extract-access-token';
+import { AdminJwtAuthGuard } from '../common/guards/admin-jwt-auth.guard';
+
+type AdminJwtUser = { _id?: string; adminId?: string; userId?: string };
 
 @ApiTags('Admin')
 @Controller('api/v1/admin/auth')
@@ -279,12 +283,13 @@ export class AdminAuthGatewayController {
       },
     },
   })
+  @UseGuards(AdminJwtAuthGuard)
   async resetPassword(
-    @Request() req: any,
+    @Request() req: { user?: AdminJwtUser },
     @Body() dto: AdminResetPasswordDto,
   ): Promise<{ message: string }> {
-    // Extract admin ID from JWT token if available
-    const adminId = req.user?.adminId || req.user?.userId;
+    const u = req.user;
+    const adminId = u?._id ?? u?.adminId ?? u?.userId;
 
     return firstValueFrom(
       this.natsClient.send('admin.auth.reset-password', {
