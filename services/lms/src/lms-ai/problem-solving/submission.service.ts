@@ -12,6 +12,10 @@ import { Submission, SubmissionDocument } from './schemas/submission.schema';
 import { SubmissionJob, SubmissionJobDocument } from './schemas/submission-job.schema';
 import { normalizeAIResponse } from './utils/normalize-ai-response.util';
 import { compareOutputs } from './utils/output-compare.util';
+import {
+  isMissingJudgeReturnValue,
+  jsonCloneForJudge,
+} from './utils/judge-output.util';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
 import { runInDocker } from './utils/docker-judge.util';
 
@@ -408,7 +412,20 @@ export class SubmissionService {
       );
 
       if (run.status === 'accepted') {
-        const userOutput = this.normalizeUnknownValue(run.output);
+        if (isMissingJudgeReturnValue(run.output)) {
+          hasRuntimeError = true;
+          failedCases.push({
+            input,
+            expected,
+            output: null,
+            error:
+              'Submission produced no return value (undefined/null) after execution.',
+          });
+          continue;
+        }
+        const userOutput = jsonCloneForJudge(
+          this.normalizeUnknownValue(run.output),
+        );
         const isMatch = compareOutputs(expected, userOutput, {
           ignoreArrayOrder:
             Boolean(testCase.ignoreArrayOrder) || allowUnorderedArrayOutput,

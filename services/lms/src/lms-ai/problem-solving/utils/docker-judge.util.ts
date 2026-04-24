@@ -4,6 +4,11 @@ import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { CodeExecutionError, executeUserFunction } from './code-execution.util';
+import {
+  isMissingJudgeReturnValue,
+  jsonCloneForJudge,
+  parseJudgeStdout,
+} from './judge-output.util';
 
 /** Writable temp root for judge bind-mounts. Do not use process.cwd() — /app is often read-only in Docker. */
 function judgeTempRoot(): string {
@@ -79,17 +84,37 @@ function buildSourceFile(
       content: `${code}
 
 import json
+import inspect
 
 with open('/workspace/payload.json', 'r', encoding='utf-8') as f:
-  payload = json.load(f)
+    payload = json.load(f)
 
 fn_name = payload.get('functionName')
-raw_input = payload.get('input')
-args = raw_input if isinstance(raw_input, list) else [raw_input]
+raw = payload.get('input')
 fn = globals().get(fn_name)
 if not callable(fn):
-  raise Exception(f'Function "{fn_name}" not found')
+    raise Exception(f'Function "{fn_name}" not found')
 
+try:
+    arity = len(inspect.signature(fn).parameters)
+except (TypeError, ValueError):
+    arity = 0
+
+def _normalize_args(value, arity_val):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        if arity_val <= 1:
+            return [value]
+        keys = sorted(value.keys())
+        if len(keys) == arity_val:
+            return [value[k] for k in keys]
+        return [value]
+    return [value]
+
+args = _normalize_args(raw, arity)
 result = fn(*args)
 print(json.dumps(result))
 `,
@@ -113,13 +138,29 @@ print(json.dumps(result))
 const fs = require('fs');
 const payload = JSON.parse(fs.readFileSync('/workspace/payload.json', 'utf8'));
 const fnName = payload.functionName;
-const rawInput = payload.input;
-const args = Array.isArray(rawInput) ? rawInput : [rawInput];
+const raw = payload.input;
 const fn = globalThis[fnName];
 if (typeof fn !== 'function') {
   throw new Error(\`Function "\${fnName}" not found\`);
 }
-const out = fn(...args);
+function __isPlain(o) {
+  return o !== null && typeof o === 'object' && !Array.isArray(o) &&
+    Object.prototype.toString.call(o) === '[object Object]';
+}
+function __normalizeArgs(value, arity) {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value;
+  if (__isPlain(value)) {
+    if (arity <= 1) return [value];
+    const keys = Object.keys(value).sort();
+    if (keys.length === arity) return keys.map((k) => value[k]);
+    return [value];
+  }
+  return [value];
+}
+const arity = typeof fn.length === 'number' ? fn.length : 0;
+const args = __normalizeArgs(raw, arity);
+const out = fn.apply(null, args);
 if (typeof out?.then === 'function') {
   throw new Error('Async return values are not supported');
 }
@@ -279,9 +320,20 @@ function runWithVm(params: {
       language: params.language,
       timeoutMs: params.timeLimitMs,
     });
+    if (isMissingJudgeReturnValue(output)) {
+      return {
+        status: 'runtime_error',
+        error:
+          'Submission produced no return value (undefined/null). Ensure every path returns the answer.',
+        executionTime: Date.now() - startedAt,
+        memoryUsed: 0,
+        stdout: '',
+        stderr: '',
+      };
+    }
     return {
       status: 'accepted',
-      output,
+      output: jsonCloneForJudge(output),
       executionTime: Date.now() - startedAt,
       memoryUsed: 0,
       stdout: '',
@@ -469,17 +521,36 @@ export async function runInDocker(params: {
       };
     }
 
-    let parsed: unknown = undefined;
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(result.stdout || 'null');
-    } catch {
-      parsed = result.stdout.trim();
+      parsed = parseJudgeStdout(result.stdout);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return {
+        status: 'runtime_error',
+        executionTime: elapsed,
+        memoryUsed,
+        error: msg,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
+    }
+    if (isMissingJudgeReturnValue(parsed)) {
+      return {
+        status: 'runtime_error',
+        executionTime: elapsed,
+        memoryUsed,
+        error:
+          'Solution printed null/undefined or invalid JSON to stdout. Return a JSON-serializable value only.',
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
     }
     return {
       status: 'accepted',
       executionTime: elapsed,
       memoryUsed,
-      output: parsed,
+      output: jsonCloneForJudge(parsed),
       stdout: result.stdout,
       stderr: result.stderr,
     };

@@ -1,4 +1,8 @@
 import { Script, createContext } from 'vm';
+import {
+  isMissingJudgeReturnValue,
+  jsonCloneForJudge,
+} from './judge-output.util';
 
 const DEFAULT_TIMEOUT_MS = 1500;
 
@@ -45,13 +49,28 @@ export function executeUserFunction(params: {
     console: { log: () => undefined, error: () => undefined, warn: () => undefined },
     module: { exports: {} as Record<string, unknown> },
     exports: {} as Record<string, unknown>,
-    __input: input,
+    __rawInput: input,
     __result: undefined as unknown,
   });
 
   const runner = new Script(
     `
       "use strict";
+      function __isPlainObject(o) {
+        if (o === null || typeof o !== "object" || Array.isArray(o)) return false;
+        return Object.prototype.toString.call(o) === "[object Object]";
+      }
+      function __normalizeInvocationArgs(raw, arity) {
+        if (raw === undefined || raw === null) return [];
+        if (Array.isArray(raw)) return raw;
+        if (__isPlainObject(raw)) {
+          if (arity <= 1) return [raw];
+          var keys = Object.keys(raw).sort();
+          if (keys.length === arity) return keys.map(function (k) { return raw[k]; });
+          return [raw];
+        }
+        return [raw];
+      }
       ${code}
       const __fnName = ${JSON.stringify(safeFunctionName)};
       const __fn =
@@ -61,7 +80,9 @@ export function executeUserFunction(params: {
       if (typeof __fn !== "function") {
         throw new Error('Function "' + __fnName + '" was not found in submission');
       }
-      __result = Array.isArray(__input) ? __fn(...__input) : __fn(__input);
+      const __arity = typeof __fn.length === "number" ? __fn.length : 0;
+      const __args = __normalizeInvocationArgs(__rawInput, __arity);
+      __result = __fn.apply(null, __args);
     `,
   );
 
@@ -84,5 +105,17 @@ export function executeUserFunction(params: {
     );
   }
 
-  return result;
+  if (isMissingJudgeReturnValue(result)) {
+    throw new CodeExecutionError(
+      'Function must return a value (got undefined or null). Check all code paths return the expected answer.',
+    );
+  }
+
+  try {
+    return jsonCloneForJudge(result);
+  } catch {
+    throw new CodeExecutionError(
+      'Return value is not JSON-serializable (e.g. contains circular structure)',
+    );
+  }
 }
