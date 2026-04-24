@@ -35,94 +35,142 @@ export class FeatureUsageRepository {
     limitDurationMinutes: number | null;
   }) {
     const userObjectId = new Types.ObjectId(params.userId);
+    const baseFilter = {
+      userId: userObjectId,
+      feature: params.feature,
+      date: params.date,
+    };
 
     if (params.usageUnit === 'minutes') {
       const limitMinutes = params.limitDurationMinutes;
-      const filter =
-        limitMinutes === null
-          ? { userId: userObjectId, feature: params.feature, date: params.date }
-          : {
-              userId: userObjectId,
-              feature: params.feature,
-              date: params.date,
-              $expr: {
-                $lt: [{ $ifNull: ['$usedDurationMinutes', 0] }, limitMinutes],
+      if (limitMinutes === null) {
+        await this.model
+          .updateOne(
+            baseFilter,
+            {
+              $inc: { usedDurationMinutes: params.incrementBy },
+              $setOnInsert: {
+                ...baseFilter,
+                usageUnit: 'minutes',
+                usedCount: 0,
+                limitCount: params.limitCount,
+                limitDurationMinutes: null,
+                createdAt: new Date(),
               },
-            };
+              $set: { updatedAt: new Date() },
+            },
+            { upsert: true },
+          )
+          .exec();
+
+        return { allowed: true };
+      }
+
       const updateResult = await this.model
         .updateOne(
-          filter,
+          {
+            ...baseFilter,
+            $or: [
+              { usedDurationMinutes: { $lt: limitMinutes } },
+              { usedDurationMinutes: { $exists: false } },
+            ],
+          },
           {
             $inc: { usedDurationMinutes: params.incrementBy },
+            $set: { updatedAt: new Date() },
+          },
+          { upsert: false },
+        )
+        .exec();
+
+      if (updateResult.modifiedCount > 0) {
+        return { allowed: true };
+      }
+
+      try {
+        await this.model.create({
+          ...baseFilter,
+          usageUnit: 'minutes',
+          usedCount: 0,
+          usedDurationMinutes: params.incrementBy,
+          limitCount: params.limitCount,
+          limitDurationMinutes: limitMinutes,
+        });
+        return { allowed: true };
+      } catch (error: unknown) {
+        if (this.isDuplicateKeyError(error)) {
+          return { allowed: false };
+        }
+        throw error;
+      }
+    }
+
+    const limitCount = params.limitCount;
+    if (limitCount === null) {
+      await this.model
+        .updateOne(
+          baseFilter,
+          {
+            $inc: { usedCount: params.incrementBy },
             $setOnInsert: {
-              userId: userObjectId,
-              feature: params.feature,
-              date: params.date,
-              usageUnit: 'minutes',
-              usedCount: 0,
-              limitCount: params.limitCount,
-              limitDurationMinutes: limitMinutes,
+              ...baseFilter,
+              usageUnit: 'count',
+              usedDurationMinutes: 0,
+              limitCount: null,
+              limitDurationMinutes: params.limitDurationMinutes,
               createdAt: new Date(),
             },
-            $set: {
-              updatedAt: new Date(),
-            },
+            $set: { updatedAt: new Date() },
           },
           { upsert: true },
         )
         .exec();
 
-      const exceeded =
-        limitMinutes !== null &&
-        updateResult.matchedCount === 0 &&
-        updateResult.upsertedCount === 0 &&
-        updateResult.modifiedCount === 0;
-
-      return { allowed: !exceeded };
+      return { allowed: true };
     }
-
-    const limitCount = params.limitCount;
-    const filter =
-      limitCount === null
-        ? { userId: userObjectId, feature: params.feature, date: params.date }
-        : {
-            userId: userObjectId,
-            feature: params.feature,
-            date: params.date,
-            $expr: {
-              $lt: [{ $ifNull: ['$usedCount', 0] }, limitCount],
-            },
-          };
 
     const updateResult = await this.model
       .updateOne(
-        filter,
+        {
+          ...baseFilter,
+          $or: [
+            { usedCount: { $lt: limitCount } },
+            { usedCount: { $exists: false } },
+          ],
+        },
         {
           $inc: { usedCount: params.incrementBy },
-          $setOnInsert: {
-            userId: userObjectId,
-            feature: params.feature,
-            date: params.date,
-            usageUnit: 'count',
-            usedDurationMinutes: 0,
-            limitCount,
-            limitDurationMinutes: params.limitDurationMinutes,
-            createdAt: new Date(),
-          },
-          $set: {
-            updatedAt: new Date(),
-          },
+          $set: { updatedAt: new Date() },
         },
-        { upsert: true },
+        { upsert: false },
       )
       .exec();
 
-    const exceeded =
-      limitCount !== null &&
-      updateResult.matchedCount === 0 &&
-      updateResult.upsertedCount === 0 &&
-      updateResult.modifiedCount === 0;
+    if (updateResult.modifiedCount > 0) {
+      return { allowed: true };
+    }
 
-    return { allowed: !exceeded };
+    try {
+      await this.model.create({
+        ...baseFilter,
+        usageUnit: 'count',
+        usedCount: params.incrementBy,
+        usedDurationMinutes: 0,
+        limitCount,
+        limitDurationMinutes: params.limitDurationMinutes,
+      });
+      return { allowed: true };
+    } catch (error: unknown) {
+      if (this.isDuplicateKeyError(error)) {
+        return { allowed: false };
+      }
+      throw error;
+    }
+  }
+
+  private isDuplicateKeyError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const maybeCode = (error as { code?: unknown }).code;
+    return maybeCode === 11000;
   }
 }
