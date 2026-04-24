@@ -269,6 +269,10 @@ export class PdfSummaryService {
       if (error instanceof BadRequestException) {
         throw error;
       }
+      // Preserve explicit RpcException statuses (e.g. 429 from AI rate limits).
+      if (error instanceof RpcException) {
+        throw error;
+      }
       // Wrap other errors in InternalServerErrorException with better messages
       if (error instanceof Error) {
         if (error.message.includes('Python service responded')) {
