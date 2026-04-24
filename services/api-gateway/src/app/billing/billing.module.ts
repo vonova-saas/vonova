@@ -9,6 +9,6 @@ import { AuthGatewayModule } from '../auth/auth.module';
   imports: [NatsClientModule, AuthGatewayModule],
   controllers: [BillingGatewayController],
   providers: [BillingGatewayService, JwtAuthGuard],
-  exports: [JwtAuthGuard],
+  exports: [JwtAuthGuard, BillingGatewayService],
 })
 export class BillingGatewayModule {}

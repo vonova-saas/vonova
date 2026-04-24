@@ -62,6 +62,8 @@ import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
 import { uploadPDFMutationFn, chatWithPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
+import DailyUsageBadge from "@/components/student/ai-lms/usage/daily-usage-badge";
 
 interface PDFSummaryChatProps {
   initialPDF?: PDFFile | null;
@@ -129,6 +131,7 @@ export default function PDFSummaryChat({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [waveformData, setWaveformData] = useState<number[]>([]);
   const animationFrameRef = useRef<number | null>(null);
+  const waveformHeights = ["h-2", "h-3", "h-4", "h-5", "h-6", "h-7", "h-8"] as const;
    //const studentId = useUserId() || "";
 
   // Keep local state in sync with parent when viewing a specific PDF chat.
@@ -214,12 +217,8 @@ export default function PDFSummaryChat({
       }
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Check for AWS/S3 configuration errors
-const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.data?.message || (error as any)?.toString();      if (uploadErrorMessage && (uploadErrorMessage.includes('AWS Access Key') || uploadErrorMessage.includes('S3') || uploadErrorMessage.includes('credentials') || uploadErrorMessage.includes('Failed to upload file to S3'))) {
-        alert('Server Error: Storage configuration (S3) is invalid. Please contact the backend team.');
-      } else {
-        alert('Upload failed. Please try again.');
-      }
+      const parsed = parseUsageLimitError(error);
+      toast.error(parsed.title, { description: parsed.description, duration: 7000 });
       const errorMessage: PDFMessage = {
         id: (Date.now() + 1).toString(),
         content: "I apologize, but I encountered an error while processing your request. Please try again.",
@@ -372,6 +371,8 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
       setStatus("ready");
     } catch (error) {
       console.error("Failed to process voice message:", error);
+      const parsed = parseUsageLimitError(error);
+      toast.error(parsed.title, { description: parsed.description, duration: 7000 });
       const aiError: PDFMessage = {
         id: (Date.now() + 1).toString(),
         content: "I couldn't process your voice request right now. Please try again.",
@@ -517,7 +518,9 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
     onDropRejected: () => {
-      alert("File too large for server limits (Max 2MB)");
+      toast.error("Upload rejected", {
+        description: "File too large for server limits (max 2MB).",
+      });
     },
   });
     
@@ -527,13 +530,17 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
   
   // Strict 2MB frontend check
   if (file.size > 2 * 1024 * 1024) {
-    alert("File too large for server limits (Max 2MB)");
+    toast.error("Upload rejected", {
+      description: "File too large for server limits (max 2MB).",
+    });
     return;
   }
 
   const currentStudentId = studentId;
   if (!currentStudentId || currentStudentId === "undefined") {
-    alert("Please refresh the page and try again.");
+    toast.error("Session issue", {
+      description: "Please refresh the page and try again.",
+    });
     return;
   }
 
@@ -589,9 +596,11 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
 
     } catch (err) {
       console.error("Upload failed:", (err as any)?.response?.data || (err as any)?.message || err);
+      const parsed = parseUsageLimitError(err);
+      toast.error(parsed.title, { description: parsed.description, duration: 7000 });
       setUploadProgress(prev =>
         prev.map(p => p.fileId === fileId
-          ? { ...p, status: "error", error: "Upload failed, please try again" }
+          ? { ...p, status: "error", error: parsed.description }
           : p
         )
       );
@@ -640,7 +649,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
         <div aria-hidden className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-20 top-8 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl" />
         {/* Chat Header */}
-        <div className="sticky top-0 z-[100] flex items-center justify-between p-4 border-b bg-background flex-shrink-0">
+        <div className="sticky top-0 z-100 flex items-center justify-between border-b bg-background p-4 shrink-0">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -670,6 +679,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <DailyUsageBadge />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -705,7 +715,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
             <AIConversationContent>
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center mb-6">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/5">
                     <FileText className="w-10 h-10 text-primary" />
                   </div>
                   <h2 className="text-2xl font-semibold mb-3 text-foreground">
@@ -753,7 +763,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                       {showDetailButton && !isTyping && messages.filter(m => m.from === "assistant").length === 1 && (
                         <div className="flex w-full justify-start mb-4">
                           <div className="flex items-end mr-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-blue-200">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-linear-to-br from-blue-500 to-purple-600">
                               <Bot className="w-5 h-5 text-white" />
                             </div>
                           </div>
@@ -772,7 +782,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                       {isTyping && (
                         <div className="flex w-full justify-start mb-4">
                           <div className="flex items-end mr-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-blue-200">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-linear-to-br from-blue-500 to-purple-600">
                               <Bot className="w-5 h-5 text-white" />
                             </div>
                           </div>
@@ -781,12 +791,10 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                               <div className="flex space-x-1">
                                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
                                 <div
-                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                                  style={{ animationDelay: "0.1s" }}
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100"
                                 ></div>
                                 <div
-                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                                  style={{ animationDelay: "0.2s" }}
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200"
                                 ></div>
                               </div>
                               <span className="text-sm text-muted-foreground">
@@ -810,7 +818,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
         </div>
 
         {/* Chat Input */}
-        <div className="sticky bottom-2 z-[100] left-0 right-0 border-t bg-background shadow-lg flex flex-col-reverse items-stretch p-3 gap-0 mx-4">
+        <div className="sticky bottom-2 left-0 right-0 z-100 mx-4 flex flex-col-reverse items-stretch gap-0 border-t bg-background p-3 shadow-lg">
           <AIInput onSubmit={handleSubmit} className="border shadow-sm w-full">
             {(isRecording || pendingVoiceUrl) ? (
               <div className="min-h-[60px] w-full flex items-center px-4 py-3">
@@ -825,12 +833,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                       {Array.from({ length: 20 }).map((_, i) => (
                         <div
                           key={i}
-                          className="w-1 bg-primary rounded-full animate-pulse"
-                          style={{
-                            height: `${Math.random() * 100}%`,
-                            animationDelay: `${i * 0.05}s`,
-                            animationDuration: '0.5s'
-                          }}
+                          className={`w-1 rounded-full bg-primary animate-pulse ${waveformHeights[i % waveformHeights.length]} delay-150`}
                         ></div>
                       ))}
                     </div>
@@ -850,8 +853,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                 value={text}
                 placeholder={`Ask about ${currentPDF.name}...`}
                 disabled={isTyping}
-                className="min-h-[60px] max-h-[120px] resize-none w-full"
-                style={{ overflowY: "auto" }}
+                className="min-h-[60px] max-h-[120px] resize-none w-full overflow-y-auto"
                 ref={textareaRef}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -978,6 +980,9 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
             <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
               Upload your PDF files and chat with AI to get instant summaries and insights.
             </p>
+            <div className="mt-5">
+              <DailyUsageBadge />
+            </div>
             <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
               <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
                 <div className="text-2xl font-semibold tabular-nums md:text-3xl">AI</div>
@@ -1101,7 +1106,7 @@ const uploadErrorMessage = (error as any)?.message || (error as any)?.response?.
                         key={progress.fileId}
                         className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
                       >
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           {getStatusIcon(progress.status)}
                         </div>
                         <div className="flex-1 min-w-0">

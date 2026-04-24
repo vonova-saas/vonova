@@ -5,12 +5,16 @@ import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { PdfSummaryService } from './pdf-summary.service';
+import { DailyUsageLimitService } from '../usage/daily-usage-limit.service';
 
 @Controller()
 export class PdfSummaryController {
   private readonly logger = new Logger(PdfSummaryController.name);
 
-  constructor(private readonly pdfSummaryService: PdfSummaryService) {}
+  constructor(
+    private readonly pdfSummaryService: PdfSummaryService,
+    private readonly dailyUsageLimitService: DailyUsageLimitService,
+  ) {}
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
   async uploadPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {
@@ -18,6 +22,8 @@ export class PdfSummaryController {
     const {
       file,
       user_id,
+      role,
+      plan,
       auto_summarize,
       summary_type,
       language,
@@ -55,6 +61,13 @@ export class PdfSummaryController {
       ...(summary_type && { summary_type }),
       ...(language && { language }),
     };
+
+    await this.dailyUsageLimitService.consumeOrThrow({
+      userId: user_id,
+      role,
+      plan,
+      feature: 'pdf_summary',
+    });
 
     return this.pdfSummaryService.uploadPDF(request, ip, userAgent);
   }
@@ -368,6 +381,8 @@ export class PdfSummaryController {
       mimeType,
       filename,
       user_id,
+      role,
+      plan,
       idempotency_key,
     } = data;
 
@@ -381,6 +396,13 @@ export class PdfSummaryController {
     }
 
     const audioBuffer = Buffer.from(audioBase64, 'base64');
+    await this.dailyUsageLimitService.consumeOrThrow({
+      userId: user_id,
+      role,
+      plan,
+      feature: 'pdf_voice',
+    });
+
     return this.pdfSummaryService.voiceAsk(
       session_id,
       audioBuffer,

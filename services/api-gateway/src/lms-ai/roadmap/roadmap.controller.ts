@@ -30,12 +30,22 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
+import { BillingGatewayService } from '../../app/billing/billing.service';
 
 @ApiTags('Roadmap Generation AI')
 @Controller('api/v1/roadmap')
 @UseGuards(JwtAuthGuard)
 export class RoadmapGatewayController {
-  constructor(private readonly roadmapService: RoadmapGatewayService) {}
+  private readonly planCache = new Map<
+    string,
+    { plan: 'free' | 'pro' | 'startup'; expiresAt: number }
+  >();
+  private static readonly PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  constructor(
+    private readonly roadmapService: RoadmapGatewayService,
+    private readonly billingService: BillingGatewayService,
+  ) {}
 
   /** Resolve current user id from req.user (id, sub, or _id) consistently across all roadmap endpoints. */
   private getCurrentUserId(req: unknown): string | undefined {
@@ -65,6 +75,74 @@ export class RoadmapGatewayController {
       return String(raw).trim() || undefined;
     }
     return undefined;
+  }
+
+  private getCurrentUserRole(req: unknown): string | undefined {
+    const r = req as { user?: { role?: unknown } } | undefined;
+    const raw = r?.user?.role;
+    if (raw === undefined || raw === null) return undefined;
+    return String(raw).trim() || undefined;
+  }
+
+  private isStudentRole(role?: string): boolean {
+    const normalized = String(role ?? '')
+      .trim()
+      .toLowerCase();
+    return normalized === 'student' || normalized === 'student_user';
+  }
+
+  private normalizePlan(rawPlan?: string): 'free' | 'pro' | 'startup' {
+    const normalized = String(rawPlan ?? '')
+      .trim()
+      .toLowerCase();
+    if (normalized === 'pro' || normalized === 'startup') return normalized;
+    if (normalized === 'basic' || normalized === 'free' || normalized === '')
+      return 'free';
+    return 'free';
+  }
+
+  private async resolveStudentPlan(req: unknown): Promise<'free' | 'pro' | 'startup'> {
+    const r = req as
+      | {
+          user?: {
+            _id?: unknown;
+            id?: unknown;
+            sub?: unknown;
+            plan?: unknown;
+            subscriptionPlan?: unknown;
+            billingPlan?: unknown;
+          };
+        }
+      | undefined;
+
+    const localPlan = this.normalizePlan(
+      String(
+        r?.user?.plan ?? r?.user?.subscriptionPlan ?? r?.user?.billingPlan ?? '',
+      ),
+    );
+    if (localPlan !== 'free') return localPlan;
+
+    const userId = this.getCurrentUserId(req);
+    if (!userId) return 'free';
+
+    const cached = this.planCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.plan;
+    }
+
+    try {
+      const billing = (await firstValueFrom(this.billingService.findOne(userId))) as {
+        data?: { plan?: string };
+      };
+      const resolvedPlan = this.normalizePlan(billing?.data?.plan);
+      this.planCache.set(userId, {
+        plan: resolvedPlan,
+        expiresAt: Date.now() + RoadmapGatewayController.PLAN_CACHE_TTL_MS,
+      });
+      return resolvedPlan;
+    } catch {
+      return 'free';
+    }
   }
 
   @Public()
@@ -120,13 +198,19 @@ export class RoadmapGatewayController {
     @Ip() ip: string,
   ) {
     const userId = this.getCurrentUserId(req);
+    const role = this.getCurrentUserRole(req);
     if (!userId) {
       throw new UnauthorizedException('Authentication required');
     }
+    const plan = this.isStudentRole(role)
+      ? await this.resolveStudentPlan(req)
+      : 'pro';
     return firstValueFrom(
       this.roadmapService.generateRoadmap({
         ...generateRoadmapDto,
         userId,
+        role,
+        plan,
         ip,
       }),
     );

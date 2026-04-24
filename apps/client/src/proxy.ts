@@ -15,6 +15,7 @@ export function proxy(request: NextRequest) {
     url.pathname.startsWith("/fonts") ||
     url.pathname.startsWith("/icons") ||
     url.pathname.startsWith("/images") ||
+    url.pathname.startsWith("/avatars") ||
     url.pathname.startsWith("/api")
   ) {
     return NextResponse.next();

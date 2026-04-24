@@ -12,35 +12,38 @@ import { Check } from "lucide-react";
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="pricing py-16 md:py-32">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl space-y-6 text-center">
-          <h1 className="text-center text-4xl font-semibold lg:text-5xl">
+    <section id="pricing" className="pricing py-16 md:py-24">
+      <div className="mx-auto max-w-6xl px-4 md:px-6">
+        <div className="mx-auto max-w-2xl space-y-4 text-center md:space-y-6">
+          <h1 className="text-center text-balance text-3xl font-semibold tracking-tight md:text-4xl lg:text-5xl">
             Pricing that Scales with You
           </h1>
-          <p>
-            Gemini is evolving to be more than just the models. It supports an
-            entire to the APIs and platforms helping developers and businesses
-            innovate.
+          <p className="mx-auto max-w-xl text-sm text-muted-foreground md:text-base">
+            Choose the plan that matches your stage. Start free, then scale as
+            your learning needs, team size, and platform usage grow.
           </p>
         </div>
 
-        <div className="mt-8 grid gap-6 md:mt-20 md:grid-cols-3">
-          <Card className="flex flex-col">
+        <div className="mt-8 grid gap-5 sm:mt-10 md:mt-14 md:grid-cols-2 lg:mt-16 lg:grid-cols-3">
+          <Card className="flex h-full flex-col rounded-2xl border-border/60 bg-card/70 shadow-sm">
             <CardHeader>
               <CardTitle className="font-medium">Free</CardTitle>
               <span className="my-3 block text-2xl font-semibold">$0 / mo</span>
-              <CardDescription className="text-sm">Per editor</CardDescription>
+              <CardDescription className="text-sm">Per learner</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <hr className="border-dashed" />
 
-              <ul className="list-outside space-y-3 text-sm">
+              <ul className="list-outside space-y-2.5 text-sm md:space-y-3">
                 {[
-                  "Basic Analytics Dashboard",
-                  "5GB Cloud Storage",
-                  "Email and Chat Support",
+                  "Access to core LMS courses",
+                  "Basic quizzes and attempts",
+                  "Community feed access",
+                  "Material library access",
+                  "AI roadmap generator (1 roadmap)",
+                  "PDF summary tool (1 file upload)",
+                  "Problem-solving workspace",
                 ].map((item, index) => (
                   <li key={index} className="flex items-center gap-2">
                     <Check className="size-3" />
@@ -51,42 +54,37 @@ export default function PricingSection() {
             </CardContent>
 
             <CardFooter className="mt-auto">
-              <Button asChild variant="outline" className="w-full">
-                <Link href="">Get Started</Link>
+              <Button asChild variant="outline" className="w-full rounded-lg">
+                <Link href="/auth/register">Get Started</Link>
               </Button>
             </CardFooter>
           </Card>
 
-          <Card className="relative">
+          <Card className="relative flex h-full flex-col rounded-2xl border-border/60 bg-card/70 shadow-sm">
             <span className="bg-linear-to-br/increasing absolute inset-x-0 -top-3 mx-auto flex h-6 w-fit items-center rounded-full from-purple-400 to-amber-300 px-3 py-1 text-xs font-medium text-amber-950 ring-1 ring-inset ring-white/20 ring-offset-1 ring-offset-gray-950/5">
               Popular
             </span>
 
-            <div className="flex flex-col">
+            <div className="flex h-full flex-col">
               <CardHeader>
                 <CardTitle className="font-medium">Pro</CardTitle>
                 <span className="my-3 block text-2xl font-semibold">
                   $19 / mo
                 </span>
                 <CardDescription className="text-sm">
-                  Per editor
+                  Per learner
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
                 <hr className="border-dashed" />
-                <ul className="list-outside space-y-3 text-sm">
+                <ul className="list-outside space-y-2.5 text-sm md:space-y-3">
                   {[
                     "Everything in Free Plan",
-                    "5GB Cloud Storage",
-                    "Email and Chat Support",
-                    "Access to Community Forum",
-                    "Single User Access",
-                    "Access to Basic Templates",
-                    "Mobile App Access",
-                    "1 Custom Report Per Month",
-                    "Monthly Product Updates",
-                    "Standard Security Features",
+                    "AI roadmap generator (multiple roadmaps)",
+                    "PDF summary tool (multiple files)",
+                    "Advanced quizzes and detailed results",
+                    "Priority support",
                   ].map((item, index) => (
                     <li key={index} className="flex items-center gap-2">
                       <Check className="size-3" />
@@ -96,31 +94,34 @@ export default function PricingSection() {
                 </ul>
               </CardContent>
 
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="">Get Started</Link>
+              <CardFooter className="mt-auto">
+                <Button asChild className="w-full rounded-lg">
+                  <Link href="/auth/register">Get Started</Link>
                 </Button>
               </CardFooter>
             </div>
           </Card>
 
-          <Card className="flex flex-col">
+          <Card className="flex h-full flex-col rounded-2xl border-border/60 bg-card/70 shadow-sm">
             <CardHeader>
               <CardTitle className="font-medium">Startup</CardTitle>
               <span className="my-3 block text-2xl font-semibold">
                 $29 / mo
               </span>
-              <CardDescription className="text-sm">Per editor</CardDescription>
+              <CardDescription className="text-sm">Per team seat</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <hr className="border-dashed" />
 
-              <ul className="list-outside space-y-3 text-sm">
+              <ul className="list-outside space-y-2.5 text-sm md:space-y-3">
                 {[
                   "Everything in Pro Plan",
-                  "5GB Cloud Storage",
-                  "Email and Chat Support",
+                  "Instructor dashboard and analytics",
+                  "Course management tools",
+                  "Quiz management tools",
+                  "Problem-solving management",
+                  "Material library management",
                 ].map((item, index) => (
                   <li key={index} className="flex items-center gap-2">
                     <Check className="size-3" />
@@ -131,8 +132,8 @@ export default function PricingSection() {
             </CardContent>
 
             <CardFooter className="mt-auto">
-              <Button asChild variant="outline" className="w-full">
-                <Link href="">Get Started</Link>
+              <Button asChild variant="outline" className="w-full rounded-lg">
+                <Link href="/auth/register">Get Started</Link>
               </Button>
             </CardFooter>
           </Card>

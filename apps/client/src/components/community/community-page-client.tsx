@@ -412,9 +412,12 @@ export default function CommunityPageClient({
     return rows.filter((p) => {
       if (seen.has(p._id)) return false;
       seen.add(p._id);
-      return true;
+      if (postScope !== "all") return true;
+      const authorId =
+        p.author && typeof p.author === "object" ? p.author._id : undefined;
+      return !(user?._id && authorId && authorId === user._id);
     });
-  }, [postsInfinite.data?.pages]);
+  }, [postScope, postsInfinite.data?.pages, user?._id]);
 
   const postsTotal = postsInfinite.data?.pages[0]?.total;
 
@@ -1177,7 +1180,6 @@ export default function CommunityPageClient({
                   </Card>
                 ) : (
                   feedPosts.map((post) => {
-                    console.log("POST DATA:", post);
                     const originalPost = resolveOriginalPost(post);
                     if (originalPost) {
                       return (

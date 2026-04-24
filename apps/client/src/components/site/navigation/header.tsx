@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/global/theme-toggle";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const menuItems = [
-  { name: "Features", href: "#features" },
-  { name: "Solution", href: "#link" },
-  { name: "Pricing", href: "#pricing" },
-  { name: "About", href: "#link" },
+  { name: "Features", href: "/site#features" },
+  { name: "Solution", href: "/site#solution" },
+  { name: "Pricing", href: "/site#pricing" },
+  { name: "About", href: "/site/about" },
 ];
+
+const EASE_OUT_CUBIC: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export const Header = () => {
   const [menuState, setMenuState] = React.useState(false);
@@ -27,15 +30,18 @@ export const Header = () => {
   }, []);
   return (
     <header>
-      <nav
+      <motion.nav
         data-state={menuState && "active"}
         className="fixed z-20 w-full px-2"
+        initial={{ y: -16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: EASE_OUT_CUBIC }}
       >
         <div
           className={cn(
-            "mx-auto mt-2 max-w-6xl px-6 transition-all duration-300 lg:px-12",
+            "mx-auto mt-2 max-w-6xl px-6 transition-all duration-400 lg:px-12",
             isScrolled &&
-              "bg-background/50 max-w-4xl rounded-2xl border backdrop-blur-lg lg:px-5",
+              "max-w-4xl rounded-2xl border border-white/15 bg-background/60 shadow-lg shadow-black/20 backdrop-blur-xl lg:px-5",
           )}
         >
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
@@ -66,9 +72,11 @@ export const Header = () => {
                   <li key={index}>
                     <Link
                       href={item.href}
-                      className="text-muted-foreground hover:text-accent-foreground block duration-150"
+                    className="block text-muted-foreground duration-400 hover:text-accent-foreground"
                     >
-                      <span>{item.name}</span>
+                      <span className="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-primary/70 after:transition-all after:duration-400 hover:after:w-full">
+                        {item.name}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -102,7 +110,7 @@ export const Header = () => {
                     <span>Login</span>
                   </Link>
                 </Button>
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="transition-all duration-400 hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(59,130,246,0.28)]">
                   <Link href="/auth/register">
                     <span>Get Started</span>
                   </Link>
@@ -111,7 +119,7 @@ export const Header = () => {
             </div>
           </div>
         </div>
-      </nav>
+      </motion.nav>
     </header>
   );
 };

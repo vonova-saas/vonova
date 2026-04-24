@@ -81,4 +81,8 @@ export class RoadmapGatewayService {
   getUserRoadmaps(data: { userId: string }) {
     return this.client.send({ cmd: 'lms.ai.roadmap.getUserRoadmaps' }, data);
   }
+
+  getMyUsage(data: { userId: string; role?: string; plan?: string }) {
+    return this.client.send({ cmd: 'lms.ai.usage.me' }, data);
+  }
 }

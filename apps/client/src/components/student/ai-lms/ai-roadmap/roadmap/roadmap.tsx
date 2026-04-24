@@ -47,6 +47,7 @@ import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions';
 import useUserId from "@/hooks/user/use-user-id";
 import { useAuthContextOptional } from "@/context/app/auth/auth-context";
 import { Button } from "@/components/ui/button";
+import DailyUsageBadge from "@/components/student/ai-lms/usage/daily-usage-badge";
 import type {
   RoadmapPayload,
   UserRoadmapListItem,
@@ -382,6 +383,9 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
             <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
               Explore your generated learning path and refine it as you progress.
             </p>
+            <div className="mt-5">
+              <DailyUsageBadge />
+            </div>
           </div>
         </section>
         <div className="mx-auto max-w-6xl px-4 pt-10">
@@ -551,6 +555,9 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
             Enter your topic and preferences to generate a personalized learning roadmap.
           </p>
+          <div className="mt-5">
+            <DailyUsageBadge />
+          </div>
         </div>
       </section>
       <div className="mx-auto max-w-6xl px-4 pt-10">

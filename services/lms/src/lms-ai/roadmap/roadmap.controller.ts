@@ -2,23 +2,51 @@ import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { RoadmapService } from './roadmap.service';
+import { DailyUsageLimitService } from '../usage/daily-usage-limit.service';
 
 @Controller()
 export class RoadmapController {
   private readonly logger = new Logger(RoadmapController.name);
 
-  constructor(private readonly roadmapService: RoadmapService) {}
+  constructor(
+    private readonly roadmapService: RoadmapService,
+    private readonly dailyUsageLimitService: DailyUsageLimitService,
+  ) {}
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {
-    const { userId, ip = '', userAgent = '', ...generateRoadmapDto } = data;
+    const {
+      userId,
+      role,
+      plan,
+      ip = '',
+      userAgent = '',
+      ...generateRoadmapDto
+    } = data;
     const request = { ...generateRoadmapDto, userId };
 
     this.logger.log(
       `Received roadmap generation request for topic: "${request.topic}", user: ${userId}`,
     );
 
-    return this.roadmapService.generateRoadmap(request, ip, userAgent);
+    await this.dailyUsageLimitService.consumeOrThrow({
+      userId,
+      role,
+      plan,
+      feature: 'ai_roadmap',
+    });
+
+    return this.roadmapService.generateRoadmap(
+      request,
+      ip,
+      userAgent,
+    );
+  }
+
+  @MessagePattern({ cmd: 'lms.ai.usage.me' })
+  async getMyUsage(@Payload() data: any, @Ctx() _ctx: NatsContext) {
+    const { userId, role, plan } = data;
+    return this.dailyUsageLimitService.getTodayUsage({ userId, role, plan });
   }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.health' })

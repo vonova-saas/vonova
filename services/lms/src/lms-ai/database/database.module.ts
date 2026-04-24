@@ -8,6 +8,7 @@ import { PdfSummarySchema } from './schemas/pdf-summary.schema';
 import { PdfChatHistorySchema } from './schemas/pdf-chat-history.schema';
 import { PdfSummaryAudioSchema } from './schemas/pdf-summary-audio.schema';
 import { VoiceAskIdempotencySchema } from './schemas/voice-ask-idempotency.schema';
+import { FeatureUsageSchema } from './schemas/feature-usage.schema';
 import { AiAssistantSchema } from './schemas/ai-assistant.schema';
 import { VideoGenSchema } from './schemas/video-gen.schema';
 import { ProblemSolverSchema } from './schemas/problem-solver.schema';
@@ -18,6 +19,7 @@ import { PdfSummaryRepository } from './repositories/pdf-summary.repository';
 import { PdfChatHistoryRepository } from './repositories/pdf-chat-history.repository';
 import { PdfSummaryAudioRepository } from './repositories/pdf-summary-audio.repository';
 import { VoiceAskIdempotencyRepository } from './repositories/voice-ask-idempotency.repository';
+import { FeatureUsageRepository } from './repositories/feature-usage.repository';
 import { LMS_AI_CONNECTION_NAME } from './constants';
 
 const LMS_AI_CONNECTION = LMS_AI_CONNECTION_NAME;
@@ -72,6 +74,7 @@ function resolveLmsAiMongoUri(configService: ConfigService): string {
         { name: 'PdfChatHistory', schema: PdfChatHistorySchema },
         { name: 'PdfSummaryAudio', schema: PdfSummaryAudioSchema },
         { name: 'VoiceAskIdempotency', schema: VoiceAskIdempotencySchema },
+        { name: 'FeatureUsage', schema: FeatureUsageSchema },
         { name: 'AiAssistant', schema: AiAssistantSchema },
         { name: 'VideoGen', schema: VideoGenSchema },
         { name: 'ProblemSolver', schema: ProblemSolverSchema },
@@ -86,6 +89,7 @@ function resolveLmsAiMongoUri(configService: ConfigService): string {
     PdfChatHistoryRepository,
     PdfSummaryAudioRepository,
     VoiceAskIdempotencyRepository,
+    FeatureUsageRepository,
   ],
   exports: [
     RoadmapRepository,
@@ -94,6 +98,7 @@ function resolveLmsAiMongoUri(configService: ConfigService): string {
     PdfChatHistoryRepository,
     PdfSummaryAudioRepository,
     VoiceAskIdempotencyRepository,
+    FeatureUsageRepository,
   ],
 })
 export class DatabaseModule {}

@@ -108,3 +108,14 @@ export const getRoadmapHistoryMutationFn = async (
   });
   return response.data;
 };
+
+export const getMyUsageQueryFn = async (): Promise<{
+  date: string;
+  timezone: string;
+  ai_roadmap: { used: number; limit: number | null; remaining: number | null };
+  pdf_summary: { used: number; limit: number | null; remaining: number | null };
+  pdf_voice: { used: number; limit: number | null; remaining: number | null };
+}> => {
+  const response = await API.get('/me/usage');
+  return response.data;
+};

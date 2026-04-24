@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthContext } from "@/context/app/auth/auth-context";
 import { Input } from "@/components/ui/input";
+import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
 
 enum Visibility {
   PUBLIC = "public",
@@ -193,9 +194,9 @@ export const GeneratorControls = (props: Props) => {
             }
           },
           onError: (error: any) => {
+            const parsed = parseUsageLimitError(error);
             toast.error("Something went wrong", {
-              description:
-                error.response?.data?.message || "Unknown error occurred",
+              description: parsed.description,
               duration: 4000,
             });
           },

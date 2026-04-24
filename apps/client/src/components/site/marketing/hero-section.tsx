@@ -1,13 +1,23 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Gem } from "lucide-react";
+import { ArrowRight, Gem, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { TextEffect } from "@/components/global/motion-primitives/text-effect";
 import { AnimatedGroup } from "@/components/global/motion-primitives/animated-group";
 import { Header } from "@/components/site/navigation/header";
 
 import { BorderBeam } from "@/components/global/magicui/border-beam";
+
+const MOTION = {
+  micro: 0.4,
+  section: 0.8,
+  hero: 1.2,
+  easeOutCubic: [0.22, 1, 0.36, 1] as const,
+};
 
 const transitionVariants = {
   item: {
@@ -21,19 +31,44 @@ const transitionVariants = {
       filter: "blur(0px)",
       y: 0,
       transition: {
-        type: "spring" as const,
-        bounce: 0.3,
-        duration: 1.5,
+        duration: MOTION.hero,
+        ease: MOTION.easeOutCubic,
       },
     },
   },
 } as const;
 
 export default function HeroSection() {
+  const heroRef = React.useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
+  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "-5%"]);
+  const ctaY = useTransform(scrollYProgress, [0, 1], ["0%", "-2%"]);
+  const ctaScale = useTransform(scrollYProgress, [0, 1], [1, 0.985]);
+
   return (
     <>
       <Header />
-      <main className="overflow-hidden">
+      <main ref={heroRef} className="overflow-hidden">
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 opacity-60 will-change-transform"
+          style={{
+            y: bgY,
+            background:
+              "radial-gradient(circle at 15% 20%, rgba(59,130,246,0.20), transparent 35%), radial-gradient(circle at 80% 30%, rgba(139,92,246,0.18), transparent 42%), radial-gradient(circle at 55% 85%, rgba(34,211,238,0.14), transparent 35%)",
+          }}
+          animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-6 -z-10 mx-auto h-72 w-72 rounded-full bg-primary/12 blur-3xl will-change-transform"
+          style={{ y: bgY }}
+        />
         <div
           aria-hidden
           className="absolute inset-0 isolate hidden opacity-65 contain-strict lg:block"
@@ -42,18 +77,18 @@ export default function HeroSection() {
           <div className="h-320 absolute left-0 top-0 w-60 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
           <div className="h-320 -translate-y-87.5 absolute left-0 top-0 w-60 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
         </div>
-        <section>
-          <div className="relative pt-24 md:pt-36">
+        <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+          <div className="relative pt-20 md:pt-28">
             <div className="absolute inset-0 -z-10 size-full [background:radial-gradient(125%_125%_at_50%_100%,transparent_0%,var(--color-background)_75%)]"></div>
-            <div className="mx-auto max-w-7xl px-6">
-              <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
+            <motion.div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center will-change-transform" style={{ y: contentY }}>
+              <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0 transform-[translateZ(0)]">
                 <AnimatedGroup variants={transitionVariants}>
                   <Link
-                    href="#link"
-                    className="hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950"
+                    href="/auth/register"
+                    className="hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-sm transition-all duration-400 dark:border-t-white/5"
                   >
                     <span className="text-foreground text-sm">
-                      🚀 Launching Soon in the Arab World
+                      🚀 Built for ambitious CS learners
                     </span>
                     <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
 
@@ -74,9 +109,9 @@ export default function HeroSection() {
                   preset="fade-in-blur"
                   speedSegment={0.3}
                   as="h1"
-                  className="mt-8 text-balance text-6xl md:text-7xl lg:mt-16 xl:text-[5.25rem]"
+                  className="mt-8 text-balance text-4xl font-bold tracking-tight md:text-5xl"
                 >
-                  Transform the Way CS Students Learn with AI
+                  Learn faster, practice deeper, and ship real skills with Vonova
                 </TextEffect>
                 <TextEffect
                   per="line"
@@ -84,40 +119,40 @@ export default function HeroSection() {
                   speedSegment={0.3}
                   delay={0.5}
                   as="p"
-                  className="mx-auto mt-8 max-w-2xl text-balance text-lg"
+                  className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg"
                 >
-                  Vonova is an AI-powered Learning Management System designed
-                  for CS students and developers in the Arab world.
-                  Personalized, structured, and ready to revolutionize your
-                  learning journey.
+                  From guided roadmaps to hands-on problem solving, Vonova gives
+                  students and instructors one professional platform to learn,
+                  build portfolios, and stay consistent.
                 </TextEffect>
 
+                <motion.div style={{ y: ctaY, scale: ctaScale }} className="will-change-transform">
                 <AnimatedGroup
                   variants={{
                     container: {
                       visible: {
                         transition: {
-                          staggerChildren: 0.05,
+                          staggerChildren: 0.09,
                           delayChildren: 0.75,
                         },
                       },
                     },
                     item: transitionVariants.item,
                   }}
-                  className="mt-12 flex flex-col items-center justify-center gap-2 md:flex-row"
+                  className="mt-8 flex flex-wrap items-center justify-center gap-3"
                 >
                   <div
                     key={1}
-                    className="bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5"
+                    className="rounded-full"
                   >
                     <Button
                       asChild
                       size="lg"
-                      className="rounded-xl px-5 text-base"
+                      className="rounded-full px-8 text-base transition-all duration-400 hover:scale-[1.02]"
                     >
-                      <Link href="#">
+                      <Link href="/auth/register">
                         <Gem className="mr-2 size-4" />
-                        <span className="text-nowrap">Join the Waitlist</span>
+                        <span className="text-nowrap">Create free account</span>
                       </Link>
                     </Button>
                   </div>
@@ -126,15 +161,56 @@ export default function HeroSection() {
                     asChild
                     size="lg"
                     variant="ghost"
-                    className="h-10.5 rounded-xl px-5"
+                    className="rounded-full border-primary/25 bg-background/60 px-8 transition-all duration-400 hover:scale-[1.02] hover:bg-background"
                   >
                     <Link href="#features">
-                      <span className="text-nowrap">See Features</span>
+                      <span className="text-nowrap">Explore platform</span>
                     </Link>
                   </Button>
                 </AnimatedGroup>
+                </motion.div>
+
+                <AnimatedGroup
+                  variants={{
+                    container: {
+                      visible: {
+                        transition: {
+                          staggerChildren: 0.1,
+                          delayChildren: 1,
+                        },
+                      },
+                    },
+                    item: transitionVariants.item,
+                  }}
+                  className="mx-auto mt-12 grid max-w-3xl grid-cols-1 gap-3 text-center sm:grid-cols-3 md:gap-6"
+                >
+                  {[
+                    { icon: Sparkles, label: "AI Guidance", value: "24/7 personalized help" },
+                    { icon: Users, label: "Community", value: "Peer-powered motivation" },
+                    { icon: ShieldCheck, label: "Professional", value: "Structured learning path" },
+                  ].map((item, index) => (
+                    <motion.div
+                      key={item.label}
+                      className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 text-left shadow-sm backdrop-blur-sm md:py-5"
+                      style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+                      initial={{ y: 0 }}
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{
+                        duration: 4 + index * 0.4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: index * 0.2,
+                      }}
+                      whileHover={{ y: -8, scale: 1.02, rotateX: 3, rotateY: index % 2 === 0 ? -2 : 2 }}
+                    >
+                      <item.icon className="mb-2 h-4 w-4 text-primary" />
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                      <p className="text-sm">{item.value}</p>
+                    </motion.div>
+                  ))}
+                </AnimatedGroup>
               </div>
-            </div>
+            </motion.div>
 
             <AnimatedGroup
               variants={{
@@ -149,13 +225,12 @@ export default function HeroSection() {
                 item: transitionVariants.item,
               }}
             >
-              <div className="relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20">
-                {/* Removed gradient overlay div */}
-                <div className="bg-background relative mx-auto max-w-6xl overflow-hidden rounded-2xl border p-4">
+              <div className="relative mt-10 overflow-hidden px-2 sm:mt-12 md:mt-16">
+                <div className="bg-background relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border/70 p-4 shadow-sm">
                   <Image
                     className="bg-background aspect-15/8 relative hidden rounded-2xl dark:block"
                     src="/images/vonova.png"
-                    alt="app screen"
+                    alt="Vonova dashboard preview"
                     width="2700"
                     height="1440"
                   />

@@ -1,16 +1,144 @@
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  ServiceUnavailableException,
+  Request,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { firstValueFrom, timeout } from 'rxjs';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { BillingGatewayService } from './app/billing/billing.service';
 
 @ApiTags('Gateway')
 @Controller('api/v1')
 export class AppController {
-  constructor(@Inject('NATS_SERVICE') private natsClient: ClientProxy) {}
+  private readonly planCache = new Map<
+    string,
+    { plan: 'free' | 'pro' | 'startup'; expiresAt: number }
+  >();
+  private static readonly PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  constructor(
+    @Inject('NATS_SERVICE') private natsClient: ClientProxy,
+    private readonly billingService: BillingGatewayService,
+  ) {}
   private static readonly HEALTH_TIMEOUT_MS = 3000;
 
-  private async getServiceHealth(cmd: string, serviceName: string) {
+  private toSafeString(raw: unknown): string | undefined {
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw === 'string') return raw.trim() || undefined;
+    if (
+      typeof raw === 'number' ||
+      typeof raw === 'boolean' ||
+      typeof raw === 'bigint' ||
+      typeof raw === 'symbol'
+    ) {
+      return String(raw).trim() || undefined;
+    }
+    if (typeof raw === 'object') {
+      const maybeHex = (raw as { toHexString?: () => string }).toHexString?.();
+      if (typeof maybeHex === 'string' && maybeHex.trim()) {
+        return maybeHex.trim();
+      }
+      const s = (raw as { toString?: () => string }).toString?.();
+      if (typeof s === 'string') {
+        const trimmed = s.trim();
+        if (trimmed && trimmed !== '[object Object]') {
+          return trimmed;
+        }
+      }
+      return undefined;
+    }
+    return undefined;
+  }
+
+  private getCurrentUserId(req: unknown): string | undefined {
+    const r = req as
+      | { user?: { _id?: unknown; id?: unknown; sub?: unknown } }
+      | undefined;
+    const raw = r?.user?.id ?? r?.user?.sub ?? r?.user?._id;
+    return this.toSafeString(raw);
+  }
+
+  private getCurrentUserRole(req: unknown): string | undefined {
+    const r = req as { user?: { role?: unknown } } | undefined;
+    const raw = r?.user?.role;
+    return this.toSafeString(raw);
+  }
+
+  private isStudentRole(role?: string): boolean {
+    const normalized = String(role ?? '')
+      .trim()
+      .toLowerCase();
+    return normalized === 'student' || normalized === 'student_user';
+  }
+
+  private normalizePlan(rawPlan?: string): 'free' | 'pro' | 'startup' {
+    const normalized = String(rawPlan ?? '')
+      .trim()
+      .toLowerCase();
+    if (normalized === 'pro' || normalized === 'startup') return normalized;
+    if (normalized === 'basic' || normalized === 'free' || normalized === '')
+      return 'free';
+    return 'free';
+  }
+
+  private async resolveStudentPlan(
+    req: unknown,
+  ): Promise<'free' | 'pro' | 'startup'> {
+    const r = req as
+      | {
+          user?: {
+            _id?: unknown;
+            id?: unknown;
+            sub?: unknown;
+            plan?: unknown;
+            subscriptionPlan?: unknown;
+            billingPlan?: unknown;
+          };
+        }
+      | undefined;
+
+    const localPlan = this.normalizePlan(
+      this.toSafeString(
+        r?.user?.plan ?? r?.user?.subscriptionPlan ?? r?.user?.billingPlan,
+      ),
+    );
+    if (localPlan !== 'free') return localPlan;
+
+    const userId = this.getCurrentUserId(req);
+    if (!userId) return 'free';
+
+    const cached = this.planCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.plan;
+    }
+
+    try {
+      const billing = (await firstValueFrom(
+        this.billingService.findOne(userId),
+      )) as {
+        data?: { plan?: string };
+      };
+      const resolvedPlan = this.normalizePlan(billing?.data?.plan);
+      this.planCache.set(userId, {
+        plan: resolvedPlan,
+        expiresAt: Date.now() + AppController.PLAN_CACHE_TTL_MS,
+      });
+      return resolvedPlan;
+    } catch {
+      return 'free';
+    }
+  }
+
+  private async getServiceHealth(
+    cmd: string,
+    serviceName: string,
+  ): Promise<unknown> {
     try {
       return await firstValueFrom(
         this.natsClient
@@ -38,25 +166,47 @@ export class AppController {
     };
   }
 
+  @Get('me/usage')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Get today's daily usage limits" })
+  @ApiResponse({
+    status: 200,
+    description: "Today's usage returned successfully",
+  })
+  async getMyDailyUsage(@Request() req: unknown): Promise<unknown> {
+    const userId = this.getCurrentUserId(req);
+    const role = this.getCurrentUserRole(req);
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const plan = this.isStudentRole(role)
+      ? await this.resolveStudentPlan(req)
+      : 'pro';
+
+    return firstValueFrom(
+      this.natsClient.send({ cmd: 'lms.ai.usage.me' }, { userId, role, plan }),
+    );
+  }
+
   // Backend Services
   @Get('app/health')
   @ApiOperation({ summary: 'Get app service health' })
   @ApiResponse({ status: 200, description: 'App service is running' })
-  async getAppHealth() {
+  async getAppHealth(): Promise<unknown> {
     return this.getServiceHealth('getAppHealth', 'App service');
   }
 
   @Get('lms/health')
   @ApiOperation({ summary: 'Get LMS service health' })
   @ApiResponse({ status: 200, description: 'LMS service is running' })
-  async getLmsHealth() {
+  async getLmsHealth(): Promise<unknown> {
     return this.getServiceHealth('getLmsHealth', 'LMS service');
   }
 
   @Get('lms-ai/health')
   @ApiOperation({ summary: 'Get LMS AI service health' })
   @ApiResponse({ status: 200, description: 'LMS AI service is running' })
-  async getLmsAiHealth() {
+  async getLmsAiHealth(): Promise<unknown> {
     return this.getServiceHealth('getLmsAiHealth', 'LMS AI service');
   }
 

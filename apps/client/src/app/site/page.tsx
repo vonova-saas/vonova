@@ -1,12 +1,12 @@
 import dynamic from "next/dynamic";
 import HeroSection from "@/components/site/marketing/hero-section";
-import Waitly from "@/components/site/marketing/waitly-section";
 import FAQsSection from "@/components/site/marketing/faqs-section";
 import PricingSection from "@/components/site/marketing/pricing-section";
 import GetStarted from "@/components/site/marketing/get-started-section";
 import FooterSection from "@/components/site/navigation/footer-section";
 import Reviews from "@/components/site/marketing/reviews";
 import ContentSection from "@/components/site/marketing/content-section";
+import SolutionSection from "@/components/site/marketing/solution-section";
 
 // Lazy-load sections that pull in recharts, motion, dotted-map to speed up initial compile
 const LMSFeaturesSection = dynamic(
@@ -25,8 +25,8 @@ export default function LandingPage() {
       <ContentSection />
       <LMSFeaturesSection />
       <AIFeaturesSection />
+      <SolutionSection />
       <Reviews />
-      <Waitly />
       <FAQsSection />
       <PricingSection />
       <GetStarted />
