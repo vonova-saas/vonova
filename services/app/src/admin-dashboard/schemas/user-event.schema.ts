@@ -13,6 +13,8 @@ export class UserEvent {
 
   @Prop({ type: Object })
   metadata?: Record<string, unknown>;
+
+  createdAt?: Date;
 }
 
 export const UserEventSchema = SchemaFactory.createForClass(UserEvent);

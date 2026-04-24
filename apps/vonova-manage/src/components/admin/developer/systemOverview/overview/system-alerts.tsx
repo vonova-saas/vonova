@@ -41,33 +41,8 @@ const alertVariants = {
   },
 };
 
-export function SystemAlerts() {
-  const [alerts, setAlerts] = useState<SystemAlert[]>([
-    {
-      id: '1',
-      type: 'error',
-      title: 'High Error Rate',
-      description: 'API error rate has exceeded 10% in the last 15 minutes',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-      acknowledged: false,
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Memory Usage High',
-      description: 'Server memory usage is at 85%',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      acknowledged: false,
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'New Version Available',
-      description: 'Update to v1.3.0 is available',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      acknowledged: true,
-    },
-  ]);
+export function SystemAlerts({ initialAlerts }: { initialAlerts: SystemAlert[] }) {
+  const [alerts, setAlerts] = useState<SystemAlert[]>(initialAlerts);
 
   const acknowledgeAlert = (id: string) => {
     setAlerts(alerts.map(alert => 

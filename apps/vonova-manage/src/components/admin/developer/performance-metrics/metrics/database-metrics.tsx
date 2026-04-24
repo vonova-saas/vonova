@@ -3,30 +3,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveBar } from '@nivo/bar';
 
-const dbData = [
-  { time: '00:00', queries: 450, slowQueries: 2, connections: 85 },
-  { time: '04:00', queries: 380, slowQueries: 1, connections: 72 },
-  { time: '08:00', queries: 980, slowQueries: 5, connections: 120 },
-  { time: '12:00', queries: 1450, slowQueries: 8, connections: 180 },
-  { time: '16:00', queries: 1320, slowQueries: 6, connections: 165 },
-  { time: '20:00', queries: 950, slowQueries: 3, connections: 110 },
-  { time: '23:59', queries: 520, slowQueries: 2, connections: 90 },
-];
-
-const barData = dbData.map(item => ({
-  time: item.time,
-  'Queries': item.queries,
-  'Slow Queries': item.slowQueries,
-  'Connections': item.connections,
-}));
-
 const barColors = {
   'Queries': '#8884d8',
   'Slow Queries': '#ff4d4f',
   'Connections': '#ffc658',
 };
 
-export function DatabaseMetrics() {
+export function DatabaseMetrics({
+  data,
+}: {
+  data?: {
+    databaseSizeGb: number;
+    queryCacheHitRate: number;
+    activeConnections: number;
+    maxConnections: number;
+    replicationLagSeconds: number;
+    performanceSeries: Array<{
+      time: string;
+      queries: number;
+      slowQueries: number;
+      connections: number;
+    }>;
+  };
+}) {
+  const barData = (data?.performanceSeries ?? []).map((item) => ({
+    time: item.time,
+    Queries: item.queries,
+    'Slow Queries': item.slowQueries,
+    Connections: item.connections,
+  }));
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -35,8 +40,8 @@ export function DatabaseMetrics() {
             <CardTitle className="text-sm font-medium">Database Size</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4 GB</div>
-            <p className="text-xs text-muted-foreground">+120 MB this week</p>
+            <div className="text-2xl font-bold">{(data?.databaseSizeGb ?? 0).toFixed(2)} GB</div>
+            <p className="text-xs text-muted-foreground">Estimated active dataset size</p>
           </CardContent>
         </Card>
 
@@ -45,8 +50,8 @@ export function DatabaseMetrics() {
             <CardTitle className="text-sm font-medium">Query Cache Hit Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">98.7%</div>
-            <p className="text-xs text-muted-foreground">+0.5% from yesterday</p>
+            <div className="text-2xl font-bold">{(data?.queryCacheHitRate ?? 0).toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Computed from request/error mix</p>
           </CardContent>
         </Card>
 
@@ -55,8 +60,8 @@ export function DatabaseMetrics() {
             <CardTitle className="text-sm font-medium">Active Connections</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
-            <p className="text-xs text-muted-foreground">Max: 200</p>
+            <div className="text-2xl font-bold">{data?.activeConnections ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Max: {data?.maxConnections ?? 0}</p>
           </CardContent>
         </Card>
 
@@ -65,8 +70,8 @@ export function DatabaseMetrics() {
             <CardTitle className="text-sm font-medium">Replication Lag</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0.15s</div>
-            <p className="text-xs text-muted-foreground">Within acceptable range</p>
+            <div className="text-2xl font-bold">{(data?.replicationLagSeconds ?? 0).toFixed(2)}s</div>
+            <p className="text-xs text-muted-foreground">Replica synchronization delay</p>
           </CardContent>
         </Card>
       </div>

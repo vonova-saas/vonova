@@ -5,52 +5,49 @@ import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
 import { TimeRange } from "../types";
 
-// Mock data generation functions
-const generateTimeSeriesData = (points: number, days: number) => {
-  const now = new Date();
-  const data = [];
-  
-  for (let i = 0; i < points; i++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - (days * (1 - i / points)));
-    
-    data.push({
-      x: date,
-      y: Math.floor(Math.random() * 100) + 20,
-    });
-  }
-  
-  return data;
-};
-
 interface MetricsDashboardProps {
   timeRange: TimeRange;
   customDate?: Date;
+  data: {
+    responseTime: Array<{ x: string; y: number }>;
+    errorRate: Array<{ x: string; y: number }>;
+    requestVolume: Array<{ x: string; y: number }>;
+    requestDistribution: Array<{ id: string; label: string; value: number }>;
+  };
+  summary: {
+    avgResponseMs: number | null;
+    totalLogs: number;
+    errors: number;
+  };
 }
 
-export function MetricsDashboard({ timeRange }: MetricsDashboardProps) {
-  // In a real app, this data would come from an API
+export function MetricsDashboard({ timeRange, data, summary }: MetricsDashboardProps) {
   const responseTimeData = {
     id: 'Response Time',
-    data: generateTimeSeriesData(20, timeRange === '1h' ? 0.04 : timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30)
+    data: data.responseTime.map((p) => ({ x: new Date(p.x), y: p.y })),
   };
 
   const errorRateData = {
     id: 'Error Rate',
-    data: generateTimeSeriesData(20, timeRange === '1h' ? 0.04 : timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30)
+    data: data.errorRate.map((p) => ({ x: new Date(p.x), y: p.y })),
   };
 
   const requestCountData = {
     id: 'Requests',
-    data: generateTimeSeriesData(20, timeRange === '1h' ? 0.04 : timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30)
+    data: data.requestVolume.map((p) => ({ x: new Date(p.x), y: p.y })),
   };
 
-  const pieData = [
-    { id: '2xx', label: '2xx', value: 85, color: 'hsl(142.1, 76.2%, 36.3%)' },
-    { id: '3xx', label: '3xx', value: 5, color: 'hsl(38, 92%, 50%)' },
-    { id: '4xx', label: '4xx', value: 7, color: 'hsl(24, 94%, 50%)' },
-    { id: '5xx', label: '5xx', value: 3, color: 'hsl(0, 84.2%, 60.2%)' },
-  ];
+  const pieData = data.requestDistribution.map((d) => ({
+    ...d,
+    color:
+      d.id === '2xx'
+        ? 'hsl(142.1, 76.2%, 36.3%)'
+        : d.id === '3xx'
+          ? 'hsl(38, 92%, 50%)'
+          : d.id === '4xx'
+            ? 'hsl(24, 94%, 50%)'
+            : 'hsl(0, 84.2%, 60.2%)',
+  }));
 
   const commonChartProps = {
     margin: { top: 20, right: 30, bottom: 50, left: 50 },
@@ -118,22 +115,22 @@ export function MetricsDashboard({ timeRange }: MetricsDashboardProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <MetricCard 
           title="Response Time"
-          value="142ms"
-          change={-5.2}
+          value={summary.avgResponseMs != null ? `${summary.avgResponseMs}ms` : 'N/A'}
+          change={0}
           icon={<span className="h-4 w-4 rounded-full bg-blue-500" />}
           chartData={responseTimeData.data}
         />
         <MetricCard 
           title="Error Rate"
-          value="2.3%"
-          change={0.5}
+          value={`${summary.totalLogs ? ((summary.errors / summary.totalLogs) * 100).toFixed(2) : '0.00'}%`}
+          change={0}
           icon={<span className="h-4 w-4 rounded-full bg-red-500" />}
           chartData={errorRateData.data}
         />
         <MetricCard 
           title="Requests"
-          value="1.2K"
-          change={12.5}
+          value={summary.totalLogs.toLocaleString()}
+          change={0}
           icon={<span className="h-4 w-4 rounded-full bg-green-500" />}
           chartData={requestCountData.data}
         />
@@ -151,7 +148,7 @@ export function MetricsDashboard({ timeRange }: MetricsDashboardProps) {
               yScale={{
                 type: 'linear',
                 min: 0,
-                max: 200,
+                max: 'auto',
                 stacked: false,
               }}
               axisBottom={{
@@ -288,7 +285,6 @@ function MetricCard({ title, value, change, icon, chartData }: MetricCardProps) 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function format(date: Date, formatStr: string): string {
   // This is a simplified version. In a real app, use date-fns or similar
   return date.toLocaleTimeString('en-US', {

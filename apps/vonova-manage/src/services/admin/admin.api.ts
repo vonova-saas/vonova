@@ -8,6 +8,16 @@ import {
   GetPendingInstructorsResponse,
   ApproveInstructorResponse,
   RejectInstructorResponse,
+  DashboardOverviewResponse,
+  DashboardOverviewRange,
+  LoggingMonitoringResponse,
+  MonitoringRange,
+  MonitoringLevel,
+  PerformanceMetricsResponse,
+  UserManagementOverviewResponse,
+  SupportTicketsResponse,
+  SupportAnalyticsResponse,
+  SecurityLogsResponse,
 } from "@/types/api/admin/admin.type";
 
 // ============= Admin User API Services =============
@@ -63,5 +73,96 @@ export const rejectInstructorMutationFn = async (
   instructorId: string
 ): Promise<RejectInstructorResponse> => {
   const response = await API.patch(`/admin/instructors/${instructorId}/reject`);
+  return response.data;
+};
+
+export const getDashboardOverviewQueryFn = async (params: {
+  range: DashboardOverviewRange;
+  customDate?: string;
+}): Promise<DashboardOverviewResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("range", params.range);
+  if (params.customDate) queryParams.append("customDate", params.customDate);
+  const response = await API.get(`/admin/dashboard/overview?${queryParams.toString()}`);
+  return response.data;
+};
+
+export const getLoggingMonitoringQueryFn = async (params: {
+  range: MonitoringRange;
+  customDate?: string;
+  search?: string;
+  levels?: MonitoringLevel[];
+  sources?: string[];
+  limit?: number;
+}): Promise<LoggingMonitoringResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("range", params.range);
+  if (params.customDate) queryParams.append("customDate", params.customDate);
+  if (params.search) queryParams.append("search", params.search);
+  if (params.levels?.length) queryParams.append("levels", params.levels.join(","));
+  if (params.sources?.length) queryParams.append("sources", params.sources.join(","));
+  if (params.limit) queryParams.append("limit", String(params.limit));
+  const response = await API.get(`/admin/logging-monitoring?${queryParams.toString()}`);
+  return response.data;
+};
+
+export const getPerformanceMetricsQueryFn = async (params: {
+  range: '24h' | '7d' | '30d' | 'custom';
+  customDate?: string;
+}): Promise<PerformanceMetricsResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("range", params.range);
+  if (params.customDate) queryParams.append("customDate", params.customDate);
+  const response = await API.get(`/admin/performance-metrics?${queryParams.toString()}`);
+  return response.data;
+};
+
+export const getUserManagementOverviewQueryFn = async (): Promise<UserManagementOverviewResponse> => {
+  const response = await API.get("/admin/user-management/overview");
+  return response.data;
+};
+
+export const getSupportTicketsQueryFn = async (params: {
+  page?: number;
+  limit?: number;
+  status?: 'OPEN' | 'REPLIED';
+  search?: string;
+}): Promise<SupportTicketsResponse> => {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append("page", String(params.page));
+  if (params.limit) queryParams.append("limit", String(params.limit));
+  if (params.status) queryParams.append("status", params.status);
+  if (params.search) queryParams.append("search", params.search);
+  const response = await API.get(`/admin/support/tickets?${queryParams.toString()}`);
+  return response.data;
+};
+
+export const getSupportAnalyticsQueryFn = async (): Promise<SupportAnalyticsResponse> => {
+  const response = await API.get("/admin/support/analytics");
+  return response.data;
+};
+
+export const replySupportTicketMutationFn = async (params: {
+  ticketId: string;
+  adminReply: string;
+}) => {
+  const response = await API.patch(`/admin/support/${params.ticketId}/reply`, {
+    adminReply: params.adminReply,
+  });
+  return response.data;
+};
+
+export const getSecurityLogsQueryFn = async (params: {
+  range: '24h' | '7d' | '30d' | 'custom';
+  customDate?: string;
+  search?: string;
+  limit?: number;
+}): Promise<SecurityLogsResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("range", params.range);
+  if (params.customDate) queryParams.append("customDate", params.customDate);
+  if (params.search) queryParams.append("search", params.search);
+  if (params.limit) queryParams.append("limit", String(params.limit));
+  const response = await API.get(`/admin/security-logs?${queryParams.toString()}`);
   return response.data;
 };

@@ -15,23 +15,10 @@ import { UserStatistics } from "./overview/user-statistics"
 import { UserActivityTimeline, mockTimelineEvents } from "./overview/user-activity-timeline"
 import { useToast } from "@/hooks/use-toast"
 import { User as UserType } from "./types"
-import { mockActivities } from "./data/mock-data"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getUsersQueryFn, getUserQueryFn, updateUserStatusMutationFn } from "@/services"
+import { getUserManagementOverviewQueryFn } from "@/services/admin/admin.api"
 import { AdminUser } from "@/types/api/admin/admin.type"
-
-// Mock data for statistics
-const mockUserActivity = Array.from({ length: 30 }, (_, i) => ({
-  date: new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  active: Math.floor(Math.random() * 100) + 50,
-  newUsers: Math.floor(Math.random() * 20) + 5,
-}))
-
-const mockRoleDistribution = [
-  { id: 'admin', label: 'Admins', value: 15, color: '#3b82f6' },
-  { id: 'moderator', label: 'Moderators', value: 25, color: '#8b5cf6' },
-  { id: 'user', label: 'Users', value: 60, color: '#10b981' },
-]
 
 // Helper function to map API role to form role
 const mapApiRoleToFormRole = (apiRole: string): UserType['role'] => {
@@ -82,6 +69,11 @@ export default function UserManagement() {
       search: searchQuery || undefined,
     }),
     placeholderData: (previousData) => previousData,
+  })
+
+  const { data: overviewData } = useQuery({
+    queryKey: ['userManagementOverview'],
+    queryFn: getUserManagementOverviewQueryFn,
   })
 
   // Fetch single user details when selected
@@ -257,8 +249,8 @@ export default function UserManagement() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <UserStatistics
-            userActivity={mockUserActivity}
-            roleDistribution={mockRoleDistribution}
+            userActivity={overviewData?.data.userActivity ?? []}
+            roleDistribution={overviewData?.data.roleDistribution ?? []}
           />
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -267,7 +259,7 @@ export default function UserManagement() {
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <UserActivityTimeline events={mockTimelineEvents} />
+                <UserActivityTimeline events={overviewData?.data.timeline ?? mockTimelineEvents} />
               </CardContent>
             </Card>
 
@@ -303,15 +295,15 @@ export default function UserManagement() {
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Total Users</span>
-                    <span className="font-medium">1,234</span>
+                    <span className="font-medium">{overviewData?.data.quickStats.totalUsers ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Active Today</span>
-                    <span className="font-medium">342</span>
+                    <span className="font-medium">{overviewData?.data.quickStats.activeToday ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">New This Week</span>
-                    <span className="font-medium">87</span>
+                    <span className="font-medium">{overviewData?.data.quickStats.newThisWeek ?? 0}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -429,7 +421,7 @@ export default function UserManagement() {
                     </Card>
 
                     <UserActivityLog
-                      activities={mockActivities}
+                      activities={overviewData?.data.recentActivity ?? []}
                       className="md:col-span-2"
                     />
                   </div>

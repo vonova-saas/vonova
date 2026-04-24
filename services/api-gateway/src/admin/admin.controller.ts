@@ -1,14 +1,20 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
-  Param,
   Patch,
+  Param,
+  Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGatewayService } from './admin.service';
 import { UpdateAdminUserStatusDto } from './dto/update-user-status.dto';
 import { ReplyAdminSupportDto } from './dto/reply-admin-support.dto';
@@ -348,6 +354,150 @@ export class AdminGatewayController {
     return firstValueFrom(this.adminService.listPendingInstructors());
   }
 
+  @Get('dashboard/overview')
+  @ApiOperation({
+    summary: 'Get admin dashboard overview',
+    description:
+      'Returns aggregated overview, performance, resource usage, system health, and recent activity data for the admin dashboard.',
+  })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    example: '24h',
+    description: 'One of `24h`, `7d`, `30d`, `custom`',
+  })
+  @ApiQuery({
+    name: 'customDate',
+    required: false,
+    example: '2026-04-24T00:00:00.000Z',
+    description: 'Used when range=`custom`',
+  })
+  getDashboardOverview(
+    @Query('range') range?: '24h' | '7d' | '30d' | 'custom',
+    @Query('customDate') customDate?: string,
+  ) {
+    return firstValueFrom(
+      this.adminService.getDashboardOverview({
+        range,
+        customDate,
+      }),
+    );
+  }
+
+  @Get('logging-monitoring')
+  @ApiOperation({
+    summary: 'Get logging and monitoring dashboard data',
+    description:
+      'Returns summary cards, logs list, sources, metrics series, and active alerts for the admin logging-monitoring page.',
+  })
+  getLoggingMonitoring(
+    @Query('range')
+    range?: '5m' | '15m' | '1h' | '6h' | '24h' | '7d' | 'custom',
+    @Query('customDate') customDate?: string,
+    @Query('search') search?: string,
+    @Query('levels') levels?: string,
+    @Query('sources') sources?: string,
+    @Query('limit') limit?: string,
+  ): Observable<unknown> {
+    const parsedLevels = levels
+      ? (levels.split(',').filter(Boolean) as Array<
+          'error' | 'warning' | 'info' | 'debug' | 'trace'
+        >)
+      : undefined;
+    const parsedSources = sources
+      ? sources.split(',').filter(Boolean)
+      : undefined;
+    const parsedLimit = limit ? Number(limit) : undefined;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return this.adminService.getLoggingMonitoring({
+      range,
+      customDate,
+      search,
+      levels: parsedLevels,
+      sources: parsedSources,
+      limit: parsedLimit,
+    }) as Observable<unknown>;
+  }
+
+  @Get('performance-metrics')
+  @ApiOperation({
+    summary: 'Get performance metrics dashboard data',
+    description:
+      'Returns overview, server, database, and API performance sections for the admin performance metrics page.',
+  })
+  getPerformanceMetrics(
+    @Query('range') range?: '24h' | '7d' | '30d' | 'custom',
+    @Query('customDate') customDate?: string,
+  ): Observable<unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return this.adminService.getPerformanceMetrics({
+      range,
+      customDate,
+    }) as Observable<unknown>;
+  }
+
+  @Get('user-management/overview')
+  @ApiOperation({
+    summary: 'Get user management overview',
+    description:
+      'Returns user activity chart, role distribution, timeline, and quick stats for the User Management overview tab.',
+  })
+  getUserManagementOverview(): Observable<unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return this.adminService.getUserManagementOverview() as Observable<unknown>;
+  }
+
+  @Get('support/tickets')
+  @ApiOperation({
+    summary: 'Get support tickets for admin management',
+    description: 'Returns paginated support tickets with search and status filters.',
+  })
+  getSupportTickets(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: 'OPEN' | 'REPLIED',
+    @Query('search') search?: string,
+  ): Observable<unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return this.adminService.getSupportTickets({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      status,
+      search,
+    }) as Observable<unknown>;
+  }
+
+  @Get('support/analytics')
+  @ApiOperation({
+    summary: 'Get support analytics for admin dashboard',
+    description: 'Returns support KPIs and chart series.',
+  })
+  getSupportAnalytics(): Observable<unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return this.adminService.getSupportAnalytics() as Observable<unknown>;
+  }
+
+  @Get('security-logs')
+  @ApiOperation({
+    summary: 'Get security center data',
+    description:
+      'Returns security logs, alert feed, and security metrics for the Security Center page.',
+  })
+  getSecurityLogs(
+    @Query('range') range?: '24h' | '7d' | '30d' | 'custom',
+    @Query('customDate') customDate?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ): Observable<unknown> {
+    return this.adminService.getSecurityLogs({
+      range,
+      customDate,
+      search,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
   @Patch('instructors/:id/approve')
   @ApiOperation({
     summary: 'Approve pending instructor',
@@ -412,5 +562,90 @@ export class AdminGatewayController {
   @ApiResponse({ status: 404, description: 'User not found' })
   rejectInstructor(@Param('id') id: string) {
     return firstValueFrom(this.adminService.rejectInstructor(id));
+  }
+
+  @Get('settings')
+  getAdminSettings(@Req() req: { user: { _id: string } }): Observable<unknown> {
+    return this.adminService.getAdminSettings(req.user._id);
+  }
+
+  @Patch('settings')
+  updateAdminSettings(
+    @Req() req: { user: { _id: string } },
+    @Body()
+    body: {
+      font?: string;
+      fontSize?: string;
+      theme?: 'light' | 'dark';
+      language?: string;
+    },
+  ): Observable<unknown> {
+    return this.adminService.updateAdminSettings(req.user._id, body ?? {});
+  }
+
+  @Post('settings/reset')
+  resetAdminSettings(
+    @Req() req: { user: { _id: string } },
+  ): Observable<unknown> {
+    return this.adminService.resetAdminSettings(req.user._id);
+  }
+
+  @Get('settings/notifications')
+  getAdminNotificationSettings(
+    @Req() req: { user: { _id: string } },
+  ): Observable<unknown> {
+    return this.adminService.getAdminNotificationSettings(req.user._id);
+  }
+
+  @Patch('settings/notifications')
+  updateAdminNotificationSettings(
+    @Req() req: { user: { _id: string } },
+    @Body()
+    body: {
+      notifyMe?: 'all' | 'mentions' | 'none';
+      communicationEmails?: boolean;
+      marketingEmails?: boolean;
+      socialEmails?: boolean;
+      securityEmails?: boolean;
+    },
+  ): Observable<unknown> {
+    return this.adminService.updateAdminNotificationSettings(
+      req.user._id,
+      body ?? {},
+    );
+  }
+
+  @Post('settings/notifications/reset')
+  resetAdminNotificationSettings(
+    @Req() req: { user: { _id: string } },
+  ): Observable<unknown> {
+    return this.adminService.resetAdminNotificationSettings(req.user._id);
+  }
+
+  @Get('settings/account')
+  getAdminAccount(@Req() req: { user: { _id: string } }): Observable<unknown> {
+    return this.adminService.getAdminAccount(req.user._id);
+  }
+
+  @Patch('settings/account')
+  @UseInterceptors(FileInterceptor('file'))
+  updateAdminAccount(
+    @Req() req: { user: { _id: string } },
+    @Body() body: Record<string, unknown>,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Observable<unknown> {
+    if (Object.prototype.hasOwnProperty.call(body, 'email')) {
+      throw new BadRequestException(
+        'Email cannot be updated from this endpoint',
+      );
+    }
+    return this.adminService.updateAdminAccount(req.user._id, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      bio: typeof body.bio === 'string' ? body.bio : undefined,
+      address: typeof body.address === 'string' ? body.address : undefined,
+      dateOfBirth:
+        typeof body.dateOfBirth === 'string' ? body.dateOfBirth : undefined,
+      file,
+    });
   }
 }

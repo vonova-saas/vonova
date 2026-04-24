@@ -5,6 +5,11 @@ import { UserEventService } from './user-event.service';
 import { AdminSupportService } from './admin-support.service';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { AdminUsersService } from './admin-users.service';
+import { AdminOverviewService } from './admin-overview.service';
+import { AdminMonitoringService } from './admin-monitoring.service';
+import { AdminPerformanceService } from './admin-performance.service';
+import { AdminUserManagementService } from './admin-user-management.service';
+import { AdminSecurityLogsService } from './admin-security-logs.service';
 
 @Controller()
 export class AdminDashboardController {
@@ -14,6 +19,11 @@ export class AdminDashboardController {
     private readonly adminSupportService: AdminSupportService,
     private readonly notificationsService: AdminNotificationsService,
     private readonly adminUsersService: AdminUsersService,
+    private readonly overviewService: AdminOverviewService,
+    private readonly monitoringService: AdminMonitoringService,
+    private readonly performanceService: AdminPerformanceService,
+    private readonly userManagementService: AdminUserManagementService,
+    private readonly securityLogsService: AdminSecurityLogsService,
   ) {}
 
   @MessagePattern({ cmd: 'admin.health.check' })
@@ -136,6 +146,29 @@ export class AdminDashboardController {
     };
   }
 
+  @MessagePattern({ cmd: 'admin.support.list' })
+  async handleSupportList(
+    @Payload()
+    data: { page?: number; limit?: number; status?: 'OPEN' | 'REPLIED'; search?: string },
+  ) {
+    const result = await this.adminSupportService.list(data ?? {});
+    return {
+      success: true,
+      data: result,
+      message: 'Support tickets retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.support.analytics' })
+  async handleSupportAnalytics() {
+    const result = await this.adminSupportService.analytics();
+    return {
+      success: true,
+      data: result,
+      message: 'Support analytics retrieved',
+    };
+  }
+
   @MessagePattern({ cmd: 'admin.notification.instructorApplication' })
   async handleInstructorApplicationNotification(
     @Payload() data: { userId: string; message?: string },
@@ -161,6 +194,79 @@ export class AdminDashboardController {
       success: true,
       data: result,
       message: 'Notifications retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.dashboard.overview' })
+  async handleDashboardOverview(
+    @Payload() data: { range?: '24h' | '7d' | '30d' | 'custom'; customDate?: string },
+  ) {
+    const result = await this.overviewService.getOverview(data ?? {});
+    return {
+      success: true,
+      data: result,
+      message: 'Dashboard overview retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.monitoring.get' })
+  async handleMonitoringGet(
+    @Payload()
+    data: {
+      range?: '5m' | '15m' | '1h' | '6h' | '24h' | '7d' | 'custom';
+      customDate?: string;
+      search?: string;
+      levels?: Array<'error' | 'warning' | 'info' | 'debug' | 'trace'>;
+      sources?: string[];
+      limit?: number;
+    },
+  ) {
+    const result = await this.monitoringService.getMonitoring(data ?? {});
+    return {
+      success: true,
+      data: result,
+      message: 'Logging and monitoring data retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.performance.get' })
+  async handlePerformanceGet(
+    @Payload()
+    data: { range?: '24h' | '7d' | '30d' | 'custom'; customDate?: string },
+  ) {
+    const result = await this.performanceService.getPerformanceMetrics(data ?? {});
+    return {
+      success: true,
+      data: result,
+      message: 'Performance metrics retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.user-management.overview' })
+  async handleUserManagementOverview() {
+    const result = await this.userManagementService.getOverview();
+    return {
+      success: true,
+      data: result,
+      message: 'User management overview retrieved',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.security-logs.get' })
+  async handleSecurityLogsGet(
+    @Payload()
+    data: {
+      range?: '24h' | '7d' | '30d' | 'custom';
+      customDate?: string;
+      search?: string;
+      limit?: number;
+    },
+  ) {
+    const result = await this.securityLogsService.getSecurityLogs(data ?? {});
+    return {
+      success: true,
+      data: result,
+      message: 'Security logs retrieved',
     };
   }
 }

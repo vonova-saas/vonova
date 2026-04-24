@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,53 +22,6 @@ interface SecurityAlert {
   source: string;
   affected: string;
 }
-
-const mockAlerts: SecurityAlert[] = [
-  {
-    id: '1',
-    title: 'Multiple Failed Login Attempts',
-    description: 'Multiple failed login attempts detected for user admin from IP 192.168.1.1',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    status: 'unread',
-    severity: 'high',
-    type: 'threat',
-    source: 'Auth System',
-    affected: 'User: admin'
-  },
-  {
-    id: '2',
-    title: 'Suspicious SQL Injection Attempt',
-    description: 'Potential SQL injection attempt detected in search query',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    status: 'in-progress',
-    severity: 'critical',
-    type: 'suspicious',
-    source: 'WAF',
-    affected: 'API Endpoint: /api/search'
-  },
-  {
-    id: '3',
-    title: 'CORS Policy Violation',
-    description: 'Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    status: 'resolved',
-    severity: 'medium',
-    type: 'warning',
-    source: 'Browser Console',
-    affected: 'Origin: https://example.com'
-  },
-  {
-    id: '4',
-    title: 'New Security Patch Available',
-    description: 'A new security patch is available for your application framework',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    status: 'unread',
-    severity: 'medium',
-    type: 'info',
-    source: 'System',
-    affected: 'Package: next@latest'
-  },
-];
 
 const getSeverityBadge = (severity: string) => {
   switch (severity) {
@@ -95,10 +49,20 @@ const getTypeBadge = (type: string) => {
   }
 };
 
-export function SecurityAlerts() {
-  const [alerts, setAlerts] = useState<SecurityAlert[]>(mockAlerts);
+export function SecurityAlerts({
+  alerts: initialAlerts,
+  isLoading = false,
+}: {
+  alerts: SecurityAlert[];
+  isLoading?: boolean;
+}) {
+  const [alerts, setAlerts] = useState<SecurityAlert[]>(initialAlerts);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<AlertStatus>('all');
+
+  useEffect(() => {
+    setAlerts(initialAlerts);
+  }, [initialAlerts]);
 
   const filteredAlerts = alerts.filter(alert => {
     const matchesSearch =
@@ -172,7 +136,11 @@ export function SecurityAlerts() {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
-          {filteredAlerts.length > 0 ? (
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground py-8 text-center">
+              Loading alerts...
+            </div>
+          ) : filteredAlerts.length > 0 ? (
             <div className="space-y-2">
               {filteredAlerts.map((alert) => (
                 <Card key={alert.id} className="overflow-hidden">

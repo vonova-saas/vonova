@@ -14,6 +14,7 @@ import {
   Minus as MinusIcon
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { getSupportAnalyticsQueryFn } from '@/services/admin/admin.api';
 
 // Dynamically import Nivo charts with no SSR to avoid window is not defined errors
 const ResponsiveBar = dynamic(
@@ -34,56 +35,7 @@ const ResponsiveLine = dynamic(
 export function SupportAnalytics() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['support-stats'],
-    queryFn: async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock data - replace with actual API call
-      return {
-        totalTickets: 128,
-        openTickets: 24,
-        avgResponseTime: '2h 15m',
-        satisfactionRate: 92,
-        
-        // Data for category distribution
-        categories: [
-          { id: 'technical', label: 'Technical', value: 42 },
-          { id: 'billing', label: 'Billing', value: 28 },
-          { id: 'general', label: 'General', value: 35 },
-          { id: 'feature-request', label: 'Feature Request', value: 15 },
-          { id: 'bug-report', label: 'Bug Report', value: 8 },
-        ],
-        
-        // Data for status distribution
-        status: [
-          { id: 'open', label: 'Open', value: 24 },
-          { id: 'in-progress', label: 'In Progress', value: 18 },
-          { id: 'resolved', label: 'Resolved', value: 72 },
-          { id: 'closed', label: 'Closed', value: 14 },
-        ],
-        
-        // Data for response time trends (last 7 days)
-        responseTimeTrend: [
-          { id: 'avgResponseTime', data: [
-            { x: 'Mon', y: 120 },
-            { x: 'Tue', y: 95 },
-            { x: 'Wed', y: 85 },
-            { x: 'Thu', y: 110 },
-            { x: 'Fri', y: 75 },
-            { x: 'Sat', y: 140 },
-            { x: 'Sun', y: 160 },
-          ]},
-        ],
-        
-        // Data for ticket volume (last 30 days)
-        ticketVolume: [
-          { id: 'tickets', data: Array.from({ length: 30 }, (_, i) => ({
-            x: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            y: Math.floor(Math.random() * 20) + 5,
-          }))},
-        ],
-      };
-    },
+    queryFn: getSupportAnalyticsQueryFn,
   });
 
   if (isLoading) {
@@ -96,34 +48,35 @@ export function SupportAnalytics() {
     );
   }
 
-  if (!stats) return null;
+  if (!stats?.data) return null;
+  const s = stats.data;
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Tickets" 
-          value={stats.totalTickets.toLocaleString()}
+          value={s.totalTickets.toLocaleString()}
           icon={<TicketIcon className="h-4 w-4 text-muted-foreground" />}
           description="All time"
         />
         <StatCard 
           title="Open Tickets" 
-          value={stats.openTickets}
+          value={s.openTickets}
           icon={<AlertTriangleIcon className="h-4 w-4 text-amber-500" />}
           description="Requires attention"
           trend="up"
         />
         <StatCard 
           title="Avg. Response Time" 
-          value={stats.avgResponseTime}
+          value={s.avgResponseTime}
           icon={<ClockIcon className="h-4 w-4 text-blue-500" />}
           description="From ticket creation"
           trend="down"
         />
         <StatCard 
           title="Satisfaction Rate" 
-          value={`${stats.satisfactionRate}%`}
+          value={`${s.satisfactionRate}%`}
           icon={<ThumbsUpIcon className="h-4 w-4 text-green-500" />}
           description="Based on surveys"
         />
@@ -136,7 +89,7 @@ export function SupportAnalytics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveLine
-              data={stats.ticketVolume}
+              data={s.ticketVolume}
               margin={{ top: 20, right: 20, bottom: 50, left: 60 }}
               xScale={{ type: 'point' }}
               yScale={{ type: 'linear', min: 0, max: 'auto', stacked: true, reverse: false }}
@@ -152,7 +105,7 @@ export function SupportAnalytics() {
                 legendPosition: 'middle',
                 format: (value) => {
                   // Only show every 5th tick to prevent overlap
-                  const index = stats.ticketVolume[0].data.findIndex(d => d.x === value);
+                  const index = s.ticketVolume[0].data.findIndex(d => d.x === value);
                   return index % 5 === 0 ? value : '';
                 },
               }}
@@ -186,7 +139,7 @@ export function SupportAnalytics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsivePie
-              data={stats.categories}
+              data={s.categories}
               margin={{ top: 20, right: 80, bottom: 80, left: 80 }}
               innerRadius={0.5}
               padAngle={0.7}
@@ -252,7 +205,7 @@ export function SupportAnalytics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveLine
-              data={stats.responseTimeTrend}
+              data={s.responseTimeTrend}
               margin={{ top: 20, right: 20, bottom: 50, left: 60 }}
               xScale={{ type: 'point' }}
               yScale={{
@@ -304,7 +257,7 @@ export function SupportAnalytics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveBar
-              data={stats.status}
+              data={s.status}
               keys={['value']}
               indexBy="label"
               margin={{ top: 20, right: 30, bottom: 50, left: 60 }}

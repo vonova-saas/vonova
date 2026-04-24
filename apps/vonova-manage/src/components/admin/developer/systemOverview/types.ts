@@ -44,4 +44,12 @@ export interface StatusItemProps {
 export interface MetricsChartsProps {
   timeRange: TimeRange;
   customDate?: Date;
+  responseTimeData: Array<{ x: string; y: number }>;
+  errorRateData: Array<{ x: string; y: number }>;
+  requestStatus: {
+    success: number;
+    clientErrors: number;
+    serverErrors: number;
+    timeouts: number;
+  };
 }

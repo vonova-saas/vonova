@@ -3,35 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveLine } from '@nivo/line';
 
-const data = [
-  {
-    id: 'responseTime',
-    color: '#8884d8',
-    data: [
-      { x: '00:00', y: 120 },
-      { x: '04:00', y: 118 },
-      { x: '08:00', y: 145 },
-      { x: '12:00', y: 160 },
-      { x: '16:00', y: 155 },
-      { x: '20:00', y: 140 },
-      { x: '23:59', y: 125 },
-    ],
-  },
-  {
-    id: 'requests',
-    color: '#82ca9d',
-    data: [
-      { x: '00:00', y: 1200 },
-      { x: '04:00', y: 1100 },
-      { x: '08:00', y: 2300 },
-      { x: '12:00', y: 3800 },
-      { x: '16:00', y: 3500 },
-      { x: '20:00', y: 2800 },
-      { x: '23:59', y: 1500 },
-    ],
-  },
-];
-
 const theme = {
   axis: {
     ticks: {
@@ -69,7 +40,25 @@ const theme = {
   },
 };
 
-export function ResponseTimeChart() {
+export function ResponseTimeChart({
+  responseTimeSeries,
+  requestVolumeSeries,
+}: {
+  responseTimeSeries: Array<{ x: string; xLabel: string; y: number }>;
+  requestVolumeSeries: Array<{ x: string; xLabel: string; y: number }>;
+}) {
+  const data = [
+    {
+      id: 'responseTime',
+      color: '#8884d8',
+      data: responseTimeSeries.map((p) => ({ x: p.xLabel, y: p.y })),
+    },
+    {
+      id: 'requests',
+      color: '#82ca9d',
+      data: requestVolumeSeries.map((p) => ({ x: p.xLabel, y: p.y })),
+    },
+  ];
   return (
     <Card>
       <CardHeader className="pb-2">

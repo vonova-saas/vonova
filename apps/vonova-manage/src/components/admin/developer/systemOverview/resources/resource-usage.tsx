@@ -49,33 +49,42 @@ function ResourceItem({ name, value, total, unit, icon }: ResourceItemProps) {
   );
 }
 
-export function ResourceUsage() {
-  // In a real app, these values would come from an API
-  const resources = [
+export function ResourceUsage({
+  resources,
+}: {
+  resources: {
+    cpu: { usedPercent: number; totalPercent: number };
+    memory: { usedBytes: number; totalBytes: number };
+    disk: { usedBytes: number; totalBytes: number } | null;
+  };
+}) {
+  const resourceItems = [
     {
       id: 'cpu',
       name: 'CPU',
-      value: 24,
-      total: 100,
+      value: resources.cpu.usedPercent,
+      total: resources.cpu.totalPercent,
       unit: 'percent',
       icon: <Cpu className="h-4 w-4" />,
     },
     {
       id: 'memory',
       name: 'Memory',
-      value: 7.2 * 1024 * 1024 * 1024, // 7.2 GB
-      total: 16 * 1024 * 1024 * 1024, // 16 GB
+      value: resources.memory.usedBytes,
+      total: resources.memory.totalBytes,
       unit: 'bytes',
       icon: <MemoryStick className="h-4 w-4" />,
     },
-    {
+    ...(resources.disk
+      ? [{
       id: 'disk',
       name: 'Disk',
-      value: 120 * 1024 * 1024 * 1024, // 120 GB
-      total: 256 * 1024 * 1024 * 1024, // 256 GB
+      value: resources.disk.usedBytes,
+      total: resources.disk.totalBytes,
       unit: 'bytes',
       icon: <HardDrive className="h-4 w-4" />,
-    },
+    }]
+      : []),
   ];
 
   return (
@@ -84,7 +93,7 @@ export function ResourceUsage() {
         <CardTitle>Resource Usage</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {resources.map((resource) => (
+        {resourceItems.map((resource) => (
           <ResourceItem
             key={resource.id}
             name={resource.name}

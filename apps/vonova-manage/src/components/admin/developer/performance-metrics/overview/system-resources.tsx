@@ -20,11 +20,37 @@ const ResourceUsage = ({ name, usage, total, color }: ResourceUsageProps) => (
   </div>
 );
 
-export function SystemResources() {
-  const resources = [
-    { name: 'CPU', usage: 45, total: '16 Cores', color: 'blue' },
-    { name: 'Memory', usage: 68, total: '32GB', color: 'green' },
-    { name: 'Disk', usage: 32, total: '1TB', color: 'purple' },
+export function SystemResources({
+  resources,
+}: {
+  resources?: {
+    cpuUsage: number;
+    memoryUsage: number;
+    diskUsage: number;
+    totalCores: number;
+    totalMemoryGb: number;
+    totalDiskGb: number;
+  };
+}) {
+  const items = [
+    {
+      name: 'CPU',
+      usage: resources?.cpuUsage ?? 0,
+      total: `${resources?.totalCores ?? 0} Cores`,
+      color: 'blue',
+    },
+    {
+      name: 'Memory',
+      usage: resources?.memoryUsage ?? 0,
+      total: `${resources?.totalMemoryGb ?? 0}GB`,
+      color: 'green',
+    },
+    {
+      name: 'Disk',
+      usage: resources?.diskUsage ?? 0,
+      total: `${resources?.totalDiskGb ?? 0}GB`,
+      color: 'purple',
+    },
   ];
 
   return (
@@ -33,7 +59,7 @@ export function SystemResources() {
         <CardTitle>System Resources</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {resources.map((resource) => (
+        {items.map((resource) => (
           <ResourceUsage key={resource.name} {...resource} />
         ))}
         <div className="text-xs text-muted-foreground">

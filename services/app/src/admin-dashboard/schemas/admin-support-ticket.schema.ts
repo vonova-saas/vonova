@@ -22,6 +22,9 @@ export class AdminSupportTicket {
 
   @Prop({ type: String })
   adminReply?: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const AdminSupportTicketSchema =

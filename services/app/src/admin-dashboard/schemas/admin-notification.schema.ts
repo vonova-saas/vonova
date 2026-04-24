@@ -24,6 +24,8 @@ export class AdminNotification {
 
   @Prop({ type: Types.ObjectId })
   supportTicketId?: Types.ObjectId;
+
+  createdAt?: Date;
 }
 
 export const AdminNotificationSchema =

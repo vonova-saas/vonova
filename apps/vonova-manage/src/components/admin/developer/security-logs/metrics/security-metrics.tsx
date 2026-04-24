@@ -5,23 +5,6 @@ import { ResponsiveBar } from '@nivo/bar';
 import { ResponsivePie } from '@nivo/pie';
 import { AlertCircle, Shield, AlertTriangle, Lock } from 'lucide-react';
 
-const barData = [
-  { month: 'Jan', high: 4, medium: 2, low: 1 },
-  { month: 'Feb', high: 3, medium: 1, low: 2 },
-  { month: 'Mar', high: 2, medium: 3, low: 1 },
-  { month: 'Apr', high: 5, medium: 2, low: 1 },
-  { month: 'May', high: 3, medium: 4, low: 2 },
-  { month: 'Jun', high: 6, medium: 3, low: 1 },
-];
-
-const pieData = [
-  { id: 'SQL Injection', label: 'SQL Injection', value: 24 },
-  { id: 'XSS Attempts', label: 'XSS Attempts', value: 18 },
-  { id: 'Brute Force', label: 'Brute Force', value: 15 },
-  { id: 'CORS Issues', label: 'CORS Issues', value: 32 },
-  { id: 'Other', label: 'Other', value: 7 },
-];
-
 const colors = {
   'high': '#ef4444',
   'medium': '#f59e0b',
@@ -33,23 +16,34 @@ const colors = {
   'Other': '#6b7280'
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const attackTypes = [
-  { name: 'SQL Injection', count: 24, trend: 'up', change: 12 },
-  { name: 'XSS Attempts', count: 18, trend: 'down', change: 5 },
-  { name: 'Brute Force', count: 15, trend: 'up', change: 8 },
-  { name: 'CORS Issues', count: 32, trend: 'up', change: 15 },
-  { name: 'Other', count: 7, trend: 'down', change: 3 },
-];
+export function SecurityMetrics({
+  metrics,
+  summary,
+  isLoading = false,
+}: {
+  metrics?: {
+    riskCards: { high: number; medium: number; low: number; blocked: number };
+    eventsSeries: Array<{ label: string; high: number; medium: number; low: number }>;
+    attackTypes: Array<{ id: string; label: string; value: number }>;
+  };
+  summary?: { totalEvents: number };
+  isLoading?: boolean;
+}) {
+  const riskMetrics = [
+    { name: 'High Risk', value: metrics?.riskCards.high ?? 0, icon: AlertCircle },
+    { name: 'Medium Risk', value: metrics?.riskCards.medium ?? 0, icon: AlertTriangle },
+    { name: 'Low Risk', value: metrics?.riskCards.low ?? 0, icon: Shield },
+    { name: 'Blocked', value: metrics?.riskCards.blocked ?? 0, icon: Lock },
+  ];
+  const barData =
+    metrics?.eventsSeries.map((it) => ({
+      month: it.label,
+      high: it.high,
+      medium: it.medium,
+      low: it.low,
+    })) ?? [];
+  const pieData = metrics?.attackTypes ?? [];
 
-const riskMetrics = [
-  { name: 'High Risk', value: 12, icon: AlertCircle, color: 'bg-red-500' },
-  { name: 'Medium Risk', value: 24, icon: AlertTriangle, color: 'bg-yellow-500' },
-  { name: 'Low Risk', value: 45, icon: Shield, color: 'bg-blue-500' },
-  { name: 'Blocked', value: 132, icon: Lock, color: 'bg-green-500' },
-];
-
-export function SecurityMetrics() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -62,7 +56,7 @@ export function SecurityMetrics() {
             <CardContent>
               <div className="text-2xl font-bold">{metric.value}</div>
               <p className="text-xs text-muted-foreground">
-                +20.1% from last month
+                {isLoading ? 'Loading...' : `${summary?.totalEvents ?? 0} total events`}
               </p>
             </CardContent>
           </Card>
@@ -76,7 +70,7 @@ export function SecurityMetrics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveBar
-              data={barData}
+              data={barData.length ? barData : [{ month: 'N/A', high: 0, medium: 0, low: 0 }]}
               keys={['high', 'medium', 'low']}
               indexBy="month"
               margin={{ top: 20, right: 80, bottom: 60, left: 60 }}
@@ -141,7 +135,7 @@ export function SecurityMetrics() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsivePie
-              data={pieData}
+              data={pieData.length ? pieData : [{ id: 'No Data', label: 'No Data', value: 1 }]}
               margin={{ top: 20, right: 80, bottom: 80, left: 80 }}
               innerRadius={0.5}
               padAngle={0.7}
@@ -206,18 +200,23 @@ export function SecurityMetrics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {Array(5).fill(0).map((_, i) => (
-              <div key={i} className="flex items-center justify-between border-b pb-2">
+            {(barData.length ? barData.slice(-5).reverse() : []).map((item) => (
+              <div key={item.month} className="flex items-center justify-between border-b pb-2">
                 <div className="flex items-center space-x-4">
                   <div className="h-2 w-2 rounded-full bg-red-500"></div>
                   <div>
-                    <p className="text-sm font-medium">Potential SQL Injection Attempt</p>
-                    <p className="text-xs text-muted-foreground">From 192.168.1.1 on /api/users</p>
+                    <p className="text-sm font-medium">Security bucket {item.month}</p>
+                    <p className="text-xs text-muted-foreground">
+                      High: {item.high}, Medium: {item.medium}, Low: {item.low}
+                    </p>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground">2 minutes ago</span>
+                <span className="text-xs text-muted-foreground">Recent</span>
               </div>
             ))}
+            {!barData.length && (
+              <div className="text-sm text-muted-foreground">No recent security events.</div>
+            )}
           </div>
         </CardContent>
       </Card>

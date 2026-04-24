@@ -6,14 +6,14 @@ import {
 } from "@/types/api/app/account.type";
 
 export const getAccountMutationFn = async (
-  userId: string
+  _userId: string
 ): Promise<getAccountResponseType> => {
-  const response = await API.get(`/account/user/${userId}`);
+  const response = await API.get(`/admin/settings/account`);
   return response.data;
 };
 
 export const updateAccountMutationFn = async (
-  userId: string,
+  _userId: string,
   data: updateAccountMultipartPayload
 ): Promise<updateAccountResponseType> => {
   const fd = new FormData();
@@ -26,7 +26,7 @@ export const updateAccountMutationFn = async (
   if (data.file) {
     fd.append("file", data.file);
   }
-  const response = await API.put(`/account/user/${userId}`, fd);
+  const response = await API.patch(`/admin/settings/account`, fd);
   return response.data;
 };
 

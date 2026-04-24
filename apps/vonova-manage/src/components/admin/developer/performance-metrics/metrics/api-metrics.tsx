@@ -3,36 +3,34 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveLine } from '@nivo/line';
 
-const apiData = [
-  {
-    id: 'success',
-    color: '#10b981',
-    data: [
-      { x: '00:00', y: 95.2 },
-      { x: '04:00', y: 96.1 },
-      { x: '08:00', y: 94.8 },
-      { x: '12:00', y: 93.5 },
-      { x: '16:00', y: 95.8 },
-      { x: '20:00', y: 96.3 },
-      { x: '23:59', y: 97.1 },
-    ],
-  },
-  {
-    id: 'error',
-    color: '#ef4444',
-    data: [
-      { x: '00:00', y: 1.2 },
-      { x: '04:00', y: 0.8 },
-      { x: '08:00', y: 1.5 },
-      { x: '12:00', y: 2.1 },
-      { x: '16:00', y: 1.3 },
-      { x: '20:00', y: 0.9 },
-      { x: '23:59', y: 0.7 },
-    ],
-  },
-];
-
-export function ApiMetrics() {
+export function ApiMetrics({
+  data,
+}: {
+  data?: {
+    successRate: number;
+    avgResponseMs: number;
+    requests: number;
+    apiPerformanceSeries: Array<{
+      id: string;
+      color: string;
+      data: Array<{ x: string; y: number }>;
+    }>;
+    endpointPerformance: Array<{
+      endpoint: string;
+      avgTimeMs: number;
+      successRate: number;
+      calls: number;
+    }>;
+    recentErrors: Array<{
+      time: string;
+      method: string;
+      endpoint: string;
+      status: number;
+      message: string;
+    }>;
+  };
+}) {
+  const apiData = data?.apiPerformanceSeries ?? [];
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -41,8 +39,8 @@ export function ApiMetrics() {
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">97.8%</div>
-            <p className="text-xs text-muted-foreground">+0.4% from yesterday</p>
+            <div className="text-2xl font-bold">{(data?.successRate ?? 0).toFixed(2)}%</div>
+            <p className="text-xs text-muted-foreground">Selected range success ratio</p>
           </CardContent>
         </Card>
 
@@ -51,8 +49,8 @@ export function ApiMetrics() {
             <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">142ms</div>
-            <p className="text-xs text-muted-foreground">-12ms from yesterday</p>
+            <div className="text-2xl font-bold">{Math.round(data?.avgResponseMs ?? 0)}ms</div>
+            <p className="text-xs text-muted-foreground">Derived from event response times</p>
           </CardContent>
         </Card>
 
@@ -61,8 +59,8 @@ export function ApiMetrics() {
             <CardTitle className="text-sm font-medium">Requests (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4M</div>
-            <p className="text-xs text-muted-foreground">+120K from yesterday</p>
+            <div className="text-2xl font-bold">{new Intl.NumberFormat().format(data?.requests ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">Request volume in selected range</p>
           </CardContent>
         </Card>
       </div>
@@ -140,18 +138,12 @@ export function ApiMetrics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { endpoint: '/api/products', avgTime: '86ms', successRate: '99.2%', calls: '245K' },
-                { endpoint: '/api/orders', avgTime: '142ms', successRate: '98.7%', calls: '189K' },
-                { endpoint: '/api/users', avgTime: '92ms', successRate: '99.5%', calls: '156K' },
-                { endpoint: '/api/search', avgTime: '215ms', successRate: '97.8%', calls: '432K' },
-                { endpoint: '/api/auth', avgTime: '78ms', successRate: '99.8%', calls: '312K' },
-              ].map((item, index) => (
+              {(data?.endpointPerformance ?? []).map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="w-1/3 truncate">{item.endpoint}</div>
-                  <div className="w-1/4 text-right">{item.avgTime}</div>
-                  <div className="w-1/4 text-right">{item.successRate}</div>
-                  <div className="w-1/4 text-right">{item.calls}</div>
+                  <div className="w-1/4 text-right">{item.avgTimeMs}ms</div>
+                  <div className="w-1/4 text-right">{item.successRate.toFixed(1)}%</div>
+                  <div className="w-1/4 text-right">{new Intl.NumberFormat().format(item.calls)}</div>
                 </div>
               ))}
             </div>
@@ -164,40 +156,11 @@ export function ApiMetrics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { 
-                  time: '2m ago', 
-                  method: 'POST', 
-                  endpoint: '/api/checkout', 
-                  status: 500, 
-                  message: 'Internal server error' 
-                },
-                { 
-                  time: '15m ago', 
-                  method: 'GET', 
-                  endpoint: '/api/products/123', 
-                  status: 404, 
-                  message: 'Product not found' 
-                },
-                { 
-                  time: '32m ago', 
-                  method: 'PUT', 
-                  endpoint: '/api/users/456', 
-                  status: 403, 
-                  message: 'Forbidden' 
-                },
-                { 
-                  time: '1h ago', 
-                  method: 'POST', 
-                  endpoint: '/api/upload', 
-                  status: 400, 
-                  message: 'Invalid file type' 
-                },
-              ].map((error, index) => (
+              {(data?.recentErrors ?? []).map((error, index) => (
                 <div key={index} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{error.method} {error.endpoint}</span>
-                    <span className="text-xs text-muted-foreground">{error.time}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(error.time).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

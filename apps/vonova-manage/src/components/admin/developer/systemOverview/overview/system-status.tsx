@@ -39,14 +39,23 @@ function StatusItem({ name, status, icon }: StatusItemProps) {
   );
 }
 
-export function SystemStatus() {
-  // In a real app, this would come from an API
+export function SystemStatus({
+  statuses,
+}: {
+  statuses: {
+    api: 'operational' | 'degraded' | 'outage';
+    database: 'operational' | 'degraded' | 'outage';
+    authentication: 'operational' | 'degraded' | 'outage';
+    fileStorage: 'operational' | 'degraded' | 'outage';
+    workers: 'operational' | 'degraded' | 'outage';
+  };
+}) {
   const services = [
-    { id: 'api', name: 'API Server', status: 'operational' as const, icon: <Server className="h-4 w-4" /> },
-    { id: 'database', name: 'Database', status: 'operational' as const, icon: <Database className="h-4 w-4" /> },
-    { id: 'auth', name: 'Authentication', status: 'operational' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
-    { id: 'storage', name: 'File Storage', status: 'degraded' as const, icon: <Cloud className="h-4 w-4" /> },
-    { id: 'workers', name: 'Background Workers', status: 'operational' as const, icon: <Cpu className="h-4 w-4" /> },
+    { id: 'api', name: 'API Server', status: statuses.api, icon: <Server className="h-4 w-4" /> },
+    { id: 'database', name: 'Database', status: statuses.database, icon: <Database className="h-4 w-4" /> },
+    { id: 'auth', name: 'Authentication', status: statuses.authentication, icon: <CheckCircle2 className="h-4 w-4" /> },
+    { id: 'storage', name: 'File Storage', status: statuses.fileStorage, icon: <Cloud className="h-4 w-4" /> },
+    { id: 'workers', name: 'Background Workers', status: statuses.workers, icon: <Cpu className="h-4 w-4" /> },
   ];
 
   return (

@@ -35,6 +35,18 @@ export class Admin {
   @IsString()
   role: string;
 
+  @Prop({ default: null })
+  profilePictureUrl?: string | null;
+
+  @Prop({ default: '' })
+  bio?: string;
+
+  @Prop({ default: '' })
+  address?: string;
+
+  @Prop({ default: null })
+  dateOfBirth?: string | null;
+
   @Prop()
   createdAt: Date;
 

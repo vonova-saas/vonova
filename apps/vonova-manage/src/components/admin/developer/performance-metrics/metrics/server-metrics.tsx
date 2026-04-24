@@ -3,49 +3,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveLine } from '@nivo/line';
 
-const serverData = [
-  {
-    id: 'cpu',
-    color: '#8884d8',
-    data: [
-      { x: '00:00', y: 35 },
-      { x: '04:00', y: 30 },
-      { x: '08:00', y: 55 },
-      { x: '12:00', y: 70 },
-      { x: '16:00', y: 65 },
-      { x: '20:00', y: 50 },
-      { x: '23:59', y: 40 },
-    ],
-  },
-  {
-    id: 'memory',
-    color: '#82ca9d',
-    data: [
-      { x: '00:00', y: 45 },
-      { x: '04:00', y: 42 },
-      { x: '08:00', y: 65 },
-      { x: '12:00', y: 75 },
-      { x: '16:00', y: 70 },
-      { x: '20:00', y: 60 },
-      { x: '23:59', y: 50 },
-    ],
-  },
-  {
-    id: 'connections',
-    color: '#ffc658',
-    data: [
-      { x: '00:00', y: 120 },
-      { x: '04:00', y: 110 },
-      { x: '08:00', y: 320 },
-      { x: '12:00', y: 480 },
-      { x: '16:00', y: 420 },
-      { x: '20:00', y: 350 },
-      { x: '23:59', y: 180 },
-    ],
-  },
-];
-
-export function ServerMetrics() {
+export function ServerMetrics({
+  data,
+}: {
+  data?: {
+    status: 'operational' | 'degraded' | 'outage';
+    uptimeSeconds: number;
+    activeProcesses: number;
+    errorRate: number;
+    performanceSeries: Array<{
+      id: string;
+      color: string;
+      data: Array<{ x: string; y: number }>;
+    }>;
+  };
+}) {
+  const serverData = data?.performanceSeries ?? [];
+  const uptimeText = data?.uptimeSeconds
+    ? `${Math.floor(data.uptimeSeconds / 86400)}d ${Math.floor((data.uptimeSeconds % 86400) / 3600)}h ${Math.floor((data.uptimeSeconds % 3600) / 60)}m`
+    : 'N/A';
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -55,11 +31,17 @@ export function ServerMetrics() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm">All systems operational</span>
+              <div className={`h-2 w-2 rounded-full ${data?.status === 'operational' ? 'bg-green-500' : data?.status === 'degraded' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <span className="text-sm">
+                {data?.status === 'operational'
+                  ? 'All systems operational'
+                  : data?.status === 'degraded'
+                    ? 'System degraded'
+                    : 'System outage'}
+              </span>
             </div>
             <div className="mt-2 text-sm text-muted-foreground">
-              Uptime: 15d 6h 23m
+              Uptime: {uptimeText}
             </div>
           </CardContent>
         </Card>
@@ -69,8 +51,8 @@ export function ServerMetrics() {
             <CardTitle className="text-sm font-medium">Active Processes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">247</div>
-            <p className="text-xs text-muted-foreground">+12 from yesterday</p>
+            <div className="text-2xl font-bold">{data?.activeProcesses ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Current running processes</p>
           </CardContent>
         </Card>
 
@@ -79,8 +61,8 @@ export function ServerMetrics() {
             <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0.12%</div>
-            <p className="text-xs text-muted-foreground">-0.03% from yesterday</p>
+            <div className="text-2xl font-bold">{(data?.errorRate ?? 0).toFixed(2)}%</div>
+            <p className="text-xs text-muted-foreground">Selected range error ratio</p>
           </CardContent>
         </Card>
       </div>

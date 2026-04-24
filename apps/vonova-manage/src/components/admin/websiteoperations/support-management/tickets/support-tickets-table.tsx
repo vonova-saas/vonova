@@ -1,19 +1,11 @@
-'use client';
-
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SupportTicket, SupportCategory, SupportStatus } from '../types';
+import { SupportTicket, SupportStatus } from '../types';
 import {
-  Wrench,
-  CreditCard,
-  HelpCircle,
-  Lightbulb,
-  Bug,
   Mail,
   Eye
 } from 'lucide-react';
@@ -25,45 +17,17 @@ const statusVariantMap: Record<SupportStatus, 'default' | 'secondary' | 'destruc
   'closed': 'outline',
 } as const;
 
-const categoryIconMap: Record<SupportCategory, React.ComponentType<{ className?: string }>> = {
-  technical: Wrench,
-  billing: CreditCard,
-  general: HelpCircle,
-  'feature-request': Lightbulb,
-  'bug-report': Bug,
-} as const;
-
 interface SupportTicketsTableProps {
+  tickets: SupportTicket[];
+  isLoading?: boolean;
   onViewTicket: (ticket: SupportTicket) => void;
   statusFilter?: SupportStatus;
   searchQuery?: string;
 }
 
-export function SupportTicketsTable({ onViewTicket, statusFilter, searchQuery = '' }: SupportTicketsTableProps) {
+export function SupportTicketsTable({ tickets, isLoading = false, onViewTicket, statusFilter, searchQuery = '' }: SupportTicketsTableProps) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  // Mock data - replace with actual API call
-  const { data: tickets, isLoading } = useQuery<SupportTicket[]>({
-    queryKey: ['support-tickets', statusFilter, searchQuery, page],
-    queryFn: async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Mock data - replace with actual API call
-      return Array.from({ length: 10 }).map((_, i) => ({
-        id: `TKT-${1000 + i}`,
-        name: `User ${i + 1}`,
-        email: `user${i + 1}@example.com`,
-        category: Object.keys(categoryIconMap)[i % 5] as SupportCategory,
-        subject: `Support ticket #${i + 1} - ${['Login issue', 'Payment problem', 'Feature request', 'Bug report', 'General question'][i % 5]}`,
-        message: 'This is a sample support ticket message. Please help me with this issue.',
-        status: ['open', 'in-progress', 'resolved', 'closed'][i % 4] as SupportStatus,
-        createdAt: new Date(Date.now() - i * 1000 * 60 * 60 * 24 * (i % 5)),
-        updatedAt: new Date(),
-      }));
-    },
-  });
 
   const filteredTickets = tickets?.filter(ticket => {
     const matchesStatus = !statusFilter || ticket.status === statusFilter;

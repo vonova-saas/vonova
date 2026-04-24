@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, BarChart2, Clock, List, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,12 +12,14 @@ import { SecurityAlerts } from './alerts/security-alerts';
 import { TimeRangeSelector } from '../systemOverview/time-range-selector';
 import type { TimeRange } from '../systemOverview/types';
 import { formatDistanceToNow } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { getSecurityLogsQueryFn } from '@/services/admin/admin.api';
 
 export default function SecurityLogs() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeTab, setActiveTab] = useState('logs');
+  const [search, setSearch] = useState('');
 
   const {
     isAutoRefreshing,
@@ -24,6 +27,23 @@ export default function SecurityLogs() {
     refreshCount,
     triggerRefresh,
   } = useAutoRefresh(60);
+
+  const { data, refetch, isLoading } = useQuery({
+    queryKey: ['admin-security-logs', timeRange, customDate?.toISOString(), search],
+    queryFn: () =>
+      getSecurityLogsQueryFn({
+        range: timeRange,
+        customDate: timeRange === 'custom' ? customDate?.toISOString() : undefined,
+        search: search || undefined,
+        limit: 200,
+      }),
+  });
+
+  useEffect(() => {
+    void refetch();
+  }, [refreshCount, refetch]);
+
+  const securityData = data?.data;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -61,12 +81,12 @@ export default function SecurityLogs() {
       </div>
 
       <Tabs
-        defaultValue="logs"
+        value={activeTab}
         className="space-y-4"
         onValueChange={setActiveTab}
       >
         <TabsList>
-          <TabsTrigger value="overview" className="flex items-center gap-2">
+          <TabsTrigger value="logs" className="flex items-center gap-2">
             <List className="h-4 w-4" />
             Security Logs
           </TabsTrigger>
@@ -83,15 +103,23 @@ export default function SecurityLogs() {
         <TabsContent value="logs" className="space-y-4">
           <SecurityLogsTable
             refreshCount={refreshCount}
+            logs={securityData?.logs ?? []}
+            searchTerm={search}
+            onSearchTermChange={setSearch}
+            isLoading={isLoading}
           />
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
-          <SecurityAlerts />
+          <SecurityAlerts alerts={securityData?.alerts ?? []} isLoading={isLoading} />
         </TabsContent>
 
         <TabsContent value="metrics" className="space-y-4">
-          <SecurityMetrics />
+          <SecurityMetrics
+            metrics={securityData?.metrics}
+            summary={securityData?.summary}
+            isLoading={isLoading}
+          />
         </TabsContent>
       </Tabs>
     </div>

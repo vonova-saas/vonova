@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Server, Users, ShoppingCart, Activity, Clock, BarChart3, RefreshCw, LayoutDashboard, Gauge, HardDrive } from "lucide-react";
@@ -14,7 +15,8 @@ import { MetricsCharts } from "@/components/admin/developer/systemOverview/perfo
 import { SystemAlerts } from "@/components/admin/developer/systemOverview/overview/system-alerts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAutoRefresh } from "@/hooks/admin/use-auto-refresh";
-import { TimeRange } from "./types";
+import { ActivityItemProps, TimeRange } from "./types";
+import { getDashboardOverviewQueryFn } from '@/services/admin/admin.api';
 
 export default function SystemOverview() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
@@ -27,11 +29,31 @@ export default function SystemOverview() {
     triggerRefresh,
   } = useAutoRefresh(30);
 
-  // Simulate data refresh when refreshCount changes
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin-dashboard-overview', timeRange, customDate?.toISOString()],
+    queryFn: () =>
+      getDashboardOverviewQueryFn({
+        range: timeRange,
+        customDate: timeRange === 'custom' ? customDate?.toISOString() : undefined,
+      }),
+  });
+
   useEffect(() => {
-    // In a real app, you would fetch new data here
-    console.log('Refreshing data...', { timeRange, customDate });
-  }, [refreshCount, timeRange, customDate]);
+    void refetch();
+  }, [refreshCount, refetch]);
+
+  const overview = data?.data;
+  const activities: ActivityItemProps[] =
+    overview?.recentActivity.map((item) => ({
+      ...item,
+      timestamp: new Date(item.timestamp),
+    })) ?? [];
+  const alerts =
+    overview?.alerts.map((alert) => ({
+      ...alert,
+      timestamp: new Date(alert.timestamp),
+      acknowledged: false,
+    })) ?? [];
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -90,26 +112,26 @@ export default function SystemOverview() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               title="Total Users"
-              value="2,845"
-              change={12.5}
+              value={overview?.metrics.totalUsers.toLocaleString() ?? (isLoading ? '...' : '0')}
               icon={<Users className="h-4 w-4" />}
             />
             <MetricCard
               title="Active Sessions"
-              value="1,243"
-              change={8.1}
+              value={overview?.metrics.activeSessions.toLocaleString() ?? (isLoading ? '...' : '0')}
               icon={<Activity className="h-4 w-4" />}
             />
             <MetricCard
-              title="Orders Today"
-              value="342"
-              change={-2.3}
+              title="Tickets Today"
+              value={overview?.metrics.ticketsToday.toLocaleString() ?? (isLoading ? '...' : '0')}
               icon={<ShoppingCart className="h-4 w-4" />}
             />
             <MetricCard
               title="API Response Time"
-              value="128ms"
-              change={-5.2}
+              value={
+                overview?.metrics.avgResponseMs != null
+                  ? `${overview.metrics.avgResponseMs}ms`
+                  : (isLoading ? '...' : 'N/A')
+              }
               icon={<Server className="h-4 w-4" />}
             />
           </div>
@@ -121,7 +143,17 @@ export default function SystemOverview() {
                 <CardTitle>System Health</CardTitle>
               </CardHeader>
               <CardContent className="pl-2">
-                <SystemStatus />
+                <SystemStatus
+                  statuses={
+                    overview?.systemStatus ?? {
+                      api: 'operational',
+                      database: 'degraded',
+                      authentication: 'operational',
+                      fileStorage: 'degraded',
+                      workers: 'operational',
+                    }
+                  }
+                />
               </CardContent>
             </Card>
 
@@ -136,28 +168,32 @@ export default function SystemOverview() {
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Uptime</span>
                   </div>
-                  <span className="text-sm">99.98%</span>
+                  <span className="text-sm">{overview?.quickStats.uptimePercent.toFixed(2) ?? 'N/A'}%</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Server className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Server Version</span>
                   </div>
-                  <span className="text-sm">v1.2.0</span>
+                  <span className="text-sm">{overview?.quickStats.serverVersion ?? 'unknown'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Activity className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Avg. Response</span>
                   </div>
-                  <span className="text-sm">142ms</span>
+                  <span className="text-sm">
+                    {overview?.quickStats.avgResponseMs != null
+                      ? `${overview.quickStats.avgResponseMs}ms`
+                      : 'N/A'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Active Users (24h)</span>
                   </div>
-                  <span className="text-sm">1,243</span>
+                  <span className="text-sm">{overview?.quickStats.activeUsers24h.toLocaleString() ?? '0'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -169,17 +205,30 @@ export default function SystemOverview() {
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <RecentActivity />
+                <RecentActivity activities={activities} />
               </CardContent>
             </Card>
           </div>
 
           {/* System Alerts */}
-          <SystemAlerts />
+          <SystemAlerts initialAlerts={alerts} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4">
-          <MetricsCharts timeRange={timeRange} customDate={customDate} />
+          <MetricsCharts
+            timeRange={timeRange}
+            customDate={customDate}
+            responseTimeData={overview?.performance.responseTime ?? []}
+            errorRateData={overview?.performance.errorRate ?? []}
+            requestStatus={
+              overview?.performance.requestStatus ?? {
+                success: 0,
+                clientErrors: 0,
+                serverErrors: 0,
+                timeouts: 0,
+              }
+            }
+          />
         </TabsContent>
 
         <TabsContent value="resources" className="space-y-4">
@@ -189,7 +238,15 @@ export default function SystemOverview() {
                 <CardTitle>Resource Usage</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResourceUsage />
+                <ResourceUsage
+                  resources={
+                    overview?.resources ?? {
+                      cpu: { usedPercent: 0, totalPercent: 100 },
+                      memory: { usedBytes: 0, totalBytes: 1 },
+                      disk: null,
+                    }
+                  }
+                />
               </CardContent>
             </Card>
             <Card>
@@ -197,7 +254,17 @@ export default function SystemOverview() {
                 <CardTitle>System Health</CardTitle>
               </CardHeader>
               <CardContent>
-                <SystemStatus />
+                <SystemStatus
+                  statuses={
+                    overview?.systemStatus ?? {
+                      api: 'operational',
+                      database: 'degraded',
+                      authentication: 'operational',
+                      fileStorage: 'degraded',
+                      workers: 'operational',
+                    }
+                  }
+                />
               </CardContent>
             </Card>
           </div>

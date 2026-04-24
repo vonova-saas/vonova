@@ -1,47 +1,27 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
 import { MetricsChartsProps } from "../types";
 
-// Mock data generation functions
-const generateTimeSeriesData = (points: number, days: number) => {
-  const now = new Date();
-  const data = [];
-  
-  for (let i = 0; i < points; i++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - (days * (1 - i / points)));
-    
-    data.push({
-      x: date,
-      y: Math.floor(Math.random() * 100) + 20,
-    });
-  }
-  
-  return data;
-};
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function MetricsCharts({ timeRange, customDate }: MetricsChartsProps) {
-  // In a real app, this data would come from an API
-  const responseTimeData = useMemo(() => ({
+export function MetricsCharts({ timeRange, customDate, responseTimeData, errorRateData, requestStatus }: MetricsChartsProps) {
+  const responseTimeSeries = {
     id: 'Response Time',
-    data: generateTimeSeriesData(20, timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30)
-  }), [timeRange]);
+    data: responseTimeData.map((d) => ({ x: new Date(d.x), y: d.y }))
+  };
 
-  const errorRateData = useMemo(() => ({
+  const errorRateSeries = {
     id: 'Error Rate',
-    data: generateTimeSeriesData(20, timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30)
-  }), [timeRange]);
+    data: errorRateData.map((d) => ({ x: new Date(d.x), y: d.y }))
+  };
 
   const pieData = [
-    { id: 'Success', label: 'Success', value: 85, color: 'hsl(142.1, 76.2%, 36.3%)' },
-    { id: 'Client Errors', label: '4xx', value: 8, color: 'hsl(38, 92%, 50%)' },
-    { id: 'Server Errors', label: '5xx', value: 5, color: 'hsl(0, 84.2%, 60.2%)' },
-    { id: 'Timeouts', label: 'Timeouts', value: 2, color: 'hsl(0, 0%, 45.1%)' },
+    { id: 'Success', label: 'Success', value: requestStatus.success, color: 'hsl(142.1, 76.2%, 36.3%)' },
+    { id: 'Client Errors', label: '4xx', value: requestStatus.clientErrors, color: 'hsl(38, 92%, 50%)' },
+    { id: 'Server Errors', label: '5xx', value: requestStatus.serverErrors, color: 'hsl(0, 84.2%, 60.2%)' },
+    { id: 'Timeouts', label: 'Timeouts', value: requestStatus.timeouts, color: 'hsl(0, 0%, 45.1%)' },
   ];
 
   return (
@@ -52,7 +32,7 @@ export function MetricsCharts({ timeRange, customDate }: MetricsChartsProps) {
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveLine
-            data={[responseTimeData]}
+            data={[responseTimeSeries]}
             margin={{ top: 20, right: 30, bottom: 50, left: 50 }}
             xScale={{
               type: 'time',
@@ -171,7 +151,7 @@ export function MetricsCharts({ timeRange, customDate }: MetricsChartsProps) {
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveLine
-            data={[errorRateData]}
+            data={[errorRateSeries]}
             margin={{ top: 20, right: 30, bottom: 50, left: 50 }}
             xScale={{
               type: 'time',

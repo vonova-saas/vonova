@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 
 interface LogEntry {
-  _id: string;
+  id: string;
   ip: string;
   userAgent: string;
   method: string;
@@ -27,68 +27,28 @@ interface LogEntry {
   timestamp: string;
   statusCode: number;
   responseTime: number;
+  severity?: 'critical' | 'high' | 'medium' | 'low';
 }
 
 interface SecurityLogsTableProps {
   timeRange?: { from: Date; to: Date };
   refreshCount?: number;
+  logs: LogEntry[];
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  isLoading?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTableProps) {
+export function SecurityLogsTable({
+  timeRange,
+  refreshCount,
+  logs,
+  searchTerm,
+  onSearchTermChange,
+  isLoading = false,
+}: SecurityLogsTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Mock data - replace with actual API call
-  const logs: LogEntry[] = [
-    {
-      _id: '1',
-      ip: '192.168.1.1',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      method: 'POST',
-      route: '/api/auth/login',
-      attackType: 'Brute Force',
-      details: {
-        origin: 'https://example.com',
-        query: { redirect: '/dashboard' },
-        body: { email: 'test@example.com', password: 'password123' },
-        responseBody: { error: 'Invalid credentials' }
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      statusCode: 401,
-      responseTime: 45
-    },
-    {
-      _id: '2',
-      ip: '10.0.0.1',
-      userAgent: 'curl/7.68.0',
-      method: 'GET',
-      route: '/api/users/1',
-      attackType: 'SQL Injection',
-      details: {
-        query: { id: "1' OR '1'='1" },
-        responseBody: { error: 'Database error' }
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      statusCode: 500,
-      responseTime: 23
-    },
-    {
-      _id: '3',
-      ip: '172.16.0.1',
-      userAgent: 'Mozilla/5.0',
-      method: 'GET',
-      route: '/admin',
-      attackType: 'Unauthorized Access',
-      details: {
-        origin: 'https://malicious-site.com',
-        responseBody: { error: 'Access denied' }
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      statusCode: 403,
-      responseTime: 8
-    }
-  ];
 
   const toggleRow = (logId: string) => {
     const newExpandedRows = new Set(expandedRows);
@@ -146,7 +106,7 @@ export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTable
               placeholder="Search logs..."
               className="pl-8 w-[200px] md:w-[300px]"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchTermChange(e.target.value)}
             />
           </div>
           <Button variant="outline" size="sm">
@@ -175,7 +135,7 @@ export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTable
           </TableHeader>
           <TableBody>
             {filteredLogs.map((log) => (
-              <React.Fragment key={log._id}>
+              <React.Fragment key={log.id}>
                 <TableRow>
                   <TableCell>
                     <div className="flex flex-col">
@@ -205,10 +165,10 @@ export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTable
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleRow(log._id)}
+                      onClick={() => toggleRow(log.id)}
                       className="flex items-center gap-1"
                     >
-                      {expandedRows.has(log._id) ? (
+                      {expandedRows.has(log.id) ? (
                         <>
                           <ChevronUp className="h-4 w-4" />
                           Hide
@@ -222,7 +182,7 @@ export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTable
                     </Button>
                   </TableCell>
                 </TableRow>
-                {expandedRows.has(log._id) && (
+                {expandedRows.has(log.id) && (
                   <TableRow className="bg-muted/50">
                     <TableCell colSpan={8} className="p-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,7 +249,14 @@ export function SecurityLogsTable({ timeRange, refreshCount }: SecurityLogsTable
                 )}
               </React.Fragment>
             ))}
-            {filteredLogs.length === 0 && (
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  Loading security logs...
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && filteredLogs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No security logs found matching your criteria.

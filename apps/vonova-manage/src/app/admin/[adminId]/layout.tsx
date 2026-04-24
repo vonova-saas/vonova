@@ -11,11 +11,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   LeftSidebarTrigger,
-  RightSidebarTrigger,
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { Bell, MessageSquare, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 import ChatSidebar from "@/components/admin/dashboard/main/chat-sidebar";
@@ -70,9 +69,8 @@ export default function DashboardLayout({ children }: Props) {
   const currentSegmentMap = segmentNameMap.admin;
 
   const [open, setOpen] = React.useState(false);
-  const [chatOpen, setChatOpen] = React.useState(false);
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -113,7 +111,7 @@ export default function DashboardLayout({ children }: Props) {
         <SidebarProvider>
           <AppSidebar />
           <div className="flex flex-1 min-w-0 flex-col">
-            <ChatSidebar open={chatOpen} onClose={() => setChatOpen(false)} />
+            <ChatSidebar open={false} onClose={() => undefined} />
             <SidebarInset>
               <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b bg-muted/10 backdrop-blur-lg">
                 <div className="flex items-center gap-2 px-4 w-full justify-between">
@@ -216,38 +214,19 @@ export default function DashboardLayout({ children }: Props) {
                     </CommandDialog>
                     {/* Theme Toggle */}
                     <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
+                      className="p-2 rounded hover:bg-muted transition-colors text-foreground"
                       aria-label="Toggle theme"
                       type="button"
                       onClick={() =>
-                        setTheme(theme === "dark" ? "light" : "dark")
+                        setTheme(resolvedTheme === "dark" ? "light" : "dark")
                       }
                     >
-                      {!mounted ? null : theme === "dark" ? (
+                      {!mounted ? null : resolvedTheme === "dark" ? (
                         <Sun className="w-5 h-5" />
                       ) : (
                         <Moon className="w-5 h-5" />
                       )}
                     </button>
-                    {/* Notification Icon */}
-                    <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Notifications"
-                      type="button"
-                    >
-                      <Bell className="w-5 h-5" />
-                    </button>
-                    {/* Chat/Menu Icon */}
-                    <button
-                      className="p-2 rounded hover:bg-muted transition-colors"
-                      aria-label="Chat"
-                      type="button"
-                      onClick={() => setChatOpen(true)}
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                    </button>
-                    {/* Right Sidebar Trigger */}
-                    <RightSidebarTrigger />
                   </div>
                 </div>
               </header>

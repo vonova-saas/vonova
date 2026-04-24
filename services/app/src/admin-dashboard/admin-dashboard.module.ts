@@ -7,7 +7,15 @@ import { UserEventService } from './user-event.service';
 import { AdminSupportService } from './admin-support.service';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { AdminUsersService } from './admin-users.service';
-import { UserActivity, UserActivitySchema } from './schemas/user-activity.schema';
+import { AdminOverviewService } from './admin-overview.service';
+import { AdminMonitoringService } from './admin-monitoring.service';
+import { AdminPerformanceService } from './admin-performance.service';
+import { AdminUserManagementService } from './admin-user-management.service';
+import { AdminSecurityLogsService } from './admin-security-logs.service';
+import {
+  UserActivity,
+  UserActivitySchema,
+} from './schemas/user-activity.schema';
 import { UserEvent, UserEventSchema } from './schemas/user-event.schema';
 import {
   AdminSupportTicket,
@@ -35,6 +43,11 @@ import {
     AdminSupportService,
     AdminNotificationsService,
     AdminUsersService,
+    AdminOverviewService,
+    AdminMonitoringService,
+    AdminPerformanceService,
+    AdminUserManagementService,
+    AdminSecurityLogsService,
   ],
 })
 export class AdminDashboardModule {}

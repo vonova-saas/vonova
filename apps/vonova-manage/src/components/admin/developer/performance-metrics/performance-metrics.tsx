@@ -6,6 +6,7 @@ import { DatabaseMetrics } from "./metrics/database-metrics";
 import { ApiMetrics } from "./metrics/api-metrics";
 import { ResponseTimeChart } from "./overview/response-time-chart";
 import { SystemResources } from "./overview/system-resources";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Database, LayoutDashboard, RefreshCw, Route, Server } from "lucide-react";
 import { Clock } from "lucide-react";
@@ -13,7 +14,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { useAutoRefresh } from "@/hooks/admin/use-auto-refresh";
 import { TimeRangeSelector } from "../systemOverview/time-range-selector";
 import type { TimeRange } from '../systemOverview/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getPerformanceMetricsQueryFn } from "@/services/admin/admin.api";
 
 export default function PerformanceMetrics() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
@@ -22,8 +24,24 @@ export default function PerformanceMetrics() {
   const {
     isAutoRefreshing,
     lastRefresh,
+    refreshCount,
     triggerRefresh,
   } = useAutoRefresh(60);
+
+  const { data, refetch } = useQuery({
+    queryKey: ['admin-performance-metrics', timeRange, customDate?.toISOString()],
+    queryFn: () =>
+      getPerformanceMetricsQueryFn({
+        range: timeRange,
+        customDate: timeRange === 'custom' ? customDate?.toISOString() : undefined,
+      }),
+  });
+
+  useEffect(() => {
+    void refetch();
+  }, [refreshCount, refetch]);
+
+  const perf = data?.data;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -80,17 +98,20 @@ export default function PerformanceMetrics() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
-          <ResponseTimeChart />
-          <SystemResources />
+          <ResponseTimeChart
+            responseTimeSeries={perf?.overview.responseTimeSeries ?? []}
+            requestVolumeSeries={perf?.overview.requestVolumeSeries ?? []}
+          />
+          <SystemResources resources={perf?.overview.resources} />
         </TabsContent>
         <TabsContent value="server">
-          <ServerMetrics />
+          <ServerMetrics data={perf?.server} />
         </TabsContent>
         <TabsContent value="database">
-          <DatabaseMetrics />
+          <DatabaseMetrics data={perf?.database} />
         </TabsContent>
         <TabsContent value="api">
-          <ApiMetrics />
+          <ApiMetrics data={perf?.api} />
         </TabsContent>
       </Tabs>
     </div>

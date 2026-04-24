@@ -64,38 +64,7 @@ function ActivityItem({ type, title, description, timestamp }: ActivityItemProps
   );
 }
 
-export function RecentActivity() {
-  // In a real app, this would come from an API
-  const activities: ActivityItemProps[] = [
-    {
-      id: '1',
-      type: 'success',
-      title: 'Backup completed',
-      description: 'Nightly database backup completed successfully',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'High memory usage',
-      description: 'Memory usage is above 80%',
-      timestamp: new Date(Date.now() - 1000 * 60 * 120), // 2 hours ago
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'New deployment',
-      description: 'Version 1.2.0 deployed to production',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-    },
-    {
-      id: '4',
-      type: 'info',
-      title: 'Scheduled maintenance',
-      description: 'System maintenance scheduled for tomorrow at 2:00 AM',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-    },
-  ];
+export function RecentActivity({ activities }: { activities: ActivityItemProps[] }) {
 
   return (
     <Card className="h-full">
