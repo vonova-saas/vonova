@@ -20,7 +20,11 @@ export default function InstructorQuizForm({ quiz, onCancel, onCreate, onUpdate 
   const [title, setTitle] = useState(quiz?.title ?? "");
   const [description, setDescription] = useState(quiz?.description ?? "");
   const [topic, setTopic] = useState(quiz?.topic ?? "");
-  const [noOfQuestions, setNoOfQuestions] = useState<string>(quiz?.noOfQuestions ?? "");
+  const [noOfQuestions, setNoOfQuestions] = useState<string>(
+    quiz?.noOfQuestions !== undefined && quiz?.noOfQuestions !== null
+      ? String(quiz.noOfQuestions)
+      : "",
+  );
   const [questions, setQuestions] = useState<Question[]>(quiz?.questions ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

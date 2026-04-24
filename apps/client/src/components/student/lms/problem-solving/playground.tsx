@@ -272,7 +272,7 @@ export default function Playground({ problem }: PlaygroundProps) {
       toast.success(
         `Accepted in ${result.executionTime}ms, ${result.memoryUsed}MB`,
       );
-    } else if (result.status !== "pending") {
+    } else {
       toast.error("Submission failed", {
         description: `${result.status} • ${result.executionTime}ms • ${result.memoryUsed}MB`,
       });

@@ -25,14 +25,18 @@ export function parseUsageLimitError(error: unknown): ParsedUsageLimitError {
   const payload = response?.data;
   const nestedError = payload?.error as Record<string, unknown> | undefined;
   const code = payload?.code ?? nestedError?.code;
+  const payloadMessage =
+    typeof payload?.message === 'string' ? payload.message : undefined;
+  const nestedMessage =
+    typeof nestedError?.message === 'string' ? nestedError.message : undefined;
 
   if (code !== 'DAILY_LIMIT_EXCEEDED') {
     return {
       isUsageLimit: false,
       title: 'Something went wrong',
       description:
-        payload?.message ??
-        nestedError?.message ??
+        payloadMessage ??
+        nestedMessage ??
         'Unexpected error. Please try again.',
     };
   }

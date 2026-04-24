@@ -36,7 +36,7 @@ export default function OnlineBooks() {
   });
 
   // Filter books by search and topic
-  const filteredBooks = useMemo(() => {
+  const filteredBooks = useMemo<Book[]>(() => {
     if (!materialsData?.items) return [];
     return materialsData.items.filter((book: any) => {
       const matchesTopic = topic === "All" || book.topics.includes(topic);
@@ -121,9 +121,9 @@ export default function OnlineBooks() {
           <TooltipProvider>
             <Dialog>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {paginatedBooks.map((book) => (
+                {paginatedBooks.map((book: Book) => (
                   <BookCard
-                    key={book._id}
+                    key={book.id}
                     book={book}
                     onQuickView={setQuickViewBook}
                     favorites={favorites}
