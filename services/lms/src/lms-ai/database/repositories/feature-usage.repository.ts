@@ -66,7 +66,6 @@ export class FeatureUsageRepository {
             },
             $set: {
               updatedAt: new Date(),
-              usageUnit: 'minutes',
               limitCount: params.limitCount,
               limitDurationMinutes: limitMinutes,
             },
@@ -114,7 +113,6 @@ export class FeatureUsageRepository {
           },
           $set: {
             updatedAt: new Date(),
-            usageUnit: 'count',
             limitCount,
             limitDurationMinutes: params.limitDurationMinutes,
           },

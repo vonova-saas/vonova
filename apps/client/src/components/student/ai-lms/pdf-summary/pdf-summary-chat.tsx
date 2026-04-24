@@ -87,6 +87,9 @@ const fakeResponses = [
       "From reviewing your PDF, I can provide the following insights:\n\n**Document Overview:**\n- Type: [Document type]\n- Length: [Number of pages]\n- Main Focus: [Primary topic]\n\n**Critical Information:**\n- [Important point 1]\n- [Important point 2]\n- [Important point 3]\n\nWould you like me to dive deeper into any particular section or answer specific questions about the content?",
   },
 ];
+
+const MAX_PDF_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_UPLOAD_SIZE_LABEL = "10MB";
  
 
 export default function PDFSummaryChat({
@@ -513,13 +516,13 @@ export default function PDFSummaryChat({
     accept: {
       "application/pdf": [".pdf"],
     },
-    maxSize: 2 * 1024 * 1024,
+    maxSize: MAX_PDF_UPLOAD_SIZE_BYTES,
     multiple: true,
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
     onDropRejected: () => {
       toast.error("Upload rejected", {
-        description: "File too large for server limits (max 2MB).",
+        description: `File too large for server limits (max ${MAX_PDF_UPLOAD_SIZE_LABEL}).`,
       });
     },
   });
@@ -528,10 +531,10 @@ export default function PDFSummaryChat({
   const file = files[0];
   if (!file) return;
   
-  // Strict 2MB frontend check
-  if (file.size > 2 * 1024 * 1024) {
+  // Frontend guard for current upload cap
+  if (file.size > MAX_PDF_UPLOAD_SIZE_BYTES) {
     toast.error("Upload rejected", {
-      description: "File too large for server limits (max 2MB).",
+      description: `File too large for server limits (max ${MAX_PDF_UPLOAD_SIZE_LABEL}).`,
     });
     return;
   }
