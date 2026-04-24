@@ -66,8 +66,6 @@ export class FeatureUsageRepository {
             },
             $set: {
               updatedAt: new Date(),
-              limitCount: params.limitCount,
-              limitDurationMinutes: limitMinutes,
             },
           },
           { upsert: true },
@@ -113,8 +111,6 @@ export class FeatureUsageRepository {
           },
           $set: {
             updatedAt: new Date(),
-            limitCount,
-            limitDurationMinutes: params.limitDurationMinutes,
           },
         },
         { upsert: true },
