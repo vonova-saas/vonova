@@ -53,6 +53,17 @@ export default function EditQuizPage() {
               const parsed = JSON.parse(draft) as {
                 title: string; description: string; topic: string; noOfQuestions: string; questions: Question[];
               };
+              const hasMeaningfulDraftData =
+                Boolean(parsed.title?.trim())
+                || Boolean(parsed.description?.trim())
+                || Boolean(parsed.topic?.trim())
+                || Boolean(parsed.noOfQuestions?.trim())
+                || Array.isArray(parsed.questions) && parsed.questions.length > 0;
+              if (!hasMeaningfulDraftData) {
+                // Ignore stale/empty drafts so backend data is not overwritten in the editor.
+                localStorage.removeItem(draftKey);
+                return;
+              }
               const isDifferent = (
                 parsed.title !== (quiz.title || "") ||
                 parsed.description !== (quiz.description || "") ||

@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { QuizType, Question } from "@/types/api/student/lms/quizzes/quiz.type";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import QuestionComponent from "./quiz-question";
-import QuizResult from "./quiz-result";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import {
@@ -15,7 +14,6 @@ import {
   normalizeQuizAttemptsResponse,
   getAttemptRecordId,
 } from "@/services/student/lms/quizzes/quiz.api";
-import { getAttemptsTypeResponse } from "@/types/api/student/lms/quizzes/quiz.type";
 import { useUserId } from "@/hooks";
 
 function getQuestions(quiz: QuizType): Question[] {
@@ -31,38 +29,13 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
   const [lockedAttemptId, setLockedAttemptId] = useState<string | null>(quiz.attemptId ?? null);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
-  const [timedOut, setTimedOut] = useState<{ [questionId: string]: boolean }>({});
   const [showResult, setShowResult] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    attemptId: string;
-    quizId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers: { questionId: string; selectedOptionId: string; correct: boolean }[];
-  } | null>(null);
-  // type Attempt = {
-  //   id: string;
-  //   quiz: string;
-  //   userId: string;
-  //   score: number;
-  //   total: number;
-  //   percentage: number;
-  //   answers?: { questionId: string; selectedOptionId: string; correct: boolean }[];
-  //   submittedAt?: string;
-  //   gradedAt?: string;
-  //   createdAt?: string;
-  //   updatedAt?: string;
-  // };
-  const [attempts, setAttempts] = useState<getAttemptsTypeResponse["data"]>([]);
-  const [loadingAttempts, setLoadingAttempts] = useState(false);
-  const [attemptsError, setAttemptsError] = useState<string | null>(null);
   const [timer, setTimer] = useState(10);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
-  const resolveAttemptIdForQuiz = (rawAttempts: unknown, targetQuizId: string): string | null => {
+  const resolveAttemptIdForQuiz = useCallback((rawAttempts: unknown, targetQuizId: string): string | null => {
     const list = Array.isArray(rawAttempts) ? rawAttempts : [];
     const match = list.find((attempt) => {
       const quizRef = (attempt as { quiz?: unknown; quizId?: unknown }).quiz
@@ -74,9 +47,9 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       return attemptQuizId === targetQuizId;
     });
     return match ? getAttemptRecordId(match) || null : null;
-  };
+  }, []);
 
-  const redirectToAttempt = async (attemptId?: string | null) => {
+  const redirectToAttempt = useCallback(async (attemptId?: string | null) => {
     if (attemptId) {
       router.replace(`/student/${userId}/quizzes/attempts/${attemptId}`);
       return;
@@ -91,7 +64,7 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
       return;
     }
     router.replace(`/student/${userId}/quizzes`);
-  };
+  }, [quiz._id, resolveAttemptIdForQuiz, router, userId]);
 
   useEffect(() => {
     let active = true;
@@ -123,20 +96,10 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
     return () => {
       active = false;
     };
-  }, [quiz._id]);
+  }, [quiz._id, redirectToAttempt]);
 
 
-  type GradedAnswer = { questionId: string; selectedOptionId: string; correct: boolean };
-  type NormalizedResult = {
-    attemptId: string;
-    quizId: string;
-    score: number;
-    total: number;
-    percentage: number;
-    answers: GradedAnswer[];
-  };
-
-  const normalizeSubmitResult = (raw: unknown): NormalizedResult | null => {
+  const extractAttemptIdFromSubmitResult = (raw: unknown): string | null => {
     if (!raw || typeof raw !== "object") return null;
     const obj = raw as Record<string, unknown>;
     const maybeWrapped = obj.data && typeof obj.data === "object"
@@ -149,23 +112,7 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
         : typeof maybeWrapped.id === "string"
           ? maybeWrapped.id
           : "";
-    const quizId =
-      typeof maybeWrapped.quizId === "string"
-        ? maybeWrapped.quizId
-        : typeof maybeWrapped.quiz === "string"
-          ? maybeWrapped.quiz
-          : quiz._id;
-    const answers =
-      Array.isArray(maybeWrapped.answers)
-        ? (maybeWrapped.answers as GradedAnswer[])
-        : [];
-    const score = Number(maybeWrapped.score ?? 0);
-    const total = Number(maybeWrapped.total ?? questions.length);
-    const percentage = Number(
-      maybeWrapped.percentage ?? (total > 0 ? Math.round((score / total) * 100) : 0),
-    );
-
-    return { attemptId, quizId, score, total, percentage, answers };
+    return attemptId || null;
   };
 
   // Timer effect
@@ -182,7 +129,6 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
 
   useEffect(() => {
     if (timer === 0 && !answers[questions[current].id]) {
-      setTimedOut((prev) => ({ ...prev, [questions[current].id]: true }));
       if (current < questions.length - 1) {
         setCurrent((c) => c + 1);
       } else if (current === questions.length) {
@@ -194,7 +140,6 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
 
   const handleAnswer = (questionId: string, optionId: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-    setTimedOut((prev) => ({ ...prev, [questionId]: false }));
     if (timerRef.current) clearInterval(timerRef.current);
     if (current < questions.length - 1) {
       setTimeout(() => setCurrent((c) => c + 1), 200); // short delay for feedback
@@ -212,9 +157,9 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
         answers: Object.entries(answers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
       };
       const res = await submitQuizMutationFn(quiz._id, payload);
-      const normalized = normalizeSubmitResult(res);
-      setResult(normalized);
-      setShowResult(true);
+      const submittedAttemptId = extractAttemptIdFromSubmitResult(res);
+      await redirectToAttempt(submittedAttemptId);
+      return;
     } catch (e: unknown) {
       const status =
         e && typeof e === "object" && "response" in e
@@ -230,46 +175,10 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
         message = String((e as { message?: string }).message) || message;
       }
       setSubmitError(message);
-      setShowResult(true); // still show results section with error
+      setShowResult(true);
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const loadAttempts = async () => {
-    try {
-      setLoadingAttempts(true);
-      setAttemptsError(null);
-      const res = await getStudentQuizAttemptsMutationFn(quiz._id);
-      const normalized = normalizeQuizAttemptsResponse(res);
-      let parsed: getAttemptsTypeResponse["data"] = [];
-      if (normalized.length) {
-        parsed = normalized as getAttemptsTypeResponse["data"];
-      }
-      const filtered = parsed.filter((attempt) => {
-        const attemptQuiz =
-          (attempt as { quiz?: unknown; quizId?: unknown }).quiz
-          ?? (attempt as { quiz?: unknown; quizId?: unknown }).quizId;
-        const attemptQuizId =
-          attemptQuiz && typeof attemptQuiz === "object"
-            ? (attemptQuiz as { _id?: string })._id
-            : String(attemptQuiz ?? "");
-        return attemptQuizId === quiz._id;
-      });
-      setAttempts(filtered);
-    } catch (e: unknown) {
-      let message = "Failed to load attempts";
-      if (e && typeof e === "object" && "message" in e) {
-        message = String((e as { message?: string }).message) || message;
-      }
-      setAttemptsError(message);
-    } finally {
-      setLoadingAttempts(false);
-    }
-  };
-
-  const handleRestart = () => {
-    void redirectToAttempt(lockedAttemptId);
   };
 
   if (checkingAccess) {
@@ -332,22 +241,22 @@ export default function QuizRunner({ quiz }: { quiz: QuizType }) {
 
   if (showResult) {
     return (
-      <QuizResult
-        quiz={quiz}
-        questions={questions}
-        answers={answers}
-        timedOut={timedOut}
-        submitting={submitting}
-        submitError={submitError}
-        result={result || undefined}
-        attempts={attempts}
-        loadingAttempts={loadingAttempts}
-        attemptsError={attemptsError}
-        onLoadAttempts={loadAttempts}
-        onRestart={handleRestart}
-        onBack={() => router.back()}
-        showRestart={false}
-      />
+      <Card className="w-full max-w-xl mx-auto">
+        <CardHeader>
+          <CardTitle>Quiz Submission Failed</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-destructive">{submitError || "Failed to submit quiz"}</p>
+          <div className="flex gap-3">
+            <Button onClick={() => void submitQuiz()} disabled={submitting}>
+              {submitting ? "Retrying..." : "Retry Submit"}
+            </Button>
+            <Button variant="outline" onClick={() => router.replace(`/student/${userId}/quizzes`)}>
+              Back to Quizzes
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   getAllQuizzesMutationFn,
   getQuizByIdMutationFn,
+  getInstructorQuizByIdMutationFn,
   createNewQuizMutationFn,
   updateQuizMutationFn,
   deleteQuizMutationFn,
@@ -120,8 +121,27 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   fetchById: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await getQuizByIdMutationFn(id);
-      const quiz = ((res as { data?: QuizType })?.data ?? res) as QuizType;
+      let rawQuizResponse: unknown;
+      try {
+        rawQuizResponse = await getQuizByIdMutationFn(id);
+      } catch {
+        try {
+          // Instructor edit pages can access quizzes that aren't available on student endpoints.
+          rawQuizResponse = await getInstructorQuizByIdMutationFn(id);
+        } catch {
+          // Some backends expose only "list instructor quizzes" + PATCH by id.
+          const instructorRes = await getInstructorQuizzesMutationFn();
+          const instructorList = Array.isArray(instructorRes)
+            ? instructorRes
+            : (instructorRes as { data?: QuizType[] })?.data ?? [];
+          const matchedQuiz = instructorList.find((q) => q._id === id);
+          if (!matchedQuiz) {
+            throw new Error("Quiz not found");
+          }
+          rawQuizResponse = matchedQuiz;
+        }
+      }
+      const quiz = ((rawQuizResponse as { data?: QuizType })?.data ?? rawQuizResponse) as QuizType;
       set((st) => ({ quizzesById: { ...st.quizzesById, [quiz._id]: quiz }, allIds: st.allIds.includes(quiz._id) ? st.allIds : [...st.allIds, quiz._id] }));
       return quiz;
     } catch (e: unknown) {

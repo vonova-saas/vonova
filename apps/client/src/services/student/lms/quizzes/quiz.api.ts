@@ -89,6 +89,18 @@ export const getInstructorQuizzesMutationFn = async (): Promise<getAllQuizzesTyp
   return response.data;
 };
 
+/** Instructor view: fetch one owned quiz by id. */
+export const getInstructorQuizByIdMutationFn = async (
+  quizId: string,
+): Promise<getQuizByIdTypeResponse> => {
+  const qid = quizId?.trim();
+  if (!qid) {
+    throw new Error("Quiz ID is required");
+  }
+  const response = await API.get<getQuizByIdTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}/${qid}`);
+  return response.data;
+};
+
 // ========== Student — browse & take quizzes ==========
 
 export const getAllQuizzesMutationFn = async (): Promise<getAllQuizzesTypeResponse> => {
