@@ -236,10 +236,13 @@ export class SubmissionService {
       return;
     }
 
-    const parameterNamesResolved = this.resolveParameterNames(
-      problem as { parameterNames?: string[] },
+    const parameterNamesResolution = this.resolveParameterNames(
+      problem as {
+        parameterNames?: string[];
+        testCases?: Array<{ input?: unknown }>;
+      },
     );
-    if (parameterNamesResolved === null) {
+    if (parameterNamesResolution === null) {
       const msg =
         'Problem is missing or invalid parameterNames: must be a non-empty array of parameter identifiers (required for deterministic judging).';
       const evaluation = this.buildSchemaFailureEvaluation(
@@ -280,6 +283,16 @@ export class SubmissionService {
         },
       );
       return;
+    }
+    const parameterNamesResolved = parameterNamesResolution.names;
+    if (parameterNamesResolution.inferred) {
+      await this.problemModel.updateOne(
+        { _id: problem._id },
+        { $set: { parameterNames: parameterNamesResolved } },
+      );
+      this.logger.warn(
+        `[judge-schema-backfill] problem=${String(problem._id)} inferred parameterNames=${JSON.stringify(parameterNamesResolved)}`,
+      );
     }
 
     try {
@@ -431,21 +444,73 @@ export class SubmissionService {
    */
   private resolveParameterNames(problem: {
     parameterNames?: string[];
-  }): string[] | null {
+    testCases?: Array<{ input?: unknown }>;
+  }): { names: string[]; inferred: boolean } | null {
     const raw = problem.parameterNames;
-    if (!Array.isArray(raw) || raw.length === 0) {
+    if (Array.isArray(raw) && raw.length > 0) {
+      const names = raw
+        .map((s) => String(s).trim())
+        .filter((s) => s.length > 0);
+      if (names.length === 0) {
+        return null;
+      }
+      for (const name of names) {
+        if (!isSafeJudgeParameterName(name)) {
+          return null;
+        }
+      }
+      return { names, inferred: false };
+    }
+
+    const inferred = this.inferLegacyParameterNames(problem.testCases ?? []);
+    if (!inferred) {
       return null;
     }
-    const names = raw.map((s) => String(s).trim()).filter((s) => s.length > 0);
-    if (names.length === 0) {
+    return { names: inferred, inferred: true };
+  }
+
+  /**
+   * Legacy bridge for problems created before `parameterNames` became required.
+   * We infer only when every test input is a plain object with an identical key set.
+   */
+  private inferLegacyParameterNames(
+    testCases: Array<{ input?: unknown }>,
+  ): string[] | null {
+    if (testCases.length === 0) {
       return null;
     }
-    for (const name of names) {
-      if (!isSafeJudgeParameterName(name)) {
+    let baseline: string[] | null = null;
+    for (const testCase of testCases) {
+      const raw = this.normalizeUnknownValue(testCase.input);
+      if (
+        raw === null ||
+        typeof raw !== 'object' ||
+        Array.isArray(raw) ||
+        Object.prototype.toString.call(raw) !== '[object Object]'
+      ) {
+        return null;
+      }
+      const keys = Object.keys(raw as Record<string, unknown>).sort();
+      if (keys.length === 0) {
+        return null;
+      }
+      for (const key of keys) {
+        if (!isSafeJudgeParameterName(key)) {
+          return null;
+        }
+      }
+      if (baseline === null) {
+        baseline = keys;
+        continue;
+      }
+      if (
+        baseline.length !== keys.length ||
+        baseline.some((k, i) => k !== keys[i])
+      ) {
         return null;
       }
     }
-    return names;
+    return baseline;
   }
 
   /** Single synthetic failure when the problem document cannot be judged. */
