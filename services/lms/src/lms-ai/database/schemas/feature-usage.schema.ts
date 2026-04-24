@@ -21,7 +21,7 @@ export class FeatureUsage {
   @Prop({ required: true, default: 0 })
   usedCount: number;
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   limitCount: number | null;
 
   // Future-ready for duration-based limits (e.g., voice minutes/day)
@@ -31,7 +31,7 @@ export class FeatureUsage {
   @Prop({ required: true, default: 0 })
   usedDurationMinutes: number;
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   limitDurationMinutes: number | null;
 
   @Prop({ required: true, index: true })

@@ -93,6 +93,8 @@ export class PdfSummaryGatewayService {
     mimeType?: string;
     filename?: string;
     user_id?: string;
+    role?: string;
+    plan?: 'free' | 'pro' | 'startup';
     idempotency_key?: string;
   }) {
     return this.client.send({ cmd: 'lms.ai.pdf.voiceAsk' }, data);
