@@ -4,11 +4,53 @@ import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { CodeExecutionError, executeUserFunction } from './code-execution.util';
+import { isSafeJudgeParameterName } from './judge-invocation.util';
 import {
   isMissingJudgeReturnValue,
   jsonCloneForJudge,
   parseJudgeStdout,
 } from './judge-output.util';
+
+/** Fixed LMS harness: Gson + reflection (default package `Solution` only). */
+const JAVA_MAIN_HARNESS = `import com.google.gson.*;
+import java.lang.reflect.*;
+import java.nio.file.*;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    String raw = Files.readString(Path.of("/workspace/payload.json"));
+    JsonObject root = JsonParser.parseString(raw).getAsJsonObject();
+    String functionName = root.get("functionName").getAsString();
+    JsonArray invocationArgs = root.getAsJsonArray("invocationArgs");
+    Class<?> solClass = Class.forName("Solution");
+    Object sol = solClass.getDeclaredConstructor().newInstance();
+    Method target = null;
+    for (Method m : solClass.getDeclaredMethods()) {
+      if (!m.getName().equals(functionName)) continue;
+      int mods = m.getModifiers();
+      if (java.lang.reflect.Modifier.isStatic(mods)) continue;
+      if (m.getParameterCount() != invocationArgs.size()) continue;
+      if (target != null) {
+        throw new IllegalStateException("Ambiguous overload for " + functionName);
+      }
+      target = m;
+    }
+    if (target == null) {
+      throw new IllegalStateException(
+          "Instance method not found: " + functionName + " with arity " + invocationArgs.size());
+    }
+    target.setAccessible(true);
+    Gson gson = new Gson();
+    Class<?>[] ptypes = target.getParameterTypes();
+    Object[] nargs = new Object[ptypes.length];
+    for (int i = 0; i < ptypes.length; i++) {
+      nargs[i] = gson.fromJson(invocationArgs.get(i), ptypes[i]);
+    }
+    Object out = target.invoke(sol, nargs);
+    System.out.print(gson.toJson(out));
+  }
+}
+`;
 
 /** Writable temp root for judge bind-mounts. Do not use process.cwd() — /app is often read-only in Docker. */
 function judgeTempRoot(): string {
@@ -66,107 +108,127 @@ function createRunnerScript(language: string): string {
     return 'python /workspace/runner.py';
   }
   if (language === 'cpp' || language === 'c++') {
-    return 'g++ -O2 -std=c++17 /workspace/main.cpp -o /workspace/main && /workspace/main';
+    return 'g++ -O2 -std=c++17 -I/workspace /workspace/main.cpp -o /workspace/main && /workspace/main';
   }
   if (language === 'java') {
-    return 'javac /workspace/Main.java && java -cp /workspace Main';
+    return 'javac -cp /workspace/gson-2.10.1.jar /workspace/Main.java /workspace/Solution.java && java -cp /workspace:/workspace/gson-2.10.1.jar Main';
   }
   return 'node /workspace/runner.js';
 }
 
-function buildSourceFile(
+function buildCppHarness(userCode: string, functionName: string): string {
+  return `#include "json.hpp"
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+using json = nlohmann::json;
+
+/*
+ * C++ ABI: define exactly one free function named like the problem, taking the full
+ * invocationArgs JSON array and returning JSON (nlohmann::json), e.g.:
+ *   json twoSum(const json& invocationArgs) {
+ *     auto nums = invocationArgs[0].get<std::vector<int>>();
+ *     int target = invocationArgs[1].get<int>();
+ *     return json(std::vector<int>{0, 1});
+ *   }
+ */
+// ----- user submission -----
+${userCode}
+// ----- end user submission -----
+
+static json read_payload() {
+  std::ifstream in("/workspace/payload.json");
+  if (!in) throw std::runtime_error("cannot open payload.json");
+  json j;
+  in >> j;
+  return j;
+}
+
+int main() {
+  try {
+    json p = read_payload();
+    std::string fname = p.at("functionName").get<std::string>();
+    const std::string expected = ${JSON.stringify(functionName)};
+    if (fname != expected) {
+      throw std::runtime_error(std::string("functionName mismatch: ") + fname);
+    }
+    json args = p.at("invocationArgs");
+    json out = ${functionName}(args);
+    std::cout << out.dump() << std::endl;
+    return 0;
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return 1;
+  }
+}
+`;
+}
+
+function buildJudgeSourceFiles(
   language: string,
   code: string,
-): { name: string; content: string } {
+  functionName: string,
+): Array<{ name: string; content: string }> {
   if (language === 'python' || language === 'py') {
-    return {
-      name: 'runner.py',
-      content: `${code}
+    return [
+      {
+        name: 'runner.py',
+        content: `${code}
 
 import json
-import inspect
 
 with open('/workspace/payload.json', 'r', encoding='utf-8') as f:
     payload = json.load(f)
 
 fn_name = payload.get('functionName')
-raw = payload.get('input')
+args = payload.get('invocationArgs')
+if not isinstance(args, list):
+    raise RuntimeError('Invalid judge payload: invocationArgs must be a JSON array')
 fn = globals().get(fn_name)
 if not callable(fn):
     raise Exception(f'Function "{fn_name}" not found')
 
-try:
-    arity = len(inspect.signature(fn).parameters)
-except (TypeError, ValueError):
-    arity = 0
-
-def _normalize_args(value, arity_val):
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return value
-    if isinstance(value, dict):
-        if arity_val <= 1:
-            return [value]
-        keys = sorted(value.keys())
-        if len(keys) == arity_val:
-            return [value[k] for k in keys]
-        return [value]
-    return [value]
-
-args = _normalize_args(raw, arity)
 result = fn(*args)
 print(json.dumps(result))
 `,
-    };
+      },
+    ];
   }
   if (language === 'cpp' || language === 'c++') {
-    return {
-      name: 'main.cpp',
-      content: code,
-    };
+    return [{ name: 'main.cpp', content: buildCppHarness(code, functionName) }];
   }
   if (language === 'java') {
-    return {
-      name: 'Main.java',
-      content: code,
-    };
+    return [
+      { name: 'Solution.java', content: code },
+      { name: 'Main.java', content: JAVA_MAIN_HARNESS },
+    ];
   }
-  return {
-    name: 'runner.js',
-    content: `${code}
+  return [
+    {
+      name: 'runner.js',
+      content: `${code}
 const fs = require('fs');
 const payload = JSON.parse(fs.readFileSync('/workspace/payload.json', 'utf8'));
 const fnName = payload.functionName;
-const raw = payload.input;
+const args = payload.invocationArgs;
+if (!Array.isArray(args)) {
+  throw new Error('Invalid judge payload: invocationArgs must be an array');
+}
 const fn = globalThis[fnName];
 if (typeof fn !== 'function') {
   throw new Error(\`Function "\${fnName}" not found\`);
 }
-function __isPlain(o) {
-  return o !== null && typeof o === 'object' && !Array.isArray(o) &&
-    Object.prototype.toString.call(o) === '[object Object]';
-}
-function __normalizeArgs(value, arity) {
-  if (value === undefined || value === null) return [];
-  if (Array.isArray(value)) return value;
-  if (__isPlain(value)) {
-    if (arity <= 1) return [value];
-    const keys = Object.keys(value).sort();
-    if (keys.length === arity) return keys.map((k) => value[k]);
-    return [value];
-  }
-  return [value];
-}
-const arity = typeof fn.length === 'number' ? fn.length : 0;
-const args = __normalizeArgs(raw, arity);
 const out = fn.apply(null, args);
 if (typeof out?.then === 'function') {
   throw new Error('Async return values are not supported');
 }
 process.stdout.write(JSON.stringify(out));
 `,
-  };
+    },
+  ];
 }
 
 async function execCommand(command: string, args: string[], timeoutMs: number) {
@@ -253,20 +315,11 @@ function isVmRunnableLanguage(normalized: string): boolean {
   );
 }
 
-/**
- * Without Docker, only the Node VM runner is available. Students sometimes leave
- * "Python" selected while pasting JS — infer JS/TS from source when safe.
- */
-function vmLanguageForNoDocker(params: {
-  declared: string;
-  code: string;
-  functionName: string;
-}): string {
-  const { declared, code, functionName } = params;
+/** Declared language only — no source-based inference (fair, deterministic). */
+function vmLanguageForNoDocker(declared: string): string {
   if (DOCKER_ONLY_LANGUAGES.has(declared)) {
     return declared;
   }
-
   if (isVmRunnableLanguage(declared)) {
     return declared === 'js' || declared === 'node' || declared === 'nodejs'
       ? 'javascript'
@@ -274,49 +327,22 @@ function vmLanguageForNoDocker(params: {
         ? 'typescript'
         : declared;
   }
-
-  const fn = functionName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const hasProblemFunction =
-    fn.length > 0 && new RegExp(`function\\s+${fn}\\s*\\(`, 'm').test(code);
-  const looksLikeJs =
-    hasProblemFunction ||
-    /\bfunction\s+\w+\s*\(/.test(code) ||
-    /\b(?:const|let|var)\s+\w+\s*=\s*(?:async\s+)?\([^)]*\)\s*=>/.test(code) ||
-    (/\b=>\s*\{/.test(code) && /\breturn\b/.test(code));
-
-  const looksLikePy =
-    /^\s*def\s+\w+\s*\(/m.test(code) ||
-    /if\s+__name__\s*==\s*['"]__main__['"]/m.test(code);
-  const looksLikeJava =
-    /\bpublic\s+(?:static\s+)?(?:void|int|boolean|double|String)\s+\w+\s*\(/m.test(
-      code,
-    );
-  const looksLikeCpp =
-    /#include\s*[</]/m.test(code) ||
-    /\b(int|void|bool|auto)\s+\w+\s*\([^)]*\)\s*\{/.test(code);
-
-  if (looksLikeJs && !looksLikePy && !looksLikeJava && !looksLikeCpp) {
-    return declared === 'typescript' || declared === 'ts'
-      ? 'typescript'
-      : 'javascript';
-  }
-
   return declared;
 }
 
-function runWithVm(params: {
+async function runWithVm(params: {
   code: string;
   functionName: string;
-  input: unknown;
+  invocationArgs: unknown[];
   language: string;
   timeLimitMs: number;
-}): RunResult {
+}): Promise<RunResult> {
   const startedAt = Date.now();
   try {
-    const output = executeUserFunction({
+    const output = await executeUserFunction({
       code: params.code,
       functionName: params.functionName,
-      input: params.input,
+      invocationArgs: params.invocationArgs,
       language: params.language,
       timeoutMs: params.timeLimitMs,
     });
@@ -343,7 +369,8 @@ function runWithVm(params: {
     const message = error instanceof Error ? error.message : String(error);
     const isTimeout =
       message.includes('Script execution timed out') ||
-      message.includes('timed out');
+      message.includes('timed out') ||
+      message.includes('worker terminated');
     if (isTimeout) {
       return {
         status: 'time_limit_exceeded',
@@ -366,30 +393,41 @@ function runWithVm(params: {
   }
 }
 
+async function copyVendorIntoWorkspace(
+  tempDir: string,
+  normalizedLanguage: string,
+): Promise<void> {
+  if (normalizedLanguage === 'cpp' || normalizedLanguage === 'c++') {
+    const src = join(__dirname, '../vendor/nlohmann/json.hpp');
+    await fs.copyFile(src, join(tempDir, 'json.hpp'));
+    return;
+  }
+  if (normalizedLanguage === 'java') {
+    const gson = join(__dirname, '../vendor/gson-2.10.1.jar');
+    await fs.copyFile(gson, join(tempDir, 'gson-2.10.1.jar'));
+  }
+}
+
 export async function runInDocker(params: {
   code: string;
   language: string;
   functionName: string;
-  input: unknown;
+  invocationArgs: unknown[];
   timeLimitMs: number;
   memoryLimitMb: number;
 }): Promise<RunResult> {
-  const { code, language, functionName, input, timeLimitMs, memoryLimitMb } =
+  const { code, language, functionName, invocationArgs, timeLimitMs, memoryLimitMb } =
     params;
   const normalizedLanguage = normalizeLanguage(language);
   const useDocker = await isDockerCliAvailable();
-  const vmLanguage = vmLanguageForNoDocker({
-    declared: normalizedLanguage,
-    code,
-    functionName,
-  });
+  const vmLanguage = vmLanguageForNoDocker(normalizedLanguage);
 
   if (!useDocker) {
     if (isVmRunnableLanguage(vmLanguage)) {
       return runWithVm({
         code,
         functionName,
-        input,
+        invocationArgs,
         language: vmLanguage,
         timeLimitMs,
       });
@@ -421,35 +459,53 @@ export async function runInDocker(params: {
     };
   }
 
+  const needsHarnessIdent =
+    normalizedLanguage === 'cpp' ||
+    normalizedLanguage === 'c++' ||
+    normalizedLanguage === 'java';
+  if (needsHarnessIdent && !isSafeJudgeParameterName(functionName)) {
+    return {
+      status: 'runtime_error',
+      error: `Invalid functionName for ${normalizedLanguage} harness (must be a safe ASCII identifier).`,
+      executionTime: 0,
+      memoryUsed: 0,
+      stdout: '',
+      stderr: '',
+    };
+  }
+
   const tempDir = join(judgeTempRoot(), randomUUID());
   await fs.mkdir(tempDir, { recursive: true });
-  const source = buildSourceFile(normalizedLanguage, code);
-  await fs.writeFile(join(tempDir, source.name), source.content, 'utf8');
-  await fs.writeFile(
-    join(tempDir, 'payload.json'),
-    JSON.stringify({ functionName, input }),
-    'utf8',
-  );
-
-  const runnerScript = createRunnerScript(normalizedLanguage);
-  const dockerArgs = [
-    'run',
-    '--rm',
-    '--network',
-    'none',
-    '--cpus',
-    '0.5',
-    '--memory',
-    `${memoryLimitMb}m`,
-    '-v',
-    `${tempDir}:/workspace`,
-    image,
-    'sh',
-    '-lc',
-    runnerScript,
-  ];
-
   try {
+    await copyVendorIntoWorkspace(tempDir, normalizedLanguage);
+    const sources = buildJudgeSourceFiles(normalizedLanguage, code, functionName);
+    for (const s of sources) {
+      await fs.writeFile(join(tempDir, s.name), s.content, 'utf8');
+    }
+    await fs.writeFile(
+      join(tempDir, 'payload.json'),
+      JSON.stringify({ functionName, invocationArgs }),
+      'utf8',
+    );
+
+    const runnerScript = createRunnerScript(normalizedLanguage);
+    const dockerArgs = [
+      'run',
+      '--rm',
+      '--network',
+      'none',
+      '--cpus',
+      '0.5',
+      '--memory',
+      `${memoryLimitMb}m`,
+      '-v',
+      `${tempDir}:/workspace`,
+      image,
+      'sh',
+      '-lc',
+      runnerScript,
+    ];
+
     const startedAt = Date.now();
     const result = await execCommand(
       'docker',
@@ -461,23 +517,9 @@ export async function runInDocker(params: {
 
     if (result.spawnError) {
       dockerCliAvailable = false;
-      const fallbackVmLang = vmLanguageForNoDocker({
-        declared: normalizedLanguage,
-        code,
-        functionName,
-      });
-      if (isVmRunnableLanguage(fallbackVmLang)) {
-        return runWithVm({
-          code,
-          functionName,
-          input,
-          language: fallbackVmLang,
-          timeLimitMs,
-        });
-      }
       return {
         status: 'runtime_error',
-        error: `Docker failed: ${result.spawnError}`,
+        error: `[JUDGE_DOCKER_SYSTEM_ERROR] Docker failed while spawning the judge container: ${result.spawnError}. No execution fallback is performed — repair Docker (daemon running, socket mounted) or use JS/TS-only mode with JUDGE_USE_DOCKER=false.`,
         executionTime: elapsed,
         memoryUsed,
         stdout: result.stdout,

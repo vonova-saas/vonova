@@ -18,6 +18,13 @@ type JudgeResult = {
     output?: unknown;
     error?: string;
   }>;
+  caseResults?: Array<{
+    passed: boolean;
+    output: unknown;
+    expected: unknown;
+    error: string | null;
+    input?: unknown;
+  }>;
   executionTime: number;
   memoryUsed: number;
 };

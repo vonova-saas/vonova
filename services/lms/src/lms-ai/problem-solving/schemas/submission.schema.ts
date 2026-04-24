@@ -57,6 +57,16 @@ export class Submission {
     error?: string;
   }>;
 
+  /** Per-test-case verdict (same order as `problem.testCases` in DB). */
+  @Prop({ type: [Object], default: [] })
+  caseResults?: Array<{
+    passed: boolean;
+    output: unknown;
+    expected: unknown;
+    error: string | null;
+    input?: unknown;
+  }>;
+
   @Prop({ default: 0 })
   executionTime: number;
 

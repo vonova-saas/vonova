@@ -12,11 +12,17 @@ import { Submission, SubmissionDocument } from './schemas/submission.schema';
 import { SubmissionJob, SubmissionJobDocument } from './schemas/submission-job.schema';
 import { normalizeAIResponse } from './utils/normalize-ai-response.util';
 import { compareOutputs } from './utils/output-compare.util';
+import type { JudgeCaseResult } from './utils/judge-case-result.types';
 import {
   isMissingJudgeReturnValue,
-  jsonCloneForJudge,
+  tryJsonCloneForJudge,
 } from './utils/judge-output.util';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
+import {
+  type BuildInvocationResult,
+  buildJudgeInvocationArgs,
+  isSafeJudgeParameterName,
+} from './utils/judge-invocation.util';
 import { runInDocker } from './utils/docker-judge.util';
 
 @Injectable()
@@ -63,6 +69,7 @@ export class SubmissionService {
       passed: 0,
       total: (problem.testCases ?? []).length,
       failedCases: [],
+      caseResults: [],
       executionTime: 0,
       memoryUsed: 0,
       judgeLogs: [],
@@ -102,6 +109,7 @@ export class SubmissionService {
         passed: 0,
         total: 0,
         failedCases: [],
+        caseResults: [],
         executionTime: 0,
         memoryUsed: 0,
       };
@@ -114,6 +122,7 @@ export class SubmissionService {
         passed: 0,
         total: 0,
         failedCases: [],
+        caseResults: [],
         executionTime: 0,
         memoryUsed: 0,
       };
@@ -124,6 +133,7 @@ export class SubmissionService {
       passed: result.passed,
       total: result.total,
       failedCases: result.failedCases,
+      caseResults: result.caseResults ?? [],
       executionTime: result.executionTime,
       memoryUsed: result.memoryUsed,
     };
@@ -184,6 +194,15 @@ export class SubmissionService {
         {
           status: 'runtime_error',
           failedCases: [{ input: null, expected: null, error: 'Problem not found' }],
+          caseResults: [
+            {
+              passed: false,
+              output: null,
+              expected: null,
+              error: 'Problem not found',
+              input: null,
+            },
+          ],
         },
       );
       await this.submissionJobModel.updateOne(
@@ -199,8 +218,63 @@ export class SubmissionService {
               failedCases: [
                 { input: null, expected: null, error: 'Problem not found' },
               ],
+              caseResults: [
+                {
+                  passed: false,
+                  output: null,
+                  expected: null,
+                  error: 'Problem not found',
+                  input: null,
+                },
+              ],
               executionTime: 0,
               memoryUsed: 0,
+            },
+          },
+        },
+      );
+      return;
+    }
+
+    const parameterNamesResolved = this.resolveParameterNames(
+      problem as { parameterNames?: string[] },
+    );
+    if (parameterNamesResolved === null) {
+      const msg =
+        'Problem is missing or invalid parameterNames: must be a non-empty array of parameter identifiers (required for deterministic judging).';
+      const evaluation = this.buildSchemaFailureEvaluation(
+        submissionId,
+        (problem.testCases ?? []).length,
+        msg,
+      );
+      await this.submissionModel.updateOne(
+        { _id: submissionId },
+        {
+          status: evaluation.status,
+          success: evaluation.success,
+          passed: evaluation.passed,
+          total: evaluation.total,
+          failedCases: evaluation.failedCases,
+          caseResults: evaluation.caseResults,
+          executionTime: evaluation.executionTime,
+          memoryUsed: evaluation.memoryUsed,
+          judgeLogs: evaluation.judgeLogs,
+        },
+      );
+      await this.submissionJobModel.updateOne(
+        { _id: job._id },
+        {
+          $set: {
+            status: 'done',
+            finishedAt: new Date(),
+            result: {
+              passed: evaluation.passed,
+              total: evaluation.total,
+              status: evaluation.status,
+              failedCases: evaluation.failedCases,
+              caseResults: evaluation.caseResults,
+              executionTime: evaluation.executionTime,
+              memoryUsed: evaluation.memoryUsed,
             },
           },
         },
@@ -214,6 +288,7 @@ export class SubmissionService {
         code: submission.code,
         language: submission.language,
         functionName: String((problem as { functionName?: string }).functionName ?? ''),
+        parameterNames: parameterNamesResolved,
         allowUnorderedArrayOutput: Boolean(
           (problem as { allowUnorderedArrayOutput?: boolean })
             .allowUnorderedArrayOutput,
@@ -231,6 +306,7 @@ export class SubmissionService {
           passed: evaluation.passed,
           total: evaluation.total,
           failedCases: evaluation.failedCases,
+          caseResults: evaluation.caseResults,
           executionTime: evaluation.executionTime,
           memoryUsed: evaluation.memoryUsed,
           judgeLogs: evaluation.judgeLogs,
@@ -247,6 +323,7 @@ export class SubmissionService {
               total: evaluation.total,
               status: evaluation.status,
               failedCases: evaluation.failedCases,
+              caseResults: evaluation.caseResults,
               executionTime: evaluation.executionTime,
               memoryUsed: evaluation.memoryUsed,
             },
@@ -276,6 +353,16 @@ export class SubmissionService {
                         error instanceof Error ? error.message : String(error),
                     },
                   ],
+                  caseResults: [
+                    {
+                      passed: false,
+                      output: null,
+                      expected: null,
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                      input: null,
+                    },
+                  ],
                   executionTime: 0,
                   memoryUsed: 0,
                 },
@@ -295,6 +382,15 @@ export class SubmissionService {
                 input: null,
                 expected: null,
                 error: error instanceof Error ? error.message : String(error),
+              },
+            ],
+            caseResults: [
+              {
+                passed: false,
+                output: null,
+                expected: null,
+                error: error instanceof Error ? error.message : String(error),
+                input: null,
               },
             ],
           },
@@ -329,6 +425,76 @@ export class SubmissionService {
       .lean();
   }
 
+  /**
+   * Strict: no default parameter list — problems must define `parameterNames`
+   * or judging is disabled with a schema runtime_error.
+   */
+  private resolveParameterNames(problem: {
+    parameterNames?: string[];
+  }): string[] | null {
+    const raw = problem.parameterNames;
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return null;
+    }
+    const names = raw.map((s) => String(s).trim()).filter((s) => s.length > 0);
+    if (names.length === 0) {
+      return null;
+    }
+    for (const name of names) {
+      if (!isSafeJudgeParameterName(name)) {
+        return null;
+      }
+    }
+    return names;
+  }
+
+  /** Single synthetic failure when the problem document cannot be judged. */
+  private buildSchemaFailureEvaluation(
+    submissionId: string,
+    totalTests: number,
+    message: string,
+  ): {
+    status: 'runtime_error';
+    success: false;
+    passed: number;
+    total: number;
+    executionTime: number;
+    memoryUsed: number;
+    judgeLogs: string[];
+    failedCases: Array<{
+      input: unknown;
+      expected: unknown;
+      output?: unknown;
+      error?: string;
+    }>;
+    caseResults: JudgeCaseResult[];
+  } {
+    const judgeLogs = [
+      `[submission=${submissionId}] status=runtime_error phase=problem_schema err=${message}`,
+    ];
+    const failedCases = [{ input: null, expected: null, error: message }];
+    const caseResults: JudgeCaseResult[] = [
+      {
+        passed: false,
+        output: null,
+        expected: null,
+        error: message,
+        input: null,
+      },
+    ];
+    return {
+      status: 'runtime_error',
+      success: false,
+      passed: 0,
+      total: totalTests,
+      executionTime: 0,
+      memoryUsed: 0,
+      judgeLogs,
+      failedCases,
+      caseResults,
+    };
+  }
+
   private async evaluateSubmission(params: {
     testCases: Array<{
       input: unknown;
@@ -339,6 +505,7 @@ export class SubmissionService {
     code: string;
     language: string;
     functionName: string;
+    parameterNames: string[];
     allowUnorderedArrayOutput: boolean;
     timeLimit: number;
     memoryLimit: number;
@@ -362,12 +529,14 @@ export class SubmissionService {
       output?: unknown;
       error?: string;
     }>;
+    caseResults: JudgeCaseResult[];
   }> {
     const {
       testCases,
       code,
       language,
       functionName,
+      parameterNames,
       allowUnorderedArrayOutput,
       timeLimit,
       memoryLimit,
@@ -376,6 +545,25 @@ export class SubmissionService {
     if (!functionName.trim()) {
       throw new BadRequestException(
         'Problem is missing functionName for execution',
+      );
+    }
+
+    if (!testCases.length) {
+      return this.buildSchemaFailureEvaluation(
+        submissionId,
+        0,
+        'Problem has no test cases configured.',
+      );
+    }
+
+    const normalizedParameterNames = parameterNames
+      .map((n) => String(n).trim())
+      .filter((s) => s.length > 0);
+    if (!normalizedParameterNames.length) {
+      return this.buildSchemaFailureEvaluation(
+        submissionId,
+        testCases.length,
+        'parameterNames must be a non-empty array after trimming.',
       );
     }
 
@@ -392,15 +580,62 @@ export class SubmissionService {
       output?: unknown;
       error?: string;
     }> = [];
+    const caseResults: JudgeCaseResult[] = [];
 
-    const shuffledCases = [...testCases].sort(() => Math.random() - 0.5);
-    for (const testCase of shuffledCases) {
+    for (const testCase of testCases) {
       const input = this.normalizeUnknownValue(testCase.input);
       const expected = this.normalizeUnknownValue(testCase.expected);
+      const expectedCloneResult = tryJsonCloneForJudge(expected);
+      if (expectedCloneResult.ok === false) {
+        hasRuntimeError = true;
+        failedCases.push({
+          input,
+          expected,
+          error: expectedCloneResult.error,
+        });
+        caseResults.push({
+          passed: false,
+          output: null,
+          expected: null,
+          error: expectedCloneResult.error,
+          input,
+        });
+        judgeLogs.push(
+          `[submission=${submissionId}] case=${JSON.stringify(input)} status=runtime_error phase=expected_clone err=${expectedCloneResult.error}`,
+        );
+        continue;
+      }
+      const expectedClone = expectedCloneResult.value;
+      const invocation: BuildInvocationResult = buildJudgeInvocationArgs(
+        input,
+        normalizedParameterNames,
+      );
+      if (invocation.ok === false) {
+        const normalizeError = invocation.error;
+        hasRuntimeError = true;
+        failedCases.push({
+          input,
+          expected,
+          error: normalizeError,
+        });
+        caseResults.push({
+          passed: false,
+          output: null,
+          expected: expectedClone,
+          error: normalizeError,
+          input,
+        });
+        judgeLogs.push(
+          `[submission=${submissionId}] case=${JSON.stringify(input)} status=runtime_error phase=normalize err=${normalizeError}`,
+        );
+        continue;
+      }
+
+      const invocationArgs = invocation.args;
       const run = await runInDocker({
         code,
         functionName,
-        input,
+        invocationArgs,
         language,
         timeLimitMs: timeLimit,
         memoryLimitMb: memoryLimit,
@@ -414,30 +649,70 @@ export class SubmissionService {
       if (run.status === 'accepted') {
         if (isMissingJudgeReturnValue(run.output)) {
           hasRuntimeError = true;
+          const msg =
+            'Submission produced no return value (undefined/null) after execution.';
           failedCases.push({
             input,
             expected,
             output: null,
-            error:
-              'Submission produced no return value (undefined/null) after execution.',
+            error: msg,
+          });
+          caseResults.push({
+            passed: false,
+            output: null,
+            expected: expectedClone,
+            error: msg,
+            input,
           });
           continue;
         }
-        const userOutput = jsonCloneForJudge(
+        const userOutResult = tryJsonCloneForJudge(
           this.normalizeUnknownValue(run.output),
         );
-        const isMatch = compareOutputs(expected, userOutput, {
+        if (userOutResult.ok === false) {
+          hasRuntimeError = true;
+          failedCases.push({
+            input,
+            expected,
+            output: null,
+            error: userOutResult.error,
+          });
+          caseResults.push({
+            passed: false,
+            output: null,
+            expected: expectedClone,
+            error: userOutResult.error,
+            input,
+          });
+          continue;
+        }
+        const userOutput = userOutResult.value;
+        const isMatch = compareOutputs(expectedClone, userOutput, {
           ignoreArrayOrder:
             Boolean(testCase.ignoreArrayOrder) || allowUnorderedArrayOutput,
         });
 
         if (isMatch) {
           passed += 1;
+          caseResults.push({
+            passed: true,
+            output: userOutput,
+            expected: expectedClone,
+            error: null,
+            input,
+          });
         } else {
           failedCases.push({
             input,
             expected,
             output: userOutput,
+          });
+          caseResults.push({
+            passed: false,
+            output: userOutput,
+            expected: expectedClone,
+            error: null,
+            input,
           });
         }
         continue;
@@ -448,10 +723,24 @@ export class SubmissionService {
         hasTimeLimitError || run.status === 'time_limit_exceeded';
       hasMemoryLimitError =
         hasMemoryLimitError || run.status === 'memory_limit_exceeded';
+      const errMsg =
+        run.error ??
+        (run.status === 'time_limit_exceeded'
+          ? 'Time limit exceeded'
+          : run.status === 'memory_limit_exceeded'
+            ? 'Memory limit exceeded'
+            : 'Runtime error');
       failedCases.push({
         input,
         expected,
-        error: run.error,
+        error: errMsg,
+      });
+      caseResults.push({
+        passed: false,
+        output: null,
+        expected: expectedClone,
+        error: errMsg,
+        input,
       });
     }
 
@@ -474,6 +763,7 @@ export class SubmissionService {
       memoryUsed: peakMemory,
       judgeLogs,
       failedCases,
+      caseResults,
     };
   }
 

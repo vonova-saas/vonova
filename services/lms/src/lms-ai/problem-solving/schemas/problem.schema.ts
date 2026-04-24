@@ -53,6 +53,13 @@ export class Problem {
   @Prop({ required: true, trim: true })
   functionName: string;
 
+  /**
+   * Ordered formal parameters for test `input` → positional args (language-agnostic).
+   * Required for judging; e.g. Two Sum: `['nums', 'target']`.
+   */
+  @Prop({ type: [String] })
+  parameterNames?: string[];
+
   @Prop({ default: false })
   allowUnorderedArrayOutput: boolean;
 

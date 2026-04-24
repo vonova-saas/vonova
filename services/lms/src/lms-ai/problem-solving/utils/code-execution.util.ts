@@ -1,16 +1,36 @@
-import { Script, createContext } from 'vm';
-import {
-  isMissingJudgeReturnValue,
-  jsonCloneForJudge,
-} from './judge-output.util';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { Worker } from 'worker_threads';
+import { runVmJudgePayload, type VmJudgePayload } from './judge-vm-inner.util';
 
 const DEFAULT_TIMEOUT_MS = 1500;
+/** Wall-clock slack beyond vm.Script timeout for worker teardown. */
+const WORKER_KILL_SLACK_MS = 400;
 
 export class CodeExecutionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'CodeExecutionError';
   }
+}
+
+function judgeVmWorkerScriptPath(): string {
+  return join(__dirname, 'judge-vm.worker.js');
+}
+
+/**
+ * Worker isolation is on by default when `judge-vm.worker.js` sits next to this module
+ * (Nest `dist` build). Under `ts-jest` the sibling `.js` is absent — execution falls back
+ * to in-process `vm` unless `JUDGE_VM_USE_WORKER=true` (fail loud if misconfigured).
+ */
+function vmWorkerEnabled(): boolean {
+  if (process.env.JUDGE_VM_USE_WORKER === 'false') {
+    return false;
+  }
+  if (process.env.JUDGE_VM_USE_WORKER === 'true') {
+    return true;
+  }
+  return existsSync(judgeVmWorkerScriptPath());
 }
 
 function isSupportedLanguage(language: string): boolean {
@@ -25,14 +45,120 @@ function isSupportedLanguage(language: string): boolean {
   );
 }
 
-export function executeUserFunction(params: {
+async function executeUserFunctionWorker(params: {
   code: string;
   functionName: string;
-  input: unknown;
+  invocationArgs: unknown[];
+  language: string;
+  timeoutMs: number;
+}): Promise<unknown> {
+  const workerPath = judgeVmWorkerScriptPath();
+  if (!existsSync(workerPath)) {
+    throw new CodeExecutionError(
+      `JUDGE_VM_USE_WORKER=true but judge worker script is missing at ${workerPath}`,
+    );
+  }
+  const payload: VmJudgePayload = {
+    code: params.code,
+    functionName: params.functionName,
+    invocationArgs: params.invocationArgs,
+    timeoutMs: params.timeoutMs,
+    language: params.language,
+  };
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settleReject = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+    const settleResolve = (v: unknown) => {
+      if (settled) return;
+      settled = true;
+      resolve(v);
+    };
+
+    let worker: Worker;
+    try {
+      worker = new Worker(workerPath, { workerData: payload });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      settleReject(
+        new CodeExecutionError(`Failed to start judge worker: ${msg}`),
+      );
+      return;
+    }
+
+    const killMs = params.timeoutMs + WORKER_KILL_SLACK_MS;
+    const killTimer = setTimeout(() => {
+      void worker
+        .terminate()
+        .catch(() => undefined)
+        .finally(() => {
+          settleReject(
+            new CodeExecutionError(
+              'Script execution timed out (worker terminated)',
+            ),
+          );
+        });
+    }, killMs);
+
+    const cleanup = () => {
+      clearTimeout(killTimer);
+      void worker.terminate().catch(() => undefined);
+    };
+
+    worker.on('message', (msg: ReturnType<typeof runVmJudgePayload>) => {
+      cleanup();
+      if (msg.ok) {
+        settleResolve(msg.result);
+      } else {
+        settleReject(new CodeExecutionError(msg.error));
+      }
+    });
+
+    worker.on('error', (err) => {
+      cleanup();
+      settleReject(
+        err instanceof Error ? err : new CodeExecutionError(String(err)),
+      );
+    });
+
+    worker.on('exit', (code) => {
+      if (settled) return;
+      cleanup();
+      if (code !== 0) {
+        settleReject(
+          new CodeExecutionError(
+            `Judge worker exited unexpectedly (code ${code})`,
+          ),
+        );
+      }
+    });
+  });
+}
+
+/**
+ * Run user JS/TS with **pre-built positional args** (same contract as Docker runners).
+ * Defaults to a **Worker Thread** so vm.Script CPU limits cannot freeze the LMS process.
+ * `JUDGE_VM_USE_WORKER=false` forces in-process `vm` (dev/tests). `JUDGE_VM_USE_WORKER=true`
+ * requires a compiled `judge-vm.worker.js` next to this file (fail loud if missing).
+ */
+export async function executeUserFunction(params: {
+  code: string;
+  functionName: string;
+  invocationArgs: unknown[];
   language: string;
   timeoutMs?: number;
-}): unknown {
-  const { code, functionName, input, language, timeoutMs = DEFAULT_TIMEOUT_MS } = params;
+}): Promise<unknown> {
+  const {
+    code,
+    functionName,
+    invocationArgs,
+    language,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  } = params;
 
   if (!isSupportedLanguage(language)) {
     throw new CodeExecutionError(
@@ -45,77 +171,25 @@ export function executeUserFunction(params: {
     throw new CodeExecutionError('Problem is missing functionName');
   }
 
-  const sandbox = createContext({
-    console: { log: () => undefined, error: () => undefined, warn: () => undefined },
-    module: { exports: {} as Record<string, unknown> },
-    exports: {} as Record<string, unknown>,
-    __rawInput: input,
-    __result: undefined as unknown,
+  if (vmWorkerEnabled()) {
+    return executeUserFunctionWorker({
+      code,
+      functionName: safeFunctionName,
+      invocationArgs,
+      language,
+      timeoutMs,
+    });
+  }
+
+  const r = runVmJudgePayload({
+    code,
+    functionName: safeFunctionName,
+    invocationArgs,
+    language,
+    timeoutMs,
   });
-
-  const runner = new Script(
-    `
-      "use strict";
-      function __isPlainObject(o) {
-        if (o === null || typeof o !== "object" || Array.isArray(o)) return false;
-        return Object.prototype.toString.call(o) === "[object Object]";
-      }
-      function __normalizeInvocationArgs(raw, arity) {
-        if (raw === undefined || raw === null) return [];
-        if (Array.isArray(raw)) return raw;
-        if (__isPlainObject(raw)) {
-          if (arity <= 1) return [raw];
-          var keys = Object.keys(raw).sort();
-          if (keys.length === arity) return keys.map(function (k) { return raw[k]; });
-          return [raw];
-        }
-        return [raw];
-      }
-      ${code}
-      const __fnName = ${JSON.stringify(safeFunctionName)};
-      const __fn =
-        (typeof globalThis[__fnName] === "function" && globalThis[__fnName]) ||
-        (module && module.exports && typeof module.exports[__fnName] === "function" && module.exports[__fnName]) ||
-        (typeof exports[__fnName] === "function" && exports[__fnName]);
-      if (typeof __fn !== "function") {
-        throw new Error('Function "' + __fnName + '" was not found in submission');
-      }
-      const __arity = typeof __fn.length === "number" ? __fn.length : 0;
-      const __args = __normalizeInvocationArgs(__rawInput, __arity);
-      __result = __fn.apply(null, __args);
-    `,
-  );
-
-  try {
-    runner.runInContext(sandbox, { timeout: timeoutMs });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new CodeExecutionError(message);
+  if (!r.ok) {
+    throw new CodeExecutionError(r.error);
   }
-
-  const result = (sandbox as { __result?: unknown }).__result;
-  if (result && typeof (result as { then?: unknown }).then === 'function') {
-    throw new CodeExecutionError(
-      'Async return values are not supported in this runner',
-    );
-  }
-  if (typeof result === 'function' || typeof result === 'symbol') {
-    throw new CodeExecutionError(
-      `Invalid return type from function: ${typeof result}`,
-    );
-  }
-
-  if (isMissingJudgeReturnValue(result)) {
-    throw new CodeExecutionError(
-      'Function must return a value (got undefined or null). Check all code paths return the expected answer.',
-    );
-  }
-
-  try {
-    return jsonCloneForJudge(result);
-  } catch {
-    throw new CodeExecutionError(
-      'Return value is not JSON-serializable (e.g. contains circular structure)',
-    );
-  }
+  return r.result;
 }

@@ -1,45 +1,63 @@
-import {
-  normalizeJudgeInvocationArgs,
-  normalizeJudgeInvocationArgsWithArity,
-} from './judge-invocation.util';
+import { buildJudgeInvocationArgs } from './judge-invocation.util';
 
-describe('normalizeJudgeInvocationArgs', () => {
-  it('spreads array inputs as positional args', () => {
-    expect(normalizeJudgeInvocationArgs([[2, 7, 11, 15], 9])).toEqual([
-      [2, 7, 11, 15],
-      9,
+describe('buildJudgeInvocationArgs', () => {
+  const two = ['nums', 'target'] as const;
+
+  it('rejects empty parameterNames', () => {
+    const r = buildJudgeInvocationArgs([1, 2], []);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/non-empty/);
+  });
+
+  it('rejects unsafe parameter names', () => {
+    const r = buildJudgeInvocationArgs({ nums: [1], target: 2 }, [
+      'nums',
+      '__proto__',
     ]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/Invalid parameter name/);
   });
 
-  it('maps plain object to sorted key order (Two Sum shape)', () => {
+  it('rejects dunder parameter names', () => {
+    const r = buildJudgeInvocationArgs({ a: 1 }, ['__x']);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/Invalid parameter name/);
+  });
+
+  it('maps object fields in parameter order', () => {
     expect(
-      normalizeJudgeInvocationArgs({ nums: [2, 7, 11, 15], target: 9 }),
-    ).toEqual([[2, 7, 11, 15], 9]);
-  });
-
-  it('wraps primitives as single-arg', () => {
-    expect(normalizeJudgeInvocationArgs(42)).toEqual([42]);
-  });
-
-  it('returns empty array for null/undefined', () => {
-    expect(normalizeJudgeInvocationArgs(null)).toEqual([]);
-    expect(normalizeJudgeInvocationArgs(undefined)).toEqual([]);
-  });
-});
-
-describe('normalizeJudgeInvocationArgsWithArity', () => {
-  const obj = { a: 2, b: 3 };
-
-  it('passes single object when arity is 1', () => {
-    expect(normalizeJudgeInvocationArgsWithArity(obj, 1)).toEqual([obj]);
-  });
-
-  it('spreads object when arity matches key count', () => {
-    expect(
-      normalizeJudgeInvocationArgsWithArity(
-        { nums: [3, 2, 4], target: 6 },
-        2,
+      buildJudgeInvocationArgs(
+        { nums: [2, 7, 11, 15], target: 9 },
+        [...two],
       ),
-    ).toEqual([[3, 2, 4], 6]);
+    ).toEqual({ ok: true, args: [[2, 7, 11, 15], 9] });
+    expect(
+      buildJudgeInvocationArgs({ target: 6, nums: [3, 2, 4] }, [...two]),
+    ).toEqual({ ok: true, args: [[3, 2, 4], 6] });
+  });
+
+  it('accepts array when length matches parameterNames', () => {
+    expect(buildJudgeInvocationArgs([[1, 2], 3], [...two])).toEqual({
+      ok: true,
+      args: [[1, 2], 3],
+    });
+  });
+
+  it('fails when array length mismatches', () => {
+    const r = buildJudgeInvocationArgs([[1]], [...two]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/length/);
+  });
+
+  it('fails when object misses a field', () => {
+    const r = buildJudgeInvocationArgs({ nums: [1] }, [...two]);
+    expect(r.ok).toBe(false);
+  });
+
+  it('single primitive with one parameter name', () => {
+    expect(buildJudgeInvocationArgs(42, ['n'])).toEqual({
+      ok: true,
+      args: [42],
+    });
   });
 });

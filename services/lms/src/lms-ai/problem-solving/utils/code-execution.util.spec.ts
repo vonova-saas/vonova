@@ -4,28 +4,28 @@ import {
 } from './code-execution.util';
 
 describe('executeUserFunction', () => {
-  it('executes user function with object input', () => {
-    const result = executeUserFunction({
+  it('runs with single object arg (caller-built invocation)', async () => {
+    const result = await executeUserFunction({
       code: 'function solve(input){ return input.a + input.b; }',
       functionName: 'solve',
-      input: { a: 2, b: 3 },
+      invocationArgs: [{ a: 2, b: 3 }],
       language: 'javascript',
     });
     expect(result).toBe(5);
   });
 
-  it('executes user function with array input as args', () => {
-    const result = executeUserFunction({
+  it('runs twoSum with positional invocationArgs', async () => {
+    const result = await executeUserFunction({
       code: 'function twoSum(nums, target){ return [0,1]; }',
       functionName: 'twoSum',
-      input: [[2, 7], 9],
+      invocationArgs: [[2, 7], 9],
       language: 'javascript',
     });
     expect(result).toEqual([0, 1]);
   });
 
-  it('expands object input into positional args (sorted keys)', () => {
-    const result = executeUserFunction({
+  it('runs twoSum hash map with pre-built args from object mapping', async () => {
+    const result = await executeUserFunction({
       code: `function twoSum(nums, target) {
         const m = new Map();
         for (let i = 0; i < nums.length; i++) {
@@ -36,42 +36,42 @@ describe('executeUserFunction', () => {
         return [-1,-1];
       }`,
       functionName: 'twoSum',
-      input: { nums: [2, 7, 11, 15], target: 9 },
+      invocationArgs: [[2, 7, 11, 15], 9],
       language: 'javascript',
     });
     expect(result).toEqual([0, 1]);
   });
 
-  it('throws when function returns undefined', () => {
-    expect(() =>
+  it('throws when function returns undefined', async () => {
+    await expect(
       executeUserFunction({
         code: 'function twoSum(){ }',
         functionName: 'twoSum',
-        input: [[1], 1],
+        invocationArgs: [[1], 1],
         language: 'javascript',
       }),
-    ).toThrow(/undefined or null/);
+    ).rejects.toThrow(/undefined or null/);
   });
 
-  it('throws when function does not exist', () => {
-    expect(() =>
+  it('throws CodeExecutionError when function missing', async () => {
+    await expect(
       executeUserFunction({
         code: 'const x = 1;',
         functionName: 'solve',
-        input: 1,
+        invocationArgs: [1],
         language: 'javascript',
       }),
-    ).toThrow(CodeExecutionError);
+    ).rejects.toThrow(CodeExecutionError);
   });
 
-  it('throws for unsupported language', () => {
-    expect(() =>
+  it('throws for unsupported language', async () => {
+    await expect(
       executeUserFunction({
         code: 'print(1)',
         functionName: 'solve',
-        input: 1,
+        invocationArgs: [1],
         language: 'python',
       }),
-    ).toThrow('not supported');
+    ).rejects.toThrow('not supported');
   });
 });

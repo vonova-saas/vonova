@@ -4,6 +4,7 @@ import {
   IsDefined,
   IsIn,
   IsArray,
+  ArrayMinSize,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
@@ -53,6 +54,11 @@ export class CreateProblemDto {
   @IsString()
   @IsNotEmpty()
   functionName: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  parameterNames: string[];
 
   @IsOptional()
   @IsBoolean()
