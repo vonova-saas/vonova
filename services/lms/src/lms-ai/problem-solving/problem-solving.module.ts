@@ -12,14 +12,15 @@ import {
   AIInteraction,
   AIInteractionSchema,
 } from './schemas/ai-interaction.schema';
-import { ProblemSolvingProgressSchema } from './schemas/problem-solving-progress.schema';
+import {
+  ProblemSolvingProgress,
+  ProblemSolvingProgressSchema,
+} from './schemas/problem-solving-progress.schema';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
 import {
   SubmissionJob,
   SubmissionJobSchema,
 } from './schemas/submission-job.schema';
-
-const PROGRESS_MODEL = 'ProblemSolvingProgress';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ const PROGRESS_MODEL = 'ProblemSolvingProgress';
         { name: SubmissionJob.name, schema: SubmissionJobSchema },
         { name: AIInteraction.name, schema: AIInteractionSchema },
         {
-          name: PROGRESS_MODEL,
+          name: ProblemSolvingProgress.name,
           schema: ProblemSolvingProgressSchema,
         },
       ],
