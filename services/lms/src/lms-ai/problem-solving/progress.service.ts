@@ -1,17 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  ProblemSolvingProgress,
-  ProblemSolvingProgressDocument,
-} from './schemas/problem-solving-progress.schema';
+import { ProblemSolvingProgressDocument } from './schemas/problem-solving-progress.schema';
+
+const PROGRESS_MODEL = 'ProblemSolvingProgress';
 
 @Injectable()
 export class ProgressService {
   private readonly logger = new Logger(ProgressService.name);
 
   constructor(
-    @InjectModel(ProblemSolvingProgress.name)
+    @InjectModel(PROGRESS_MODEL)
     private readonly progressModel: Model<ProblemSolvingProgressDocument>,
   ) {}
 
