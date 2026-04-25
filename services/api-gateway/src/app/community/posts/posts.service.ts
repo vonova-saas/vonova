@@ -13,7 +13,7 @@ export class PostsGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
@@ -257,6 +257,52 @@ export class PostsGatewayService {
     return this.client.send(
       { cmd: 'app.community.comments.toggleLike' },
       { commentId, userId },
+    );
+  }
+
+  // ─── Replies ───────────────────────────────────────────────────────────────
+
+  createReply(
+    commentId: string,
+    postId: string,
+    userId: string,
+    createCommentDto: CreateCommentDto,
+  ) {
+    return this.client.send(
+      { cmd: 'app.community.replies.create' },
+      { commentId, postId, userId, dto: createCommentDto },
+    );
+  }
+
+  createReplyWithFile(
+    commentId: string,
+    postId: string,
+    userId: string,
+    createCommentDto: CreateCommentDto,
+    file: UploadedFile,
+  ) {
+    // Convert file buffer to base64 for NATS serialization
+    let processedFile: UploadedFile | undefined = undefined;
+    if (file && file.buffer) {
+      processedFile = {
+        ...file,
+        buffer:
+          typeof file.buffer === 'string'
+            ? file.buffer
+            : file.buffer.toString('base64'),
+      };
+    }
+
+    return this.client.send(
+      { cmd: 'app.community.replies.createWithFile' },
+      { commentId, postId, userId, dto: createCommentDto, image: processedFile },
+    );
+  }
+
+  getReplies(commentId: string, query: { page?: number; limit?: number }) {
+    return this.client.send(
+      { cmd: 'app.community.replies.getForComment' },
+      { commentId, ...query },
     );
   }
 }

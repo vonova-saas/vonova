@@ -9,6 +9,9 @@ import type {
   PublishedStatus,
 } from "@/types/api/app/community/community.types";
 
+// Export the API instance for use in enhanced comments API
+export const communityApi = API;
+
 const ARTICLES = "/community/articles";
 const POSTS = "/community/posts";
 
@@ -94,7 +97,7 @@ function normalizePost(raw: unknown): CommunityPost {
   const shared =
     originalCandidate && typeof originalCandidate === "object"
       ? normalizePost(originalCandidate)
-        : null;
+      : null;
   const images = Array.isArray(row.images)
     ? row.images.map((value) => String(value ?? "").trim()).filter(Boolean)
     : typeof row.image === "string" && row.image.trim()
@@ -174,29 +177,29 @@ export type GenerateArticleWithAIResponse = {
   summary: string;
   body: string;
   category:
-    | "architecture"
-    | "devops"
-    | "backend"
-    | "databases"
-    | "frontend"
-    | "mobile"
-    | "ai"
-    | "security";
+  | "architecture"
+  | "devops"
+  | "backend"
+  | "databases"
+  | "frontend"
+  | "mobile"
+  | "ai"
+  | "security";
 };
 
 const ARTICLE_CATEGORY_KEYWORDS: Array<{
   category: GenerateArticleWithAIResponse["category"];
   terms: string[];
 }> = [
-  { category: "frontend", terms: ["frontend", "front-end", "css", "html", "react", "vue", "angular"] },
-  { category: "backend", terms: ["backend", "back-end", "api", "server", "node", "express"] },
-  { category: "databases", terms: ["database", "sql", "nosql", "mongodb", "postgres"] },
-  { category: "devops", terms: ["devops", "docker", "kubernetes", "ci/cd", "deployment"] },
-  { category: "mobile", terms: ["mobile", "android", "ios", "react native", "flutter"] },
-  { category: "ai", terms: ["ai", "machine learning", "llm", "neural", "artificial intelligence"] },
-  { category: "security", terms: ["security", "auth", "encryption", "vulnerability", "owasp"] },
-  { category: "architecture", terms: ["architecture", "system design", "microservices", "scalability"] },
-];
+    { category: "frontend", terms: ["frontend", "front-end", "css", "html", "react", "vue", "angular"] },
+    { category: "backend", terms: ["backend", "back-end", "api", "server", "node", "express"] },
+    { category: "databases", terms: ["database", "sql", "nosql", "mongodb", "postgres"] },
+    { category: "devops", terms: ["devops", "docker", "kubernetes", "ci/cd", "deployment"] },
+    { category: "mobile", terms: ["mobile", "android", "ios", "react native", "flutter"] },
+    { category: "ai", terms: ["ai", "machine learning", "llm", "neural", "artificial intelligence"] },
+    { category: "security", terms: ["security", "auth", "encryption", "vulnerability", "owasp"] },
+    { category: "architecture", terms: ["architecture", "system design", "microservices", "scalability"] },
+  ];
 
 function cleanGeneratedMarkdown(input: string): string {
   const trimmed = input.trim();
@@ -470,25 +473,25 @@ export async function createPost(input: string | CreatePostInput, image?: File):
   const normalized: CreatePostInput =
     typeof input === "string"
       ? {
-          content: input,
-          files: image ? [image] : undefined,
-        }
+        content: input,
+        files: image ? [image] : undefined,
+      }
       : input;
 
   const hasBinary = Boolean((normalized.files?.length ?? 0) > 0 || (normalized.videos?.length ?? 0) > 0);
   const payload = hasBinary
     ? (() => {
-        const form = new FormData();
-        form.append("content", normalized.content);
-        for (const tag of normalized.tags ?? []) form.append("tags", tag);
-        for (const file of normalized.files ?? []) form.append("files", file);
-        for (const video of normalized.videos ?? []) form.append("videos", video);
-        return form;
-      })()
+      const form = new FormData();
+      form.append("content", normalized.content);
+      for (const tag of normalized.tags ?? []) form.append("tags", tag);
+      for (const file of normalized.files ?? []) form.append("files", file);
+      for (const video of normalized.videos ?? []) form.append("videos", video);
+      return form;
+    })()
     : {
-        content: normalized.content,
-        ...(normalized.tags?.length ? { tags: normalized.tags } : {}),
-      };
+      content: normalized.content,
+      ...(normalized.tags?.length ? { tags: normalized.tags } : {}),
+    };
   const res = await API.post(POSTS, payload);
   const inner = unwrapData<{ data?: { post?: CommunityPost }; post?: CommunityPost }>(
     res.data,
@@ -509,13 +512,13 @@ export async function updatePost(
   const body =
     payload.image
       ? (() => {
-          const form = new FormData();
-          if (payload.content !== undefined) {
-            form.append("content", payload.content);
-          }
-          form.append("files", payload.image);
-          return form;
-        })()
+        const form = new FormData();
+        if (payload.content !== undefined) {
+          form.append("content", payload.content);
+        }
+        form.append("files", payload.image);
+        return form;
+      })()
       : { content: payload.content };
   const res = await API.put(`${POSTS}/${postId}`, body);
   const inner = unwrapData<{ data?: { post?: CommunityPost }; post?: CommunityPost }>(

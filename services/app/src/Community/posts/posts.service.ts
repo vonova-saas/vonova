@@ -20,7 +20,7 @@ export class PostsService {
     private readonly commentsService: CommentsService,
     private readonly s3Service: S3Service,
     private readonly communityS3Service: CommunityS3Service,
-  ) {}
+  ) { }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
         .lean();
     } catch (error: any) {
       // Handle duplicate key error
@@ -70,7 +70,9 @@ export class PostsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
+        .populate('sharedPost', 'content author image images imageKeys videos videoKeys createdAt')
+        .populate('sharedPost.author', 'name profilePictureUrl role')
         .lean(),
       this.postModel.countDocuments(),
     ]);
@@ -87,7 +89,7 @@ export class PostsService {
   async getPostById(postId: string) {
     const post = await this.postModel
       .findById(this.toObjectId(postId))
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .lean();
 
     if (!post) throw new NotFoundErr('Post not found');
@@ -105,7 +107,9 @@ export class PostsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
+        .populate('sharedPost', 'content author image images imageKeys videos videoKeys createdAt')
+        .populate('sharedPost.author', 'name profilePictureUrl role')
         .lean(),
       this.postModel.countDocuments({ author: authorId }),
     ]);
@@ -145,7 +149,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .lean();
   }
 
@@ -160,12 +164,12 @@ export class PostsService {
 
     // Delete images and videos from S3 if they exist
     const deletePromises: Promise<boolean>[] = [];
-    
+
     // Delete single image if exists
     if (post.imageKey) {
       deletePromises.push(this.communityS3Service.deleteFile(post.imageKey));
     }
-    
+
     // Delete multiple images if they exist
     if (post.imageKeys && Array.isArray(post.imageKeys)) {
       for (const imageKey of post.imageKeys) {
@@ -177,14 +181,14 @@ export class PostsService {
     if (post.videoKey) {
       deletePromises.push(this.communityS3Service.deleteFile(post.videoKey));
     }
-    
+
     // Delete multiple videos if they exist
     if (post.videoKeys && Array.isArray(post.videoKeys)) {
       for (const videoKey of post.videoKeys) {
         deletePromises.push(this.communityS3Service.deleteFile(videoKey));
       }
     }
-    
+
     // Wait for all S3 deletions to complete
     if (deletePromises.length > 0) {
       try {
@@ -206,21 +210,21 @@ export class PostsService {
   // Test method to verify comment deletion (can be removed after testing)
   async testCommentDeletion(postId: string) {
     console.log(`[POSTS BACKEND] Testing comment deletion for post: ${postId}`);
-    
+
     // Check existing comments
     const existingComments = await this.commentsService.getCommentsByPostForDeletion(postId);
     console.log(`[POSTS BACKEND] Existing comments: ${existingComments?.length || 0}`);
-    
+
     if (existingComments && existingComments.length > 0) {
       // Test deletion
       const result = await this.commentsService.deleteCommentsByPost(postId);
       console.log(`[POSTS BACKEND] Test deletion result:`, result);
-      
+
       // Verify deletion
       const remainingComments = await this.commentsService.getCommentsByPostForDeletion(postId);
       console.log(`[POSTS BACKEND] Remaining comments after deletion: ${remainingComments?.length || 0}`);
     }
-    
+
     return { testCompleted: true };
   }
 
@@ -228,21 +232,21 @@ export class PostsService {
   private async deletePostCommentsAndImages(postId: string) {
     try {
       console.log(`[POSTS BACKEND] Starting comment deletion for post: ${postId}`);
-      
+
       // First, directly query the comment model to ensure we get all comments
       const postObjectId = this.toObjectId(postId);
       const comments = await this.commentsService.getCommentsByPostForDeletion(postId);
-      
+
       // Fallback: if service method fails, try direct model access
       if (!comments) {
         console.log(`[POSTS BACKEND] Service method returned null, trying direct model access`);
         const directComments = await this.commentsService.getCommentsByPostDirect(postId);
         console.log(`[POSTS BACKEND] Direct query found ${directComments?.length || 0} comments`);
-        
+
         if (directComments && directComments.length > 0) {
           // Delete images from S3 for all comments
           const deletePromises: Promise<boolean>[] = [];
-          
+
           for (const comment of directComments) {
             // Delete comment image if exists
             if (comment.imageKey) {
@@ -250,7 +254,7 @@ export class PostsService {
               deletePromises.push(this.communityS3Service.deleteFile(comment.imageKey));
             }
           }
-          
+
           // Wait for all S3 deletions to complete
           if (deletePromises.length > 0) {
             try {
@@ -260,7 +264,7 @@ export class PostsService {
               console.error('Failed to delete some comment images from S3:', error);
             }
           }
-          
+
           // Delete all comments from database
           console.log(`[POSTS BACKEND] Deleting ${directComments.length} comments from database`);
           const deleteResult = await this.commentsService.deleteCommentsByPostDirect(postId);
@@ -268,11 +272,11 @@ export class PostsService {
         }
       } else {
         console.log(`[POSTS BACKEND] Found ${comments?.length || 0} comments for post: ${postId}`);
-        
+
         if (comments && comments.length > 0) {
           // Delete images from S3 for all comments
           const deletePromises: Promise<boolean>[] = [];
-          
+
           for (const comment of comments) {
             // Delete comment image if exists
             if (comment.imageKey) {
@@ -280,7 +284,7 @@ export class PostsService {
               deletePromises.push(this.communityS3Service.deleteFile(comment.imageKey));
             }
           }
-          
+
           // Wait for all S3 deletions to complete
           if (deletePromises.length > 0) {
             try {
@@ -290,7 +294,7 @@ export class PostsService {
               console.error('Failed to delete some comment images from S3:', error);
             }
           }
-          
+
           // Delete all comments from database
           console.log(`[POSTS BACKEND] Deleting ${comments.length} comments from database`);
           const deleteResult = await this.commentsService.deleteCommentsByPost(postId);
@@ -348,7 +352,7 @@ export class PostsService {
 
     // Create a new post as a shared post
     const sharedPostContent = shareComment || '';
-    
+
     const newSharedPost = await this.postModel.create({
       author: this.toObjectId(userId),
       content: sharedPostContent,
@@ -365,10 +369,10 @@ export class PostsService {
     // Return the newly created shared post with full population
     const result = await this.postModel
       .findById(newSharedPost._id)
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .populate('sharedPost', 'content author image images createdAt')
       .populate('sharedBy', 'name profilePicture role')
-      .populate('sharedPost.author', 'name profilePicture role')
+      .populate('sharedPost.author', 'name profilePictureUrl role')
       .lean();
 
     const frontendUrl = process.env.FRONTEND_ORIGIN;
@@ -416,7 +420,7 @@ export class PostsService {
           );
           image = uploadResult.url;
           imageKey = uploadResult.key;
-          
+
           // Update post with image info
           await this.postModel.findByIdAndUpdate(post._id, { image, imageKey });
         } catch (error) {
@@ -428,7 +432,7 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
         .lean();
     } catch (error: any) {
       // Handle duplicate key error
@@ -484,14 +488,14 @@ export class PostsService {
       }
 
       // Update post with images info
-      await this.postModel.findByIdAndUpdate(post._id, { 
-        images: uploadedImages, 
-        imageKeys: uploadedImageKeys 
+      await this.postModel.findByIdAndUpdate(post._id, {
+        images: uploadedImages,
+        imageKeys: uploadedImageKeys
       });
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
         .lean();
     } catch (error: any) {
       // Handle duplicate key error
@@ -565,8 +569,8 @@ export class PostsService {
       }
 
       // Update post with files info
-      await this.postModel.findByIdAndUpdate(post._id, { 
-        images: uploadedImages.length > 0 ? uploadedImages : null, 
+      await this.postModel.findByIdAndUpdate(post._id, {
+        images: uploadedImages.length > 0 ? uploadedImages : null,
         imageKeys: uploadedImageKeys.length > 0 ? uploadedImageKeys : null,
         videos: uploadedVideos.length > 0 ? uploadedVideos : null,
         videoKeys: uploadedVideoKeys.length > 0 ? uploadedVideoKeys : null,
@@ -574,7 +578,7 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePicture role')
+        .populate('author', 'name profilePictureUrl role')
         .lean();
     } catch (error: any) {
       // Handle duplicate key error
@@ -595,7 +599,7 @@ export class PostsService {
         console.error('Failed to cleanup uploaded image:', cleanupError);
       }
     }
-    
+
     // Clean up uploaded videos
     for (const key of videoKeys) {
       try {
@@ -604,7 +608,7 @@ export class PostsService {
         console.error('Failed to cleanup uploaded video:', cleanupError);
       }
     }
-    
+
     // Delete the post
     try {
       await this.postModel.findByIdAndDelete(postId);
@@ -668,7 +672,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .lean();
   }
 
@@ -720,7 +724,7 @@ export class PostsService {
     // Update post data
     if (dto.content !== undefined) post.content = dto.content;
     if (dto.tags !== undefined) post.tags = dto.tags || [];
-    
+
     // Replace images if new ones were uploaded
     if (uploadedImages.length > 0) {
       post.images = uploadedImages;
@@ -731,8 +735,8 @@ export class PostsService {
 
     // Delete old images from S3 if new ones were uploaded
     if (oldImageKeys.length > 0 && uploadedImageKeys.length > 0) {
-      const deletePromises = oldImageKeys.map(key => 
-        this.communityS3Service.deleteFile(key).catch(error => 
+      const deletePromises = oldImageKeys.map(key =>
+        this.communityS3Service.deleteFile(key).catch(error =>
           console.error('Failed to delete old image from S3:', error)
         )
       );
@@ -741,7 +745,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .lean();
   }
 
@@ -765,7 +769,7 @@ export class PostsService {
     let uploadedImageKeys: string[] = [];
     let uploadedVideos: string[] = [];
     let uploadedVideoKeys: string[] = [];
-    
+
     const oldImageKeys = post.imageKeys || [];
     const oldVideoKeys = post.videoKeys || [];
 
@@ -812,7 +816,7 @@ export class PostsService {
     // Update post data
     if (dto.content !== undefined) post.content = dto.content;
     if (dto.tags !== undefined) post.tags = dto.tags || [];
-    
+
     // Replace images if new ones were uploaded
     if (uploadedImages.length > 0) {
       post.images = uploadedImages;
@@ -829,8 +833,8 @@ export class PostsService {
 
     // Delete old files from S3 if new ones were uploaded
     if (oldImageKeys.length > 0 && uploadedImageKeys.length > 0) {
-      const deletePromises = oldImageKeys.map(key => 
-        this.communityS3Service.deleteFile(key).catch(error => 
+      const deletePromises = oldImageKeys.map(key =>
+        this.communityS3Service.deleteFile(key).catch(error =>
           console.error('Failed to delete old image from S3:', error)
         )
       );
@@ -838,8 +842,8 @@ export class PostsService {
     }
 
     if (oldVideoKeys.length > 0 && uploadedVideoKeys.length > 0) {
-      const deletePromises = oldVideoKeys.map(key => 
-        this.communityS3Service.deleteFile(key).catch(error => 
+      const deletePromises = oldVideoKeys.map(key =>
+        this.communityS3Service.deleteFile(key).catch(error =>
           console.error('Failed to delete old video from S3:', error)
         )
       );
@@ -848,7 +852,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePicture role')
+      .populate('author', 'name profilePictureUrl role')
       .lean();
   }
 
@@ -861,7 +865,7 @@ export class PostsService {
         console.error('Failed to cleanup uploaded image during update:', cleanupError);
       }
     }
-    
+
     // Clean up uploaded videos
     for (const key of videoKeys) {
       try {

@@ -176,6 +176,7 @@ import { postImgSrcForDisplay } from "@/lib/post-image-display-url";
 import { cn } from "@/lib/utils";
 import { ImagePreviewGallery } from "@/components/community/image-preview-gallery";
 import { ImageUploadZone } from "@/components/community/image-upload-zone";
+import { LinkedInImageGalleryWithLightbox } from "@/components/community/linkedin-image-gallery-with-lightbox";
 import { VideoPreviewGallery } from "@/components/community/video-preview-gallery";
 import { VideoUploadZone } from "@/components/community/video-upload-zone";
 
@@ -425,29 +426,72 @@ function readMinutes(article: CommunityArticle): number | null {
 
 
 
-function pickArticleCardImage(article: CommunityArticle): string | undefined {
 
-  if (article.coverImage) return article.coverImage.trim();
+function getArticleCardImages(article: CommunityArticle): string[] {
 
-  if (article.images?.[0]) return article.images[0].trim();
+  if (!article) return [];
 
-  const firstImageBlock = article.contentBlocks?.find((b) => b.type === "image" && b.url);
+  
 
-  return firstImageBlock?.url?.trim();
+  // Collect all possible images
+
+  const coverImage = article.coverImage ? [article.coverImage.trim()] : [];
+
+  const articleImages = (article.images ?? []).map(img => img.trim()).filter(Boolean);
+
+  const blockImages = (article.contentBlocks ?? [])
+
+    .filter((b) => b.type === "image" && b.url)
+
+    .map((b) => String(b.url).trim())
+
+    .filter(Boolean);
+
+  
+
+  // Combine and deduplicate
+
+  const allImages = [...coverImage, ...articleImages, ...blockImages];
+
+  return Array.from(new Set(allImages));
 
 }
 
 
 
-function ArticlePreviewImage({ src, alt }: { src?: string; alt: string }) {
+function ArticleCardImage({ images, alt }: { images: string[]; alt: string }) {
 
-  const [failed, setFailed] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
-  const safeSrc = src ? articleImgSrcForDisplay(src) : "";
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
 
 
 
-  if (!src || failed) {
+  const handleImageLoad = (index: number) => {
+
+    setLoadedImages(prev => new Set(prev).add(index));
+
+  };
+
+
+
+  const handleImageError = (index: number) => {
+
+    setFailedImages(prev => new Set(prev).add(index));
+
+  };
+
+
+
+  const displayImages = images.slice(0, 4); // Show max 4 images in card
+
+  const hasMoreImages = images.length > 4;
+
+  const extraCount = images.length - 4;
+
+
+
+  if (displayImages.length === 0) {
 
     return (
 
@@ -463,23 +507,315 @@ function ArticlePreviewImage({ src, alt }: { src?: string; alt: string }) {
 
 
 
+  // Single image - full width with proper aspect ratio
+
+  if (displayImages.length === 1) {
+
+    const safeSrc = articleImgSrcForDisplay(displayImages[0]);
+
+    const isFailed = failedImages.has(0);
+
+    
+
+    if (isFailed) {
+
+      return (
+
+        <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary/20 to-muted">
+
+          <BookOpen className="h-10 w-10 text-primary/60" />
+
+        </div>
+
+      );
+
+    }
+
+
+
+    return (
+
+      <div className="relative h-full w-full overflow-hidden">
+
+        <img
+
+          src={safeSrc}
+
+          alt={alt}
+
+          className="h-full w-full object-contain transition-transform duration-300 hover:scale-[1.02]"
+
+          loading="lazy"
+
+          referrerPolicy="no-referrer"
+
+          onLoad={() => handleImageLoad(0)}
+
+          onError={() => handleImageError(0)}
+
+        />
+
+        {!loadedImages.has(0) && (
+
+          <div className="absolute inset-0 animate-pulse bg-muted/20" />
+
+        )}
+
+      </div>
+
+    );
+
+  }
+
+
+
+  // Two images - side by side
+
+  if (displayImages.length === 2) {
+
+    return (
+
+      <div className="grid h-full w-full grid-cols-2 gap-1">
+
+        {displayImages.map((image, index) => {
+
+          const safeSrc = articleImgSrcForDisplay(image);
+
+          const isFailed = failedImages.has(index);
+
+          
+
+          if (isFailed) return null;
+
+
+
+          return (
+
+            <div key={index} className="relative overflow-hidden">
+
+              <img
+
+                src={safeSrc}
+
+                alt={`${alt} ${index + 1}`}
+
+                className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+
+                loading="lazy"
+
+                referrerPolicy="no-referrer"
+
+                onLoad={() => handleImageLoad(index)}
+
+                onError={() => handleImageError(index)}
+
+              />
+
+              {!loadedImages.has(index) && (
+
+                <div className="absolute inset-0 animate-pulse bg-muted/20" />
+
+              )}
+
+            </div>
+
+          );
+
+        })}
+
+      </div>
+
+    );
+
+  }
+
+
+
+  // Three images - one large, two small
+
+  if (displayImages.length === 3) {
+
+    return (
+
+      <div className="grid h-full w-full grid-cols-2 gap-1">
+
+        <div className="col-span-1 relative overflow-hidden">
+
+          {(() => {
+
+            const safeSrc = articleImgSrcForDisplay(displayImages[0]);
+
+            const isFailed = failedImages.has(0);
+
+            
+
+            if (isFailed) return null;
+
+
+
+            return (
+
+              <img
+
+                src={safeSrc}
+
+                alt={`${alt} 1`}
+
+                className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+
+                loading="lazy"
+
+                referrerPolicy="no-referrer"
+
+                onLoad={() => handleImageLoad(0)}
+
+                onError={() => handleImageError(0)}
+
+              />
+
+            );
+
+          })()}
+
+          {!loadedImages.has(0) && (
+
+            <div className="absolute inset-0 animate-pulse bg-muted/20" />
+
+          )}
+
+        </div>
+
+        <div className="col-span-1 grid grid-rows-2 gap-1">
+
+          {displayImages.slice(1).map((image, index) => {
+
+            const actualIndex = index + 1;
+
+            const safeSrc = articleImgSrcForDisplay(image);
+
+            const isFailed = failedImages.has(actualIndex);
+
+            
+
+            if (isFailed) return null;
+
+
+
+            return (
+
+              <div key={actualIndex} className="relative overflow-hidden">
+
+                <img
+
+                  src={safeSrc}
+
+                  alt={`${alt} ${actualIndex + 1}`}
+
+                  className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+
+                  loading="lazy"
+
+                  referrerPolicy="no-referrer"
+
+                  onLoad={() => handleImageLoad(actualIndex)}
+
+                  onError={() => handleImageError(actualIndex)}
+
+                />
+
+                {!loadedImages.has(actualIndex) && (
+
+                  <div className="absolute inset-0 animate-pulse bg-muted/20" />
+
+                )}
+
+              </div>
+
+            );
+
+          })}
+
+        </div>
+
+      </div>
+
+    );
+
+  }
+
+
+
+  // Four images - 2x2 grid
+
   return (
 
-    <img
+    <div className="grid h-full w-full grid-cols-2 gap-1">
 
-      src={safeSrc}
+      {displayImages.map((image, index) => {
 
-      alt={alt}
+        const safeSrc = articleImgSrcForDisplay(image);
 
-      className="h-full w-full scale-[1.08] object-cover object-top"
+        const isFailed = failedImages.has(index);
 
-      loading="lazy"
+        
 
-      referrerPolicy="no-referrer"
+        if (isFailed) return null;
 
-      onError={() => setFailed(true)}
 
-    />
+
+        return (
+
+          <div key={index} className="relative overflow-hidden">
+
+            <img
+
+              src={safeSrc}
+
+              alt={`${alt} ${index + 1}`}
+
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+
+              loading="lazy"
+
+              referrerPolicy="no-referrer"
+
+              onLoad={() => handleImageLoad(index)}
+
+              onError={() => handleImageError(index)}
+
+            />
+
+            {!loadedImages.has(index) && (
+
+              <div className="absolute inset-0 animate-pulse bg-muted/20" />
+
+            )}
+
+            {/* Overlay for extra images indicator */}
+
+            {hasMoreImages && index === 3 && (
+
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+
+                <div className="text-center">
+
+                  <div className="text-2xl font-bold text-white">+{extraCount}</div>
+
+                  <div className="text-xs text-white/80">more</div>
+
+                </div>
+
+              </div>
+
+            )}
+
+          </div>
+
+        );
+
+      })}
+
+    </div>
 
   );
 
@@ -523,66 +859,25 @@ function PostMediaGallery({ images, videos }: { images: string[]; videos: string
 
     <div className="space-y-3">
 
-      {images.length > 0 ? (
+      {/* LinkedIn-style Image Gallery */}
+      {images.length > 0 && (
+        <LinkedInImageGalleryWithLightbox images={images} />
+      )}
 
-        <div className={cn("grid gap-3", images.length > 1 ? "sm:grid-cols-2" : "grid-cols-1")}>
-
-          {images.map((image, index) => (
-
-            <img
-
-              key={`${image}-${index}`}
-
-              src={postImgSrcForDisplay(image)}
-
-              alt={`Post media ${index + 1}`}
-
-              className="max-h-96 w-full object-contain"
-
-              loading="lazy"
-
-              referrerPolicy="no-referrer"
-
-              onError={(e) => {
-
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-
-              }}
-
-            />
-
-          ))}
-
-        </div>
-
-      ) : null}
-
-      {videos.length > 0 ? (
-
+      {/* Videos */}
+      {videos.length > 0 && (
         <div className="space-y-3">
-
           {videos.map((video, index) => (
-
             <video
-
               key={`${video}-${index}`}
-
               src={video}
-
               controls
-
               preload="metadata"
-
               className="max-h-[28rem] w-full rounded-xl border bg-black"
-
             />
-
           ))}
-
         </div>
-
-      ) : null}
-
+      )}
     </div>
 
   );
@@ -1349,19 +1644,81 @@ export default function CommunityPageClient({
   );
 
   const handlePostPhotoSelection = useCallback(
-    (files: File[]) => {
-      if (!validatePostMediaSelection(files, postVideos)) return;
-      setPostFiles(files);
+    (newFiles: File[]) => {
+      if (!validatePostMediaSelection(newFiles, postVideos)) return;
+      
+      setPostFiles(prevFiles => {
+        // Create a map to track existing files by name and size for duplicate detection
+        const existingFilesMap = new Map(
+          prevFiles.map(file => [`${file.name}-${file.size}`, file])
+        );
+        
+        // Filter out duplicates and add new files
+        const uniqueNewFiles = newFiles.filter(file => {
+          const key = `${file.name}-${file.size}`;
+          if (existingFilesMap.has(key)) {
+            return false; // Skip duplicate
+          }
+          existingFilesMap.set(key, file);
+          return true;
+        });
+        
+        // Combine existing files with new unique files
+        const combinedFiles = [...prevFiles, ...uniqueNewFiles];
+        
+        // Enforce maximum limit (10 images)
+        if (combinedFiles.length > 10) {
+          toast({
+            title: "Too many images",
+            description: "Maximum 10 images allowed per post. Some images were not added.",
+            variant: "destructive",
+          });
+          return combinedFiles.slice(0, 10);
+        }
+        
+        return combinedFiles;
+      });
     },
-    [postVideos, validatePostMediaSelection],
+    [postVideos, validatePostMediaSelection, toast],
   );
 
   const handlePostVideoSelection = useCallback(
-    (videos: File[]) => {
-      if (!validatePostMediaSelection(postFiles, videos)) return;
-      setPostVideos(videos);
+    (newVideos: File[]) => {
+      if (!validatePostMediaSelection(postFiles, newVideos)) return;
+      
+      setPostVideos(prevVideos => {
+        // Create a map to track existing videos by name and size for duplicate detection
+        const existingVideosMap = new Map(
+          prevVideos.map(video => [`${video.name}-${video.size}`, video])
+        );
+        
+        // Filter out duplicates and add new videos
+        const uniqueNewVideos = newVideos.filter(video => {
+          const key = `${video.name}-${video.size}`;
+          if (existingVideosMap.has(key)) {
+            return false; // Skip duplicate
+          }
+          existingVideosMap.set(key, video);
+          return true;
+        });
+        
+        // Combine existing videos with new unique videos
+        const combinedVideos = [...prevVideos, ...uniqueNewVideos];
+        
+        // Enforce maximum limit (5 videos)
+        if (combinedVideos.length > 5) {
+          toast({
+            title: "Too many videos",
+            description: "Maximum 5 videos allowed per post. Some videos were not added.",
+            variant: "destructive",
+          });
+          return combinedVideos.slice(0, 5);
+        }
+        
+        return combinedVideos;
+      });
     },
-    [postFiles, validatePostMediaSelection],
+    [postFiles, validatePostMediaSelection, toast],
   );
 
   const handleCreatePost = () => {
@@ -2002,7 +2359,7 @@ export default function CommunityPageClient({
 
                   const mins = readMinutes(article);
 
-                  const cardImage = pickArticleCardImage(article);
+                  const cardImages = getArticleCardImages(article);
 
                   const articleAuthorId =
 
@@ -2042,7 +2399,7 @@ export default function CommunityPageClient({
 
                         <div className="relative aspect-16/10 w-full bg-muted">
 
-                          <ArticlePreviewImage src={cardImage} alt={article.title} />
+                          <ArticleCardImage images={cardImages} alt={article.title} />
 
                           <div className="absolute left-3 top-3 flex flex-wrap gap-1">
 
@@ -2433,43 +2790,33 @@ export default function CommunityPageClient({
                   </div>
 
                   <input
-
                     ref={postPhotoInputRef}
-
                     type="file"
-
                     accept="image/*"
-
-                    className="hidden"
-
                     multiple
-
-                    aria-label="Select post photo"
-
-                    title="Select post photo"
-
-                    onChange={(e) => handlePostPhotoSelection(Array.from(e.target.files ?? []))}
-
+                    className="hidden"
+                    aria-label="Select post photos"
+                    title="Select post photos"
+                    onChange={(e) => {
+                      handlePostPhotoSelection(Array.from(e.target.files ?? []));
+                      // Reset input value to allow selecting the same files again
+                      e.target.value = '';
+                    }}
                   />
 
                   <input
-
                     ref={postVideoInputRef}
-
                     type="file"
-
                     accept="video/*"
-
-                    className="hidden"
-
                     multiple
-
+                    className="hidden"
                     aria-label="Select post videos"
-
                     title="Select post videos"
-
-                    onChange={(e) => handlePostVideoSelection(Array.from(e.target.files ?? []))}
-
+                    onChange={(e) => {
+                      handlePostVideoSelection(Array.from(e.target.files ?? []));
+                      // Reset input value to allow selecting the same files again
+                      e.target.value = '';
+                    }}
                   />
 
                 </CardContent>
