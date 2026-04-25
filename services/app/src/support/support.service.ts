@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateSupportDto } from './dto/create-support.dto';
 import { UpdateSupportDto } from './dto/update-support.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,6 +9,7 @@ import { EmailSenderService } from '../notification/email-sender.service';
 
 @Injectable()
 export class SupportService {
+  private readonly logger = new Logger(SupportService.name);
   constructor(
     @InjectModel(Support.name)
     private readonly supportModel: Model<Support>,
@@ -96,7 +97,9 @@ export class SupportService {
         replyTo: support.email,
       });
     } catch {
-      // Email failures should not block ticket creation.
+      this.logger.warn(
+        `Support notification email failed for ticket ${String(support._id)}`,
+      );
     }
     return {
       message: 'Support created successfully',

@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -42,6 +43,7 @@ const MARK_RESOLVED_REPLY = 'Marked as resolved by admin.';
 
 @Injectable()
 export class AdminSupportService {
+  private readonly logger = new Logger(AdminSupportService.name);
   constructor(
     @InjectModel(AdminSupportTicket.name)
     private readonly ticketModel: Model<AdminSupportTicketDocument>,
@@ -126,7 +128,9 @@ export class AdminSupportService {
           await this.emailSender.sendEmail({ to, subject, html });
         }
       } catch {
-        // Do not block the reply flow if email fails.
+        this.logger.warn(
+          `Support reply email failed for ticket ${String(supportUpdated._id)}`,
+        );
       }
       return supportUpdated;
     }
@@ -147,6 +151,30 @@ export class AdminSupportService {
     }
 
     return ticket;
+  }
+
+  async updateStatus(
+    adminUserId: string,
+    ticketId: string,
+    status: 'open' | 'in-progress' | 'resolved' | 'closed',
+  ) {
+    const adminAccount = await this.adminModel.findById(adminUserId).select('_id').lean();
+    if (!adminAccount) {
+      throw new ForbiddenException('Admin access required');
+    }
+
+    const mappedStatus = status === 'in-progress' ? 'pending' : status;
+    const supportUpdated = await this.supportModel.findByIdAndUpdate(
+      ticketId,
+      { $set: { status: mappedStatus, updatedAt: new Date() } },
+      { new: true },
+    );
+
+    if (supportUpdated) {
+      return supportUpdated;
+    }
+
+    throw new NotFoundException('Support ticket not found');
   }
 
   async list(params: {

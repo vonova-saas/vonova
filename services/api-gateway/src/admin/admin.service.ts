@@ -79,6 +79,14 @@ export class AdminGatewayService {
     return this.client.send({ cmd: 'admin.support.reply' }, body);
   }
 
+  updateDashboardSupportStatus(body: {
+    adminUserId: string;
+    ticketId: string;
+    status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  }) {
+    return this.client.send({ cmd: 'admin.support.status.update' }, body);
+  }
+
   getAdminNotifications(query: { page?: number; limit?: number }) {
     return this.client.send({ cmd: 'admin.notifications.list' }, query ?? {});
   }

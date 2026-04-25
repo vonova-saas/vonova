@@ -146,6 +146,27 @@ export class AdminDashboardController {
     };
   }
 
+  @MessagePattern({ cmd: 'admin.support.status.update' })
+  async handleSupportStatusUpdate(
+    @Payload()
+    data: {
+      adminUserId: string;
+      ticketId: string;
+      status: 'open' | 'in-progress' | 'resolved' | 'closed';
+    },
+  ) {
+    const ticket = await this.adminSupportService.updateStatus(
+      data.adminUserId,
+      data.ticketId,
+      data.status,
+    );
+    return {
+      success: true,
+      data: ticket,
+      message: 'Support status updated',
+    };
+  }
+
   @MessagePattern({ cmd: 'admin.support.list' })
   async handleSupportList(
     @Payload()

@@ -12,7 +12,11 @@ import { SupportAnalytics } from './analytics/support-analytics';
 import { TicketDetails } from './tickets/ticket-details';
 import { SupportTicket } from './types';
 import { BarChart2, Download, Plus, RefreshCw, Search, Ticket } from 'lucide-react';
-import { getSupportTicketsQueryFn, replySupportTicketMutationFn } from '@/services/admin/admin.api';
+import {
+  getSupportTicketsQueryFn,
+  replySupportTicketMutationFn,
+  updateSupportTicketStatusMutationFn,
+} from '@/services/admin/admin.api';
 
 export default function SupportManagement() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -47,12 +51,18 @@ export default function SupportManagement() {
       queryClient.invalidateQueries({ queryKey: ['support-stats'] });
     },
   });
+  const statusMutation = useMutation({
+    mutationFn: updateSupportTicketStatusMutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['support-stats'] });
+    },
+  });
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
-    if (status !== 'resolved') return false;
-    await replyMutation.mutateAsync({
+    await statusMutation.mutateAsync({
       ticketId,
-      adminReply: 'Marked as resolved by admin.',
+      status: status as SupportTicket['status'],
     });
     return true;
   };

@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGatewayService } from './admin.service';
 import { UpdateAdminUserStatusDto } from './dto/update-user-status.dto';
 import { ReplyAdminSupportDto } from './dto/reply-admin-support.dto';
+import { UpdateAdminSupportStatusDto } from './dto/update-admin-support-status.dto';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -242,6 +243,36 @@ export class AdminGatewayController {
         adminUserId: req.user._id,
         ticketId: id,
         adminReply: dto.adminReply,
+      }),
+    );
+  }
+
+  @Patch('support/:id/status')
+  @ApiOperation({
+    summary: 'Update support ticket status',
+    description:
+      'Updates support ticket status (`open`, `in-progress`, `resolved`, `closed`) and attributes the action to the current admin user.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Support ticket MongoDB ObjectId',
+    example: '507f1f77bcf86cd799439012',
+  })
+  @ApiBody({ type: UpdateAdminSupportStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Ticket status updated',
+  })
+  updateSupportStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateAdminSupportStatusDto,
+    @Req() req: { user: { _id: string } },
+  ) {
+    return firstValueFrom(
+      this.adminService.updateDashboardSupportStatus({
+        adminUserId: req.user._id,
+        ticketId: id,
+        status: dto.status,
       }),
     );
   }
