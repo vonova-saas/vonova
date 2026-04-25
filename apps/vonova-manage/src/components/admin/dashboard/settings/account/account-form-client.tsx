@@ -23,6 +23,10 @@ import {
   updateAccountMutationFn,
 } from "@/services/app/account.api"
 import { useAuthContext } from "@/context/auth/auth-context"
+import {
+  avatarImgSrcForDisplay,
+  isDisplayableImageSrc,
+} from "@/lib/avatar-display-url"
 
 interface AccountFormClientProps {
   defaultValues: Partial<{
@@ -48,40 +52,6 @@ function formatDateInputValue(value: Date | null): string {
   const m = String(value.getMonth() + 1).padStart(2, "0")
   const d = String(value.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
-}
-
-/** Only pass URLs the browser can load; invalid strings avoid a broken <img> request. */
-function isDisplayableImageSrc(src: string): boolean {
-  const s = src.trim()
-  if (!s) return false
-  return (
-    s.startsWith("https://") ||
-    s.startsWith("http://") ||
-    s.startsWith("blob:") ||
-    s.startsWith("data:image/")
-  )
-}
-
-/**
- * S3 objects often block hotlinked browser requests (Referer / ACL). Load via same-origin proxy.
- * Blob/data URLs and non-S3 https stay as-is.
- */
-function avatarImgSrcForDisplay(url: string): string {
-  const s = url.trim()
-  if (!s || s.startsWith("blob:") || s.startsWith("data:")) return s
-  try {
-    const u = new URL(s)
-    if (
-      u.protocol === "https:" &&
-      u.hostname.toLowerCase().endsWith(".amazonaws.com") &&
-      u.hostname.toLowerCase().includes(".s3.")
-    ) {
-      return `/api/avatar?url=${encodeURIComponent(s)}`
-    }
-  } catch {
-    return s
-  }
-  return s
 }
 
 export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
@@ -226,6 +196,7 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
           ? new Date(res.data.dateOfBirth)
           : null,
       })
+      const avatarForAuth = nextUrl || normalizeAvatar(res.data.avatarUrl)
       queryClient.setQueryData(["authUser"], (prev: unknown) => {
         const p = prev as { user?: Record<string, unknown> } | undefined
         const prevUser = p?.user ?? {}
@@ -236,14 +207,24 @@ export function AccountFormClient({ defaultValues }: AccountFormClientProps) {
             name: res.data.name ?? prevUser.name,
             email: res.data.email ?? prevUser.email,
             profilePicture:
-              nextUrl ||
-              res.data.avatarUrl ||
-              prevUser.profilePicture,
+              avatarForAuth || (prevUser.profilePicture as string) || "",
           },
         }
       })
       await queryClient.invalidateQueries({ queryKey: ["authUser"] })
       await queryClient.refetchQueries({ queryKey: ["authUser"] })
+      // Refetch can replace cache with a payload that omits profilePicture (older API);
+      // re-apply avatar from this successful PATCH so the sidebar updates immediately.
+      if (avatarForAuth) {
+        queryClient.setQueryData(["authUser"], (prev: unknown) => {
+          const p = prev as { user?: Record<string, unknown> } | undefined
+          if (!p?.user) return p
+          return {
+            ...p,
+            user: { ...p.user, profilePicture: avatarForAuth },
+          }
+        })
+      }
       await queryClient.invalidateQueries({ queryKey: ["account", userId] })
       await queryClient.refetchQueries({ queryKey: ["account", userId] })
       if (typeof window !== "undefined") {

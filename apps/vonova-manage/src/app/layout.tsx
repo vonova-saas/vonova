@@ -18,9 +18,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={cn(
-          "overflow-x-hidden antialiased",
-        )}
+        className={cn("overflow-x-hidden antialiased")}
+        suppressHydrationWarning
       >
         <Providers>
           <NextTopLoader showSpinner={false} color="black" />

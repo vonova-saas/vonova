@@ -26,10 +26,14 @@ import {
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAdminId from "@/hooks/admin/use-admin-id";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { adminLogoutMutationFn, adminCurrentUserQueryFn } from "@/services";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  avatarImgSrcForDisplay,
+  isDisplayableImageSrc,
+} from "@/lib/avatar-display-url";
 
 export function NavAdmin({
   admin,
@@ -50,7 +54,26 @@ export function NavAdmin({
   // Prefer live user data; fall back to provided props
   const userName = me?.user?.name || admin.name;
   const userEmail = me?.user?.email || admin.email;
-  const userAvatar = admin.avatar;
+  const rawAvatar = useMemo(() => {
+    const fromMe = me?.user?.profilePicture?.trim() ?? "";
+    if (fromMe) return fromMe;
+    return admin.avatar?.trim() ?? "";
+  }, [me?.user?.profilePicture, admin.avatar]);
+
+  const proxiedAvatar = useMemo(
+    () =>
+      rawAvatar && isDisplayableImageSrc(rawAvatar)
+        ? avatarImgSrcForDisplay(rawAvatar)
+        : "",
+    [rawAvatar],
+  );
+
+  const [avatarSrc, setAvatarSrc] = useState(proxiedAvatar);
+  useEffect(() => {
+    setAvatarSrc(proxiedAvatar);
+  }, [proxiedAvatar]);
+
+  const userAvatar = avatarSrc;
   const initials = userName
     ? userName
       .split(" ")
@@ -94,11 +117,18 @@ export function NavAdmin({
               <Avatar className="h-8 w-8 rounded-lg">
                 {userAvatar ? (
                   <AvatarImage
+                    key={userAvatar}
                     src={userAvatar}
                     alt={userName}
-                    onError={(e) => {
-                      // Hide broken image so fallback initials are visible
-                      e.currentTarget.style.display = 'none';
+                    referrerPolicy="no-referrer"
+                    onError={() => {
+                      if (
+                        rawAvatar &&
+                        isDisplayableImageSrc(rawAvatar) &&
+                        userAvatar.startsWith("/api/avatar")
+                      ) {
+                        setAvatarSrc(rawAvatar);
+                      }
                     }}
                   />
                 ) : null}
@@ -120,12 +150,30 @@ export function NavAdmin({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={admin.avatar} alt={admin.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  {userAvatar ? (
+                    <AvatarImage
+                      key={`${userAvatar}-menu`}
+                      src={userAvatar}
+                      alt={userName}
+                      referrerPolicy="no-referrer"
+                      onError={() => {
+                        if (
+                          rawAvatar &&
+                          isDisplayableImageSrc(rawAvatar) &&
+                          userAvatar.startsWith("/api/avatar")
+                        ) {
+                          setAvatarSrc(rawAvatar);
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <AvatarFallback className="rounded-lg">
+                    {initials || "??"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{admin.name}</span>
-                  <span className="truncate text-xs">{admin.email}</span>
+                  <span className="truncate font-medium">{userName}</span>
+                  <span className="truncate text-xs">{userEmail}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

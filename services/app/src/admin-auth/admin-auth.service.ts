@@ -342,7 +342,16 @@ export class AdminAuthService {
 
   async getCurrentUser(
     accessToken: string,
-  ): Promise<{ message: string; user: { _id: string; name: string; email: string; role: string } }> {
+  ): Promise<{
+    message: string;
+    user: {
+      _id: string;
+      name: string;
+      email: string;
+      role: string;
+      profilePicture: string | null;
+    };
+  }> {
     try {
       const payload = this.jwtService.verify<{ sub: string; role: string }>(
         accessToken,
@@ -363,6 +372,7 @@ export class AdminAuthService {
           name: admin.name,
           email: admin.email,
           role: admin.role,
+          profilePicture: admin.profilePictureUrl || null,
         },
       };
     } catch {

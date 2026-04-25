@@ -28,6 +28,7 @@ const useAuth = () => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 min - avoid refetch on every navigation
+    refetchOnWindowFocus: true, // pick up profilePicture / name changes after deploy or other tabs
     retry: 2,
   });
 };
