@@ -24,7 +24,7 @@ export class AdminDashboardController {
     private readonly performanceService: AdminPerformanceService,
     private readonly userManagementService: AdminUserManagementService,
     private readonly securityLogsService: AdminSecurityLogsService,
-  ) {}
+  ) { }
 
   @MessagePattern({ cmd: 'admin.health.check' })
   handleHealthCheck() {
@@ -109,6 +109,28 @@ export class AdminDashboardController {
       success: true,
       data: doc,
       message: 'Event recorded',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.performance.log' })
+  async handlePerformanceLog(
+    @Payload()
+    data: {
+      userId: string;
+      action: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    // Always log performance data regardless of admin log settings
+    const doc = await this.userEventService.log(
+      data.userId,
+      data.action,
+      data.metadata,
+    );
+    return {
+      success: true,
+      data: doc,
+      message: 'Performance event recorded',
     };
   }
 

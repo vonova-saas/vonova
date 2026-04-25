@@ -32,7 +32,7 @@ export class LoggingInterceptor implements NestInterceptor {
   constructor(
     private readonly logger: LoggerService,
     @Inject('NATS_SERVICE') private readonly natsClient: ClientProxy,
-  ) {}
+  ) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -92,12 +92,13 @@ export class LoggingInterceptor implements NestInterceptor {
         ? request.user._id
         : '000000000000000000000000';
 
+    // Always send performance data for metrics, even if admin logs are disabled
     this.natsClient
       .send(
-        { cmd: 'admin.event.log' },
+        { cmd: 'admin.performance.log' },
         {
           userId,
-          action: message,
+          action: 'HTTP Request',
           metadata: {
             source,
             level,
@@ -118,6 +119,36 @@ export class LoggingInterceptor implements NestInterceptor {
         catchError(() => EMPTY),
       )
       .subscribe();
+
+    // Only send admin event logs if not disabled
+    if (process.env.HIDE_ADMIN_LOGS !== 'true') {
+      this.natsClient
+        .send(
+          { cmd: 'admin.event.log' },
+          {
+            userId,
+            action: message,
+            metadata: {
+              source,
+              level,
+              message,
+              method: request.method,
+              path: request.path,
+              url: request.originalUrl || request.url,
+              statusCode,
+              responseTimeMs,
+              ip: request.ip,
+              stackTrace,
+              error: errorMessage,
+            },
+          },
+        )
+        .pipe(
+          take(1),
+          catchError(() => EMPTY),
+        )
+        .subscribe();
+    }
   }
 
   private detectSource(request: any): 'api-gateway' | 'app' | 'lms' {

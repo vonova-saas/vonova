@@ -13,7 +13,7 @@ import { catchError, take, tap } from 'rxjs/operators';
 export class MonitoringLogInterceptor implements NestInterceptor {
   constructor(
     @Inject('NATS_OUTBOUND') private readonly natsClient: ClientProxy,
-  ) {}
+  ) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const start = Date.now();
@@ -60,6 +60,11 @@ export class MonitoringLogInterceptor implements NestInterceptor {
     errorMessage?: string;
     stackTrace?: string;
   }) {
+    // Check if admin logs are disabled
+    if (process.env.HIDE_ADMIN_LOGS === 'true') {
+      return;
+    }
+
     const userId = this.extractUserId(params.payload);
     const message = `NATS ${params.pattern} ${params.statusCode}`;
 

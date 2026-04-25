@@ -60,7 +60,7 @@ const ADMIN_ACCOUNT_AVATAR_MAX_BYTES = 8 * 1024 * 1024;
   },
 })
 export class AdminGatewayController {
-  constructor(private readonly adminService: AdminGatewayService) {}
+  constructor(private readonly adminService: AdminGatewayService) { }
 
   @Get('users')
   @ApiOperation({
@@ -432,10 +432,43 @@ export class AdminGatewayController {
     @Query('sources') sources?: string,
     @Query('limit') limit?: string,
   ): Observable<unknown> {
+    // Check if admin logs are disabled
+    if (process.env.HIDE_ADMIN_LOGS === 'true') {
+      return new Observable((subscriber) => {
+        subscriber.next({
+          success: true,
+          message: 'Admin logs are disabled',
+          data: {
+            summary: {
+              totalLogs: 0,
+              errors: 0,
+              avgResponseMs: null,
+              activeUsers: 0,
+            },
+            logs: [],
+            sources: [],
+            metrics: {
+              responseTime: [],
+              errorRate: [],
+              requestVolume: [],
+              requestDistribution: [
+                { id: '2xx', label: '2xx', value: 0 },
+                { id: '3xx', label: '3xx', value: 0 },
+                { id: '4xx', label: '4xx', value: 0 },
+                { id: '5xx', label: '5xx', value: 0 },
+              ],
+            },
+            alerts: [],
+          },
+        });
+        subscriber.complete();
+      });
+    }
+
     const parsedLevels = levels
       ? (levels.split(',').filter(Boolean) as Array<
-          'error' | 'warning' | 'info' | 'debug' | 'trace'
-        >)
+        'error' | 'warning' | 'info' | 'debug' | 'trace'
+      >)
       : undefined;
     const parsedSources = sources
       ? sources.split(',').filter(Boolean)

@@ -9,6 +9,9 @@ import {
   User,
 } from "lucide-react";
 
+// Check if admin logs are disabled (client-side check)
+const isAdminLogsDisabled = process.env.NEXT_PUBLIC_HIDE_ADMIN_LOGS === 'true';
+
 export const sidebarNavData = {
   adminData: {
     name: "Admin",
@@ -25,11 +28,13 @@ export const sidebarNavData = {
       icon: MonitorCog,
       isActive: true,
     },
-    {
-      title: "Logging & Monitoring",
-      url: "/admin/:adminId/logging-monitoring",
-      icon: Combine
-    },
+    ...(isAdminLogsDisabled ? [] : [
+      {
+        title: "Logging & Monitoring",
+        url: "/admin/:adminId/logging-monitoring",
+        icon: Combine
+      }
+    ]),
     {
       title: "Security Logs",
       url: "/admin/:adminId/security-logs",

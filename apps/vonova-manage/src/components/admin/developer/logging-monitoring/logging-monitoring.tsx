@@ -62,6 +62,28 @@ export function LoggingMonitoring() {
   const sources: LogSource[] =
     monitoring?.sources.map((s) => ({ ...s, lastUpdated: new Date(s.lastUpdated) })) ?? [];
 
+  // Check if admin logs are disabled
+  if (monitoring?.message === 'Admin logs are disabled') {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold tracking-tight">Logging & Monitoring</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Admin logs have been disabled by the system administrator.</p>
+        </div>
+        
+        <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg">
+          <div className="text-center space-y-2">
+            <BellOff className="h-12 w-12 mx-auto text-muted-foreground" />
+            <h3 className="text-lg font-medium">Logging Disabled</h3>
+            <p className="text-sm text-muted-foreground">Admin logs are currently disabled for privacy or performance reasons.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleFilterChange = (filters: { level?: LogEntry['level'][]; source?: string[] }) => {
     if (filters.level !== undefined) setLogLevels(filters.level);
     if (filters.source !== undefined) setSelectedSources(filters.source);
