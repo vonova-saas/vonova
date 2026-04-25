@@ -44,6 +44,45 @@ function normalizeComment(raw: unknown): CommunityComment {
   };
 }
 
+function normalizeArticle(raw: unknown): CommunityArticle {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const rawImages =
+    Array.isArray(row.images)
+      ? row.images
+      : Array.isArray(row.imageUrls)
+        ? row.imageUrls
+        : Array.isArray(row.files)
+          ? row.files
+          : [];
+  const images = rawImages
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+  const coverImage =
+    typeof row.coverImage === "string"
+      ? row.coverImage.trim()
+      : typeof row.cover_image === "string"
+        ? row.cover_image.trim()
+        : typeof row.imageUrl === "string"
+          ? row.imageUrl.trim()
+          : typeof row.thumbnail === "string"
+            ? row.thumbnail.trim()
+            : typeof row.thumbnailUrl === "string"
+              ? row.thumbnailUrl.trim()
+              : images[0];
+
+  return {
+    ...(row as CommunityArticle),
+    coverImage: coverImage || undefined,
+    images,
+    publishedStatus:
+      (typeof row.publishedStatus === "string"
+        ? row.publishedStatus
+        : typeof row.status === "string"
+          ? row.status
+          : "draft") as PublishedStatus,
+  };
+}
+
 function normalizePost(raw: unknown): CommunityPost {
   const row = (raw ?? {}) as Record<string, unknown>;
   const originalCandidate =
@@ -56,12 +95,26 @@ function normalizePost(raw: unknown): CommunityPost {
     originalCandidate && typeof originalCandidate === "object"
       ? normalizePost(originalCandidate)
         : null;
+  const images = Array.isArray(row.images)
+    ? row.images.map((value) => String(value ?? "").trim()).filter(Boolean)
+    : typeof row.image === "string" && row.image.trim()
+      ? [row.image.trim()]
+      : [];
+  const videos = Array.isArray(row.videos)
+    ? row.videos.map((value) => String(value ?? "").trim()).filter(Boolean)
+    : typeof row.video === "string" && row.video.trim()
+      ? [row.video.trim()]
+      : [];
   return {
     ...(row as CommunityPost),
     originalPost: shared,
     sharedPost: shared,
     type: shared ? "repost" : "post",
     content: String(row.content ?? row.shareComment ?? ""),
+    image: images[0] ?? null,
+    images,
+    video: videos[0] ?? null,
+    videos,
   };
 }
 
@@ -82,7 +135,7 @@ export async function fetchArticles(
   const res = await API.get(ARTICLES, { params });
   const body = res.data as ArticlesListResponse & { message?: string };
   return {
-    data: body.data ?? [],
+    data: (body.data ?? []).map(normalizeArticle),
     pagination: body.pagination ?? emptyPagination(),
   };
 }
@@ -91,18 +144,18 @@ export async function fetchArticleById(id: string): Promise<CommunityArticle> {
   const res = await API.get(`${ARTICLES}/${id}`);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-    return inner.data;
+    return normalizeArticle(inner.data);
   }
-  return inner as CommunityArticle;
+  return normalizeArticle(inner);
 }
 
 export async function fetchArticleBySlug(slug: string): Promise<CommunityArticle> {
   const res = await API.get(`${ARTICLES}/slug/${encodeURIComponent(slug)}`);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-    return inner.data;
+    return normalizeArticle(inner.data);
   }
-  return inner as CommunityArticle;
+  return normalizeArticle(inner);
 }
 
 export type CreateArticleInput = {
@@ -290,9 +343,9 @@ export async function createArticle(input: CreateArticleInput): Promise<Communit
   const res = await API.post(ARTICLES, form);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-    return inner.data;
+    return normalizeArticle(inner.data);
   }
-  return inner as CommunityArticle;
+  return normalizeArticle(inner);
 }
 
 export type UpdateArticleInput = Partial<CreateArticleInput> & { id: string };
@@ -319,9 +372,9 @@ export async function updateArticle(input: UpdateArticleInput): Promise<Communit
   const res = await API.put(`${ARTICLES}/${id}`, form);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-    return inner.data;
+    return normalizeArticle(inner.data);
   }
-  return inner as CommunityArticle;
+  return normalizeArticle(inner);
 }
 
 /** PUT /api/v1/community/articles/{id} */
@@ -340,9 +393,9 @@ export async function approveArticle(id: string): Promise<CommunityArticle> {
   const res = await API.put(`${ARTICLES}/${id}/approve`);
   const inner = unwrapData<{ data?: CommunityArticle } | CommunityArticle>(res.data);
   if (inner && typeof inner === "object" && "data" in inner && inner.data) {
-    return inner.data;
+    return normalizeArticle(inner.data);
   }
-  return inner as CommunityArticle;
+  return normalizeArticle(inner);
 }
 
 /** PUT /api/v1/community/articles/{id}/approve */
