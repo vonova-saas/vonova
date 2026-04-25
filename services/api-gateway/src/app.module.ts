@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './common/config/configuration';
@@ -41,6 +42,7 @@ import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module'
 import { AdminGatewayModule } from './admin/admin.module';
 import { AdminAuthGatewayModule } from './admin-auth/admin-auth.module';
 import { CommunityGatewayModule } from './app/community/community.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 @Module({
   imports: [
@@ -90,7 +92,14 @@ import { CommunityGatewayModule } from './app/community/community.module';
     //* Generative AI Services
   ],
   controllers: [AppController, FaviconController, RootRedirectController],
-  providers: [SwaggerService, LoggerService],
+  providers: [
+    SwaggerService,
+    LoggerService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

@@ -80,10 +80,10 @@ export function SupportList() {
       const who = fromSupport ? (last.senderName?.trim() || "Support") : "You";
       const prefix = `${who}: `;
       const text = `${prefix}${last.message}`;
-      return text.trim().slice(0, 140) + (text.length > 140 ? "…" : "");
+      return text.trim();
     }
     const text = it.message || "";
-    return text.trim().slice(0, 140) + (text && text.length > 140 ? "…" : "");
+    return text.trim();
   }
 
   function getRecentThread(it: SupportItem): SupportThreadItem[] {
@@ -141,7 +141,7 @@ export function SupportList() {
                   }`}>{it.status}</span>
                 </div>
                 <div className="text-sm">{it.subject}</div>
-                <div className="text-base text-muted-foreground flex items-start gap-2 min-w-0">
+                <div className="text-base text-muted-foreground flex items-start gap-2">
                   {(() => {
                     const thread = it.messages ?? [];
                     const last = thread.length > 0 ? thread[thread.length - 1] : null;
@@ -154,7 +154,11 @@ export function SupportList() {
                       ? last?.senderName?.trim() || "Support"
                       : "You";
                     if (!fromSupport || !src) {
-                      return <span className="min-w-0">{getPreview(it)}</span>;
+                      return (
+                        <span className="whitespace-pre-wrap wrap-break-word">
+                          {getPreview(it)}
+                        </span>
+                      );
                     }
                     return (
                       <>
@@ -162,7 +166,9 @@ export function SupportList() {
                           <AvatarImage src={src} alt="" referrerPolicy="no-referrer" />
                           <AvatarFallback className="text-xs">{getAvatarFallbackText(label)}</AvatarFallback>
                         </Avatar>
-                        <span className="min-w-0">{getPreview(it)}</span>
+                        <span className="whitespace-pre-wrap wrap-break-word">
+                          {getPreview(it)}
+                        </span>
                       </>
                     );
                   })()}
