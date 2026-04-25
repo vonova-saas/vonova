@@ -18,7 +18,7 @@ export class PostsController {
     private readonly commentsService: CommentsService,
     private readonly s3Service: S3Service,
     private readonly communityS3Service: CommunityS3Service,
-  ) {}
+  ) { }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
@@ -37,8 +37,8 @@ export class PostsController {
       imageType: typeof image,
       imageKeys: image ? Object.keys(image) : null,
       bufferType: image?.buffer ? typeof image.buffer : 'no buffer',
-      bufferSize: image?.buffer ? 
-          Buffer.byteLength(image.buffer) : 'no buffer'
+      bufferSize: image?.buffer ?
+        Buffer.byteLength(image.buffer) : 'no buffer'
     });
 
     // Handle files based on what's provided
@@ -53,7 +53,7 @@ export class PostsController {
       // Handle single image or no files
       post = await this.postsService.createPostWithFile(userId, dto, image);
     }
-      
+
     return { message: 'Post created successfully', data: { post } };
   }
 
@@ -99,7 +99,7 @@ export class PostsController {
       // Handle single image or no files
       post = await this.postsService.updatePostWithFile(postId, userId, role, dto, image);
     }
-      
+
     return { message: 'Post updated successfully', data: { post } };
   }
 
@@ -175,5 +175,34 @@ export class PostsController {
 
     const result = await this.commentsService.toggleCommentLike(commentId, userId);
     return { message: result.liked ? 'Comment liked' : 'Comment unliked', data: result };
+  }
+
+  // ─── Replies ───────────────────────────────────────────────────────────────
+
+  @MessagePattern({ cmd: 'app.community.replies.create' })
+  async createReply(@Payload() data: { commentId: string; postId: string; userId: string; dto: CreateCommentDto }) {
+    const { commentId, postId, userId, dto } = data;
+    if (!commentId || !postId || !userId || !dto) throw new Error('commentId, postId, userId and dto are required');
+
+    const result = await this.commentsService.createReply(commentId, postId, userId, dto);
+    return { message: 'Reply created successfully', data: result };
+  }
+
+  @MessagePattern({ cmd: 'app.community.replies.createWithFile' })
+  async createReplyWithFile(@Payload() data: { commentId: string; postId: string; userId: string; dto: CreateCommentDto; image?: Express.Multer.File }) {
+    const { commentId, postId, userId, dto, image } = data;
+    if (!commentId || !postId || !userId || !dto) throw new Error('commentId, postId, userId and dto are required');
+
+    const result = await this.commentsService.createReplyWithFile(commentId, postId, userId, dto, image);
+    return { message: 'Reply created successfully', data: result };
+  }
+
+  @MessagePattern({ cmd: 'app.community.replies.getForComment' })
+  async getReplies(@Payload() data: { commentId: string; page?: number; limit?: number }) {
+    const { commentId, page = 1, limit = 5 } = data;
+    if (!commentId) throw new Error('commentId is required');
+
+    const result = await this.commentsService.getRepliesByComment(commentId, page, limit);
+    return { data: result };
   }
 }

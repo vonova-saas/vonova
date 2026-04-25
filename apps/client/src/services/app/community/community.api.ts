@@ -719,3 +719,62 @@ export async function toggleCommentLike(
   const d = body.data ?? { liked: body.liked, likesCount: body.likesCount };
   return { liked: Boolean(d?.liked), likesCount: d?.likesCount };
 }
+
+// Reply to a comment
+export async function createReply(
+  postId: string,
+  parentCommentId: string,
+  text: string,
+  image?: File,
+): Promise<CommunityComment> {
+  const endpoint = `${POSTS}/${postId}/comments/${parentCommentId}/reply`;
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error("Reply text is required");
+  }
+
+  const parse = (raw: unknown): CommunityComment => {
+    const inner = unwrapData<{ data?: CommunityComment } | CommunityComment>(raw as never);
+    if (inner && typeof inner === "object" && "data" in inner && inner.data) {
+      return normalizeComment(inner.data);
+    }
+    return normalizeComment(inner);
+  };
+
+  // Send both `text` and `content` in one request for gateway compatibility.
+  const form = new FormData();
+  form.append("text", trimmed);
+  form.append("content", trimmed);
+  if (image) {
+    // Community comment endpoint uses FileInterceptor("file").
+    form.append("file", image);
+  }
+  const res = await API.post(endpoint, form);
+  return parse(res.data);
+}
+
+// Get replies for a comment
+export async function getReplies(
+  commentId: string,
+  page = 1,
+  limit = 5,
+): Promise<{ replies: CommunityComment[]; total?: number; totalPages?: number }> {
+  const res = await API.get(`${POSTS}/comments/${commentId}/replies`, { params: { page, limit } });
+  const inner = unwrapData<
+    | { replies?: CommunityComment[]; data?: { replies?: CommunityComment[] } }
+    | { data?: CommunityComment[] }
+  >(res.data);
+  if (inner && typeof inner === "object" && "replies" in inner && inner.replies) {
+    return { replies: inner.replies.map(normalizeComment) };
+  }
+  if (inner && typeof inner === "object" && "data" in inner) {
+    const d = inner.data as { replies?: CommunityComment[] } | CommunityComment[];
+    if (Array.isArray(d)) {
+      return { replies: d.map(normalizeComment) };
+    }
+    if (d && typeof d === "object" && "replies" in d && Array.isArray(d.replies)) {
+      return { replies: d.replies.map(normalizeComment) };
+    }
+  }
+  return { replies: [] };
+}
