@@ -13,6 +13,18 @@ import { Observable, throwError } from 'rxjs';
 export class AllExceptionsFilter implements RpcExceptionFilter<any> {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  /** Gateway RpcExceptionFilter expects `message` to be a string. */
+  private normalizeOutgoingMessage(message: unknown): string {
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+    if (Array.isArray(message) && message.length > 0) {
+      const first = message[0];
+      return typeof first === 'string' ? first : JSON.stringify(message);
+    }
+    return 'Internal server error';
+  }
+
   catch(exception: any, host: ArgumentsHost): Observable<any> {
     const error = exception?.response || exception?.message || exception;
 
@@ -26,13 +38,14 @@ export class AllExceptionsFilter implements RpcExceptionFilter<any> {
       errorName: exception?.name || 'Error',
     });
 
+    const message = this.normalizeOutgoingMessage(
+      typeof error === 'string' ? error : error?.message,
+    );
+
     // Throw the actual error structure that the gateway expects
     return throwError(() => ({
       statusCode: exception?.status || 500,
-      message:
-        typeof error === 'string'
-          ? error
-          : error?.message || 'Internal server error',
+      message,
       error: exception?.name || 'Error',
     }));
   }
