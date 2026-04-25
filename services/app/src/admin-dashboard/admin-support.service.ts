@@ -7,7 +7,7 @@ import {
   AdminSupportType,
 } from './schemas/admin-support-ticket.schema';
 import { User, UserDocument } from '../auth/schema/user.schema';
-import { Role } from '../auth/enums/role.enum';
+import { Admin, AdminDocument } from '../admin-auth/schemas/admin.schema';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { Support, SupportDocument } from '../support/schema/support.schema';
 
@@ -38,6 +38,8 @@ export class AdminSupportService {
     private readonly supportModel: Model<SupportDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Admin.name, 'adminConnection')
+    private readonly adminModel: Model<AdminDocument>,
     private readonly notificationsService: AdminNotificationsService,
   ) {}
 
@@ -60,8 +62,9 @@ export class AdminSupportService {
   }
 
   async reply(adminUserId: string, ticketId: string, adminReply: string) {
-    const admin = await this.userModel.findById(adminUserId);
-    if (!admin || admin.role !== Role.ADMIN) {
+    // Gateway sends the platform **Admin** document id (admin DB JWT `sub`), not `User._id`.
+    const adminAccount = await this.adminModel.findById(adminUserId).select('_id').lean();
+    if (!adminAccount) {
       throw new ForbiddenException('Admin access required');
     }
 
