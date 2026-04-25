@@ -84,7 +84,7 @@ export default function PDFSummaryCard({
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20">
+    <Card className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border-2 hover:border-primary/20">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -92,7 +92,7 @@ export default function PDFSummaryCard({
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap max-w-full">
-              <CardTitle className="text-base font-semibold line-clamp-1 truncate block">
+              <CardTitle className="text-base font-semibold line-clamp-2 break-all">
                 {pdf.name}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">

@@ -1,6 +1,7 @@
 "use client";
 import { toast } from "sonner";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useUserId } from "@/hooks";
 import { useDropzone } from "react-dropzone";
 import {
@@ -61,9 +62,10 @@ import { PDFFile, PDFMessage, UploadProgress } from "./types";
 import { mockPDFFiles, mockMessages } from "./fake-data";
 import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
-import { uploadPDFMutationFn, chatWithPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { uploadPDFMutationFn, chatWithPDFMutationFn, getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
 import DailyUsageBadge from "@/components/student/ai-lms/usage/daily-usage-badge";
+import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
 
 interface PDFSummaryChatProps {
   initialPDF?: PDFFile | null;
@@ -91,8 +93,7 @@ const fakeResponses = [
 const MAX_PDF_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PDF_UPLOAD_SIZE_LABEL = "10MB";
  
-
-export default function PDFSummaryChat({
+function PDFSummaryChat({
   initialPDF,
   initialMessages = [],
   isIndividualChat = false,
@@ -114,6 +115,70 @@ export default function PDFSummaryChat({
   const [isTyping, setIsTyping] = useState(false);
   const [currentBranch, setCurrentBranch] = useState(0);
   const [pdfs, setPdfs] = useState<PDFFile[]>(mockPDFFiles);
+  const [localSessions, setLocalSessions] = useState<any[]>([]);
+
+  // Fetch sessions with localStorage fallback
+  const { data: sessionsData, isLoading } = useQuery<GetSessionsResponse>({
+    queryKey: ["pdf-sessions"],
+    queryFn: getSessionsQueryFn,
+    enabled: !!studentId,
+  });
+
+  // Read localStorage only on the client after mount to avoid SSR/CSR hydration mismatches.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = JSON.parse(localStorage.getItem("pdf_sessions") || "[]");
+      setLocalSessions(stored);
+    } catch (err) {
+      console.error("Failed to read localStorage sessions:", err);
+      setLocalSessions([]);
+    }
+  }, []);
+
+  // Convert sessions to PDFFile format with localStorage fallback
+  const syncedPdfs = useMemo(() => {
+    // Get sessions from API or localStorage fallback (loaded on client after mount)
+    let sessions: any[] = [];
+    const apiSessions = Array.isArray((sessionsData as any)?.data)
+      ? (sessionsData as any).data
+      : Array.isArray(sessionsData)
+        ? (sessionsData as any)
+        : [];
+
+    if (apiSessions.length > 0) {
+      sessions = apiSessions;
+    } else if (localSessions.length > 0) {
+      sessions = localSessions.map((session: any) => ({
+        session_id: session.session_id,
+        file_name: session.file_name || session.filename,
+        file_size: session.file_size ?? session.fileSize ?? session.size ?? 0,
+        page_count: session.page_count ?? session.pages ?? session.pageCount ?? 0,
+        created_at: session.created_at,
+        status: session.status || "ready",
+      }));
+    }
+
+    // Convert sessions to PDFFile format
+    return sessions.map((session: any) => ({
+      id: session.session_id,
+      name: session.file_name || session.filename || "PDF Document",
+      size: Number(session.file_size ?? session.fileSize ?? session.size ?? 0) || 0,
+      uploadedAt: new Date(session.created_at),
+      status: session.status || "ready",
+      pages: Number(session.pages ?? session.page_count ?? session.pageCount ?? 0) || 0,
+      topics: [], // Not available in session data
+      lastAccessed: new Date(session.created_at),
+    }));
+  }, [sessionsData, localSessions]);
+
+  // Update pdfs state with synced data
+  useEffect(() => {
+    if (syncedPdfs.length > 0) {
+      setPdfs(syncedPdfs);
+    }
+  }, [syncedPdfs]);
+
   const [currentPDF, setCurrentPDF] = useState<PDFFile | null>(initialPDF || null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
@@ -576,8 +641,18 @@ export default function PDFSummaryChat({
       setShowUploadModal(false);
       setUploadProgress([]);
       
-      // Force state refresh to show new file in View All/Recent Chats
-      window.location.href = `/student/${currentStudentId}/pdf-summary`;
+      // Update the PDFs list to show new file
+      const newPDF: PDFFile = {
+        id: response.session_id,
+        name: file.name,
+        size: file.size,
+        uploadedAt: new Date(),
+        status: "ready",
+        pages: 0,
+        topics: [],
+        lastAccessed: new Date(),
+      };
+      setPdfs(prev => [newPDF, ...prev.slice(0, 9)]); // Keep top 10
         
         // Store session in localStorage
         const existingSessions = JSON.parse(
@@ -592,10 +667,6 @@ export default function PDFSummaryChat({
           "pdf_sessions", 
           JSON.stringify(existingSessions.slice(0, 10))
         );
-        
-        if (currentStudentId && response?.session_id) {
-          window.location.href = `/student/${currentStudentId}/pdf-summary/${response.session_id}?fresh=1`;
-        }
 
     } catch (err) {
       console.error("Upload failed:", (err as any)?.response?.data || (err as any)?.message || err);
@@ -670,11 +741,12 @@ export default function PDFSummaryChat({
               <div className="flex flex-col">
                 <span className="font-semibold text-foreground">{currentPDF.name}</span>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="text-xs">
+                  {/* Temporarily commented out as requested */}
+                  {/* <Badge variant="outline" className="text-xs">
                     {currentPDF.pages} pages
                   </Badge>
                   <span>•</span>
-                  <span>{formatFileSize(currentPDF.size)}</span>
+                  <span>{formatFileSize(currentPDF.size)}</span> */}
                   <span>•</span>
                   <span>{formatDate(currentPDF.uploadedAt)}</span>
                 </div>
@@ -689,7 +761,7 @@ export default function PDFSummaryChat({
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="z-100">
                 <DropdownMenuItem onClick={() => handleDownload(currentPDF.id)}>
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
@@ -821,130 +893,103 @@ export default function PDFSummaryChat({
         </div>
 
         {/* Chat Input */}
-        <div className="sticky bottom-2 left-0 right-0 z-100 mx-4 flex flex-col-reverse items-stretch gap-0 border-t bg-background p-3 shadow-lg">
-          <AIInput onSubmit={handleSubmit} className="border shadow-sm w-full">
-            {(isRecording || pendingVoiceUrl) ? (
-              <div className="min-h-[60px] w-full flex items-center px-4 py-3">
-                {isRecording ? (
-                  <div className="flex-1 flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-muted-foreground">Recording… {recordingSeconds}s</span>
+        <div className="sticky bottom-0 z-50 mx-auto mb-4 flex w-[90%] items-center gap-2 border rounded-xl bg-background p-2 shadow-lg">
+          <AIInput onSubmit={handleSubmit} className="border shadow-sm flex-1">
+            <div className="flex items-center gap-2 w-full">
+              {(isRecording || pendingVoiceUrl) ? (
+                <div className="min-h-[60px] w-full flex items-center px-4 py-3">
+                  {isRecording ? (
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-muted-foreground">Recording… {recordingSeconds}s</span>
+                      </div>
+                      {/* Waveform Animation */}
+                      <div className="flex-1 h-8 flex items-center justify-center gap-1">
+                        {Array.from({ length: 20 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-1 rounded-full bg-primary animate-pulse ${waveformHeights[i % waveformHeights.length]} delay-150`}
+                          ></div>
+                        ))}
+                      </div>
                     </div>
-                    {/* Waveform Animation */}
-                    <div className="flex-1 h-8 flex items-center justify-center gap-1">
-                      {Array.from({ length: 20 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-1 rounded-full bg-primary animate-pulse ${waveformHeights[i % waveformHeights.length]} delay-150`}
-                        ></div>
-                      ))}
+                  ) : (
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="text-sm text-muted-foreground">
+                        Voice note ready to send
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center gap-3">
-                    <div className="text-sm text-muted-foreground">
-                      Voice note ready to send
-                    </div>
-                    {/* Hide transcript during review state */}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <AIInputTextarea
-                onChange={(e) => setText(e.target.value)}
-                value={text}
-                placeholder={`Ask about ${currentPDF.name}...`}
-                disabled={isTyping}
-                className="min-h-[60px] max-h-[120px] resize-none w-full overflow-y-auto"
-                ref={textareaRef}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    const form = e.currentTarget.form;
-                    if (form) form.requestSubmit();
-                  }
-                }}
-              />
-            )}
-            <AIInputToolbar>
-              {(isRecording || pendingVoiceUrl) && (
-                <>
-                  {isRecording && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={isTyping}
-                      onClick={stopRecording}
-                      className="mr-1"
-                    >
-                      <Square size={16} />
-                    </Button>
                   )}
-                  {pendingVoiceUrl && !isRecording && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={isTyping}
-                      onClick={() => {
-                        if (audioRef.current) {
-                          if (isPlayingVoice) {
-                            audioRef.current.pause();
-                            setIsPlayingVoice(false);
-                          } else {
-                            audioRef.current.play();
-                            setIsPlayingVoice(true);
-                          }
-                        }
-                      }}
-                      className="mr-1"
-                    >
-                      {isPlayingVoice ? <Pause size={16} /> : <Play size={16} />}
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={isTyping}
-                    onClick={discardCurrentVoice}
-                    className="mr-2"
-                  >
-                    <TrashIcon size={16} />
-                  </Button>
-                </>
+                </div>
+              ) : (
+                <AIInputTextarea
+                  placeholder={`Ask about ${currentPDF.name}...`}
+                  disabled={isTyping}
+                  className="min-h-[60px] max-h-[120px] resize-none flex-1 overflow-y-auto"
+                  ref={textareaRef}
+                />
               )}
-              <AIInputSubmit
-                disabled={isTyping}
-                status={status}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground mr-1"
-                onClick={(e) => {
-                  if (isRecording) {
-                    e.preventDefault();
-                    sendVoiceAfterStopRef.current = true;
-                    stopRecording();
-                    return;
-                  }
-                  if (pendingVoiceUrl) {
-                    e.preventDefault();
-                    void sendRecordedVoice();
-                    return;
-                  }
-                  if (!text.trim()) {
-                    e.preventDefault();
-                    startRecording();
-                  }
-                }}
-              >
-                {text.trim() || isRecording || pendingVoiceUrl ? (
-                  <SendIcon size={16} />
-                ) : (
-                  <Mic size={16} />
-                )}
-              </AIInputSubmit>
-            </AIInputToolbar>
+              <AIInputToolbar className="shrink-0">
+                <div className="flex items-center gap-2">
+                  {(isRecording || pendingVoiceUrl) && (
+                    <>
+                      {isRecording && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={isTyping}
+                          onClick={stopRecording}
+                          className="mr-1"
+                        >
+                          <Square size={16} />
+                        </Button>
+                      )}
+                      {pendingVoiceUrl && !isRecording && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={isTyping}
+                          onClick={() => {
+                            if (audioRef.current) {
+                              if (isPlayingVoice) {
+                                audioRef.current.pause();
+                                setIsPlayingVoice(false);
+                              } else {
+                                audioRef.current.play();
+                                setIsPlayingVoice(true);
+                              }
+                            }
+                          }}
+                          className="mr-2"
+                        >
+                          {isPlayingVoice ? <Pause size={16} /> : <Play size={16} />}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={isTyping}
+                        onClick={discardCurrentVoice}
+                        className="mr-2"
+                      >
+                        <TrashIcon size={16} />
+                      </Button>
+                    </>
+                  )}
+                  <AIInputSubmit>
+                    {text.trim() || isRecording || pendingVoiceUrl ? (
+                      <SendIcon size={16} />
+                    ) : (
+                      <Mic size={16} />
+                    )}
+                  </AIInputSubmit>
+                </div>
+              </AIInputToolbar>
+            </div>
           </AIInput>
         </div>
 
@@ -994,9 +1039,9 @@ export default function PDFSummaryChat({
                 </div>
               </div>
               <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-                <div className="text-2xl font-semibold tabular-nums md:text-3xl">PDF</div>
+                <div className="text-2xl font-semibold tabular-nums md:text-3xl">{pdfs.length}</div>
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                  Upload
+                  PDF Uploads
                 </div>
               </div>
               <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
@@ -1157,3 +1202,5 @@ export default function PDFSummaryChat({
     </>
   );
 };
+
+export default PDFSummaryChat;
