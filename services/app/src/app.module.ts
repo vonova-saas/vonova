@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './common/config/configuration';
@@ -18,6 +19,8 @@ import { WaitlistModule } from './waitlist/waitlist.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { PostsModule } from './Community/posts/posts.module';
 import { ArticlesModule } from './Community/articles/articles.module';
+import { OutboundNatsModule } from './common/nats/outbound-nats.module';
+import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.interceptor';
 // import { ChatbotModule } from './chatbot/chatbot.module';
 
 @Module({
@@ -46,9 +49,15 @@ import { ArticlesModule } from './Community/articles/articles.module';
     AdminDashboardModule,
     PostsModule,
     ArticlesModule,
+    OutboundNatsModule,
     // ChatbotModule,
   ],
   controllers: [AppController],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MonitoringLogInterceptor,
+    },
+  ],
 })
 export class AppModule {}

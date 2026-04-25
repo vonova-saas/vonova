@@ -27,6 +27,7 @@ import {
 } from './schemas/admin-notification.schema';
 import { Support, SupportSchema } from '../support/schema/support.schema';
 import { Admin, AdminSchema } from '../admin-auth/schemas/admin.schema';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { Admin, AdminSchema } from '../admin-auth/schemas/admin.schema';
       { name: Support.name, schema: SupportSchema },
     ]),
     MongooseModule.forFeature([{ name: Admin.name, schema: AdminSchema }], 'adminConnection'),
+    NotificationModule,
   ],
   controllers: [AdminDashboardController],
   providers: [

@@ -6,6 +6,7 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }
 
 @Injectable()
@@ -27,17 +28,17 @@ export class EmailSenderService {
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {
-    const { to, subject, html } = options;
+    const { to, subject, html, replyTo } = options;
 
     const result = await this.resend.emails.send({
       from: this.fromAddress,
       to,
       subject,
       html,
+      ...(replyTo ? { replyTo } : {}),
     });
     if (result.error) {
-      const message =
-        result.error.message || `Resend rejected email to ${to}`;
+      const message = result.error.message || `Resend rejected email to ${to}`;
       this.logger.error(`Email send failed: ${message}`);
       throw new Error(message);
     }

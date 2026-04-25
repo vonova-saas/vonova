@@ -152,6 +152,16 @@ export const replySupportTicketMutationFn = async (params: {
   return response.data;
 };
 
+export const updateSupportTicketStatusMutationFn = async (params: {
+  ticketId: string;
+  status: 'open' | 'resolved';
+}) => {
+  const response = await API.patch(`/admin/support/${params.ticketId}/status`, {
+    status: params.status,
+  });
+  return response.data;
+};
+
 export const getSecurityLogsQueryFn = async (params: {
   range: '24h' | '7d' | '30d' | 'custom';
   customDate?: string;

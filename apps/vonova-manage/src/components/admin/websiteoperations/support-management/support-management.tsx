@@ -12,7 +12,12 @@ import { SupportAnalytics } from './analytics/support-analytics';
 import { TicketDetails } from './tickets/ticket-details';
 import { SupportTicket } from './types';
 import { BarChart2, Download, Plus, RefreshCw, Search, Ticket } from 'lucide-react';
-import { getSupportTicketsQueryFn, replySupportTicketMutationFn } from '@/services/admin/admin.api';
+import { toast } from 'sonner';
+import {
+  getSupportTicketsQueryFn,
+  replySupportTicketMutationFn,
+  updateSupportTicketStatusMutationFn,
+} from '@/services/admin/admin.api';
 
 export default function SupportManagement() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -47,14 +52,33 @@ export default function SupportManagement() {
       queryClient.invalidateQueries({ queryKey: ['support-stats'] });
     },
   });
+  const statusMutation = useMutation({
+    mutationFn: updateSupportTicketStatusMutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['support-stats'] });
+    },
+  });
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
-    if (status !== 'resolved') return false;
-    await replyMutation.mutateAsync({
-      ticketId,
-      adminReply: 'Marked as resolved by admin.',
-    });
-    return true;
+    if (status !== 'open' && status !== 'resolved') {
+      toast.error('Only Open and Resolved are available.');
+      return false;
+    }
+    try {
+      await statusMutation.mutateAsync({
+        ticketId,
+        status,
+      });
+      toast.success(`Ticket marked as ${status}`);
+      return true;
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Failed to update ticket status';
+      toast.error(message);
+      return false;
+    }
   };
 
   const handleSendResponse = async (ticketId: string, message: string) => {
@@ -164,9 +188,7 @@ export default function SupportManagement() {
               >
                 <option value="">All Status</option>
                 <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
                 <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
               </select>
             </div>
           )}

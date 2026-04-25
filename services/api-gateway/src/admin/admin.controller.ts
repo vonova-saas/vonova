@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGatewayService } from './admin.service';
 import { UpdateAdminUserStatusDto } from './dto/update-user-status.dto';
 import { ReplyAdminSupportDto } from './dto/reply-admin-support.dto';
+import { UpdateAdminSupportStatusDto } from './dto/update-admin-support-status.dto';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -59,7 +60,7 @@ const ADMIN_ACCOUNT_AVATAR_MAX_BYTES = 8 * 1024 * 1024;
   },
 })
 export class AdminGatewayController {
-  constructor(private readonly adminService: AdminGatewayService) {}
+  constructor(private readonly adminService: AdminGatewayService) { }
 
   @Get('users')
   @ApiOperation({
@@ -246,6 +247,36 @@ export class AdminGatewayController {
     );
   }
 
+  @Patch('support/:id/status')
+  @ApiOperation({
+    summary: 'Update support ticket status',
+    description:
+      'Updates support ticket status (`open`, `in-progress`, `resolved`, `closed`) and attributes the action to the current admin user.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Support ticket MongoDB ObjectId',
+    example: '507f1f77bcf86cd799439012',
+  })
+  @ApiBody({ type: UpdateAdminSupportStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Ticket status updated',
+  })
+  updateSupportStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateAdminSupportStatusDto,
+    @Req() req: { user: { _id: string } },
+  ) {
+    return firstValueFrom(
+      this.adminService.updateDashboardSupportStatus({
+        adminUserId: req.user._id,
+        ticketId: id,
+        status: dto.status,
+      }),
+    );
+  }
+
   @Get('notifications')
   @ApiOperation({
     summary: 'List admin notifications',
@@ -401,10 +432,43 @@ export class AdminGatewayController {
     @Query('sources') sources?: string,
     @Query('limit') limit?: string,
   ): Observable<unknown> {
+    // Check if admin logs are disabled
+    if (process.env.HIDE_ADMIN_LOGS === 'true') {
+      return new Observable((subscriber) => {
+        subscriber.next({
+          success: true,
+          message: 'Admin logs are disabled',
+          data: {
+            summary: {
+              totalLogs: 0,
+              errors: 0,
+              avgResponseMs: null,
+              activeUsers: 0,
+            },
+            logs: [],
+            sources: [],
+            metrics: {
+              responseTime: [],
+              errorRate: [],
+              requestVolume: [],
+              requestDistribution: [
+                { id: '2xx', label: '2xx', value: 0 },
+                { id: '3xx', label: '3xx', value: 0 },
+                { id: '4xx', label: '4xx', value: 0 },
+                { id: '5xx', label: '5xx', value: 0 },
+              ],
+            },
+            alerts: [],
+          },
+        });
+        subscriber.complete();
+      });
+    }
+
     const parsedLevels = levels
       ? (levels.split(',').filter(Boolean) as Array<
-          'error' | 'warning' | 'info' | 'debug' | 'trace'
-        >)
+        'error' | 'warning' | 'info' | 'debug' | 'trace'
+      >)
       : undefined;
     const parsedSources = sources
       ? sources.split(',').filter(Boolean)

@@ -18,7 +18,7 @@ export class AdminSeederService implements OnModuleInit {
     @InjectModel(Admin.name, 'adminConnection')
     private readonly adminModel: Model<AdminDocument>,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async onModuleInit(): Promise<void> {
     const enabled = this.configService.get<boolean>('SEED_ADMINS_ON_BOOT');
@@ -67,6 +67,7 @@ export class AdminSeederService implements OnModuleInit {
       // Create new admin in admin database
       const admin = new this.adminModel({
         email,
+        name: this.extractNameFromEmail(email), // Extract name from email
         password: tempPassword, // Will be hashed by pre-save hook
         isTempPassword: true,
         role: 'admin',
@@ -84,5 +85,22 @@ export class AdminSeederService implements OnModuleInit {
 
   private emailRegexExact(email: string): RegExp {
     return new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  }
+
+  private extractNameFromEmail(email: string): string {
+    const localPart = email.split('@')[0];
+
+    // Handle common patterns
+    if (localPart.includes('.')) {
+      return localPart.split('.').map(part =>
+        part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      ).join(' ');
+    } else if (localPart.includes('_')) {
+      return localPart.split('_').map(part =>
+        part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      ).join(' ');
+    } else {
+      return localPart.charAt(0).toUpperCase() + localPart.slice(1).toLowerCase();
+    }
   }
 }

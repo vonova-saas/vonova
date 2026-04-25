@@ -43,7 +43,7 @@ export class SupportController {
     return this.supportService.remove(userId, id);
   }
 
-  @MessagePattern({ cmd: 'createMessage' })
+  @MessagePattern({ cmd: 'support.createMessage' })
   createMessage(
     @Payload('userId') userId: string,
     @Payload('id') id: string,
@@ -52,7 +52,7 @@ export class SupportController {
     return this.supportService.createMessage(userId, id, message);
   }
 
-  @MessagePattern({ cmd: 'findOneMessages' })
+  @MessagePattern({ cmd: 'support.findOneMessages' })
   findOneMessages(
     @Payload('userId') userId: string,
     @Payload('id') id: string,
@@ -60,7 +60,7 @@ export class SupportController {
     return this.supportService.findOneMessages(userId, id);
   }
 
-  @MessagePattern({ cmd: 'updateStatus' })
+  @MessagePattern({ cmd: 'support.updateStatus' })
   updateStatus(
     @Payload('userId') userId: string,
     @Payload('id') id: string,

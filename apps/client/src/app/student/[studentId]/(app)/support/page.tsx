@@ -22,8 +22,8 @@ export default function SupportPage() {
         <div className="text-center text-sm text-muted-foreground">
           <p>
             Can&apos;t find what you&apos;re looking for? Email us at{" "}
-            <a href="mailto:support@onyx.com" className="text-primary hover:underline">
-              support@onyx.com
+            <a href="mailto:vonovacompany@gmail.com" className="text-primary hover:underline">
+              vonovacompany@gmail.com
             </a>
           </p>
         </div>

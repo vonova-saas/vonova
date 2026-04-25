@@ -71,6 +71,8 @@ export function TicketDetails({
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Status:</span>
           <select
+            aria-label="Update ticket status"
+            title="Update ticket status"
             value={ticket.status}
             onChange={(e) => onUpdateStatus(e.target.value as SupportTicket['status'])}
             className={`rounded-md px-3 py-1 text-sm font-medium ${
@@ -78,9 +80,7 @@ export function TicketDetails({
             } border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
           >
             <option value="open">Open</option>
-            <option value="in-progress">In Progress</option>
             <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
           </select>
           
           {ticket.priority && (
