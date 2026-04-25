@@ -90,15 +90,21 @@ export class SupportService {
           </p>
         </div>
       `;
+      const supportInboxEmail =
+        process.env.SUPPORT_EMAIL_TO?.trim() || 'vonavacompany@gmail.com';
       await this.emailSender.sendEmail({
-        to: 'vonavacompany@gmail.com',
+        to: supportInboxEmail,
         subject,
         html,
         replyTo: support.email,
       });
-    } catch {
-      this.logger.warn(
-        `Support notification email failed for ticket ${String(support._id)}`,
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown email send error';
+      this.logger.error(
+        `Support notification email failed for ticket ${String(
+          support._id,
+        )}: ${message}`,
       );
     }
     return {

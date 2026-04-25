@@ -127,9 +127,13 @@ export class AdminSupportService {
           `;
           await this.emailSender.sendEmail({ to, subject, html });
         }
-      } catch {
-        this.logger.warn(
-          `Support reply email failed for ticket ${String(supportUpdated._id)}`,
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown email send error';
+        this.logger.error(
+          `Support reply email failed for ticket ${String(
+            supportUpdated._id,
+          )}: ${message}`,
         );
       }
       return supportUpdated;

@@ -12,6 +12,7 @@ import { SupportAnalytics } from './analytics/support-analytics';
 import { TicketDetails } from './tickets/ticket-details';
 import { SupportTicket } from './types';
 import { BarChart2, Download, Plus, RefreshCw, Search, Ticket } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   getSupportTicketsQueryFn,
   replySupportTicketMutationFn,
@@ -60,11 +61,20 @@ export default function SupportManagement() {
   });
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
-    await statusMutation.mutateAsync({
-      ticketId,
-      status: status as SupportTicket['status'],
-    });
-    return true;
+    try {
+      await statusMutation.mutateAsync({
+        ticketId,
+        status: status as SupportTicket['status'],
+      });
+      toast.success(`Ticket marked as ${status}`);
+      return true;
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Failed to update ticket status';
+      toast.error(message);
+      return false;
+    }
   };
 
   const handleSendResponse = async (ticketId: string, message: string) => {

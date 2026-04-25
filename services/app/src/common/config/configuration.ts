@@ -33,6 +33,7 @@ export default () => ({
   //? Email configuration (Resend Email Service)
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   EMAIL_FROM: process.env.EMAIL_FROM,
+  SUPPORT_EMAIL_TO: process.env.SUPPORT_EMAIL_TO,
 
   //? AWS S3 Configuration
   AWS_S3_REGION_APP: process.env.AWS_S3_REGION_APP,

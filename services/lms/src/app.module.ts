@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './common/config/configuration';
 import { AppController } from './app.controller';
@@ -24,6 +25,8 @@ import { DatabaseModule } from './lms-ai/database/database.module';
 import { RoadmapModule } from './lms-ai/roadmap/roadmap.module';
 import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
 import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.module';
+import { OutboundNatsModule } from './common/nats/outbound-nats.module';
+import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.interceptor';
 
 @Module({
   imports: [
@@ -69,8 +72,14 @@ import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.m
     RoadmapModule,
     PdfSummaryModule,
     ProblemSolvingModule,
+    OutboundNatsModule,
   ],
   controllers: [AppController],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MonitoringLogInterceptor,
+    },
+  ],
 })
 export class AppModule {}
