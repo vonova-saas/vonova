@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,12 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Search,
   Filter,
   FileText,
@@ -21,6 +28,9 @@ import {
   Grid3X3,
   List,
   BarChart3,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { PDFFile } from "./types";
 import PDFSummaryCard from "./pdf-summary-card";
@@ -28,6 +38,12 @@ import useStudentId from "@/hooks/student/use-student-id";
 import { getChatHistoryQueryFn, getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
 import { jsPDF } from "jspdf";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
+import { uploadPDFMutationFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 interface PDFSummaryListProps {
   pdfs?: PDFFile[];
@@ -50,18 +66,154 @@ export default function PDFSummaryList({
   onRename = (pdfId: string, newName: string) => {
     console.log("Rename PDF:", pdfId, "to", newName);
   },
-  onUpload = () => {
-    window.location.href = `/student/${studentId}/pdf-summary`;
-  },
+  onUpload,
 }: PDFSummaryListProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [topicFilter, setTopicFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [localSessions, setLocalSessions] = useState<any[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<any[]>([]);
+
+  // Default onUpload implementation if not provided
+  const handleUpload = onUpload || (() => {
+    setShowUploadModal(true);
+  });
 
   const router = useRouter();
   const currentStudentId = useStudentId();
+
+  const MAX_PDF_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+  const MAX_PDF_UPLOAD_SIZE_LABEL = "10MB";
+
+  // Upload functionality
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const pdfFiles = acceptedFiles.filter(
+      (file) => file.type === "application/pdf",
+    );
+    if (pdfFiles.length > 0) {
+      handleFileUpload(pdfFiles);
+    }
+  }, [currentStudentId]);
+
+ const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "application/pdf": [".pdf"],
+    },
+    maxSize: MAX_PDF_UPLOAD_SIZE_BYTES,
+    multiple: true,
+    onDragEnter: () => {},
+    onDragLeave: () => {},
+    onDropRejected: () => {
+      toast.error("Upload rejected", {
+        description: `File too large for server limits (max ${MAX_PDF_UPLOAD_SIZE_LABEL}).`,
+      });
+    },
+  });
+    
+  const handleCancelUpload = (fileId: string) => {
+    setUploadProgress((prev) => prev.filter((p) => p.fileId !== fileId));
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "uploading":
+        return <Loader2 className="w-4 h-4 animate-spin" />;
+      case "processing":
+        return <Loader2 className="w-4 h-4 animate-spin" />;
+      case "complete":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "uploading":
+        return "bg-blue-500";
+      case "processing":
+        return "bg-yellow-500";
+      case "complete":
+        return "bg-green-500";
+      case "error":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const handleFileUpload = async (files: File[]) => {
+  const file = files[0];
+  if (!file) return;
+  
+  // Frontend guard for file size - check before any API call
+  const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSizeBytes) {
+    toast.error("File size exceeds 10MB limit", {
+      description: `Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB, which exceeds 10MB limit.`,
+    });
+    return;
+  }
+
+  const fileId = `${file.name}-${Date.now()}`;
+    setUploadProgress([{
+      fileId,
+      fileName: file.name,
+      progress: 20,
+      status: "uploading",
+      error: null,
+    }]);
+
+    try {
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId ? { ...p, progress: 60 } : p)
+      );
+
+    const response = await uploadPDFMutationFn({
+      file,
+    });
+
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId
+          ? { ...p, progress: 100, status: "complete" }
+          : p
+        )
+      );
+
+      setShowUploadModal(false);
+      setUploadProgress([]);
+      
+      // Store session in localStorage
+      const existingSessions = JSON.parse(
+        localStorage.getItem("pdf_sessions") || "[]"
+      );
+      existingSessions.unshift({
+        session_id: response.session_id,
+        file_name: file.name,
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem(
+        "pdf_sessions", 
+        JSON.stringify(existingSessions.slice(0, 10))
+      );
+
+    } catch (err) {
+      console.error("Upload failed:", (err as any)?.response?.data || (err as any)?.message || err);
+      const parsed = parseUsageLimitError(err);
+      toast.error(parsed.title, { description: parsed.description, duration: 7000 });
+      setUploadProgress(prev =>
+        prev.map(p => p.fileId === fileId
+          ? { ...p, status: "error", error: parsed.description }
+          : p
+        )
+      );
+    }
+  };
 
   // Default onChat implementation if not provided
   const handleChat = onChat || ((pdfId: string) => {
@@ -299,7 +451,7 @@ export default function PDFSummaryList({
                   Upload PDFs and start chatting with AI to get instant
                   summaries and answers from your documents.
                 </p>
-                <Button onClick={onUpload} className="mt-4" size="lg">
+                <Button onClick={handleUpload} className="mt-4" size="lg">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload New PDF
                 </Button>
@@ -375,23 +527,64 @@ export default function PDFSummaryList({
       </div>
 
       {/* Results */}
-      {filteredPDFs.length === 0 ? (
-        <Card className="p-12">
+      {isLoading ? (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              : "space-y-4"
+          }
+        >
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} className="group border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <Skeleton className="h-5 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton className="w-8 h-8 rounded" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <Skeleton className="h-3 w-4/6" />
+                </div>
+                <div className="flex justify-between items-center mt-4">
+                  <Skeleton className="h-8 w-20 rounded" />
+                  <div className="flex gap-2">
+                    <Skeleton className="w-8 h-8 rounded" />
+                    <Skeleton className="w-8 h-8 rounded" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredPDFs.length === 0 ? (
+        <Card className="p-16 border-2 border-dashed border-muted-foreground/20 bg-muted/5">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <FileText className="w-16 h-16 text-primary/20 mb-4" />
-            <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+              <FileText className="w-10 h-10 text-primary/40" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-3">
               {search || statusFilter !== "All" || topicFilter !== "All"
                 ? "No PDFs found"
                 : "No PDFs uploaded yet"}
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-base text-muted-foreground mb-6 max-w-md">
               {search || statusFilter !== "All" || topicFilter !== "All"
                 ? "Try adjusting your search or filters to find PDFs."
                 : "Upload your first PDF to start analyzing and chatting with AI!"}
             </p>
             {!search && statusFilter === "All" && topicFilter === "All" && (
-              <Button onClick={onUpload} className="flex items-center gap-2">
-                <Upload className="w-4 h-4" />
+              <Button onClick={handleUpload} className="flex items-center gap-2 px-6 py-3 text-base" size="lg">
+                <Upload className="w-5 h-5" />
                 Upload Your First PDF
               </Button>
             )}
@@ -417,6 +610,103 @@ export default function PDFSummaryList({
           ))}
         </div>
       )}
+      
+      {/* Upload Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload PDF Files
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Upload Area */}
+            <Card
+              {...getRootProps()}
+              className="border-2 border-dashed transition-colors cursor-pointer"
+            >
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <input {...getInputProps()} />
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Upload className="w-8 h-8 text-primary" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2">
+                    {isDragActive
+                      ? "Drop PDF files here"
+                      : "Upload PDF files"}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Drag and drop PDF files here, or click to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Maximum file size: 10MB per file
+                  </p>
+                </div>
+                <Button variant="outline" className="mt-2">
+                  Choose Files
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Upload Progress */}
+            {uploadProgress.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="font-semibold mb-3">Upload Progress</h4>
+                  <div className="space-y-3">
+                    {uploadProgress.map((progress) => (
+                      <div
+                        key={progress.fileId}
+                        className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div className="shrink-0">
+                          {getStatusIcon(progress.status)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium truncate">
+                              {progress.fileName}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs ${getStatusColor(progress.status)}`}
+                              >
+                                {progress.status}
+                              </Badge>
+                              {progress.status === "uploading" && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    handleCancelUpload(progress.fileId)
+                                  }
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <Progress
+                            value={progress.progress}
+                            className="h-2"
+                          />
+                          {progress.error && (
+                            <p className="text-sm text-red-600">{progress.error}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

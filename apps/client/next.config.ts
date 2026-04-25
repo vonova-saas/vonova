@@ -13,6 +13,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'ik.imagekit.io',
       },
+
+      {
+        protocol: 'https',
+        hostname: 'vonova-app.s3.eu-north-1.amazonaws.com',
+      },
     ],
   },
 };

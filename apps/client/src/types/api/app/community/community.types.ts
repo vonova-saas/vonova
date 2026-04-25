@@ -81,6 +81,8 @@ export type CommunityPost = {
   content: string;
   image?: string | null;
   images?: string[];
+  video?: string | null;
+  videos?: string[] | null;
   author?: CommunityAuthor | string;
   originalPost?: CommunityPost | null;
   sharedPost?: CommunityPost | null;

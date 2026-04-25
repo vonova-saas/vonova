@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { articleImgSrcForDisplay } from "@/lib/article-image-display-url";
 
 function getArticleImage(article?: CommunityArticle): string | undefined {
   if (!article) return undefined;
@@ -89,7 +90,7 @@ function renderBlock(block: ArticleContentBlock, index: number) {
     return (
       <figure key={index} className="mt-6 space-y-2">
         <img
-          src={encodeURI(block.url)}
+          src={articleImgSrcForDisplay(block.url)}
           alt={block.alt || ""}
           className="w-full rounded-xl border object-cover"
           loading="lazy"
@@ -156,7 +157,6 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [galleryImageErrors, setGalleryImageErrors] = useState<Record<string, boolean>>({});
   const backHref = `/${area}/${userId}/community`;
   const authorName =
     article && typeof article.author === "object"
@@ -226,7 +226,6 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
     );
   }
 
-  const images = getArticleGalleryImages(article);
   const articleAuthorId =
     typeof article.author === "string"
       ? article.author
@@ -249,9 +248,9 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
         <div className="relative h-60 w-full bg-muted md:h-80">
           {heroImage && !heroImageFailed ? (
             <img
-              src={encodeURI(heroImage)}
+              src={articleImgSrcForDisplay(heroImage)}
               alt={article.title}
-              className="h-full w-full object-cover"
+              className="h-full w-full scale-[1.08] object-cover object-top"
               loading="lazy"
               onError={() => setHeroImageFailed(true)}
             />
@@ -347,8 +346,9 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
                   ),
                   th: ({ ...props }) => <th {...props} className="bg-muted/40 px-4 py-2 text-left font-semibold" />,
                   td: ({ ...props }) => <td {...props} className="border-t px-4 py-2 align-top" />,
-                  img: ({ ...props }) => (
+                  img: ({ src, ...props }) => (
                     <img
+                      src={src && typeof src === "string" ? articleImgSrcForDisplay(src) : src}
                       {...props}
                       className="my-6 w-full rounded-xl border object-cover shadow-sm"
                       loading="lazy"
@@ -381,45 +381,6 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
             )}
           </section>
 
-          {images?.length > 0 && (
-            <section className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">Article images</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {images.map((img, index) => (
-                  galleryImageErrors[img] ? (
-                    <div
-                      key={`${img}-${index}`}
-                      className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground"
-                    >
-                      Could not load image preview.
-                      <a
-                        href={img}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="ml-1 underline underline-offset-2"
-                      >
-                        Open image
-                      </a>
-                    </div>
-                  ) : (
-                    <img
-                      key={`${img}-${index}`}
-                      src={img}
-                      alt={`article-image-${index}`}
-                      loading="lazy"
-                      className="block h-auto w-full rounded-xl border"
-                      onError={() =>
-                        setGalleryImageErrors((prev) => ({
-                          ...prev,
-                          [img]: true,
-                        }))
-                      }
-                    />
-                  )
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </article>
 
