@@ -8,4 +8,6 @@ export const PROBLEM_PATTERNS = {
   AI_HINT: 'ai.hint',
   AI_HINTS: 'ai.hints',
   AI_SOLUTION: 'ai.solution',
+  MARK_SOLVED: 'progress.markSolved',
+  GET_SOLVED: 'progress.getSolved',
 } as const;

@@ -37,6 +37,9 @@ export class ProblemSolvingProgress {
   @Prop({ type: Boolean, default: false })
   solutionUsed: boolean;
 
+  @Prop({ type: Boolean, default: false })
+  solved: boolean;
+
   @Prop({ type: [StoredHintSchema], default: [] })
   hints: StoredHint[];
 }

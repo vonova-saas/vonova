@@ -66,4 +66,15 @@ export class ProblemSolvingGatewayService {
       { userId, dto },
     );
   }
+
+  markAsSolved(userId: string, problemId: string) {
+    return this.client.send(
+      { cmd: PROBLEM_PATTERNS.MARK_SOLVED },
+      { userId, problemId },
+    );
+  }
+
+  getSolvedProblems(userId: string) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.GET_SOLVED }, { userId });
+  }
 }

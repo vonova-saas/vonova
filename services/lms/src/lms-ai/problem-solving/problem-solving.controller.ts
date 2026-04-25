@@ -4,6 +4,7 @@ import { PROBLEM_PATTERNS } from './constants/message-patterns';
 import { ProblemService } from './problem.service';
 import { SubmissionService } from './submission.service';
 import { AiService } from './ai.service';
+import { ProgressService } from './progress.service';
 import {
   CreateProblemDto,
   DeleteProblemDto,
@@ -20,6 +21,7 @@ export class ProblemSolvingController {
     private readonly problemService: ProblemService,
     private readonly submissionService: SubmissionService,
     private readonly aiService: AiService,
+    private readonly progressService: ProgressService,
   ) {}
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.CREATE })
@@ -87,5 +89,17 @@ export class ProblemSolvingController {
   ) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.AI_SOLUTION} received`);
     return this.aiService.requestSolution(data.dto, data.userId);
+  }
+
+  @MessagePattern({ cmd: PROBLEM_PATTERNS.MARK_SOLVED })
+  async markAsSolved(@Payload() data: { userId: string; problemId: string }) {
+    this.logger.log(`NATS ${PROBLEM_PATTERNS.MARK_SOLVED} received`);
+    return this.progressService.markAsSolved(data.userId, data.problemId);
+  }
+
+  @MessagePattern({ cmd: PROBLEM_PATTERNS.GET_SOLVED })
+  async getSolvedProblems(@Payload() data: { userId: string }) {
+    this.logger.log(`NATS ${PROBLEM_PATTERNS.GET_SOLVED} received`);
+    return this.progressService.getSolvedProblems(data.userId);
   }
 }

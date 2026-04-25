@@ -4,6 +4,7 @@ import { ProblemSolvingController } from './problem-solving.controller';
 import { ProblemService } from './problem.service';
 import { SubmissionService } from './submission.service';
 import { AiService } from './ai.service';
+import { ProgressService } from './progress.service';
 import { ProblemSolvingAiClient } from './problem-solving.ai-client';
 import { Problem, ProblemSchema } from './schemas/problem.schema';
 import { Submission, SubmissionSchema } from './schemas/submission.schema';
@@ -16,7 +17,10 @@ import {
   ProblemSolvingProgressSchema,
 } from './schemas/problem-solving-progress.schema';
 import { SubmissionJudgeQueue } from './submission-judge.queue';
-import { SubmissionJob, SubmissionJobSchema } from './schemas/submission-job.schema';
+import {
+  SubmissionJob,
+  SubmissionJobSchema,
+} from './schemas/submission-job.schema';
 
 @Module({
   imports: [
@@ -40,6 +44,7 @@ import { SubmissionJob, SubmissionJobSchema } from './schemas/submission-job.sch
     SubmissionService,
     SubmissionJudgeQueue,
     AiService,
+    ProgressService,
     ProblemSolvingAiClient,
   ],
 })

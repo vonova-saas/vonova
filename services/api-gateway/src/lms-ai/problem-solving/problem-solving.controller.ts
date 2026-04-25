@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import {
   Body,
   Controller,
@@ -182,7 +185,9 @@ export class ProblemSolvingGatewayController {
     description: 'Problem retrieved successfully.',
   })
   async getProblemForStudent(@Param('id') id: string) {
-    const problem = await firstValueFrom(this.problemSolvingService.getProblem(id));
+    const problem = await firstValueFrom(
+      this.problemSolvingService.getProblem(id),
+    );
     return this.sanitizeProblemForStudent(problem);
   }
 
@@ -225,7 +230,10 @@ export class ProblemSolvingGatewayController {
     description:
       'Polls async judging status/result for a previously submitted job.',
   })
-  async getSubmissionStatus(@Request() req: unknown, @Param('jobId') jobId: string) {
+  async getSubmissionStatus(
+    @Request() req: unknown,
+    @Param('jobId') jobId: string,
+  ) {
     const user = this.getUser(req);
     return firstValueFrom(
       this.problemSolvingService.getSubmissionStatus(user.id, jobId),
@@ -332,6 +340,47 @@ export class ProblemSolvingGatewayController {
         ...dto,
         problemId: id,
       }),
+    );
+  }
+
+  @Post('student/problems/:id/solved')
+  @UseGuards(StudentGuard)
+  @ApiOperation({
+    summary: 'Mark problem as solved (Student)',
+    description: 'Marks a problem as solved for the current user.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Problem Mongo ObjectId',
+    example: '665f7d4a3f0f8d0f42c5b8a1',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Problem marked as solved successfully.',
+  })
+  async markAsSolved(@Request() req: unknown, @Param('id') id: string) {
+    const user = this.getUser(req);
+    return firstValueFrom(this.problemSolvingService.markAsSolved(user.id, id));
+  }
+
+  @Get('student/problems/solved')
+  @UseGuards(StudentGuard)
+  @ApiOperation({
+    summary: 'Get solved problems (Student)',
+    description:
+      'Returns a list of problem IDs that the current user has solved.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Solved problems retrieved successfully.',
+    schema: {
+      example: ['665f7d4a3f0f8d0f42c5b8a1', '665f7d4a3f0f8d0f42c5b8a2'],
+    },
+  })
+  async getSolvedProblems(@Request() req: unknown) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getSolvedProblems(user.id),
     );
   }
 }
