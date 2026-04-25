@@ -36,14 +36,14 @@ export class SupportGatewayService {
   }
 
   createMessage(userId: string, id: string, message: string) {
-    return this.client.send({ cmd: 'createMessage' }, { userId, id, message });
+    return this.client.send({ cmd: 'support.createMessage' }, { userId, id, message });
   }
 
   findOneMessages(userId: string, id: string) {
-    return this.client.send({ cmd: 'findOneMessages' }, { userId, id });
+    return this.client.send({ cmd: 'support.findOneMessages' }, { userId, id });
   }
 
   updateStatus(userId: string, id: string, status: string) {
-    return this.client.send({ cmd: 'updateStatus' }, { userId, id, status });
+    return this.client.send({ cmd: 'support.updateStatus' }, { userId, id, status });
   }
 }
