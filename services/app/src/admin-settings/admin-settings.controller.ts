@@ -66,6 +66,8 @@ export class AdminSettingsController {
       bio?: string;
       address?: string;
       dateOfBirth?: string | null;
+      /** Set by API gateway after S3 upload (file bytes are not sent over NATS). */
+      profilePictureUrl?: string;
       file?: Express.Multer.File;
     },
   ) {

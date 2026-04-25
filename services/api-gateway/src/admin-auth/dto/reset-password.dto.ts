@@ -18,17 +18,14 @@ export class AdminResetPasswordDto {
     type: String,
     minLength: 8,
     pattern:
-      '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&^()_+\\-=[\\]{};\':"\\\\|,.<>/~`])[A-Za-z\\d@$!%*?&^()_+\\-=[\\]{};\':"\\\\|,.<>/~`]{8,}$',
+      '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9\\s]).{8,}$',
   })
   @IsString()
   @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/~`])[A-Za-z\d@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/~`]{8,}$/,
-    {
-      message:
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/, {
+    message:
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+  })
   newPassword: string;
 }

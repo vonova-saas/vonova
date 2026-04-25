@@ -32,6 +32,8 @@ import {
 import { AdminJwtAuthGuard } from 'src/common/guards/admin-jwt-auth.guard';
 import { AdminGuard } from 'src/common/guards/admin.guard';
 
+const ADMIN_ACCOUNT_AVATAR_MAX_BYTES = 8 * 1024 * 1024;
+
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('api/v1/admin')
@@ -628,7 +630,9 @@ export class AdminGatewayController {
   }
 
   @Patch('settings/account')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: ADMIN_ACCOUNT_AVATAR_MAX_BYTES } }),
+  )
   updateAdminAccount(
     @Req() req: { user: { _id: string } },
     @Body() body: Record<string, unknown>,

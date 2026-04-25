@@ -29,6 +29,8 @@ type AccountUpdateInput = {
   bio?: string;
   address?: string;
   dateOfBirth?: string | null;
+  /** From gateway after direct S3 upload (preferred over NATS file payload). */
+  profilePictureUrl?: string;
   file?: Express.Multer.File;
 };
 
@@ -173,7 +175,9 @@ export class AdminSettingsService {
     }
 
     let avatarUrl: string | undefined;
-    if (update.file) {
+    if (update.profilePictureUrl) {
+      avatarUrl = update.profilePictureUrl;
+    } else if (update.file) {
       avatarUrl = await this.uploadProfilePicture(adminId, update.file);
     }
 

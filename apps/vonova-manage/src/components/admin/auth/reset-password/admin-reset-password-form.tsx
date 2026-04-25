@@ -34,10 +34,12 @@ export function AdminResetPasswordForm({
       return;
     }
 
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^()_+\-=[\]{};':"\\|,.<>/~`])[A-Za-z\d@$!%*?&^()_+\-=[\]{};':"\\|,.<>/~`]{8,}$/;
+    // Same rule as gateway/app ResetPasswordDto (server is source of truth; this avoids an extra round trip).
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
     if (!passwordRegex.test(newPassword)) {
-      setFormError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+      setFormError(
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      );
       return;
     }
 
@@ -76,6 +78,10 @@ export function AdminResetPasswordForm({
           name="oldPassword"
           type="password"
           autoComplete="current-password"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          data-lpignore="true"
           required
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
@@ -89,6 +95,10 @@ export function AdminResetPasswordForm({
           name="newPassword"
           type="password"
           autoComplete="new-password"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          data-lpignore="true"
           required
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
@@ -102,6 +112,10 @@ export function AdminResetPasswordForm({
           name="confirmPassword"
           type="password"
           autoComplete="new-password"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          data-lpignore="true"
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
