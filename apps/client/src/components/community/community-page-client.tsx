@@ -42,6 +42,10 @@ import {
 
   updatePost,
 
+  createReply,
+
+  getReplies,
+
 } from "@/services/app/community/community.api";
 
 import { getAccountMutationFn } from "@/services/app/settings/account.api";
@@ -1170,6 +1174,12 @@ export default function CommunityPageClient({
 
   const [commentFiles, setCommentFiles] = useState<Record<string, File | null>>({});
 
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+
+  const [replyFiles, setReplyFiles] = useState<Record<string, File | null>>({});
+
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+
   const [shareComposerOpen, setShareComposerOpen] = useState(false);
 
   const [shareTargetPost, setShareTargetPost] = useState<CommunityPost | null>(null);
@@ -1985,6 +1995,38 @@ export default function CommunityPageClient({
 
   });
 
+  // Create reply mutation
+  const createReplyMut = useMutation({
+    mutationFn: ({ 
+      postId, 
+      parentCommentId, 
+      text, 
+      image 
+    }: { 
+      postId: string; 
+      parentCommentId: string; 
+      text: string; 
+      image?: File 
+    }) => createReply(postId, parentCommentId, text, image),
+    onSuccess: () => {
+      toast({ title: "Reply posted" });
+      // Clear reply draft
+      setReplyDrafts({});
+      setReplyFiles({});
+      // Invalidate comments query to refresh the data
+      void qc.invalidateQueries({ queryKey: ["community", "comments", expandedPostId] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not post reply.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  // Simplified replies queries - will be handled in PostCard component
+  const repliesQueries: Record<string, any> = {};
+
 
 
   const goToArticles = useCallback(() => {
@@ -2041,7 +2083,37 @@ export default function CommunityPageClient({
 
   }, [area, router, userId, viewMode]);
 
+  // Reply handler functions
+  const handleReplyToComment = useCallback((parentCommentId: string, text: string, image?: File) => {
+    if (!expandedPostId) return;
+    createReplyMut.mutate({ 
+      postId: expandedPostId, 
+      parentCommentId, 
+      text, 
+      image 
+    });
+  }, [expandedPostId, createReplyMut]);
 
+  const handleToggleReplies = useCallback((commentId: string) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  }, []);
+
+  const handleReplyChange = useCallback((commentId: string, text: string) => {
+    setReplyDrafts(prev => ({
+      ...prev,
+      [commentId]: text
+    }));
+  }, []);
+
+  const handleReplyImageChange = useCallback((commentId: string, file: File | null) => {
+    setReplyFiles(prev => ({
+      ...prev,
+      [commentId]: file
+    }));
+  }, []);
 
   const hubLabel = area === "instructor" ? "Instructor hub" : "Student hub";
 
@@ -2292,8 +2364,6 @@ export default function CommunityPageClient({
 
 
         <Tabs
-
-          id="community-articles"
 
           value={activeTab}
 
@@ -2935,6 +3005,10 @@ export default function CommunityPageClient({
 
                           userId={user?._id}
 
+                          user={user}
+
+                          account={account}
+
                           isAdmin={isAdmin}
 
                           expanded={expandedPostId === originalPost._id}
@@ -3011,6 +3085,22 @@ export default function CommunityPageClient({
 
                           onLikeComment={(id) => likeCommentMut.mutate(id)}
 
+                          onReplyToComment={handleReplyToComment}
+
+                          onToggleReplies={handleToggleReplies}
+
+                          expandedReplies={expandedReplies}
+
+                          replyDrafts={replyDrafts}
+
+                          replyFiles={replyFiles}
+
+                          onReplyChange={handleReplyChange}
+
+                          onReplyImageChange={handleReplyImageChange}
+
+                          repliesQueries={repliesQueries}
+
                           repostUsers={repostUsersByPostId.get(originalPost._id) ?? []}
 
                         />
@@ -3030,6 +3120,10 @@ export default function CommunityPageClient({
                         post={post}
 
                         userId={user?._id}
+
+                        user={user}
+
+                        account={account}
 
                         isAdmin={isAdmin}
 
@@ -3102,6 +3196,22 @@ export default function CommunityPageClient({
                         }
 
                         onLikeComment={(id) => likeCommentMut.mutate(id)}
+
+                        onReplyToComment={handleReplyToComment}
+
+                        onToggleReplies={handleToggleReplies}
+
+                        expandedReplies={expandedReplies}
+
+                        replyDrafts={replyDrafts}
+
+                        replyFiles={replyFiles}
+
+                        onReplyChange={handleReplyChange}
+
+                        onReplyImageChange={handleReplyImageChange}
+
+                        repliesQueries={repliesQueries}
 
                         repostUsers={repostUsersByPostId.get(post._id) ?? []}
 
@@ -3909,6 +4019,10 @@ type PostCardProps = {
 
   userId?: string;
 
+  user?: any;
+
+  account?: any;
+
   isAdmin: boolean;
 
   expanded: boolean;
@@ -3943,6 +4057,22 @@ type PostCardProps = {
 
   onLikeComment: (id: string) => void;
 
+  onReplyToComment: (parentCommentId: string, text: string, image?: File) => void;
+
+  onToggleReplies: (commentId: string) => void;
+
+  expandedReplies: Record<string, boolean>;
+
+  replyDrafts: Record<string, string>;
+
+  replyFiles: Record<string, File | null>;
+
+  onReplyChange: (commentId: string, text: string) => void;
+
+  onReplyImageChange: (commentId: string, file: File | null) => void;
+
+  repliesQueries: Record<string, ReturnType<typeof useQuery>>;
+
   repostUsers: CommunityAuthor[];
 
 };
@@ -3966,6 +4096,10 @@ function RepostWrapper({
   originalPost,
 
   userId,
+
+  user,
+
+  account,
 
   isAdmin,
 
@@ -4000,6 +4134,22 @@ function RepostWrapper({
   onEditComment,
 
   onLikeComment,
+
+  onReplyToComment,
+
+  onToggleReplies,
+
+  expandedReplies,
+
+  replyDrafts,
+
+  replyFiles,
+
+  onReplyChange,
+
+  onReplyImageChange,
+
+  repliesQueries,
 
   repostUsers,
 
@@ -4065,6 +4215,10 @@ function RepostWrapper({
 
           userId={userId}
 
+          user={user}
+
+          account={account}
+
           isAdmin={isAdmin}
 
           expanded={expanded}
@@ -4099,6 +4253,22 @@ function RepostWrapper({
 
           onLikeComment={onLikeComment}
 
+          onReplyToComment={onReplyToComment}
+
+          onToggleReplies={onToggleReplies}
+
+          expandedReplies={expandedReplies}
+
+          replyDrafts={replyDrafts}
+
+          replyFiles={replyFiles}
+
+          onReplyChange={onReplyChange}
+
+          onReplyImageChange={onReplyImageChange}
+
+          repliesQueries={repliesQueries}
+
           repostUsers={repostUsers}
 
         />
@@ -4118,6 +4288,10 @@ function PostCard({
   post,
 
   userId,
+
+  user,
+
+  account,
 
   isAdmin,
 
@@ -4152,6 +4326,22 @@ function PostCard({
   onEditComment,
 
   onLikeComment,
+
+  onReplyToComment,
+
+  onToggleReplies,
+
+  expandedReplies,
+
+  replyDrafts,
+
+  replyFiles,
+
+  onReplyChange,
+
+  onReplyImageChange,
+
+  repliesQueries,
 
   repostUsers,
 
@@ -4634,6 +4824,8 @@ function PostCard({
 
                 const canDel = Boolean(userId && cid && userId === cid) || isAdmin;
 
+                const isLiked = Boolean(userId && c.likes?.some(id => id.toString() === userId.toString()));
+
                 return (
 
                   <div
@@ -4664,7 +4856,25 @@ function PostCard({
 
                         >
 
-                          <Heart className="h-3.5 w-3.5" />
+                          <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+
+                        </Button>
+
+                        <Button
+
+                          type="button"
+
+                          variant="ghost"
+
+                          size="sm"
+
+                          className="h-7 px-2"
+
+                          onClick={() => onToggleReplies(c._id)}
+
+                        >
+
+                          Reply
 
                         </Button>
 
@@ -4863,6 +5073,167 @@ function PostCard({
                       </div>
 
                     ) : null}
+
+                    {/* Reply Section */}
+                    {expandedReplies[c._id] && (
+                      <div className="mt-3 space-y-2 border-l-2 border-border/30 pl-4">
+                        {/* Reply Input */}
+                        <div className="flex items-start gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage
+                              src={currentUserPic(user, account)}
+                              className="object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <AvatarFallback className="text-xs">
+                              {initials(authorName(user))}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <Textarea
+                              placeholder="Add a reply..."
+                              value={replyDrafts[c._id] || ""}
+                              onChange={(e) => onReplyChange(c._id, e.target.value)}
+                              className="min-h-[60px] resize-none text-sm"
+                              rows={2}
+                            />
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2"
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/*';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) onReplyImageChange(c._id, file);
+                                    };
+                                    input.click();
+                                  }}
+                                >
+                                  <ImagePlus className="h-3 w-3" />
+                                </Button>
+                                {replyFiles[c._id] && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {replyFiles[c._id].name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => onReplyChange(c._id, "")}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-6 px-3 text-xs"
+                                  onClick={() => {
+                                    const text = replyDrafts[c._id] || "";
+                                    if (text.trim()) {
+                                      onReplyToComment(c._id, text.trim(), replyFiles[c._id] || undefined);
+                                    }
+                                  }}
+                                  disabled={!replyDrafts[c._id]?.trim()}
+                                >
+                                  Reply
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Display existing replies from nested comments */}
+                        {c.replies && c.replies.length > 0 && (
+                          <div className="space-y-2">
+                            {c.replies.map((reply) => {
+                              const replyLiked = Boolean(userId && reply.likes?.some(id => id.toString() === userId.toString()));
+                              const replyAuthorId = typeof reply.author === "object" && reply.author ? reply.author._id : undefined;
+                              const canDeleteReply = Boolean(userId && replyAuthorId && userId === replyAuthorId) || isAdmin;
+
+                              return (
+                                <div key={reply._id} className="flex items-start gap-2 rounded-lg bg-muted/10 p-2">
+                                  <Avatar className="h-5 w-5">
+                                    {authorPic(reply.author) && isDisplayableImageSrc(authorPic(reply.author)!) ? (
+                                      <AvatarImage
+                                        src={avatarImgSrcForDisplay(authorPic(reply.author)!)}
+                                        className="object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    ) : (
+                                      <AvatarImage
+                                        src={getDefaultAvatarUrl(authorName(reply.author))}
+                                        className="object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    )}
+                                    <AvatarFallback className="text-[10px]">
+                                      {initials(authorName(reply.author))}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium">{authorName(reply.author)}</span>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 px-1"
+                                          onClick={() => onLikeComment(reply._id)}
+                                        >
+                                          <Heart className={`h-3 w-3 ${replyLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                                        </Button>
+                                        {canDeleteReply && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-5 px-1 text-destructive"
+                                            onClick={() => onDeleteComment(reply._id)}
+                                          >
+                                            ×
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p
+                                      dir={isMostlyArabic(reply.text) ? "rtl" : "ltr"}
+                                      className={cn(
+                                        "text-xs text-muted-foreground mt-1",
+                                        isMostlyArabic(reply.text) ? "text-right" : "text-left",
+                                      )}
+                                    >
+                                      {reply.text}
+                                    </p>
+                                    {reply.image && (
+                                      <div className="mt-1">
+                                        <img
+                                          src={reply.image}
+                                          alt="Reply image"
+                                          className="rounded border border-border/50 max-h-20 w-auto object-cover"
+                                          loading="lazy"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                   </div>
 

@@ -109,6 +109,11 @@ export type CommunityComment = {
   text: string;
   image?: string | null;
   author?: CommunityAuthor | string;
+  likes?: string[];
   likesCount?: number;
+  parentComment?: string;
+  replies?: CommunityComment[];
+  repliesCount?: number;
   createdAt?: string;
+  updatedAt?: string;
 };
