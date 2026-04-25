@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/global/icons";
+import { avatarImgSrcForDisplay } from "@/lib/avatar-display-url";
+import { getAvatarFallbackText } from "@/utils/functions/app/helper";
 import { toast } from "sonner";
 import { getSupportTicketByIdMutationFn, getSupportTicketMutationFn, updateSupportTicketMutationFn, deleteSupportTicketMutationFn, getSupportMessagesQueryFn, addSupportMessageMutationFn, updateSupportStatusMutationFn } from "@/services/app/support/support.api";
 import type { SupportCategory, SupportMessage, SupportStatus, updateSupportTicketType } from "@/types/api/app/support/support.type";
@@ -63,17 +66,17 @@ export default function SupportEditPage() {
           message: detail.data.message || "",
         });
         setStatus(detail.data.status as SupportStatus);
-        // Load messages thread
+        // Always load thread from messages endpoint so admin replies (`sender: admin`) are never skipped
+        // when `findOne` embeds an empty `messages: []` array.
         try {
-          // if backend includes messages in detail, prefer it, else fetch via messages endpoint
-          if (Array.isArray((detail.data).messages)) {
-            setMessages((detail.data).messages as SupportMessage[]);
-          } else {
-            const msgRes = await getSupportMessagesQueryFn(userId, match._id);
-            setMessages(msgRes.data);
-          }
+          const msgRes = await getSupportMessagesQueryFn(userId, match._id);
+          const fromApi = Array.isArray(msgRes.data) ? msgRes.data : [];
+          setMessages(fromApi as SupportMessage[]);
         } catch {
-          // ignore thread load errors here, already handled by outer catch if fatal
+          const embedded = (detail.data as { messages?: SupportMessage[] }).messages;
+          if (Array.isArray(embedded) && embedded.length > 0) {
+            setMessages(embedded);
+          }
         }
       } catch (e) {
         toast.error((e as Error)?.message || "Failed to load support ticket");
@@ -255,15 +258,31 @@ export default function SupportEditPage() {
                     {messages.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No messages yet.</p>
                     ) : (
-                      messages.map((m, idx) => (
-                        <div key={idx} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow ${m.sender === 'user' ? 'bg-primary/90 text-primary-foreground' : 'bg-white border'}`}>
-                            <div className="opacity-80 text-xs mb-1">{m.sender === 'user' ? 'You' : 'Support'}</div>
+                      messages.map((m, idx) => {
+                        const fromUser = m.sender === "user";
+                        const supportLabel = m.senderName?.trim() || "Support";
+                        const avatarSrc =
+                          !fromUser && m.senderAvatarUrl
+                            ? avatarImgSrcForDisplay(m.senderAvatarUrl)
+                            : null;
+                        return (
+                        <div key={`${m.createdAt}-${idx}`} className={`flex gap-2 ${fromUser ? 'justify-end' : 'justify-start'}`}>
+                          {!fromUser && (
+                            <Avatar className="h-8 w-8 mt-1 shrink-0">
+                              {avatarSrc ? (
+                                <AvatarImage src={avatarSrc} alt="" referrerPolicy="no-referrer" />
+                              ) : null}
+                              <AvatarFallback className="text-xs">{getAvatarFallbackText(supportLabel)}</AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow ${fromUser ? 'bg-primary/90 text-primary-foreground' : 'bg-white border'}`}>
+                            <div className="opacity-80 text-xs mb-1">{fromUser ? 'You' : supportLabel}</div>
                             <div>{m.message}</div>
                             <div className="mt-1 text-xs opacity-90">{new Date(m.createdAt).toLocaleString()}</div>
                           </div>
                         </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
 

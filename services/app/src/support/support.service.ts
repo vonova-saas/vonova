@@ -13,6 +13,34 @@ export class SupportService {
     private readonly supportModel: Model<Support>,
   ) {}
 
+  /** Public API: thread entries never expose internal Mongo subdocument ids. */
+  private sanitizeMessageOut(m: Record<string, unknown> | null | undefined) {
+    if (!m || typeof m !== 'object') return m;
+    const out: Record<string, unknown> = {
+      sender: m.sender,
+      message: m.message,
+      createdAt: m.createdAt,
+    };
+    if (m.senderName != null && String(m.senderName).trim() !== '') {
+      out.senderName = m.senderName;
+    }
+    if (m.senderAvatarUrl != null && String(m.senderAvatarUrl).trim() !== '') {
+      out.senderAvatarUrl = m.senderAvatarUrl;
+    }
+    return out;
+  }
+
+  private mapSupportToPublic(doc: Support | (Support & { toObject?: (opt?: object) => Record<string, unknown> }) | null) {
+    if (doc == null) return doc;
+    const o = typeof (doc as Support & { toObject?: (opt?: object) => Record<string, unknown> }).toObject === 'function'
+      ? (doc as Support & { toObject: (opt?: object) => Record<string, unknown> }).toObject({ versionKey: false })
+      : { ...(doc as object as Record<string, unknown>) };
+    if (Array.isArray(o.messages)) {
+      o.messages = o.messages.map((entry) => this.sanitizeMessageOut(entry as Record<string, unknown>));
+    }
+    return o;
+  }
+
   async create(createSupportDto: CreateSupportDto, userId: string) {
     const support = await this.supportModel.create({
       ...createSupportDto,
@@ -20,7 +48,7 @@ export class SupportService {
     });
     return {
       message: 'Support created successfully',
-      data: support,
+      data: this.mapSupportToPublic(support) as unknown as Support,
     };
   }
 
@@ -34,7 +62,7 @@ export class SupportService {
     }
     return {
       message: 'Support found successfully',
-      data: support,
+      data: support.map((d) => this.mapSupportToPublic(d) as unknown as Support),
     };
   }
 
@@ -48,7 +76,7 @@ export class SupportService {
     }
     return {
       message: 'Support found successfully',
-      data: support,
+      data: this.mapSupportToPublic(support) as unknown as Support,
     };
   }
 
@@ -66,7 +94,7 @@ export class SupportService {
     }
     return {
       message: 'Support updated successfully',
-      data: support,
+      data: this.mapSupportToPublic(support) as unknown as Support,
     };
   }
 
@@ -103,7 +131,7 @@ export class SupportService {
     }
     return {
       message: 'Message added successfully',
-      data: support.messages,
+      data: (support.messages || []).map((m) => this.sanitizeMessageOut(m as unknown as Record<string, unknown>)),
     };
   }
 
@@ -120,7 +148,7 @@ export class SupportService {
     }
     return {
       message: 'Messages found successfully',
-      data: support.messages,
+      data: (support.messages || []).map((m) => this.sanitizeMessageOut(m as unknown as Record<string, unknown>)),
     };
   }
 
@@ -138,7 +166,7 @@ export class SupportService {
     }
     return {
       message: 'Status updated successfully',
-      data: support,
+      data: this.mapSupportToPublic(support) as unknown as Support,
     };
   }
 }

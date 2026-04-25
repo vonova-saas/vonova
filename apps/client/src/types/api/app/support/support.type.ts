@@ -2,9 +2,14 @@ export type SupportCategory = 'technical' | 'billing' | 'general' | 'feature-req
 export type SupportStatus = 'open' | 'pending' | 'resolved' | 'closed';
 
 export type SupportMessage = {
-  sender: 'user' | 'agent';
+  /** `user` = customer; `admin` = platform admin (manage app); `agent` = legacy/alternate support label */
+  sender: 'user' | 'agent' | 'admin';
   message: string;
   createdAt: string;
+  /** Set when `sender` is `admin` — display name from platform Admin */
+  senderName?: string;
+  /** Set when `sender` is `admin` — S3/HTTPS profile picture */
+  senderAvatarUrl?: string | null;
 };
 
 export type addSupportTicketType = {
@@ -42,6 +47,7 @@ export type getSupportTicketResponseType = {
     status: SupportStatus;
     subject: string;
     message: string;
+    messages?: SupportMessage[];
     createdAt: string;
     updatedAt: string;
   }[],

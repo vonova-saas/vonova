@@ -348,6 +348,7 @@ export type SupportTicketItem = {
     userName: string;
     userRole: 'admin' | 'user';
     message: string;
+    userAvatarUrl?: string | null;
     createdAt: string;
     updatedAt: string;
   }>;
