@@ -7,16 +7,39 @@ import {
   AdminSupportType,
 } from './schemas/admin-support-ticket.schema';
 import { User, UserDocument } from '../auth/schema/user.schema';
-import { Role } from '../auth/enums/role.enum';
+import { Admin, AdminDocument } from '../admin-auth/schemas/admin.schema';
 import { AdminNotificationsService } from './admin-notifications.service';
+import { Support, SupportDocument } from '../support/schema/support.schema';
+
+type SupportMessage = { sender?: string; message?: string; createdAt?: Date };
+
+type SupportLean = {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  fullName: string;
+  email: string;
+  category: string;
+  subject: string;
+  message: string;
+  status: string;
+  messages?: SupportMessage[];
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+const MARK_RESOLVED_REPLY = 'Marked as resolved by admin.';
 
 @Injectable()
 export class AdminSupportService {
   constructor(
     @InjectModel(AdminSupportTicket.name)
     private readonly ticketModel: Model<AdminSupportTicketDocument>,
+    @InjectModel(Support.name)
+    private readonly supportModel: Model<SupportDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Admin.name, 'adminConnection')
+    private readonly adminModel: Model<AdminDocument>,
     private readonly notificationsService: AdminNotificationsService,
   ) {}
 
@@ -39,9 +62,28 @@ export class AdminSupportService {
   }
 
   async reply(adminUserId: string, ticketId: string, adminReply: string) {
-    const admin = await this.userModel.findById(adminUserId);
-    if (!admin || admin.role !== Role.ADMIN) {
+    // Gateway sends the platform **Admin** document id (admin DB JWT `sub`), not `User._id`.
+    const adminAccount = await this.adminModel.findById(adminUserId).select('_id').lean();
+    if (!adminAccount) {
       throw new ForbiddenException('Admin access required');
+    }
+
+    const markResolved = adminReply === MARK_RESOLVED_REPLY;
+    const nextStatus = markResolved ? 'resolved' : 'pending';
+
+    const supportUpdated = await this.supportModel.findByIdAndUpdate(
+      ticketId,
+      {
+        $push: {
+          messages: { sender: 'admin', message: adminReply, createdAt: new Date() },
+        },
+        $set: { status: nextStatus, updatedAt: new Date() },
+      },
+      { new: true },
+    );
+
+    if (supportUpdated) {
+      return supportUpdated;
     }
 
     const ticket = await this.ticketModel.findByIdAndUpdate(
@@ -68,56 +110,53 @@ export class AdminSupportService {
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = {};
-    if (params.status) filter.status = params.status;
+    if (params.status === 'OPEN') {
+      filter.status = { $in: ['open', 'pending'] };
+    } else if (params.status === 'REPLIED') {
+      filter.status = { $in: ['resolved', 'closed'] };
+    }
     if (params.search?.trim()) {
-      filter.message = { $regex: params.search.trim(), $options: 'i' };
+      const s = params.search.trim();
+      filter.$or = [
+        { subject: { $regex: s, $options: 'i' } },
+        { message: { $regex: s, $options: 'i' } },
+        { email: { $regex: s, $options: 'i' } },
+        { fullName: { $regex: s, $options: 'i' } },
+      ];
     }
 
     const [rows, total] = await Promise.all([
-      this.ticketModel
+      this.supportModel
         .find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      this.ticketModel.countDocuments(filter),
+      this.supportModel.countDocuments(filter),
     ]);
 
-    const userIds = rows.map((r) => String(r.userId));
+    const supportRows = rows as SupportLean[];
+    const userIds = [...new Set(supportRows.map((r) => String(r.userId)))];
     const users = await this.userModel
       .find({ _id: { $in: userIds } })
-      .select('name email')
+      .select('name email profilePictureUrl')
       .lean();
     const userMap = new Map(users.map((u) => [String(u._id), u]));
 
-    const items = rows.map((r) => {
+    const items = supportRows.map((r) => {
       const user = userMap.get(String(r.userId));
       return {
         id: String(r._id),
-        name: user?.name ?? 'Unknown User',
-        email: user?.email ?? 'unknown@example.com',
-        category: r.type === 'BUG' ? 'bug-report' : 'general',
-        subject:
-          r.type === 'BUG'
-            ? `Bug report #${String(r._id).slice(-6)}`
-            : `Feedback #${String(r._id).slice(-6)}`,
+        name: r.fullName || user?.name || 'Unknown User',
+        email: r.email || user?.email || 'unknown@example.com',
+        category: r.category,
+        subject: r.subject,
         message: r.message,
-        status: r.status === 'OPEN' ? 'open' : 'resolved',
+        status: this.mapSupportStatusToDashboard(r.status),
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
-        responses: r.adminReply
-          ? [
-              {
-                id: `${String(r._id)}-reply`,
-                userId: 'admin',
-                userName: 'Admin',
-                userRole: 'admin',
-                message: r.adminReply,
-                createdAt: r.updatedAt,
-                updatedAt: r.updatedAt,
-              },
-            ]
-          : [],
+        userAvatarUrl: user?.profilePictureUrl ?? null,
+        responses: this.mapSupportMessagesToResponses(r),
       };
     });
 
@@ -129,36 +168,49 @@ export class AdminSupportService {
 
   async analytics() {
     const [all, last30d, last7d] = await Promise.all([
-      this.ticketModel.find().lean(),
-      this.ticketModel.find({ createdAt: { $gte: new Date(Date.now() - 30 * 86400000) } }).lean(),
-      this.ticketModel.find({ createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } }).lean(),
+      this.supportModel.find().lean(),
+      this.supportModel
+        .find({ createdAt: { $gte: new Date(Date.now() - 30 * 86400000) } })
+        .lean(),
+      this.supportModel
+        .find({ createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } })
+        .lean(),
     ]);
 
-    const totalTickets = all.length;
-    const openTickets = all.filter((t) => t.status === 'OPEN').length;
-    const avgResponseHours = this.computeAverageResponseHours(all);
-    const satisfactionRate = 92;
+    const allRows = all as SupportLean[];
+    const last30Rows = last30d as SupportLean[];
+    const last7Rows = last7d as SupportLean[];
 
-    const categories = [
-      {
-        id: 'general',
-        label: 'General',
-        value: all.filter((t) => t.type === 'FEEDBACK').length,
-      },
-      {
-        id: 'bug-report',
-        label: 'Bug Report',
-        value: all.filter((t) => t.type === 'BUG').length,
-      },
+    const totalTickets = allRows.length;
+    const openTickets = allRows.filter((t) => t.status === 'open' || t.status === 'pending').length;
+    const avgResponseHours = this.computeAverageResponseHoursSupport(allRows);
+
+    const categoryDefs: { id: string; label: string }[] = [
+      { id: 'general', label: 'General' },
+      { id: 'technical', label: 'Technical' },
+      { id: 'billing', label: 'Billing' },
+      { id: 'feature-request', label: 'Feature Request' },
+      { id: 'bug-report', label: 'Bug Report' },
     ];
+    const categories = categoryDefs.map((c) => ({
+      id: c.id,
+      label: c.label,
+      value: allRows.filter((t) => t.category === c.id).length,
+    }));
 
     const status = [
-      { id: 'open', label: 'Open', value: openTickets },
+      { id: 'open', label: 'Open', value: allRows.filter((t) => t.status === 'open').length },
+      {
+        id: 'in-progress',
+        label: 'In Progress',
+        value: allRows.filter((t) => t.status === 'pending').length,
+      },
       {
         id: 'resolved',
         label: 'Resolved',
-        value: all.filter((t) => t.status === 'REPLIED').length,
+        value: allRows.filter((t) => t.status === 'resolved').length,
       },
+      { id: 'closed', label: 'Closed', value: allRows.filter((t) => t.status === 'closed').length },
     ];
 
     const responseTimeTrend = [
@@ -166,13 +218,13 @@ export class AdminSupportService {
         id: 'avgResponseTime',
         data: Array.from({ length: 7 }, (_, i) => {
           const d = new Date(Date.now() - (6 - i) * 86400000);
-          const dayRows = last7d.filter(
+          const dayKey = d.toISOString().slice(0, 10);
+          const dayRows = last7Rows.filter(
             (t) =>
               t.createdAt != null &&
-              new Date(t.createdAt).toISOString().slice(0, 10) ===
-                d.toISOString().slice(0, 10),
+              new Date(t.createdAt).toISOString().slice(0, 10) === dayKey,
           );
-          const y = this.computeAverageResponseHours(dayRows) * 60;
+          const y = this.computeAverageResponseHoursSupport(dayRows) * 60;
           return { x: d.toLocaleDateString('en-US', { weekday: 'short' }), y: Number(y.toFixed(0)) };
         }),
       },
@@ -184,7 +236,7 @@ export class AdminSupportService {
         data: Array.from({ length: 30 }, (_, i) => {
           const d = new Date(Date.now() - (29 - i) * 86400000);
           const key = d.toISOString().slice(0, 10);
-          const count = last30d.filter(
+          const count = last30Rows.filter(
             (t) =>
               t.createdAt != null &&
               new Date(t.createdAt).toISOString().slice(0, 10) === key,
@@ -198,7 +250,7 @@ export class AdminSupportService {
       totalTickets,
       openTickets,
       avgResponseTime: `${avgResponseHours.toFixed(1)}h`,
-      satisfactionRate,
+      satisfactionRate: 92,
       categories,
       status,
       responseTimeTrend,
@@ -206,12 +258,43 @@ export class AdminSupportService {
     };
   }
 
-  private computeAverageResponseHours(rows: Array<{ createdAt?: Date; updatedAt?: Date; status?: string }>) {
-    const replied = rows.filter((r) => r.status === 'REPLIED' && r.createdAt && r.updatedAt);
-    if (!replied.length) return 0;
-    const totalMs = replied.reduce((sum, r) => {
-      return sum + (new Date(r.updatedAt as Date).getTime() - new Date(r.createdAt as Date).getTime());
-    }, 0);
-    return totalMs / replied.length / 3600000;
+  private mapSupportStatusToDashboard(
+    s: string,
+  ): 'open' | 'in-progress' | 'resolved' | 'closed' {
+    if (s === 'pending') return 'in-progress';
+    if (s === 'open') return 'open';
+    if (s === 'resolved') return 'resolved';
+    if (s === 'closed') return 'closed';
+    return 'open';
+  }
+
+  private mapSupportMessagesToResponses(r: SupportLean) {
+    const msgs = r.messages || [];
+    return msgs.map((m, i) => {
+      const isAdmin = m.sender === 'admin';
+      return {
+        id: `${String(r._id)}-msg-${i}`,
+        userId: isAdmin ? 'admin' : String(r.userId),
+        userName: isAdmin ? 'Admin' : r.fullName || 'User',
+        userRole: isAdmin ? ('admin' as const) : ('user' as const),
+        message: m.message ?? '',
+        createdAt: m.createdAt ?? r.updatedAt ?? r.createdAt,
+        updatedAt: m.createdAt ?? r.updatedAt ?? r.createdAt,
+      };
+    });
+  }
+
+  private computeAverageResponseHoursSupport(rows: SupportLean[]) {
+    const hours: number[] = [];
+    for (const r of rows) {
+      const msgs = r.messages || [];
+      const firstAdmin = msgs.find((m) => m.sender === 'admin');
+      if (!firstAdmin?.createdAt || !r.createdAt) continue;
+      hours.push(
+        (new Date(firstAdmin.createdAt).getTime() - new Date(r.createdAt).getTime()) / 3600000,
+      );
+    }
+    if (!hours.length) return 0;
+    return hours.reduce((a, b) => a + b, 0) / hours.length;
   }
 }

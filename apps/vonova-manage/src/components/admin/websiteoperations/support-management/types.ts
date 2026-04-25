@@ -7,6 +7,8 @@ export interface SupportTicket {
   id: string;
   name: string;
   email: string;
+  /** User profile image URL (S3 or similar); optional for legacy rows */
+  userAvatarUrl?: string | null;
   category: SupportCategory;
   subject: string;
   message: string;

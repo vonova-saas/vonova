@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { SupportTicket } from '../types';
+import { avatarImgSrcForDisplay } from '@/lib/avatar-display-url';
 
 interface TicketDetailsProps {
   ticket: SupportTicket;
@@ -100,8 +101,21 @@ export function TicketDetails({
                   {ticket.category.replace('-', ' ')}
                 </Badge>
               </div>
-              <CardDescription className="mt-1">
-                Created by {ticket.name} • {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+              <CardDescription className="mt-1 flex items-center gap-2">
+                {ticket.userAvatarUrl ? (
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage
+                      src={avatarImgSrcForDisplay(ticket.userAvatarUrl)}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                    />
+                    <AvatarFallback>{ticket.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                ) : null}
+                <span>
+                  Created by {ticket.name} •{' '}
+                  {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+                </span>
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">

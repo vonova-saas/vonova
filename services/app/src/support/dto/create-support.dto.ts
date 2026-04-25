@@ -4,14 +4,10 @@ import {
   MaxLength,
   IsOptional,
   IsIn,
-  IsNotEmpty,
 } from 'class-validator';
 
+/** Body fields only; `userId` is supplied on the NATS payload, not in createSupportDto. */
 export class CreateSupportDto {
-  @IsNotEmpty()
-  @IsString()
-  userId: string;
-
   @IsOptional()
   @IsString()
   fullName?: string;
