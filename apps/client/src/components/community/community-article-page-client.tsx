@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { articleImgSrcForDisplay } from "@/lib/article-image-display-url";
+import { ArticleImageGallery } from "./article-image-gallery";
 
 function getArticleImage(article?: CommunityArticle): string | undefined {
   if (!article) return undefined;
@@ -89,13 +90,16 @@ function renderBlock(block: ArticleContentBlock, index: number) {
   if (block.type === "image" && block.url) {
     return (
       <figure key={index} className="mt-6 space-y-2">
-        <img
-          src={articleImgSrcForDisplay(block.url)}
-          alt={block.alt || ""}
-          className="w-full rounded-xl border object-cover"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
+        <div className="overflow-hidden rounded-xl border bg-muted/20">
+          <img
+            src={articleImgSrcForDisplay(block.url)}
+            alt={block.alt || ""}
+            className="w-full object-contain"
+            style={{ maxHeight: '600px' }}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        </div>
         {block.caption ? <figcaption className="text-center text-sm text-muted-foreground">{block.caption}</figcaption> : null}
       </figure>
     );
@@ -315,6 +319,27 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
 
           <Separator />
 
+          {/* Image Gallery */}
+          {(() => {
+            const galleryImages = getArticleGalleryImages(article);
+            if (galleryImages.length > 1) {
+              return (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Images</h3>
+                  <ArticleImageGallery 
+                    images={galleryImages}
+                    aspectRatio="auto"
+                    maxImages={6}
+                    showLightbox={true}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          <Separator />
+
           <section className="prose prose-neutral dark:prose-invert max-w-none">
             {markdownBody ? (
               <ReactMarkdown
@@ -347,13 +372,16 @@ export default function CommunityArticlePageClient({ area, userId, slug }: Props
                   th: ({ ...props }) => <th {...props} className="bg-muted/40 px-4 py-2 text-left font-semibold" />,
                   td: ({ ...props }) => <td {...props} className="border-t px-4 py-2 align-top" />,
                   img: ({ src, ...props }) => (
-                    <img
-                      src={src && typeof src === "string" ? articleImgSrcForDisplay(src) : src}
-                      {...props}
-                      className="my-6 w-full rounded-xl border object-cover shadow-sm"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="my-6 overflow-hidden rounded-xl border bg-muted/20 shadow-sm">
+                      <img
+                        src={src && typeof src === "string" ? articleImgSrcForDisplay(src) : src}
+                        {...props}
+                        className="w-full object-contain"
+                        style={{ maxHeight: '600px' }}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
                   ),
                   a: ({ ...props }) => (
                     <a

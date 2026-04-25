@@ -14,7 +14,7 @@ export class CommentsService {
     @InjectModel('Post') private readonly postModel: Model<PostDocument>,
     private readonly s3Service: S3Service,
     private readonly communityS3Service: CommunityS3Service,
-  ) {}
+  ) { }
 
   private toObjectId(id: string): Types.ObjectId {
     if (!Types.ObjectId.isValid(id)) {
@@ -40,7 +40,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePicture')
+      .populate('author', 'name profilePictureUrl')
       .lean();
   }
 
@@ -50,13 +50,24 @@ export class CommentsService {
 
     const [comments, total] = await Promise.all([
       this.commentModel
-        .find({ post: postObjectId })
+        .find({
+          post: postObjectId,
+          parentComment: null
+        }) // Only get top-level comments
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePicture')
+        .populate('author', 'name profilePictureUrl')
+        .populate({
+          path: 'replies',
+          options: { sort: { createdAt: -1 }, limit: 3 }, // Get latest 3 replies
+          populate: {
+            path: 'author',
+            select: 'name profilePicture',
+          },
+        })
         .lean(),
-      this.commentModel.countDocuments({ post: postObjectId }),
+      this.commentModel.countDocuments({ post: postObjectId, parentComment: null }),
     ]);
 
     return {
@@ -153,8 +164,150 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePicture')
+      .populate('author', 'name profilePictureUrl')
       .lean();
+  }
+
+  // ─── Replies ─────────────────────────────────────────────────────────────────
+
+  async createReply(
+    parentCommentId: string,
+    postId: string,
+    userId: string,
+    dto: CreateCommentDto
+  ) {
+    // Verify parent comment exists
+    const parentComment = await this.commentModel.findById(this.toObjectId(parentCommentId));
+    if (!parentComment) {
+      throw new Error('Parent comment not found');
+    }
+
+    // Create the reply
+    const reply = await this.commentModel.create({
+      post: this.toObjectId(postId),
+      parentComment: this.toObjectId(parentCommentId),
+      author: this.toObjectId(userId),
+      text: dto.text,
+      image: dto.image || null,
+      imageKey: dto.imageKey || null,
+    });
+
+    // Add reply to parent comment's replies array
+    await this.commentModel.findByIdAndUpdate(
+      this.toObjectId(parentCommentId),
+      {
+        $push: { replies: reply._id },
+        $inc: { repliesCount: 1 }
+      }
+    );
+
+    // Increment comments count on the post
+    await this.postModel.findByIdAndUpdate(
+      this.toObjectId(postId),
+      { $inc: { commentsCount: 1 } }
+    );
+
+    return this.commentModel
+      .findById(reply._id)
+      .populate('author', 'name profilePictureUrl')
+      .lean();
+  }
+
+  async createReplyWithFile(
+    parentCommentId: string,
+    postId: string,
+    userId: string,
+    dto: CreateCommentDto,
+    file?: Express.Multer.File,
+  ) {
+    // Verify parent comment exists
+    const parentComment = await this.commentModel.findById(this.toObjectId(parentCommentId));
+    if (!parentComment) {
+      throw new Error('Parent comment not found');
+    }
+
+    let image: string | undefined;
+    let imageKey: string | undefined;
+
+    // Create reply first to get replyId
+    const reply = await this.commentModel.create({
+      post: this.toObjectId(postId),
+      parentComment: this.toObjectId(parentCommentId),
+      author: this.toObjectId(userId),
+      text: dto.text,
+      image: null,
+      imageKey: null,
+    });
+
+    // Upload file to S3 if provided
+    if (file) {
+      try {
+        const uploadResult = await this.communityS3Service.uploadFile(
+          file,
+          'posts',
+          postId,
+          userId,
+          reply._id.toString() // Use replyId for the folder structure
+        );
+        image = uploadResult.url;
+        imageKey = uploadResult.key;
+
+        // Update reply with image info
+        await this.commentModel.findByIdAndUpdate(reply._id, { image, imageKey });
+      } catch (error) {
+        // If upload fails, delete the created reply
+        await this.commentModel.findByIdAndDelete(reply._id);
+        throw new Error(`Failed to upload reply image: ${error.message}`);
+      }
+    }
+
+    // Add reply to parent comment's replies array
+    await this.commentModel.findByIdAndUpdate(
+      this.toObjectId(parentCommentId),
+      {
+        $push: { replies: reply._id },
+        $inc: { repliesCount: 1 }
+      }
+    );
+
+    // Increment comments count on the post
+    await this.postModel.findByIdAndUpdate(
+      this.toObjectId(postId),
+      { $inc: { commentsCount: 1 } }
+    );
+
+    return this.commentModel
+      .findById(reply._id)
+      .populate('author', 'name profilePictureUrl')
+      .lean();
+  }
+
+  async getRepliesByComment(
+    parentCommentId: string,
+    page: number = 1,
+    limit: number = 5
+  ) {
+    const skip = (page - 1) * limit;
+    const parentCommentObjectId = this.toObjectId(parentCommentId);
+
+    const [replies, total] = await Promise.all([
+      this.commentModel
+        .find({ parentComment: parentCommentObjectId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('author', 'name profilePictureUrl')
+        .lean(),
+      this.commentModel.countDocuments({ parentComment: parentCommentObjectId }),
+    ]);
+
+    return {
+      replies,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   // ─── Likes ─────────────────────────────────────────────────────────────────
@@ -220,7 +373,7 @@ export class CommentsService {
         );
         image = uploadResult.url;
         imageKey = uploadResult.key;
-        
+
         // Update comment with image info
         await this.commentModel.findByIdAndUpdate(comment._id, { image, imageKey });
       } catch (error) {
@@ -238,7 +391,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePicture')
+      .populate('author', 'name profilePictureUrl')
       .lean();
   }
 
@@ -310,7 +463,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePicture')
+      .populate('author', 'name profilePictureUrl')
       .lean();
   }
 
@@ -333,8 +486,8 @@ export class CommentsService {
   async deleteCommentsByPost(postId: string): Promise<{ deletedCount: number; acknowledged: boolean }> {
     try {
       console.log(`[COMMENTS SERVICE] Deleting all comments for post: ${postId}`);
-      const result = await this.commentModel.deleteMany({ 
-        post: this.toObjectId(postId) 
+      const result = await this.commentModel.deleteMany({
+        post: this.toObjectId(postId)
       });
       console.log(`[COMMENTS SERVICE] Deleted ${result.deletedCount} comments for post: ${postId}`);
       return result;
@@ -348,8 +501,8 @@ export class CommentsService {
   async deleteCommentsByPostDirect(postId: string): Promise<{ deletedCount: number; acknowledged: boolean }> {
     try {
       console.log(`[COMMENTS SERVICE] Direct deletion of comments for post: ${postId}`);
-      const result = await this.commentModel.deleteMany({ 
-        post: this.toObjectId(postId) 
+      const result = await this.commentModel.deleteMany({
+        post: this.toObjectId(postId)
       });
       console.log(`[COMMENTS SERVICE] Direct deletion result: ${result.deletedCount} comments deleted`);
       return result;

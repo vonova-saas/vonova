@@ -11,13 +11,21 @@ export class Comment extends Document {
 
   @Prop({ required: true, trim: true, maxlength: 1000 })
   text: string;
-  
-@Prop({ type: String, default: null })
-image?: string;
 
-@Prop({ type: String, default: null })
-imageKey?: string;
+  @Prop({ type: String, default: null })
+  image?: string;
 
+  @Prop({ type: String, default: null })
+  imageKey?: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Comment', default: null })
+  parentComment?: Types.ObjectId;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Comment' }], default: [] })
+  replies: Types.ObjectId[];
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  repliesCount: number;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   likes: Types.ObjectId[];
@@ -31,3 +39,5 @@ export const CommentSchema = SchemaFactory.createForClass(Comment);
 // Indexes for performance
 CommentSchema.index({ post: 1, createdAt: -1 });
 CommentSchema.index({ author: 1 });
+CommentSchema.index({ parentComment: 1, createdAt: -1 });
+CommentSchema.index({ post: 1, parentComment: 1 });

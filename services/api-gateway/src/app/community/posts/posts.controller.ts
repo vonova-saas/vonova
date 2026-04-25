@@ -51,7 +51,7 @@ import {
 @Controller('api/v1/community/posts')
 @UseGuards(JwtAuthGuard)
 export class PostsGatewayController {
-  constructor(private readonly postsService: PostsGatewayService) {}
+  constructor(private readonly postsService: PostsGatewayService) { }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
@@ -947,22 +947,20 @@ export class PostsGatewayController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Comment liked/unliked successfully',
+    description: 'Comment like toggled successfully',
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Comment liked' },
         data: {
           type: 'object',
           properties: {
             liked: { type: 'boolean', example: true },
-            likesCount: { type: 'number', example: 3 },
+            likesCount: { type: 'number', example: 5 },
           },
         },
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Comment not found' })
   @Post('comments/:commentId/like')
   async toggleCommentLike(
     @Param('commentId') commentId: string,
@@ -971,5 +969,158 @@ export class PostsGatewayController {
     return firstValueFrom(
       this.postsService.toggleCommentLike(commentId, req.user._id),
     );
+  }
+
+  // ─── Replies ───────────────────────────────────────────────────────────────
+
+  @ApiOperation({
+    summary: 'Reply to a comment',
+    description: 'Adds a reply to a specific comment with optional image',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({
+    name: 'commentId',
+    description: 'The unique identifier of the parent comment',
+    example: '507f1f77bcf86cd799439013',
+  })
+  @ApiParam({
+    name: 'postId',
+    description: 'The unique identifier of the post',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        content: {
+          type: 'string',
+          description: 'Reply content',
+          example: 'This is my reply to your comment',
+        },
+      },
+      required: ['content'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Reply created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439014' },
+            text: { type: 'string', example: 'This is my reply' },
+            author: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                name: { type: 'string', example: 'John Doe' },
+                profilePicture: {
+                  type: 'string',
+                  nullable: true,
+                },
+              },
+            },
+            parentComment: { type: 'string', example: '507f1f77bcf86cd799439013' },
+            likes: { type: 'array', items: { type: 'string' } },
+            likesCount: { type: 'number', example: 0 },
+            createdAt: {
+              type: 'string',
+              example: '2023-01-01T00:00:00.000Z',
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Comment or post not found' })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
+  @Post(':postId/comments/:commentId/reply')
+  @UseInterceptors(FileInterceptor('file'))
+  async replyToComment(
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: Record<string, unknown>,
+    @UploadedFile() file: CustomUploadedFile | undefined,
+    @Request() req: any,
+  ) {
+    const createCommentDto = plainToInstance(CreateCommentDto, {
+      text: body.content,
+    });
+
+    const errors = await validate(createCommentDto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
+    // Handle file upload if present
+    if (file) {
+      return firstValueFrom(
+        this.postsService.createReplyWithFile(
+          commentId,
+          postId,
+          req.user._id,
+          createCommentDto,
+          file,
+        ),
+      );
+    }
+
+    return firstValueFrom(
+      this.postsService.createReply(
+        commentId,
+        postId,
+        req.user._id,
+        createCommentDto,
+      ),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Get replies for a comment',
+    description: 'Retrieves a paginated list of replies for a specific comment',
+  })
+  @ApiParam({
+    name: 'commentId',
+    description: 'The unique identifier of the comment',
+    example: '507f1f77bcf86cd799439013',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 5 })
+  @ApiResponse({
+    status: 200,
+    description: 'Replies retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            replies: { type: 'array', items: { type: 'object' } },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 5 },
+                total: { type: 'number', example: 12 },
+                totalPages: { type: 'number', example: 3 },
+                hasNext: { type: 'boolean', example: true },
+                hasPrev: { type: 'boolean', example: false },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  @Get('comments/:commentId/replies')
+  async getReplies(
+    @Param('commentId') commentId: string,
+    @Query() query: { page?: number; limit?: number },
+  ) {
+    return firstValueFrom(this.postsService.getReplies(commentId, query));
   }
 }
