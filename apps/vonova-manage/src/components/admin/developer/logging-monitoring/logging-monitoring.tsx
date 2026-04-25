@@ -57,10 +57,10 @@ export function LoggingMonitoring() {
     void refetch();
   }, [refreshCount, refetch]);
 
-  const monitoring = data?.data;
-  const logs: LogEntry[] = monitoring?.logs.map((log) => ({ ...log, timestamp: new Date(log.timestamp) })) ?? [];
+  const monitoring = data?.data as any;
+  const logs: LogEntry[] = monitoring?.logs?.map((log: any) => ({ ...log, timestamp: new Date(log.timestamp) })) ?? [];
   const sources: LogSource[] =
-    monitoring?.sources.map((s) => ({ ...s, lastUpdated: new Date(s.lastUpdated) })) ?? [];
+    monitoring?.sources?.map((s: any) => ({ ...s, lastUpdated: new Date(s.lastUpdated) })) ?? [];
 
   // Check if admin logs are disabled
   if (monitoring?.message === 'Admin logs are disabled') {
@@ -196,7 +196,7 @@ export function LoggingMonitoring() {
             <CardHeader><div className="flex items-center justify-between"><CardTitle>Alerts</CardTitle><Button variant="outline" size="sm" className="h-8"><Plus className="mr-2 h-4 w-4" />New Alert Rule</Button></div></CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(monitoring?.alerts.length ?? 0) > 0 ? monitoring?.alerts.map((alert) => (
+                {(monitoring?.alerts.length ?? 0) > 0 ? monitoring?.alerts.map((alert: any) => (
                   <Alert key={alert.id}>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{alert.title}</AlertTitle>
