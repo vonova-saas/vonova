@@ -84,21 +84,24 @@ export function SettingsFormClient({ defaultValues }: SettingsFormClientProps) {
   const hasParentTheme =
     defaultValues.theme === 'light' || defaultValues.theme === 'dark'
 
+  // Get initial theme from client preference if no parent theme
+  const initialTheme = hasParentTheme ? defaultValues.theme! : readClientThemePreference()
+
   const form = useForm<SettingsFormValues>({
     defaultValues: {
       font: defaultValues.font ?? 'cairo',
       fontSize: defaultValues.fontSize ?? '16',
       language: defaultValues.language ?? 'en',
-      theme: hasParentTheme ? defaultValues.theme! : 'light',
+      theme: initialTheme,
     },
   })
 
-  // Match the theme radio to next-themes / localStorage on first client mount (no hardcoded light).
+  // Apply the initial theme on mount if no parent theme
   useEffect(() => {
-    if (hasParentTheme) return
-    const t = readClientThemePreference()
-    form.setValue('theme', t, { shouldDirty: false, shouldTouch: false })
-  }, [hasParentTheme, form])
+    if (!hasParentTheme) {
+      applyThemePreference(initialTheme)
+    }
+  }, [hasParentTheme, initialTheme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // cache to avoid re-loading a font that is already registered
   const loadedFontsRef = useRef<Set<string>>(new Set())
