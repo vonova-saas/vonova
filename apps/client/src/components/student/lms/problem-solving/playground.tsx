@@ -22,6 +22,7 @@ import {
   useSubmissionStatusQuery,
   useSubmitSolutionMutation,
 } from "@/hooks/student/use-problem-solving";
+import { useProblemCompletion } from "@/hooks/student/use-problem-completion";
 import type {
   AIInteractionEntity,
   ProblemEntity,
@@ -44,6 +45,7 @@ const SUBMIT_DEBOUNCE_MS = 800;
 
 export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
+  const { markAsCompleted } = useProblemCompletion();
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
   const [solution, setSolution] = useState<AIInteractionEntity | null>(null);
@@ -272,12 +274,13 @@ export default function Playground({ problem }: PlaygroundProps) {
       toast.success(
         `Accepted in ${result.executionTime}ms, ${result.memoryUsed}MB`,
       );
+      markAsCompleted(problem._id);
     } else {
       toast.error("Submission failed", {
         description: `${result.status} • ${result.executionTime}ms • ${result.memoryUsed}MB`,
       });
     }
-  }, [submissionStatusQuery.data]);
+  }, [submissionStatusQuery.data, markAsCompleted, problem._id]);
 
   const displayStatus = submissionStatusQuery.data?.status ?? submissionStatus;
   const displaySummary = submissionStatusQuery.data
@@ -316,8 +319,8 @@ export default function Playground({ problem }: PlaygroundProps) {
             >
               <option value="typescript">TypeScript</option>
               <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="java">Java</option>
+              {/* <option value="python">Python</option>
+              <option value="java">Java</option> */}
             </select>
           </div>
           <div className="text-[11px] text-zinc-500">Auto</div>
