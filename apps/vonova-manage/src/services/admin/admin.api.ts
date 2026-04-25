@@ -154,7 +154,7 @@ export const replySupportTicketMutationFn = async (params: {
 
 export const updateSupportTicketStatusMutationFn = async (params: {
   ticketId: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  status: 'open' | 'resolved';
 }) => {
   const response = await API.patch(`/admin/support/${params.ticketId}/status`, {
     status: params.status,

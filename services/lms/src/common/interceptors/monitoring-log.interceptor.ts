@@ -20,6 +20,10 @@ export class MonitoringLogInterceptor implements NestInterceptor {
     const payload = this.getPayload(context);
     const pattern = this.getPattern(context);
 
+    if (this.shouldSkipPattern(pattern)) {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       tap({
         next: () => {
@@ -70,6 +74,7 @@ export class MonitoringLogInterceptor implements NestInterceptor {
             level: params.level,
             message,
             pattern: params.pattern,
+            command: params.pattern,
             statusCode: params.statusCode,
             responseTimeMs: params.responseTimeMs,
             error: params.errorMessage,
@@ -91,14 +96,42 @@ export class MonitoringLogInterceptor implements NestInterceptor {
 
   private getPattern(context: ExecutionContext): string {
     const rpcContext = context.switchToRpc().getContext<{
-      getSubject?: () => string;
-      getPattern?: () => string;
+      getSubject?: () => unknown;
+      getPattern?: () => unknown;
     }>();
-    return (
-      rpcContext?.getSubject?.() ||
-      rpcContext?.getPattern?.() ||
-      `${context.getClass().name}.${context.getHandler().name}`
-    );
+    const rawPattern =
+      rpcContext?.getSubject?.() ??
+      rpcContext?.getPattern?.() ??
+      `${context.getClass().name}.${context.getHandler().name}`;
+    return this.normalizePattern(rawPattern);
+  }
+
+  private normalizePattern(pattern: unknown): string {
+    if (typeof pattern === 'string') {
+      const value = pattern.trim();
+      if (value.startsWith('{') && value.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(value) as { cmd?: unknown };
+          if (typeof parsed.cmd === 'string' && parsed.cmd.trim().length > 0) {
+            return parsed.cmd;
+          }
+        } catch {
+          // Ignore malformed pattern payloads and use raw value.
+        }
+      }
+      return value;
+    }
+    if (pattern && typeof pattern === 'object') {
+      const cmd = (pattern as { cmd?: unknown }).cmd;
+      if (typeof cmd === 'string' && cmd.trim().length > 0) {
+        return cmd.trim();
+      }
+    }
+    return String(pattern);
+  }
+
+  private shouldSkipPattern(pattern: string): boolean {
+    return pattern === 'admin.event.log';
   }
 
   private extractUserId(payload: Record<string, unknown>): string {

@@ -4,11 +4,11 @@ import { IsIn, IsString } from 'class-validator';
 export class UpdateAdminSupportStatusDto {
   @ApiProperty({
     description: 'New status for the support ticket',
-    enum: ['open', 'in-progress', 'resolved', 'closed'],
-    example: 'in-progress',
+    enum: ['open', 'resolved'],
+    example: 'open',
   })
   @IsString()
-  @IsIn(['open', 'in-progress', 'resolved', 'closed'])
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  @IsIn(['open', 'resolved'])
+  status: 'open' | 'resolved';
 }
 

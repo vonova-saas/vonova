@@ -82,7 +82,7 @@ export class AdminGatewayService {
   updateDashboardSupportStatus(body: {
     adminUserId: string;
     ticketId: string;
-    status: 'open' | 'in-progress' | 'resolved' | 'closed';
+    status: 'open' | 'resolved';
   }) {
     return this.client.send({ cmd: 'admin.support.status.update' }, body);
   }

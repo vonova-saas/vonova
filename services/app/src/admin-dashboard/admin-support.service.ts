@@ -160,17 +160,16 @@ export class AdminSupportService {
   async updateStatus(
     adminUserId: string,
     ticketId: string,
-    status: 'open' | 'in-progress' | 'resolved' | 'closed',
+    status: 'open' | 'resolved',
   ) {
     const adminAccount = await this.adminModel.findById(adminUserId).select('_id').lean();
     if (!adminAccount) {
       throw new ForbiddenException('Admin access required');
     }
 
-    const mappedStatus = status === 'in-progress' ? 'pending' : status;
     const supportUpdated = await this.supportModel.findByIdAndUpdate(
       ticketId,
-      { $set: { status: mappedStatus, updatedAt: new Date() } },
+      { $set: { status, updatedAt: new Date() } },
       { new: true },
     );
 

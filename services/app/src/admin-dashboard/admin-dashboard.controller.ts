@@ -152,7 +152,7 @@ export class AdminDashboardController {
     data: {
       adminUserId: string;
       ticketId: string;
-      status: 'open' | 'in-progress' | 'resolved' | 'closed';
+      status: 'open' | 'resolved';
     },
   ) {
     const ticket = await this.adminSupportService.updateStatus(

@@ -61,10 +61,14 @@ export default function SupportManagement() {
   });
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
+    if (status !== 'open' && status !== 'resolved') {
+      toast.error('Only Open and Resolved are available.');
+      return false;
+    }
     try {
       await statusMutation.mutateAsync({
         ticketId,
-        status: status as SupportTicket['status'],
+        status,
       });
       toast.success(`Ticket marked as ${status}`);
       return true;
@@ -184,9 +188,7 @@ export default function SupportManagement() {
               >
                 <option value="">All Status</option>
                 <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
                 <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
               </select>
             </div>
           )}
