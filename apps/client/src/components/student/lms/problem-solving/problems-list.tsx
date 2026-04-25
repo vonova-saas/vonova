@@ -11,6 +11,7 @@ import { Search, Filter, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { useProblemsQuery } from "@/hooks/student/use-problem-solving";
+import { useProblemCompletion } from "@/hooks/student/use-problem-completion";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,6 +33,7 @@ const CATEGORY_OPTIONS = [
 
 export default function ProblemsList() {
   const userId = useUserId();
+  const { isCompleted } = useProblemCompletion();
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -77,6 +79,15 @@ export default function ProblemsList() {
       return matchesSearch && matchesCategories;
     });
   }, [search, problems, selectedCategories]);
+
+  const availableProblems = useMemo(
+    () => filteredProblems.filter((problem) => !isCompleted(problem._id)),
+    [filteredProblems, isCompleted],
+  );
+  const completedProblems = useMemo(
+    () => filteredProblems.filter((problem) => isCompleted(problem._id)),
+    [filteredProblems, isCompleted],
+  );
 
   const handleRefresh = () => {
     setSearch("");
@@ -149,8 +160,8 @@ export default function ProblemsList() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 pt-10">
-      {/* Search and filter */}
-      <div className="w-full max-w-3xl flex flex-col md:flex-row gap-4 mb-8">
+      {/* Search and Filter */}
+      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Input
             placeholder="Search problems..."
@@ -160,7 +171,7 @@ export default function ProblemsList() {
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
         </div>
-        <div className="relative w-[120px]">
+        <div className="relative w-[93px]">
           <Select
             value={difficulty}
             onValueChange={(value) =>
@@ -220,55 +231,117 @@ export default function ProblemsList() {
           <div className="text-center text-muted-foreground py-8">No problems found.</div>
         ) : null}
         {filteredProblems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredProblems.map((problem, index) => (
-              <Card
-                key={problem._id ?? `${problem.title}-${index}`}
-                className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
-              >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-semibold flex flex-col gap-1">
-                    <span>{problem.title}</span>
-                    <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-                      <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                      >
-                        {problem.testCases?.length ?? 0} cases
-                      </span>
-                      <Badge
-                        className={
-                          problem.difficulty === "easy"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                            : problem.difficulty === "medium"
-                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                              : "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300"
-                        }
-                      >
-                        {problem.difficulty}
-                      </Badge>
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col flex-1 justify-between">
-                  <p className="mb-4 text-sm text-muted-foreground min-h-[40px] line-clamp-3">
-                    {problem.description}
-                  </p>
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {problem.categories.map((category) => (
-                      <Badge key={category} variant="outline">
-                        {category}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Link
-                    href={`/student/${userId}/problem-solving/${problem._id}`}
-                    className="w-full mt-auto"
-                  >
-                    <Button className="w-full cursor-pointer">Solve Problem</Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-10">
+            <section>
+              <h2 className="text-xl font-semibold mb-4">Available Problems</h2>
+              {availableProblems.length === 0 ? (
+                <Card>
+                  <CardContent className="py-6 text-muted-foreground">
+                    You have no problems left to solve. See completed problems below.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
+                  {availableProblems.map((problem, index) => (
+                    <Card
+                      key={problem._id ?? `${problem.title}-${index}`}
+                      className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
+                    >
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-lg font-semibold flex items-center">
+                          {problem.title}
+                          <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold ml-2 align-middle">
+                            {problem.testCases?.length ?? 0} Cases
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col flex-1 justify-between">
+                        <p className="mb-2 text-muted-foreground min-h-[48px]">
+                          {problem.description}
+                        </p>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <span
+                            className={
+                              problem.difficulty === "easy"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : problem.difficulty === "medium"
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-rose-600 dark:text-rose-400"
+                            }
+                          >
+                            {problem.difficulty}
+                          </span>
+                          {" • "}
+                          {problem.categories.join(", ")}
+                        </div>
+                        <Link
+                          href={`/student/${userId}/problem-solving/${problem._id}`}
+                          className="w-full mt-4"
+                        >
+                          <Button className="w-full cursor-pointer">Solve Problem</Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </section>
+            <section>
+              <h2 className="text-xl font-semibold mb-4">Completed Problems</h2>
+              {completedProblems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
+                  {completedProblems.map((problem, index) => (
+                    <Card
+                      key={problem._id ?? `${problem.title}-${index}`}
+                      className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
+                    >
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-lg font-semibold flex items-center">
+                          {problem.title}
+                          <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold ml-2 align-middle">
+                            {problem.testCases?.length ?? 0} Cases
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col flex-1 justify-between">
+                        <p className="mb-2 text-muted-foreground min-h-[48px]">
+                          {problem.description}
+                        </p>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <span
+                            className={
+                              problem.difficulty === "easy"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : problem.difficulty === "medium"
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-rose-600 dark:text-rose-400"
+                            }
+                          >
+                            {problem.difficulty}
+                          </span>
+                          {" • "}
+                          {problem.categories.join(", ")}
+                        </div>
+                        <Link
+                          href={`/student/${userId}/problem-solving/${problem._id}`}
+                          className="w-full mt-4"
+                        >
+                          <Button className="w-full cursor-pointer" variant="outline">
+                            Solve Again
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-6 text-muted-foreground">
+                    No completed problems yet.
+                  </CardContent>
+                </Card>
+              )}
+            </section>
           </div>
         ) : null}
       </div>
