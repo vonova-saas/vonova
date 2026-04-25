@@ -174,6 +174,10 @@ import { articleImgSrcForDisplay } from "@/lib/article-image-display-url";
 import { postImgSrcForDisplay } from "@/lib/post-image-display-url";
 
 import { cn } from "@/lib/utils";
+import { ImagePreviewGallery } from "@/components/community/image-preview-gallery";
+import { ImageUploadZone } from "@/components/community/image-upload-zone";
+import { VideoPreviewGallery } from "@/components/community/video-preview-gallery";
+import { VideoUploadZone } from "@/components/community/video-upload-zone";
 
 import { MoreHorizontal } from "lucide-react";
 
@@ -391,6 +395,20 @@ function initials(name: string) {
 
 }
 
+// Generate a default avatar URL using the user's name
+function getDefaultAvatarUrl(name: string): string {
+  // Use a reliable avatar service with the user's name/initials
+  const initials = name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U";
+  
+  // Using DiceBear API for consistent avatars
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(initials)}&backgroundColor=6366f1&color=fff`;
+}
+
 
 
 function readMinutes(article: CommunityArticle): number | null {
@@ -519,7 +537,7 @@ function PostMediaGallery({ images, videos }: { images: string[]; videos: string
 
               alt={`Post media ${index + 1}`}
 
-              className="max-h-80 w-full rounded-xl border object-cover"
+              className="max-h-96 w-full object-contain"
 
               loading="lazy"
 
@@ -2798,9 +2816,19 @@ export default function CommunityPageClient({
 
                   />
 
-                ) : null}
+                ) : (
 
-                <AvatarFallback>{initials(user?.name || "You")}</AvatarFallback>
+                  <AvatarImage
+
+                    src={getDefaultAvatarUrl(user?.name || "You")}
+
+                    className="object-cover"
+
+                    referrerPolicy="no-referrer"
+
+                  />
+
+                )}
 
               </Avatar>
 
@@ -2836,25 +2864,61 @@ export default function CommunityPageClient({
 
             </p>
 
-            {postFiles.length > 0 ? (
-
-              <div className="mt-4 rounded-xl border bg-muted/20 p-3 text-sm">
-
-                Attached photos ({formatBytes(getTotalFileBytes(postFiles))}): <span className="font-medium">{postFiles.map((f) => f.name).join(", ")}</span>
-
+            {/* Image Upload Zone */}
+            {postFiles.length === 0 && (
+              <div className="mt-4">
+                <ImageUploadZone
+                  onFilesSelected={handlePostPhotoSelection}
+                  maxFiles={10}
+                  maxSize={5 * 1024 * 1024} // 5MB per image
+                  className="max-h-48"
+                />
               </div>
+            )}
 
-            ) : null}
-
-            {postVideos.length > 0 ? (
-
-              <div className="mt-3 rounded-xl border bg-muted/20 p-3 text-sm">
-
-                Attached videos ({formatBytes(getTotalFileBytes(postVideos))}): <span className="font-medium">{postVideos.map((f) => f.name).join(", ")}</span>
-
+            {/* Image Preview Gallery */}
+            {postFiles.length > 0 && (
+              <div className="mt-4">
+                <ImagePreviewGallery
+                  files={postFiles}
+                  onRemove={(index) => {
+                    const newFiles = postFiles.filter((_, i) => i !== index);
+                    setPostFiles(newFiles);
+                  }}
+                  onEdit={(index, file) => {
+                    // TODO: Implement image editing functionality
+                    console.log('Edit image:', index, file);
+                  }}
+                  onAddMore={() => postPhotoInputRef.current?.click()}
+                />
               </div>
+            )}
 
-            ) : null}
+            {/* Video Upload Zone */}
+            {postVideos.length === 0 && (
+              <div className="mt-4">
+                <VideoUploadZone
+                  onFilesSelected={handlePostVideoSelection}
+                  maxFiles={5}
+                  maxSize={200 * 1024 * 1024} // 200MB per video
+                  className="max-h-48"
+                />
+              </div>
+            )}
+
+            {/* Video Preview Gallery */}
+            {postVideos.length > 0 && (
+              <div className="mt-4">
+                <VideoPreviewGallery
+                  files={postVideos}
+                  onRemove={(index) => {
+                    const newVideos = postVideos.filter((_, i) => i !== index);
+                    setPostVideos(newVideos);
+                  }}
+                  onAddMore={() => postVideoInputRef.current?.click()}
+                />
+              </div>
+            )}
 
             {postFiles.length > 0 || postVideos.length > 0 ? (
               <p className="mt-3 text-xs text-muted-foreground">
@@ -3028,9 +3092,19 @@ export default function CommunityPageClient({
 
                       />
 
-                    ) : null}
+                    ) : (
 
-                    <AvatarFallback>{initials(authorName(shareTargetPost.author))}</AvatarFallback>
+                      <AvatarImage
+
+                        src={getDefaultAvatarUrl(authorName(shareTargetPost.author))}
+
+                        className="object-cover"
+
+                        referrerPolicy="no-referrer"
+
+                      />
+
+                    )}
 
                   </Avatar>
 
@@ -3612,9 +3686,19 @@ function RepostWrapper({
 
               />
 
-            ) : null}
+            ) : (
 
-            <AvatarFallback>{initials(authorName(repost.author))}</AvatarFallback>
+              <AvatarImage
+
+                src={getDefaultAvatarUrl(authorName(repost.author))}
+
+                className="object-cover"
+
+                referrerPolicy="no-referrer"
+
+              />
+
+            )}
 
           </Avatar>
 
@@ -3819,9 +3903,19 @@ function PostCard({
 
             />
 
-          ) : null}
+          ) : (
 
-          <AvatarFallback>{initials(authorName(post.author))}</AvatarFallback>
+            <AvatarImage
+
+              src={getDefaultAvatarUrl(authorName(post.author))}
+
+              className="object-cover"
+
+              referrerPolicy="no-referrer"
+
+            />
+
+          )}
 
         </Avatar>
 
@@ -4397,7 +4491,7 @@ function PostCard({
 
                             alt="Comment attachment"
 
-                            className="max-h-72 w-full rounded-md object-contain"
+                            className="max-h-80 w-full object-contain"
 
                             loading="lazy"
 
@@ -4497,9 +4591,19 @@ function PostCard({
 
                       />
 
-                    ) : null}
+                    ) : (
 
-                    <AvatarFallback>{initials(u.name || u.email || "Member")}</AvatarFallback>
+                      <AvatarImage
+
+                        src={getDefaultAvatarUrl(u.name || u.email || "Member")}
+
+                        className="object-cover"
+
+                        referrerPolicy="no-referrer"
+
+                      />
+
+                    )}
 
                   </Avatar>
 
