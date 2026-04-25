@@ -168,6 +168,27 @@ export class ProblemSolvingGatewayController {
     return problems.map((problem) => this.sanitizeProblemForStudent(problem));
   }
 
+  @Get('student/problems/solved')
+  @UseGuards(StudentGuard)
+  @ApiOperation({
+    summary: 'Get solved problems (Student)',
+    description:
+      'Returns a list of problem IDs that the current user has solved.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Solved problems retrieved successfully.',
+    schema: {
+      example: ['665f7d4a3f0f8d0f42c5b8a1', '665f7d4a3f0f8d0f42c5b8a2'],
+    },
+  })
+  async getSolvedProblems(@Request() req: unknown) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getSolvedProblems(user.id),
+    );
+  }
+
   @Get('student/problems/:id')
   @UseGuards(StudentGuard)
   @ApiOperation({
@@ -361,26 +382,5 @@ export class ProblemSolvingGatewayController {
   async markAsSolved(@Request() req: unknown, @Param('id') id: string) {
     const user = this.getUser(req);
     return firstValueFrom(this.problemSolvingService.markAsSolved(user.id, id));
-  }
-
-  @Get('student/problems/solved')
-  @UseGuards(StudentGuard)
-  @ApiOperation({
-    summary: 'Get solved problems (Student)',
-    description:
-      'Returns a list of problem IDs that the current user has solved.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Solved problems retrieved successfully.',
-    schema: {
-      example: ['665f7d4a3f0f8d0f42c5b8a1', '665f7d4a3f0f8d0f42c5b8a2'],
-    },
-  })
-  async getSolvedProblems(@Request() req: unknown) {
-    const user = this.getUser(req);
-    return firstValueFrom(
-      this.problemSolvingService.getSolvedProblems(user.id),
-    );
   }
 }
