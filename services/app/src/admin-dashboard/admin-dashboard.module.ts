@@ -25,6 +25,7 @@ import {
   AdminNotification,
   AdminNotificationSchema,
 } from './schemas/admin-notification.schema';
+import { Support, SupportSchema } from '../support/schema/support.schema';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import {
       { name: UserEvent.name, schema: UserEventSchema },
       { name: AdminSupportTicket.name, schema: AdminSupportTicketSchema },
       { name: AdminNotification.name, schema: AdminNotificationSchema },
+      { name: Support.name, schema: SupportSchema },
     ]),
   ],
   controllers: [AdminDashboardController],

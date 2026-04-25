@@ -335,6 +335,7 @@ export type SupportTicketItem = {
   id: string;
   name: string;
   email: string;
+  userAvatarUrl?: string | null;
   category: 'technical' | 'billing' | 'general' | 'feature-request' | 'bug-report';
   subject: string;
   message: string;
