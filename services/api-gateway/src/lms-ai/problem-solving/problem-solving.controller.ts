@@ -168,7 +168,7 @@ export class ProblemSolvingGatewayController {
     return problems.map((problem) => this.sanitizeProblemForStudent(problem));
   }
 
-  @Get('student/problems/solved')
+  @Get('student/solved-problems')
   @UseGuards(StudentGuard)
   @ApiOperation({
     summary: 'Get solved problems (Student)',
