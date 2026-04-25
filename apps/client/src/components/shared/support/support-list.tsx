@@ -7,7 +7,10 @@ import { getSupportTicketMutationFn, deleteSupportTicketMutationFn } from "@/ser
 import type { getSupportTicketResponseType } from "@/types/api/app/support/support.type";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/global/icons";
+import { avatarImgSrcForDisplay } from "@/lib/avatar-display-url";
+import { getAvatarFallbackText } from "@/utils/functions/app/helper";
 import { toast } from "sonner";
 import type { SupportCategory, SupportStatus } from "@/types/api/app/support/support.type";
 
@@ -17,6 +20,13 @@ interface SupportItem {
   status: SupportStatus;
   subject: string;
   message: string;
+  messages?: Array<{
+    sender?: string;
+    message?: string;
+    createdAt?: string;
+    senderName?: string;
+    senderAvatarUrl?: string | null;
+  }>;
   createdAt: string;
 }
 
@@ -65,6 +75,15 @@ export function SupportList() {
   }
 
   function getPreview(it: SupportItem) {
+    const thread = it.messages ?? [];
+    const last = thread.length > 0 ? thread[thread.length - 1] : null;
+    if (last?.message) {
+      const fromSupport = last.sender && last.sender !== "user";
+      const who = fromSupport ? (last.senderName?.trim() || "Support") : "You";
+      const prefix = `${who}: `;
+      const text = `${prefix}${last.message}`;
+      return text.trim().slice(0, 140) + (text.length > 140 ? "…" : "");
+    }
     const text = it.message || "";
     return text.trim().slice(0, 140) + (text && text.length > 140 ? "…" : "");
   }
@@ -118,7 +137,32 @@ export function SupportList() {
                   }`}>{it.status}</span>
                 </div>
                 <div className="text-sm">{it.subject}</div>
-                <div className="text-sm text-muted-foreground">{getPreview(it)}</div>
+                <div className="text-sm text-muted-foreground flex items-start gap-2 min-w-0">
+                  {(() => {
+                    const thread = it.messages ?? [];
+                    const last = thread.length > 0 ? thread[thread.length - 1] : null;
+                    const fromSupport = last && last.sender && last.sender !== "user";
+                    const src =
+                      fromSupport && last?.senderAvatarUrl
+                        ? avatarImgSrcForDisplay(last.senderAvatarUrl)
+                        : null;
+                    const label = fromSupport
+                      ? last?.senderName?.trim() || "Support"
+                      : "You";
+                    if (!fromSupport || !src) {
+                      return <span className="min-w-0">{getPreview(it)}</span>;
+                    }
+                    return (
+                      <>
+                        <Avatar className="h-7 w-7 mt-0.5 shrink-0">
+                          <AvatarImage src={src} alt="" referrerPolicy="no-referrer" />
+                          <AvatarFallback className="text-xs">{getAvatarFallbackText(label)}</AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0">{getPreview(it)}</span>
+                      </>
+                    );
+                  })()}
+                </div>
                 <div className="text-xs text-muted-foreground">{new Date(it.createdAt).toLocaleString()}</div>
               </div>
               <div className="flex items-center gap-2">

@@ -32,6 +32,8 @@ export interface SupportTicketResponse {
   userName: string;
   userRole: 'admin' | 'user';
   message: string;
+  /** Platform admin profile image when `userRole` is `admin` */
+  userAvatarUrl?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   attachments?: Array<{

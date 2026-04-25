@@ -163,7 +163,14 @@ export function TicketDetails({
           {ticket.responses?.map((response) => (
             <div key={response.id} className="flex gap-3">
               <Avatar className="h-8 w-8 mt-1">
-                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${response.userName}`} />
+                <AvatarImage
+                  src={
+                    response.userRole === 'admin' && response.userAvatarUrl
+                      ? avatarImgSrcForDisplay(response.userAvatarUrl)
+                      : `https://api.dicebear.com/7.x/initials/svg?seed=${response.userName}`
+                  }
+                  referrerPolicy="no-referrer"
+                />
                 <AvatarFallback>{response.userName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex-1">

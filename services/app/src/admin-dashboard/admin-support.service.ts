@@ -11,7 +11,13 @@ import { Admin, AdminDocument } from '../admin-auth/schemas/admin.schema';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { Support, SupportDocument } from '../support/schema/support.schema';
 
-type SupportMessage = { sender?: string; message?: string; createdAt?: Date };
+type SupportMessage = {
+  sender?: string;
+  message?: string;
+  createdAt?: Date;
+  senderName?: string;
+  senderAvatarUrl?: string | null;
+};
 
 type SupportLean = {
   _id: Types.ObjectId;
@@ -63,7 +69,10 @@ export class AdminSupportService {
 
   async reply(adminUserId: string, ticketId: string, adminReply: string) {
     // Gateway sends the platform **Admin** document id (admin DB JWT `sub`), not `User._id`.
-    const adminAccount = await this.adminModel.findById(adminUserId).select('_id').lean();
+    const adminAccount = await this.adminModel
+      .findById(adminUserId)
+      .select('name profilePictureUrl')
+      .lean();
     if (!adminAccount) {
       throw new ForbiddenException('Admin access required');
     }
@@ -75,7 +84,13 @@ export class AdminSupportService {
       ticketId,
       {
         $push: {
-          messages: { sender: 'admin', message: adminReply, createdAt: new Date() },
+          messages: {
+            sender: 'admin',
+            message: adminReply,
+            createdAt: new Date(),
+            senderName: adminAccount.name?.trim() || 'Support',
+            senderAvatarUrl: adminAccount.profilePictureUrl ?? null,
+          },
         },
         $set: { status: nextStatus, updatedAt: new Date() },
       },
@@ -275,11 +290,14 @@ export class AdminSupportService {
       return {
         id: `${String(r._id)}-msg-${i}`,
         userId: isAdmin ? 'admin' : String(r.userId),
-        userName: isAdmin ? 'Admin' : r.fullName || 'User',
+        userName: isAdmin ? m.senderName?.trim() || 'Support' : r.fullName || 'User',
         userRole: isAdmin ? ('admin' as const) : ('user' as const),
         message: m.message ?? '',
         createdAt: m.createdAt ?? r.updatedAt ?? r.createdAt,
         updatedAt: m.createdAt ?? r.updatedAt ?? r.createdAt,
+        ...(isAdmin && m.senderAvatarUrl
+          ? { userAvatarUrl: m.senderAvatarUrl }
+          : {}),
       };
     });
   }

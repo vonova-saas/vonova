@@ -65,6 +65,6 @@ export const updateSupportStatusMutationFn = async (
   id: string,
   data: updateSupportStatusRequestType
 ): Promise<updateSupportStatusResponseType> => {
-  const response = await API.put(`/support/user/${userId}/${id}/status`, data);
+  const response = await API.patch(`/support/user/${userId}/${id}/status`, data);
   return response.data;
 };
