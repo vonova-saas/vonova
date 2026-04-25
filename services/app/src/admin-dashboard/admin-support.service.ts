@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -10,6 +14,7 @@ import { User, UserDocument } from '../auth/schema/user.schema';
 import { Admin, AdminDocument } from '../admin-auth/schemas/admin.schema';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { Support, SupportDocument } from '../support/schema/support.schema';
+import { EmailSenderService } from '../notification/email-sender.service';
 
 type SupportMessage = {
   sender?: string;
@@ -47,6 +52,7 @@ export class AdminSupportService {
     @InjectModel(Admin.name, 'adminConnection')
     private readonly adminModel: Model<AdminDocument>,
     private readonly notificationsService: AdminNotificationsService,
+    private readonly emailSender: EmailSenderService,
   ) {}
 
   async create(userId: string, message: string, type: AdminSupportType) {
@@ -98,6 +104,30 @@ export class AdminSupportService {
     );
 
     if (supportUpdated) {
+      // Email the user with the admin reply as well.
+      try {
+        const to = String(supportUpdated.email || '').trim();
+        if (to) {
+          const subject = `[Vonova Support] Re: ${
+            supportUpdated.subject || 'Support ticket'
+          }`;
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+              <h2 style="margin: 0 0 8px 0;">Support reply</h2>
+              <p style="margin: 0 0 16px 0; color: #555;">
+                Ticket: <strong>${String(supportUpdated._id)}</strong>
+              </p>
+              <div style="border: 1px solid #eee; border-radius: 8px; padding: 12px;">
+                <p style="margin: 0 0 8px 0;"><strong>${adminAccount.name?.trim() || 'Support'}:</strong></p>
+                <p style="margin: 0; white-space: pre-wrap;">${adminReply}</p>
+              </div>
+            </div>
+          `;
+          await this.emailSender.sendEmail({ to, subject, html });
+        }
+      } catch {
+        // Do not block the reply flow if email fails.
+      }
       return supportUpdated;
     }
 
@@ -119,7 +149,12 @@ export class AdminSupportService {
     return ticket;
   }
 
-  async list(params: { page?: number; limit?: number; status?: 'OPEN' | 'REPLIED'; search?: string }) {
+  async list(params: {
+    page?: number;
+    limit?: number;
+    status?: 'OPEN' | 'REPLIED';
+    search?: string;
+  }) {
     const page = Math.max(1, params.page ?? 1);
     const limit = Math.min(100, Math.max(1, params.limit ?? 20));
     const skip = (page - 1) * limit;
@@ -197,7 +232,9 @@ export class AdminSupportService {
     const last7Rows = last7d as SupportLean[];
 
     const totalTickets = allRows.length;
-    const openTickets = allRows.filter((t) => t.status === 'open' || t.status === 'pending').length;
+    const openTickets = allRows.filter(
+      (t) => t.status === 'open' || t.status === 'pending',
+    ).length;
     const avgResponseHours = this.computeAverageResponseHoursSupport(allRows);
 
     const categoryDefs: { id: string; label: string }[] = [
@@ -214,7 +251,11 @@ export class AdminSupportService {
     }));
 
     const status = [
-      { id: 'open', label: 'Open', value: allRows.filter((t) => t.status === 'open').length },
+      {
+        id: 'open',
+        label: 'Open',
+        value: allRows.filter((t) => t.status === 'open').length,
+      },
       {
         id: 'in-progress',
         label: 'In Progress',
@@ -225,7 +266,11 @@ export class AdminSupportService {
         label: 'Resolved',
         value: allRows.filter((t) => t.status === 'resolved').length,
       },
-      { id: 'closed', label: 'Closed', value: allRows.filter((t) => t.status === 'closed').length },
+      {
+        id: 'closed',
+        label: 'Closed',
+        value: allRows.filter((t) => t.status === 'closed').length,
+      },
     ];
 
     const responseTimeTrend = [
@@ -240,7 +285,10 @@ export class AdminSupportService {
               new Date(t.createdAt).toISOString().slice(0, 10) === dayKey,
           );
           const y = this.computeAverageResponseHoursSupport(dayRows) * 60;
-          return { x: d.toLocaleDateString('en-US', { weekday: 'short' }), y: Number(y.toFixed(0)) };
+          return {
+            x: d.toLocaleDateString('en-US', { weekday: 'short' }),
+            y: Number(y.toFixed(0)),
+          };
         }),
       },
     ];
@@ -256,7 +304,13 @@ export class AdminSupportService {
               t.createdAt != null &&
               new Date(t.createdAt).toISOString().slice(0, 10) === key,
           ).length;
-          return { x: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), y: count };
+          return {
+            x: d.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            }),
+            y: count,
+          };
         }),
       },
     ];
@@ -290,7 +344,9 @@ export class AdminSupportService {
       return {
         id: `${String(r._id)}-msg-${i}`,
         userId: isAdmin ? 'admin' : String(r.userId),
-        userName: isAdmin ? m.senderName?.trim() || 'Support' : r.fullName || 'User',
+        userName: isAdmin
+          ? m.senderName?.trim() || 'Support'
+          : r.fullName || 'User',
         userRole: isAdmin ? ('admin' as const) : ('user' as const),
         message: m.message ?? '',
         createdAt: m.createdAt ?? r.updatedAt ?? r.createdAt,
@@ -309,7 +365,9 @@ export class AdminSupportService {
       const firstAdmin = msgs.find((m) => m.sender === 'admin');
       if (!firstAdmin?.createdAt || !r.createdAt) continue;
       hours.push(
-        (new Date(firstAdmin.createdAt).getTime() - new Date(r.createdAt).getTime()) / 3600000,
+        (new Date(firstAdmin.createdAt).getTime() -
+          new Date(r.createdAt).getTime()) /
+          3600000,
       );
     }
     if (!hours.length) return 0;

@@ -13,6 +13,6 @@ import { EmailSenderService } from './email-sender.service';
   ],
   controllers: [NotificationController],
   providers: [NotificationService, EmailSenderService],
-  exports: [NotificationService],
+  exports: [NotificationService, EmailSenderService],
 })
 export class NotificationModule {}

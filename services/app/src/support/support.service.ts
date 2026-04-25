@@ -5,12 +5,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Support } from './schema/support.schema';
 import { RpcException } from '@nestjs/microservices';
+import { EmailSenderService } from '../notification/email-sender.service';
 
 @Injectable()
 export class SupportService {
   constructor(
     @InjectModel(Support.name)
     private readonly supportModel: Model<Support>,
+    private readonly emailSender: EmailSenderService,
   ) {}
 
   /** Public API: thread entries never expose internal Mongo subdocument ids. */
@@ -21,22 +23,43 @@ export class SupportService {
       message: m.message,
       createdAt: m.createdAt,
     };
-    if (m.senderName != null && String(m.senderName).trim() !== '') {
+    if (typeof m.senderName === 'string' && m.senderName.trim() !== '') {
       out.senderName = m.senderName;
     }
-    if (m.senderAvatarUrl != null && String(m.senderAvatarUrl).trim() !== '') {
+    if (
+      typeof m.senderAvatarUrl === 'string' &&
+      m.senderAvatarUrl.trim() !== ''
+    ) {
       out.senderAvatarUrl = m.senderAvatarUrl;
     }
     return out;
   }
 
-  private mapSupportToPublic(doc: Support | (Support & { toObject?: (opt?: object) => Record<string, unknown> }) | null) {
+  private mapSupportToPublic(
+    doc:
+      | Support
+      | (Support & {
+          toObject?: (opt?: object) => Record<string, unknown>;
+        })
+      | null,
+  ) {
     if (doc == null) return doc;
-    const o = typeof (doc as Support & { toObject?: (opt?: object) => Record<string, unknown> }).toObject === 'function'
-      ? (doc as Support & { toObject: (opt?: object) => Record<string, unknown> }).toObject({ versionKey: false })
-      : { ...(doc as object as Record<string, unknown>) };
+    const o =
+      typeof (
+        doc as Support & {
+          toObject?: (opt?: object) => Record<string, unknown>;
+        }
+      ).toObject === 'function'
+        ? (
+            doc as Support & {
+              toObject: (opt?: object) => Record<string, unknown>;
+            }
+          ).toObject({ versionKey: false })
+        : { ...(doc as object as Record<string, unknown>) };
     if (Array.isArray(o.messages)) {
-      o.messages = o.messages.map((entry) => this.sanitizeMessageOut(entry as Record<string, unknown>));
+      o.messages = o.messages.map((entry) =>
+        this.sanitizeMessageOut(entry as Record<string, unknown>),
+      );
     }
     return o;
   }
@@ -46,6 +69,35 @@ export class SupportService {
       ...createSupportDto,
       userId,
     });
+
+    // Notify support mailbox. Replying from email should go to the user.
+    try {
+      const subject = `[Vonova Support] ${support.subject} (${String(support._id).slice(-6)})`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+          <h2 style="margin: 0 0 8px 0;">New support ticket</h2>
+          <p style="margin: 0 0 16px 0; color: #555;">
+            Category: <strong>${support.category}</strong> • Status: <strong>${support.status}</strong>
+          </p>
+          <div style="border: 1px solid #eee; border-radius: 8px; padding: 12px;">
+            <p style="margin: 0 0 8px 0;"><strong>From:</strong> ${support.fullName} (${support.email})</p>
+            <p style="margin: 0 0 8px 0;"><strong>Subject:</strong> ${support.subject}</p>
+            <p style="margin: 0; white-space: pre-wrap;">${support.message}</p>
+          </div>
+          <p style="margin: 16px 0 0 0; color: #666; font-size: 12px;">
+            Ticket ID: ${String(support._id)}
+          </p>
+        </div>
+      `;
+      await this.emailSender.sendEmail({
+        to: 'vonavacompany@gmail.com',
+        subject,
+        html,
+        replyTo: support.email,
+      });
+    } catch {
+      // Email failures should not block ticket creation.
+    }
     return {
       message: 'Support created successfully',
       data: this.mapSupportToPublic(support) as unknown as Support,
@@ -62,7 +114,9 @@ export class SupportService {
     }
     return {
       message: 'Support found successfully',
-      data: support.map((d) => this.mapSupportToPublic(d) as unknown as Support),
+      data: support.map(
+        (d) => this.mapSupportToPublic(d) as unknown as Support,
+      ),
     };
   }
 
@@ -131,7 +185,9 @@ export class SupportService {
     }
     return {
       message: 'Message added successfully',
-      data: (support.messages || []).map((m) => this.sanitizeMessageOut(m as unknown as Record<string, unknown>)),
+      data: (support.messages || []).map((m) =>
+        this.sanitizeMessageOut(m as unknown as Record<string, unknown>),
+      ),
     };
   }
 
@@ -148,7 +204,9 @@ export class SupportService {
     }
     return {
       message: 'Messages found successfully',
-      data: (support.messages || []).map((m) => this.sanitizeMessageOut(m as unknown as Record<string, unknown>)),
+      data: (support.messages || []).map((m) =>
+        this.sanitizeMessageOut(m as unknown as Record<string, unknown>),
+      ),
     };
   }
 
