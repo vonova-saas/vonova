@@ -40,7 +40,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 
@@ -57,13 +57,13 @@ export class CommentsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePictureUrl')
+        .populate('author', 'name username email profilePictureUrl profilePicture avatar')
         .populate({
           path: 'replies',
           options: { sort: { createdAt: -1 }, limit: 3 }, // Get latest 3 replies
           populate: {
             path: 'author',
-            select: 'name profilePicture',
+            select: 'name username email profilePictureUrl profilePicture avatar',
           },
         })
         .lean(),
@@ -164,7 +164,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 
@@ -209,7 +209,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(reply._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 
@@ -278,7 +278,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(reply._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 
@@ -296,7 +296,7 @@ export class CommentsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePictureUrl')
+        .populate('author', 'name username email profilePictureUrl profilePicture avatar')
         .lean(),
       this.commentModel.countDocuments({ parentComment: parentCommentObjectId }),
     ]);
@@ -391,7 +391,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 
@@ -463,7 +463,7 @@ export class CommentsService {
 
     return this.commentModel
       .findById(comment._id)
-      .populate('author', 'name profilePictureUrl')
+      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
       .lean();
   }
 

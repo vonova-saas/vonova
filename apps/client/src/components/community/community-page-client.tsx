@@ -254,12 +254,12 @@ function getEstimatedTransportBytes(files: File[]): number {
 
 
 
-function authorName(author: CommunityArticle["author"] | CommunityPost["author"]): string {
-
-  if (!author || typeof author === "string") return "Member";
-
-  return author.name || author.email || "Member";
-
+function authorName(author: CommunityArticle["author"] | CommunityPost["author"] | CommunityComment["author"]): string {
+  if (!author) return "Member";
+  // If author is a string (unpopulated ObjectId), we can't show a name
+  if (typeof author === "string") return "Member";
+  // Try all possible name fields from different user models
+  return author.name || author.username || author.email || "Member";
 }
 
 
@@ -332,15 +332,17 @@ function avatarImgSrcForDisplay(url: string): string {
 
 
 
-function authorPic(author: CommunityArticle["author"] | CommunityPost["author"]): string | undefined {
+function authorPic(author: CommunityArticle["author"] | CommunityPost["author"] | CommunityComment["author"]): string | undefined {
 
   if (!author || typeof author === "string") return undefined;
 
   return (
 
-    author.avatar ||
+    author.profilePictureUrl ||
 
     author.profilePicture ||
+
+    author.avatar ||
 
     (author as Record<string, string | undefined>).photo ||
 
@@ -1995,7 +1997,7 @@ export default function CommunityPageClient({
 
   });
 
-  // Create reply mutation
+  // Create reply mutation with optimistic update
   const createReplyMut = useMutation({
     mutationFn: ({ 
       postId, 
@@ -2008,15 +2010,33 @@ export default function CommunityPageClient({
       text: string; 
       image?: File 
     }) => createReply(postId, parentCommentId, text, image),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({ title: "Reply posted" });
-      // Clear reply draft
-      setReplyDrafts({});
-      setReplyFiles({});
-      // Invalidate comments query to refresh the data
+      // Clear reply draft for the specific comment
+      setReplyDrafts(prev => ({ ...prev, [variables.parentCommentId]: "" }));
+      setReplyFiles(prev => ({ ...prev, [variables.parentCommentId]: null }));
+      
+      // Optimistically update the cache with the new reply
+      qc.setQueryData<CommunityComment[]>(["community", "comments", expandedPostId], (oldComments) => {
+        if (!oldComments) return oldComments;
+        
+        return oldComments.map(comment => {
+          if (comment._id === variables.parentCommentId) {
+            // Append the new reply to the comment's replies array
+            return {
+              ...comment,
+              replies: [...(comment.replies || []), data],
+              repliesCount: (comment.repliesCount || 0) + 1
+            };
+          }
+          return comment;
+        });
+      });
+      
+      // Also invalidate to ensure consistency with server
       void qc.invalidateQueries({ queryKey: ["community", "comments", expandedPostId] });
     },
-    onError: (e: unknown) => {
+    onError: (e: unknown, variables) => {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         "Could not post reply.";
@@ -5119,7 +5139,7 @@ function PostCard({
                                 </Button>
                                 {replyFiles[c._id] && (
                                   <span className="text-xs text-muted-foreground">
-                                    {replyFiles[c._id].name}
+                                    {replyFiles[c._id]?.name}
                                   </span>
                                 )}
                               </div>

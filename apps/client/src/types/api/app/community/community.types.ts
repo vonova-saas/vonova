@@ -34,9 +34,11 @@ export type ArticleContentBlock = {
 export type CommunityAuthor = {
   _id?: string;
   name?: string;
+  username?: string;
   email?: string;
   avatar?: string;
   profilePicture?: string;
+  profilePictureUrl?: string;
   role?: string;
 };
 
