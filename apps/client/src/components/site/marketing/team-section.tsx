@@ -10,6 +10,11 @@ type TeamMember = {
   role: string;
   bio: string;
   image: string;
+  skills?: string[];
+  social?: {
+    github?: string;
+    linkedin?: string;
+  };
 };
 
 type TeamSectionProps = {
@@ -20,19 +25,18 @@ const containerVariants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.12,
+      staggerChildren: 0.08,
       delayChildren: 0.1,
     },
   },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 20, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.4, ease: "easeOut" as const },
   },
 };
 
@@ -71,9 +75,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
               className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm ${
                 index === 1 ? "md:-mt-4" : index === 2 ? "md:mt-3" : ""
               }`}
-              whileHover={{ y: -6, rotate: index === 1 ? 0 : index % 2 === 0 ? -0.5 : 0.5 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+              whileHover={{ y: -6 }}
+              transition={{ duration: 0.25 }}
             >
               <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                 <div className="absolute inset-0 rounded-2xl border border-primary/25" />
@@ -99,20 +102,28 @@ export default function TeamSection({ members }: TeamSectionProps) {
                   </div>
 
                   <div className="absolute right-3 top-3 flex translate-y-2 gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                    <a
-                      href="#"
-                      aria-label={`${member.name} LinkedIn`}
-                      className="rounded-full border border-white/20 bg-black/40 p-1.5 text-white/90 backdrop-blur hover:bg-black/60"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </a>
-                    <a
-                      href="#"
-                      aria-label={`${member.name} GitHub`}
-                      className="rounded-full border border-white/20 bg-black/40 p-1.5 text-white/90 backdrop-blur hover:bg-black/60"
-                    >
-                      <Github className="h-4 w-4" />
-                    </a>
+                    {member.social?.linkedin && (
+                      <a
+                        href={member.social.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${member.name} LinkedIn`}
+                        className="rounded-full border border-white/20 bg-black/40 p-1.5 text-white/90 backdrop-blur hover:bg-black/60 hover:scale-110 transition-transform"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </a>
+                    )}
+                    {member.social?.github && (
+                      <a
+                        href={member.social.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${member.name} GitHub`}
+                        className="rounded-full border border-white/20 bg-black/40 p-1.5 text-white/90 backdrop-blur hover:bg-black/60 hover:scale-110 transition-transform"
+                      >
+                        <Github className="h-4 w-4" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -125,6 +136,18 @@ export default function TeamSection({ members }: TeamSectionProps) {
                 <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                   {member.bio}
                 </p>
+                {member.skills && member.skills.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {member.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.article>
           ))}
