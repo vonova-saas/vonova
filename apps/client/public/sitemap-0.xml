@@ -24,4 +24,16 @@
 <url><loc>https://vonova.tech/site/auth/login</loc><lastmod>2026-04-25T21:40:02.790Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://vonova.tech/site/auth/register</loc><lastmod>2026-04-25T21:40:02.790Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://vonova.tech/site</loc><lastmod>2026-04-25T21:40:02.790Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/forbidden</loc><lastmod>2026-04-26T00:13:37.808Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/unauthorized</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/blog</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/contact</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/help-center</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/privacy</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/terms</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/about</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/auth/forget-password</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/auth/login</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site/auth/register</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://vonova.tech/site</loc><lastmod>2026-04-26T00:13:37.810Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>
