@@ -87,3 +87,16 @@ export const requestSolutionMutationFn = async (
   return response.data;
 };
 
+export const markProblemAsSolvedMutationFn = async (
+  problemId: string,
+): Promise<boolean> => {
+  const response = await API.post<boolean>(
+    `${STUDENT_BASE}/problems/${problemId}/solved`,
+  );
+  return response.data;
+};
+
+export const getSolvedProblemsQueryFn = async (): Promise<string[]> => {
+  const response = await API.get<string[]>(`${STUDENT_BASE}/solved-problems`);
+  return response.data;
+};

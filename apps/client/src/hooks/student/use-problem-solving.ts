@@ -8,6 +8,8 @@ import {
   getSubmissionStatusQueryFn,
   requestHintMutationFn,
   requestSolutionMutationFn,
+  markProblemAsSolvedMutationFn,
+  getSolvedProblemsQueryFn,
 } from "@/services/student/lms/problem-solving/problem-solving.api";
 import type {
   HintRequest,
@@ -28,6 +30,7 @@ export const problemSolvingKeys = {
     [...problemSolvingKeys.all, "submissions", problemId] as const,
   submissionStatus: (jobId: string) =>
     [...problemSolvingKeys.all, "submission-status", jobId] as const,
+  solved: () => [...problemSolvingKeys.all, "solved"] as const,
 };
 
 export const useProblemsQuery = (filters?: ProblemsFilter) =>
@@ -74,3 +77,13 @@ export const useSubmissionStatusQuery = (jobId: string) =>
       query.state.data?.status === "pending" ? 1200 : false,
   });
 
+export const useMarkAsSolvedMutation = () =>
+  useMutation({
+    mutationFn: (problemId: string) => markProblemAsSolvedMutationFn(problemId),
+  });
+
+export const useSolvedProblemsQuery = () =>
+  useQuery({
+    queryKey: problemSolvingKeys.solved(),
+    queryFn: () => getSolvedProblemsQueryFn(),
+  });

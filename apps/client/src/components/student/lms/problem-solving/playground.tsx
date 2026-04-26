@@ -21,8 +21,8 @@ import {
   useSolutionMutation,
   useSubmissionStatusQuery,
   useSubmitSolutionMutation,
+  useMarkAsSolvedMutation,
 } from "@/hooks/student/use-problem-solving";
-import { useProblemCompletion } from "@/hooks/student/use-problem-completion";
 import type {
   AIInteractionEntity,
   ProblemEntity,
@@ -45,7 +45,7 @@ const SUBMIT_DEBOUNCE_MS = 800;
 
 export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
-  const { markAsCompleted } = useProblemCompletion();
+  const markAsSolvedMutation = useMarkAsSolvedMutation();
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
   const [solution, setSolution] = useState<AIInteractionEntity | null>(null);
@@ -274,13 +274,13 @@ export default function Playground({ problem }: PlaygroundProps) {
       toast.success(
         `Accepted in ${result.executionTime}ms, ${result.memoryUsed}MB`,
       );
-      markAsCompleted(problem._id);
+      markAsSolvedMutation.mutate(problem._id);
     } else {
       toast.error("Submission failed", {
         description: `${result.status} • ${result.executionTime}ms • ${result.memoryUsed}MB`,
       });
     }
-  }, [submissionStatusQuery.data, markAsCompleted, problem._id]);
+  }, [submissionStatusQuery.data, markAsSolvedMutation, problem._id]);
 
   const displayStatus = submissionStatusQuery.data?.status ?? submissionStatus;
   const displaySummary = submissionStatusQuery.data
