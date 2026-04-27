@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 const menuItems = [
+  { name: "Home", href: "/" },
   { name: "Features", href: "/site#features" },
   { name: "Solution", href: "/site#solution" },
   { name: "Pricing", href: "/site#pricing" },
@@ -41,7 +42,7 @@ export const Header = () => {
           className={cn(
             "mx-auto mt-2 max-w-6xl px-6 transition-all duration-400 lg:px-12",
             isScrolled &&
-              "max-w-4xl rounded-2xl border border-white/15 bg-background/60 shadow-lg shadow-black/20 backdrop-blur-xl lg:px-5",
+            "max-w-4xl rounded-2xl border border-white/15 bg-background/60 shadow-lg shadow-black/20 backdrop-blur-xl lg:px-5",
           )}
         >
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
@@ -72,7 +73,7 @@ export const Header = () => {
                   <li key={index}>
                     <Link
                       href={item.href}
-                    className="block text-muted-foreground duration-400 hover:text-accent-foreground"
+                      className="block text-muted-foreground duration-400 hover:text-accent-foreground"
                     >
                       <span className="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-primary/70 after:transition-all after:duration-400 hover:after:w-full">
                         {item.name}
@@ -91,6 +92,7 @@ export const Header = () => {
                       <Link
                         href={item.href}
                         className="text-muted-foreground hover:text-accent-foreground block duration-150"
+                        onClick={() => setMenuState(false)}
                       >
                         <span>{item.name}</span>
                       </Link>
