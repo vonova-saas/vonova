@@ -14,10 +14,17 @@ import Link from "next/link";
 
 interface iAppProps {
   data: EnrolledCourseType;
+  studentId: string;
 }
 
-export function CourseProgressCard({ data }: iAppProps) {
-  const thumbnailUrl = useConstructUrl(data.Course.thumbnailUrl || "");
+export function CourseProgressCard({ data, studentId }: iAppProps) {
+  // Use useConstructUrl to resolve thumbnail from IndexedDB storage
+  const resolvedThumbnailUrl = useConstructUrl(data.Course.thumbnailUrl || "");
+  const thumbnailUrl = resolvedThumbnailUrl && resolvedThumbnailUrl !== "/images/placeholder.svg"
+    ? resolvedThumbnailUrl
+    : (data.Course.thumbnailUrl?.startsWith("http") || data.Course.thumbnailUrl?.startsWith("/"))
+      ? data.Course.thumbnailUrl
+      : "/placeholder-course.jpg";
   const { totalLessons, completedLessons, progressPercentage } =
     useCourseProgress({ courseData: data.Course as any });
   return (
@@ -35,7 +42,7 @@ export function CourseProgressCard({ data }: iAppProps) {
       <CardContent className="p-4">
         <Link
           className="font-medium text-lg line-clamp-2 hover:underline group-hover:text-primary transition-colors"
-          href={`/dashboard/${data.Course.slug}}`}
+          href={`/student/${studentId}/courses/${data.Course.slug}`}
         >
           {data.Course.title}
         </Link>
@@ -56,10 +63,10 @@ export function CourseProgressCard({ data }: iAppProps) {
         </div>
 
         <Link
-          href={`/dashboard/${data.Course.slug}`}
+          href={`/student/${studentId}/courses/${data.Course.slug}`}
           className={buttonVariants({ className: "w-full mt-4" })}
         >
-          Learn More
+          Continue Learning
         </Link>
       </CardContent>
     </Card>

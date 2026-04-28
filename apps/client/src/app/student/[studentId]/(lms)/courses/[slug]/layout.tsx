@@ -1,22 +1,51 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { CourseSidebar } from "@/components/student/lms/courses/course-sidebar";
-import { getCourseSidebarData } from "@/components/student/lms/courses/data/get-course-sidebar-data";
+import { getCourseSidebarData, CourseSidebarDataType } from "@/components/student/lms/courses/data/get-course-sidebar-data";
 
 interface iAppProps {
-  params: Promise<{ slug: string }>;
   children: ReactNode;
 }
 
-export default async function CourseLayout({ children, params }: iAppProps) {
-  const { slug } = await params;
+export default function CourseLayout({ children }: iAppProps) {
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
+  const [courseData, setCourseData] = useState<CourseSidebarDataType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Server-side security check and Lightweight data fetching
-  const course = await getCourseSidebarData(slug);
+  useEffect(() => {
+    async function fetchData() {
+      if (slug) {
+        const data = await getCourseSidebarData(slug);
+        setCourseData(data);
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [slug]);
+
+  if (loading || !courseData) {
+    return (
+      <div className="flex flex-1">
+        <div className="w-80 border-r border-border shrink-0 p-4">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="h-32 bg-muted rounded"></div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden p-4">{children}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1">
       {/* sidebar - 30% */}
       <div className="w-80 border-r border-border shrink-0">
-        <CourseSidebar course={course.course}/>
+        <CourseSidebar course={courseData.course}/>
       </div>
 
       {/* main Content - 70% */}

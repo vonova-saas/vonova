@@ -10,6 +10,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Star, BookOpen } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import useConstructUrl from "@/hooks/courses/use-construct-url";
+
+// Helper to extract plain text from rich text JSON
+function extractTextFromRichText(jsonString: string | undefined): string {
+  if (!jsonString) return "";
+  try {
+    const parsed = JSON.parse(jsonString);
+    if (parsed.type === "doc" && Array.isArray(parsed.content)) {
+      return parsed.content
+        .map((node: { content?: Array<{ text?: string }> }) => {
+          if (node.content && Array.isArray(node.content)) {
+            return node.content.map((item: { text?: string }) => item.text || "").join("");
+          }
+          return "";
+        })
+        .join("\n");
+    }
+    return jsonString; // Fallback to raw if not in expected format
+  } catch {
+    return jsonString; // Return as-is if not valid JSON
+  }
+}
 
 export default function CourseEnrollPage() {
   const params = useParams<{ slug: string; studentId: string }>();
@@ -24,6 +46,10 @@ export default function CourseEnrollPage() {
     checkEnrollmentStatus,
     isEnrolled,
   } = useStudentCoursesStore();
+
+  // Get thumbnail URL using the construct url hook - must be called before any early returns
+  const thumbnailKey = currentCourse?.thumbnailUrl || "";
+  const resolvedThumbnailUrl = useConstructUrl(thumbnailKey);
 
   useEffect(() => {
     if (slug) {
@@ -67,7 +93,12 @@ export default function CourseEnrollPage() {
     );
   }
 
-  const thumbnailUrl = currentCourse.thumbnailUrl || "/placeholder-course.jpg";
+  // Calculate final thumbnail URL (using resolved URL from hook or fallback)
+  const thumbnailUrl = resolvedThumbnailUrl && resolvedThumbnailUrl !== "/images/placeholder.svg"
+    ? resolvedThumbnailUrl
+    : (thumbnailKey.startsWith("http") || thumbnailKey.startsWith("/")
+      ? thumbnailKey
+      : "/placeholder-course.jpg");
   const difficulty = currentCourse.difficulty || "BEGINNER";
   const isFree = currentCourse.price?.isFree || false;
   const price = isFree
@@ -94,7 +125,7 @@ export default function CourseEnrollPage() {
             {currentCourse.title}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            {currentCourse.description}
+            {extractTextFromRichText(currentCourse.smallDescription) || extractTextFromRichText(currentCourse.description) || "No description available"}
           </p>
 
           <div className="mx-auto mt-8 flex flex-wrap items-center justify-center gap-6">
@@ -135,9 +166,29 @@ export default function CourseEnrollPage() {
               />
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold mb-4">About This Course</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {currentCourse.description}
-                </p>
+                <div className="text-muted-foreground leading-relaxed">
+                  {currentCourse.description ? (
+                    (() => {
+                      try {
+                        const parsed = JSON.parse(currentCourse.description);
+                        if (parsed.type === "doc") {
+                          return parsed.content?.map((node: { type: string; content?: Array<{ text?: string }> }, i: number) => {
+                            if (node.type === "paragraph" && node.content) {
+                              const text = node.content.map((item: { text?: string }) => item.text || "").join("");
+                              return text ? <p key={i} className="mb-4">{text}</p> : <br key={i} />;
+                            }
+                            return null;
+                          });
+                        }
+                      } catch {
+                        // Not JSON, show as plain text
+                      }
+                      return <p>{currentCourse.description}</p>;
+                    })()
+                  ) : (
+                    <p>No detailed description available</p>
+                  )}
+                </div>
 
               </CardContent>
             </Card>
