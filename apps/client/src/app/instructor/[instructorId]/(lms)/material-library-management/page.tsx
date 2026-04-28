@@ -97,14 +97,70 @@ export default function MaterialLibraryManagementPage() {
     }
   };
 
+  // Static Mock Data for Demo
+  const staticMaterials: Material[] = [
+    {
+      _id: "1",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Introduction to Programming",
+      description: "A comprehensive guide to programming fundamentals",
+      type: "book",
+      status: "PUBLISHED",
+      topics: ["programming-basics"],
+      author: "Demo Author",
+      createdAt: "2024-04-20T10:00:00Z",
+      updatedAt: "2024-04-20T10:00:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "2", 
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Web Development Guide",
+      description: "Complete guide to modern web development",
+      type: "visual-guide",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-21T14:30:00Z",
+      updatedAt: "2024-04-21T14:30:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "3",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "React Presentation",
+      description: "Introduction to React framework",
+      type: "presentation",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-22T09:15:00Z",
+      updatedAt: "2024-04-22T09:15:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    }
+  ];
+
   const queryClient = useQueryClient();
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [materials, setMaterials] = useState<Material[]>(staticMaterials);
+  const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load materials on mount
+  /*
+  // Load materials on mount - COMMENTED OUT FOR DEMO
   useEffect(() => {
     loadMaterials();
   }, []);
@@ -122,6 +178,7 @@ export default function MaterialLibraryManagementPage() {
       setLoading(false);
     }
   };
+  */
 
   // Calculate frontend stats from materials state
   const calculatedStats: LocalStats = {

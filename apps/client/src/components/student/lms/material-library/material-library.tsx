@@ -47,17 +47,74 @@ function getMaterialIcon(type: string) {
   }
 }
 
+// Static Mock Data for Demo (same as Instructor)
+  const staticMaterials = [
+    {
+      _id: "1",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Introduction to Programming",
+      description: "A comprehensive guide to programming fundamentals",
+      type: "book",
+      status: "PUBLISHED",
+      topics: ["programming-basics"],
+      author: "Demo Author",
+      createdAt: "2024-04-20T10:00:00Z",
+      updatedAt: "2024-04-20T10:00:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "2", 
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Web Development Guide",
+      description: "Complete guide to modern web development",
+      type: "visual-guide",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-21T14:30:00Z",
+      updatedAt: "2024-04-21T14:30:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "3",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "React Presentation",
+      description: "Introduction to React framework",
+      type: "presentation",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-22T09:15:00Z",
+      updatedAt: "2024-04-22T09:15:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    }
+  ];
+
 export default function MaterialLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch published materials from API
+  /*
+  // Fetch published materials from API - COMMENTED OUT FOR DEMO
   const { data: materialsData, isLoading, error, refetch } = useQuery({
     queryKey: ['student-library'],
     queryFn: () => fetchLibraryItemsQueryFn(undefined, 'PUBLISHED'),
   });
+  */
 
-  const materials = materialsData?.items || [];
-  const loading = isLoading;
+  const materials = staticMaterials;
+  const loading = false;
 
   // Filter materials based on search query
   const filteredMaterials = materials.filter((material: any) =>
@@ -66,7 +123,7 @@ export default function MaterialLibrary() {
 
   // Real stats from materials
   const totalMaterials = materials.length;
-  const totalTopics = new Set(materials.map((m: any) => m.topicId).filter(Boolean)).size;
+  const totalTopics = new Set(materials.flatMap((m: any) => m.topics || [])).size;
 
   return (
     <div className="min-h-full w-full pb-16">
@@ -93,7 +150,7 @@ export default function MaterialLibrary() {
               size="lg"
               variant="outline"
               className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
-              onClick={() => refetch()}
+              onClick={() => console.log('Refresh clicked - using static data for demo')}
               disabled={loading}
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -226,7 +283,7 @@ export default function MaterialLibrary() {
             <p className="text-muted-foreground text-center max-w-md">
               Materials will appear here once instructors add them to the library.
             </p>
-            <Button variant="outline" className="mt-4" onClick={() => refetch()} disabled={loading}>
+            <Button variant="outline" className="mt-4" onClick={() => console.log('Refresh clicked - using static data for demo')} disabled={loading}>
               <RefreshCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
