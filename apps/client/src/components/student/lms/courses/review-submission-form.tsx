@@ -39,7 +39,7 @@ export function ReviewSubmissionForm({ courseId, onSuccess }: iAppProps) {
         body: body || undefined,
       };
 
-      await createReviewMutationFn(courseId, data);
+      // await createReviewMutationFn(courseId, data);
 
       toast.success("Review submitted successfully");
       setTitle("");

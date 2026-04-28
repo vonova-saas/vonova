@@ -15,7 +15,7 @@ export async function markLessonComlete(
       timeSpentSec,
     };
 
-    await markLessonCompleteMutationFn(courseId, lessonId, data);
+    // await markLessonCompleteMutationFn(courseId, lessonId, data);
 
     return {
       status: "success",

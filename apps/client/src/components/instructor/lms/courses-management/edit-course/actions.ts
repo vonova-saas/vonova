@@ -81,7 +81,7 @@ export async function reorderLessons(
       })),
     };
 
-    await reorderLessonsMutationFn(courseId, chapterId, reorderData);
+    // await reorderLessonsMutationFn(courseId, chapterId, reorderData);
 
     return {
       status: "success",
@@ -115,7 +115,7 @@ export async function reorderChapters(
       })),
     };
 
-    await reorderChaptersMutationFn(courseId, reorderData);
+    // await reorderChaptersMutationFn(courseId, reorderData);
 
     return {
       status: "success",

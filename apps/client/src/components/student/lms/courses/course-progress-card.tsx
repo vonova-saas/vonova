@@ -11,6 +11,7 @@ import useConstructUrl from "@/hooks/courses/use-construct-url";
 import { useCourseProgress } from "@/hooks/courses/use-course-progress";
 import Image from "next/image";
 import Link from "next/link";
+import { AIFeedbackButton } from "./ai-feedback-button";
 
 interface iAppProps {
   data: EnrolledCourseType;
@@ -68,6 +69,14 @@ export function CourseProgressCard({ data, studentId }: iAppProps) {
         >
           Continue Learning
         </Link>
+
+        <div className="mt-3 flex justify-center">
+          <AIFeedbackButton
+            courseId={data.Course._id}
+            courseTitle={data.Course.title}
+            studentId={studentId}
+          />
+        </div>
       </CardContent>
     </Card>
   );

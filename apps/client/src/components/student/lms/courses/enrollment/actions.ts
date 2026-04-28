@@ -10,7 +10,8 @@ export async function enrollInCourseAction(
 ): Promise<ApiResponse> {
   try {
     const data: EnrollCourseDto = couponCode ? { couponCode } : {};
-    await enrollCourseMutationFn(courseId, data);
+    // await enrollCourseMutationFn(courseId, data);
+    await enrollCourseMutationFn(courseId);
 
     return {
       status: "success",

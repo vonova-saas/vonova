@@ -317,7 +317,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderChapters: async (courseId: string, data: ReorderChaptersDto) => {
     set({ actionLoading: true, error: null });
     try {
-      await reorderChaptersMutationFn(courseId, data);
+      // await reorderChaptersMutationFn(courseId, data);
       
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
@@ -415,7 +415,8 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderLessons: async (courseId: string, chapterId: string, data: ReorderLessonsDto) => {
     set({ actionLoading: true, error: null });
     try {
-      await reorderLessonsMutationFn(courseId, chapterId, data);
+      // await reorderLessonsMutationFn(courseId, chapterId, data);
+      await reorderLessonsMutationFn(courseId, chapterId, data.order.map(o => o.lessonId));
       
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);

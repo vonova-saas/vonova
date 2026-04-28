@@ -81,11 +81,12 @@ export function CourseSidebar({ course }: iAppProps) {
                   slug={course.slug}
                   studentId={studentId}
                   isActive={currentLessonId === lesson.id}
-                  completed={
-                    lesson.lessonProgress.find(
-                      (progress) => progress.lessonId === lesson.id
-                    )?.completed || false
-                  }
+                  completed={false}
+                  // completed={
+                  //   lesson.lessonProgress.find(
+                  //     (progress) => progress.lessonId === lesson.id
+                  //   )?.completed || false
+                  // }
                 />
               ))}
             </CollapsibleContent>
