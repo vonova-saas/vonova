@@ -4,9 +4,9 @@ import Link from "next/link";
 
 export default function GetStarted() {
   return (
-    <section className="py-16">
+    <section className="py-20">
       <div className="mx-auto max-w-5xl px-6">
-        <div className="relative overflow-hidden rounded-3xl border bg-linear-to-br from-primary/15 via-background to-violet-500/10 px-6 py-12 md:px-10 md:py-20">
+        <div className="relative overflow-hidden rounded-3xl border bg-card/70 px-6 py-12 md:px-10 md:py-20 backdrop-blur-sm">
           <div
             aria-hidden
             className="absolute -left-20 -top-20 h-56 w-56 rounded-full bg-primary/20 blur-3xl"

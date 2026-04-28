@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { Brain, Code2, GraduationCap, Trophy } from "lucide-react";
+import { FileText, Code2, GraduationCap, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function ContentSection() {
   return (
-    <section id="features" className="py-16 md:py-24">
+    <section className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl space-y-8 px-6 text-center md:space-y-12">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
           Why learners choose Vonova
@@ -28,9 +28,9 @@ export default function ContentSection() {
             text: "Clear learning paths with practical milestones.",
           },
           {
-            icon: Brain,
-            title: "AI Assistant",
-            text: "Get instant explanations and roadmap support.",
+            icon: FileText,
+            title: "Pdf Summarizer",
+            text: "Get instant summaries and insights from your PDFs.",
           },
           {
             icon: Code2,
@@ -68,7 +68,7 @@ export default function ContentSection() {
       >
         <motion.div className="rounded-2xl border bg-card/50 p-4" whileHover={{ scale: 1.01 }}>
           <Image
-            src="/images/vonova.png"
+            src="/images/Dashboard2.png"
             className="w-full rounded-xl border"
             alt="Vonova features preview"
             width={1207}

@@ -12,8 +12,8 @@ export const FOOTER_LINKS = [
   {
     group: "Company",
     items: [
-      { title: "About", href: "#link" },
-      { title: "Careers", href: "#" },
+      { title: "About", href: "/about" },
+      { title: "Careers", href: "/careers" },
       { title: "Blog", href: "/blog" },
       { title: "Contact", href: "/contact" },
       { title: "Help Center", href: "/help-center" },
@@ -33,8 +33,8 @@ export const FOOTER_LINKS = [
     items: [
       { title: "Privacy Policy", href: "/privacy" },
       { title: "Terms of Service", href: "/terms" },
-      { title: "Cookies", href: "#" },
-      { title: "Security", href: "#" },
+      { title: "Cookies", href: "/cookies" },
+      { title: "Security", href: "/security" },
     ],
   },
 ];

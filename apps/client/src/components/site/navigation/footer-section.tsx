@@ -15,7 +15,7 @@ export default function FooterSection() {
           </Link>
           <div className="flex flex-wrap justify-center gap-6 text-sm">
             <Link
-              href="#"
+              href="https://twitter.com/vonova"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="X/Twitter"
@@ -35,7 +35,7 @@ export default function FooterSection() {
               </svg>
             </Link>
             <Link
-              href="#"
+              href="https://linkedin.com/company/vonova"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LinkedIn"
@@ -55,7 +55,7 @@ export default function FooterSection() {
               </svg>
             </Link>
             <Link
-              href="#"
+              href="https://facebook.com/vonova"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
@@ -75,7 +75,7 @@ export default function FooterSection() {
               </svg>
             </Link>
             <Link
-              href="#"
+              href="https://instagram.com/vonova"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"

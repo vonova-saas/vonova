@@ -12,11 +12,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   LeftSidebarTrigger,
-  RightSidebarTrigger,
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { Bell, MessageSquare, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 import ChatSidebar from "@/components/instructor/main/chat-sidebar";
@@ -85,7 +84,7 @@ export default function InstructorDashboardLayout({ children }: Props) {
   // Dashboard sections for search (use /instructor prefix for client-side routes)
   const instructorDashboardSections = [
     { name: "Dashboard", url: userId ? `/instructor/${userId}` : "/instructor" },
-    { name: "Courses Management", url: `/instructor/${userId}/courses-management`},
+    { name: "Courses Management", url: `/instructor/${userId}/courses-management` },
     { name: "Material Library Management", url: `/instructor/${userId}/material-library-management` },
     { name: "Quiz Management", url: `/instructor/${userId}/quiz-management` },
     { name: "Problem Solving Management", url: `/instructor/${userId}/problem-solving-management` },
@@ -214,14 +213,8 @@ export default function InstructorDashboardLayout({ children }: Props) {
                       </CommandList>
                     </CommandDialog>
                     {!mounted ? (
-                      <div
-                        className="flex items-center gap-3"
-                        aria-hidden
-                      >
+                      <div className="flex items-center gap-3" aria-hidden>
                         <div className="h-9 w-56 rounded-lg bg-muted/80" />
-                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
-                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
-                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
                         <div className="h-9 w-9 rounded-lg bg-muted/80" />
                       </div>
                     ) : (
@@ -254,22 +247,6 @@ export default function InstructorDashboardLayout({ children }: Props) {
                             <Moon className="w-5 h-5" />
                           )}
                         </button>
-                        <button
-                          className="p-2 rounded hover:bg-muted transition-colors"
-                          aria-label="Notifications"
-                          type="button"
-                        >
-                          <Bell className="w-5 h-5" />
-                        </button>
-                        <button
-                          className="p-2 rounded hover:bg-muted transition-colors"
-                          aria-label="Chat"
-                          type="button"
-                          onClick={() => setChatOpen(true)}
-                        >
-                          <MessageSquare className="w-5 h-5" />
-                        </button>
-                        <RightSidebarTrigger />
                       </>
                     )}
                   </div>

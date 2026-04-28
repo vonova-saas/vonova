@@ -4,7 +4,7 @@ import FAQsSection from "@/components/site/marketing/faqs-section";
 import PricingSection from "@/components/site/marketing/pricing-section";
 import GetStarted from "@/components/site/marketing/get-started-section";
 import FooterSection from "@/components/site/navigation/footer-section";
-import Reviews from "@/components/site/marketing/reviews";
+// import Reviews from "@/components/site/marketing/reviews";
 import ContentSection from "@/components/site/marketing/content-section";
 import SolutionSection from "@/components/site/marketing/solution-section";
 
@@ -26,7 +26,7 @@ export default function LandingPage() {
       <LMSFeaturesSection />
       <AIFeaturesSection />
       <SolutionSection />
-      <Reviews />
+      {/* <Reviews /> */}
       <FAQsSection />
       <PricingSection />
       <GetStarted />

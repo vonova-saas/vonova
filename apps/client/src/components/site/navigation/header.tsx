@@ -10,10 +10,10 @@ import { motion } from "framer-motion";
 
 const menuItems = [
   { name: "Home", href: "/" },
-  { name: "Features", href: "/site#features" },
-  { name: "Solution", href: "/site#solution" },
-  { name: "Pricing", href: "/site#pricing" },
-  { name: "About", href: "/site/about" },
+  { name: "Features", href: "#features" },
+  { name: "Solution", href: "#solution" },
+  { name: "Pricing", href: "#pricing" },
+  { name: "About", href: "/about" },
 ];
 
 const EASE_OUT_CUBIC: [number, number, number, number] = [0.22, 1, 0.36, 1];

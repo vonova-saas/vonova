@@ -13,11 +13,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   LeftSidebarTrigger,
-  RightSidebarTrigger,
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { Bell, MessageSquare, SearchIcon } from "lucide-react";
+import { Bell, MessageSquare, Moon, SearchIcon, Sun } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 import ChatSidebar from "@/components/student/main/chat-sidebar";
@@ -30,7 +29,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useUserId } from "@/hooks";
 import { AuthProvider } from "@/context/app/auth/auth-context";
@@ -147,57 +145,57 @@ export default function DashboardLayout({ children }: Props) {
                       className="mr-2 data-[orientation=vertical]:h-4"
                     />
                     <Breadcrumb>
-                    <BreadcrumbList className="flex-nowrap overflow-x-auto py-1 scrollbar-hide">
-                    {/* user root link - always visible (Link for client-side nav) */}
-                    <BreadcrumbItem className="whitespace-nowrap">
-                      <BreadcrumbLink asChild>
-                        <Link
-                          href={userId ? `/student/${userId}` : "/student"}
-                          className="text-sm md:text-base"
-                        >
-                          Dashboard
-                        </Link>
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
+                      <BreadcrumbList className="flex-nowrap overflow-x-auto py-1 scrollbar-hide">
+                        {/* user root link - always visible (Link for client-side nav) */}
+                        <BreadcrumbItem className="whitespace-nowrap">
+                          <BreadcrumbLink asChild>
+                            <Link
+                              href={userId ? `/student/${userId}` : "/student"}
+                              className="text-sm md:text-base"
+                            >
+                              Dashboard
+                            </Link>
+                          </BreadcrumbLink>
+                        </BreadcrumbItem>
 
-                    {/* Dynamic breadcrumb segments */}
-                    {crumbSegments.map((segment, index) => {
-                      const href = userId
-                        ? `/student/${userId}/${crumbSegments.slice(0, index + 1).join("/")}`
-                        : `/student/${crumbSegments.slice(0, index + 1).join("/")}`;
-                      const previousSegment = index > 0 ? crumbSegments[index - 1] : "";
-                      const isProblemDetailsSegment =
-                        previousSegment === "problem-solving";
-                      const displayName = isProblemDetailsSegment
-                        ? "Problem Details"
-                        : currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
-                      const isLast = index === crumbSegments.length - 1;
-                      const isMobile =
-                        mounted &&
-                        typeof window !== "undefined" &&
-                        window.innerWidth < 768;
+                        {/* Dynamic breadcrumb segments */}
+                        {crumbSegments.map((segment, index) => {
+                          const href = userId
+                            ? `/student/${userId}/${crumbSegments.slice(0, index + 1).join("/")}`
+                            : `/student/${crumbSegments.slice(0, index + 1).join("/")}`;
+                          const previousSegment = index > 0 ? crumbSegments[index - 1] : "";
+                          const isProblemDetailsSegment =
+                            previousSegment === "problem-solving";
+                          const displayName = isProblemDetailsSegment
+                            ? "Problem Details"
+                            : currentSegmentMap[segment as keyof typeof currentSegmentMap] || segment;
+                          const isLast = index === crumbSegments.length - 1;
+                          const isMobile =
+                            mounted &&
+                            typeof window !== "undefined" &&
+                            window.innerWidth < 768;
 
-                      if (isMobile && !isLast && crumbSegments.length > 1) {
-                        return null;
-                      }
+                          if (isMobile && !isLast && crumbSegments.length > 1) {
+                            return null;
+                          }
 
-                      return (
-                        <React.Fragment key={segment}>
-                          <BreadcrumbSeparator className="mx-1" />
-                          <BreadcrumbItem className="whitespace-nowrap">
-                            <BreadcrumbLink asChild>
-                              <Link
-                                href={href}
-                                className={`text-sm md:text-base ${isLast ? "font-medium" : "text-muted-foreground"}`}
-                              >
-                                {isMobile && crumbSegments.length > 1 && isLast ? "..." : displayName}
-                              </Link>
-                            </BreadcrumbLink>
-                          </BreadcrumbItem>
-                        </React.Fragment>
-                      );
-                    })}
-                  </BreadcrumbList>
+                          return (
+                            <React.Fragment key={segment}>
+                              <BreadcrumbSeparator className="mx-1" />
+                              <BreadcrumbItem className="whitespace-nowrap">
+                                <BreadcrumbLink asChild>
+                                  <Link
+                                    href={href}
+                                    className={`text-sm md:text-base ${isLast ? "font-medium" : "text-muted-foreground"}`}
+                                  >
+                                    {isMobile && crumbSegments.length > 1 && isLast ? "..." : displayName}
+                                  </Link>
+                                </BreadcrumbLink>
+                              </BreadcrumbItem>
+                            </React.Fragment>
+                          );
+                        })}
+                      </BreadcrumbList>
                     </Breadcrumb>
                   </div>
                   <div className="flex items-center gap-3">
@@ -233,8 +231,6 @@ export default function DashboardLayout({ children }: Props) {
                         <div className="h-9 w-56 rounded-lg bg-muted/80" />
                         <div className="h-9 w-9 rounded-lg bg-muted/80" />
                         <div className="h-9 w-9 rounded-lg bg-muted/80" />
-                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
-                        <div className="h-9 w-9 rounded-lg bg-muted/80" />
                       </div>
                     ) : (
                       <>
@@ -266,22 +262,6 @@ export default function DashboardLayout({ children }: Props) {
                             <Moon className="w-5 h-5" />
                           )}
                         </Button>
-                        <Button
-                          className="p-2 rounded hover:bg-muted transition-colors"
-                          aria-label="Notifications"
-                          type="button"
-                        >
-                          <Bell className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          className="p-2 rounded hover:bg-muted transition-colors"
-                          aria-label="Chat"
-                          type="button"
-                          onClick={() => setChatOpen(true)}
-                        >
-                          <MessageSquare className="w-5 h-5" />
-                        </Button>
-                        <RightSidebarTrigger />
                       </>
                     )}
                   </div>

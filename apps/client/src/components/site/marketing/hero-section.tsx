@@ -127,47 +127,47 @@ export default function HeroSection() {
                 </TextEffect>
 
                 <motion.div style={{ y: ctaY, scale: ctaScale }} className="will-change-transform">
-                <AnimatedGroup
-                  variants={{
-                    container: {
-                      visible: {
-                        transition: {
-                          staggerChildren: 0.09,
-                          delayChildren: 0.75,
+                  <AnimatedGroup
+                    variants={{
+                      container: {
+                        visible: {
+                          transition: {
+                            staggerChildren: 0.09,
+                            delayChildren: 0.75,
+                          },
                         },
                       },
-                    },
-                    item: transitionVariants.item,
-                  }}
-                  className="mt-8 flex flex-wrap items-center justify-center gap-3"
-                >
-                  <div
-                    key={1}
-                    className="rounded-full"
+                      item: transitionVariants.item,
+                    }}
+                    className="mt-8 flex flex-wrap items-center justify-center gap-3"
                   >
+                    <div
+                      key={1}
+                      className="rounded-full"
+                    >
+                      <Button
+                        asChild
+                        size="lg"
+                        className="rounded-full px-8 text-base transition-all duration-400 hover:scale-[1.02]"
+                      >
+                        <Link href="/auth/register">
+                          <Gem className="mr-2 size-4" />
+                          <span className="text-nowrap">Create free account</span>
+                        </Link>
+                      </Button>
+                    </div>
                     <Button
+                      key={2}
                       asChild
                       size="lg"
-                      className="rounded-full px-8 text-base transition-all duration-400 hover:scale-[1.02]"
+                      variant="ghost"
+                      className="rounded-full border-primary/25 bg-background/60 px-8 transition-all duration-400 hover:scale-[1.02] hover:bg-background"
                     >
-                      <Link href="/auth/register">
-                        <Gem className="mr-2 size-4" />
-                        <span className="text-nowrap">Create free account</span>
+                      <Link href="/">
+                        <span className="text-nowrap">Explore platform</span>
                       </Link>
                     </Button>
-                  </div>
-                  <Button
-                    key={2}
-                    asChild
-                    size="lg"
-                    variant="ghost"
-                    className="rounded-full border-primary/25 bg-background/60 px-8 transition-all duration-400 hover:scale-[1.02] hover:bg-background"
-                  >
-                    <Link href="#features">
-                      <span className="text-nowrap">Explore platform</span>
-                    </Link>
-                  </Button>
-                </AnimatedGroup>
+                  </AnimatedGroup>
                 </motion.div>
 
                 <AnimatedGroup
@@ -228,8 +228,8 @@ export default function HeroSection() {
               <div className="relative mt-10 overflow-hidden px-2 sm:mt-12 md:mt-16">
                 <div className="bg-background relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border/70 p-4 shadow-sm">
                   <Image
-                    className="bg-background aspect-15/8 relative hidden rounded-2xl dark:block"
-                    src="/images/vonova.png"
+                    className="bg-background aspect-15/8 relative rounded-2xl"
+                    src="/images/Dashboard2.png"
                     alt="Vonova dashboard preview"
                     width="2700"
                     height="1440"

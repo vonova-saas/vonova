@@ -1,158 +1,166 @@
 "use client";
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
 import {
-  AppWindowMac,
-  ChartBarIncreasingIcon,
-  Database,
-  Fingerprint,
-  IdCard,
+  Code2,
+  ClipboardList,
+  Users,
+  FileText,
+  Map,
 } from "lucide-react";
+
 import Image from "next/image";
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { BorderBeam } from "@/components/global/magicui/border-beam";
 
 export default function AIFeaturesSection() {
-  type ImageKey = "item-1" | "item-2" | "item-3" | "item-4";
+  type ImageKey = "item-1" | "item-2" | "item-3" | "item-4" | "item-5";
+
   const [activeItem, setActiveItem] = useState<ImageKey>("item-1");
 
   const images = {
     "item-1": {
-      image: "/images/charts.png",
-      alt: "Course creation and management UI",
+      image: "/images/Problem-Solving-Management.png",
+      alt: "Problem Solving Management UI",
     },
     "item-2": {
-      image: "/images/music.png",
-      alt: "AI-generated teaching video preview",
+      image: "/images/Quiz-Management.png",
+      alt: "Quiz Management UI",
     },
     "item-3": {
-      image: "/images/mail2.png",
-      alt: "AI Problem solving coach",
+      image: "/images/Community.png",
+      alt: "Community Feature UI",
     },
     "item-4": {
-      image: "/images/payments.png",
-      alt: "AI Assetant",
+      image: "/images/PDF-Summary.png",
+      alt: "PDF Summary Feature UI",
     },
     "item-5": {
-      image: "/images/charts.png",
-      alt: "AI Roadmap Generator",
+      image: "/images/AI-Roadmap-Generator.png",
+      alt: "AI Roadmap Generator UI",
     },
   };
 
   return (
-    <section className="py-12 md:py-20 lg:py-32">
-      <div className="mx-auto max-w-5xl space-y-8 px-6 md:space-y-16 lg:space-y-20 dark:[--color-border:color-mix(in_oklab,var(--color-white)_10%,transparent)]">
-        <div className="relative z-10 mx-auto max-w-2xl space-y-6 text-center">
-          <h2 className="text-balance text-4xl font-semibold lg:text-6xl">
-            The AI Advantage for Instructors & Students
+    <section id="features" className="py-16 md:py-24 lg:py-32">
+      <div className="mx-auto max-w-6xl px-6 space-y-12">
+        {/* HEADER */}
+        <motion.div
+          className="text-center max-w-2xl mx-auto space-y-4"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-semibold">
+            The AI Advantage for Learning Platforms
           </h2>
-          <p>
-            Vonova brings advanced AI features to help educators deliver
-            personalized learning, manage courses effortlessly, and understand
-            student progress in depth.
+          <p className="text-muted-foreground">
+            Powerful AI tools to create content, manage assessments, and track
+            student progress — all in one place.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid gap-12 sm:px-12 md:grid-cols-2 lg:gap-20 lg:px-0">
+        {/* CONTENT */}
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          {/* ACCORDION */}
           <Accordion
             type="single"
             value={activeItem}
             onValueChange={(value) => setActiveItem(value as ImageKey)}
-            className="w-full"
-            suppressHydrationWarning
+            className="w-full space-y-2"
           >
-            <AccordionItem value="item-1">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2 text-base">
-                  <Database className="size-4" />
-                  Course Creation & Management
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Build, organize, and publish engaging courses with intuitive
-                tools powered by AI recommendations.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2 text-base">
-                  <Fingerprint className="size-4" />
-                  AI-Generated Video Explanations
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Automatically create teaching videos tailored to your curriculum
-                and student needs.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2 text-base">
-                  <IdCard className="size-4" />
-                  Student Progress Tracking
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Gain real-time insights into learning outcomes, helping you
-                adjust materials and keep students on track.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2 text-base">
-                  <ChartBarIncreasingIcon className="size-4" />
-                  AI Assetant
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Understand student engagement with clear visualizations, trends,
-                and actionable recommendations.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-5">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2 text-base">
-                  <AppWindowMac className="size-4" />
-                  AI Roadmap Genrator
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Understand student engagement with clear visualizations, trends,
-                and actionable recommendations.
-              </AccordionContent>
-            </AccordionItem>
+            {[
+              {
+                value: "item-1",
+                icon: Code2,
+                title: "Problem Solving Management",
+                desc: "Create, manage, and organize coding problems with real-time evaluation.",
+              },
+              {
+                value: "item-2",
+                icon: ClipboardList,
+                title: "Quiz Management",
+                desc: "Build quizzes instantly with AI assistance and track performance.",
+              },
+              {
+                value: "item-3",
+                icon: Users,
+                title: "Community & Collaboration",
+                desc: "Enable discussions and peer interaction for better learning.",
+              },
+              {
+                value: "item-4",
+                icon: FileText,
+                title: "PDF Summary Generator",
+                desc: "Automatically generate concise summaries from documents.",
+              },
+              {
+                value: "item-5",
+                icon: Map,
+                title: "AI Roadmap Generator",
+                desc: "Create personalized learning paths based on goals.",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.value}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.08 }}
+              >
+                <AccordionItem
+                  value={item.value}
+                  className="rounded-xl border border-white/10 px-4 transition-all hover:bg-white/5"
+                >
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5 text-primary" />
+                      {item.title}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    {item.desc}
+                  </AccordionContent>
+                </AccordionItem>
+              </motion.div>
+            ))}
           </Accordion>
 
-          <div className="bg-background relative flex overflow-hidden rounded-3xl border p-2">
-            <div className="aspect-76/59 bg-background relative w-100% rounded-2xl">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${activeItem}-id`}
-                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
-                  className="size-full overflow-hidden rounded-2xl border bg-zinc-900 shadow-md"
-                >
+          {/* IMAGE */}
+          <div className="relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeItem}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.35 }}
+                whileHover={{ scale: 1.02 }}
+                className="rounded-2xl border border-white/10 bg-card/50 p-4 backdrop-blur-xl"
+              >
+                <div className="flex justify-center items-center">
                   <Image
                     src={images[activeItem].image}
-                    className="size-full object-cover object-left-top dark:mix-blend-lighten"
                     alt={images[activeItem].alt}
-                    width={1207}
-                    height={929}
+                    width={1000}
+                    height={700}
+                    className="max-h-[500px] w-auto object-contain rounded-lg border border-white/20"
+                    priority
                   />
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
             <BorderBeam
               duration={6}
-              size={200}
-              className="from-transparent via-yellow-700 to-transparent dark:via-white/50"
+              size={250}
+              className="from-transparent via-orange-500/40 to-transparent"
             />
           </div>
         </div>
