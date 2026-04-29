@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -37,7 +40,15 @@ export function NavMain({
 }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const { setOpenMobile } = useSidebar();
+  const isMobile = useIsMobile();
   useEffect(() => setMounted(true), []);
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   if (!mounted) {
     return (
@@ -68,7 +79,7 @@ export function NavMain({
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <Link href={item.url}>
+                  <Link href={item.url} onClick={handleLinkClick}>
                     <SidebarMenuButton
                       tooltip={item.title}
                       isActive={pathname === item.url}
@@ -87,7 +98,7 @@ export function NavMain({
                           asChild
                           isActive={pathname === subItem.url}
                         >
-                          <Link href={subItem.url}>
+                          <Link href={subItem.url} onClick={handleLinkClick}>
                             <span>{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
@@ -99,7 +110,7 @@ export function NavMain({
             </Collapsible>
           ) : (
             <SidebarMenuItem key={item.url} className={isActive ? 'bg-muted rounded-md' : ''}>
-              <Link href={item.url}>
+              <Link href={item.url} onClick={handleLinkClick}>
                 <SidebarMenuButton
                   tooltip={item.title}
                   isActive={pathname === item.url}

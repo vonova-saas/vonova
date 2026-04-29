@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Lightbulb, Loader2, Sparkles, WandSparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,7 @@ const SUBMIT_DEBOUNCE_MS = 800;
 
 export default function Playground({ problem }: PlaygroundProps) {
   const queryClient = useQueryClient();
+  const { resolvedTheme } = useTheme();
   const markAsSolvedMutation = useMarkAsSolvedMutation();
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
@@ -285,37 +287,39 @@ export default function Playground({ problem }: PlaygroundProps) {
   const displayStatus = submissionStatusQuery.data?.status ?? submissionStatus;
   const displaySummary = submissionStatusQuery.data
     ? {
-        passed: submissionStatusQuery.data.passed ?? 0,
-        total: submissionStatusQuery.data.total ?? 0,
-        failedCases: (submissionStatusQuery.data.failedCases ?? []).map((item) => ({
-          input: item.input,
-          expected: item.expected,
-          userOutput: item.output,
-          errorMessage: item.error,
-        })),
-      }
+      passed: submissionStatusQuery.data.passed ?? 0,
+      total: submissionStatusQuery.data.total ?? 0,
+      failedCases: (submissionStatusQuery.data.failedCases ?? []).map((item) => ({
+        input: item.input,
+        expected: item.expected,
+        userOutput: item.output,
+        errorMessage: item.error,
+      })),
+    }
     : submissionSummary;
+
+  const monacoTheme = resolvedTheme === "dark" ? "vs-dark" : "vs";
 
   return (
     <>
-      <Card className="h-full overflow-hidden border-0 bg-[#1a1a1a] py-0 shadow-none">
-        <CardHeader className="border-b border-zinc-800 bg-[#151515] py-3">
+      <Card className="h-full overflow-hidden border-0 bg-background py-0 shadow-none">
+        <CardHeader className="border-b border-border bg-background py-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm text-zinc-100">Code Workspace</CardTitle>
-            <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+            <CardTitle className="text-sm text-foreground">Code Workspace</CardTitle>
+            <Badge variant="outline" className="border-border text-muted-foreground">
               Monaco Editor
             </Badge>
           </div>
         </CardHeader>
 
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-[#151515] px-4 py-2 text-xs">
+        <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-zinc-300">Language</span>
+            <span className="font-medium text-muted-foreground">Language</span>
             <select
               aria-label="Programming language"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="h-7 rounded-md border border-zinc-700 bg-zinc-900 px-2 text-[11px] text-zinc-200"
+              className="h-7 rounded-md border border-border bg-background px-2 text-[11px] text-foreground"
             >
               <option value="typescript">TypeScript</option>
               <option value="javascript">JavaScript</option>
@@ -323,16 +327,16 @@ export default function Playground({ problem }: PlaygroundProps) {
               <option value="java">Java</option> */}
             </select>
           </div>
-          <div className="text-[11px] text-zinc-500">Auto</div>
+          <div className="text-[11px] text-muted-foreground">Auto</div>
         </div>
 
         <CardContent className="grid h-[calc(100%-110px)] grid-rows-[1fr_auto] overflow-hidden p-0">
-          <div className="overflow-hidden bg-[#0f1117] ring-1 ring-inset ring-white/5">
+          <div className="overflow-hidden bg-muted ring-1 ring-inset ring-border">
             <MonacoEditor
               language={language}
               value={code}
               onChange={(value: string | undefined) => setCode(value ?? "")}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -342,7 +346,7 @@ export default function Playground({ problem }: PlaygroundProps) {
             />
           </div>
 
-          <div className="space-y-3 border-t border-zinc-800 bg-[#151515] px-4 py-3">
+          <div className="space-y-3 border-t border-border bg-background px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={handleSubmit}
@@ -364,7 +368,7 @@ export default function Playground({ problem }: PlaygroundProps) {
                 variant="outline"
                 onClick={handleGetHint}
                 disabled={hintMutation.isPending || hintLimitReached}
-                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                className="h-8 border-border bg-background text-foreground hover:bg-accent"
               >
                 {hintMutation.isPending ? (
                   <>
@@ -383,7 +387,7 @@ export default function Playground({ problem }: PlaygroundProps) {
                 variant="outline"
                 onClick={handleViewHints}
                 disabled={allHints.length === 0}
-                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                className="h-8 border-border bg-background text-foreground hover:bg-accent"
               >
                 <Lightbulb className="mr-2 h-4 w-4" />
                 View Hints ({visibleHints.length})
@@ -393,7 +397,7 @@ export default function Playground({ problem }: PlaygroundProps) {
                 variant="outline"
                 onClick={handleShowSolution}
                 disabled={solutionMutation.isPending || solutionUsed}
-                className="h-8 border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                className="h-8 border-border bg-background text-foreground hover:bg-accent"
               >
                 {solutionMutation.isPending ? (
                   <>
@@ -409,19 +413,18 @@ export default function Playground({ problem }: PlaygroundProps) {
               </Button>
             </div>
 
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Result:{" "}
               <span
-                className={`font-semibold ${
-                  displayStatus === "accepted"
+                className={`font-semibold ${displayStatus === "accepted"
                     ? "text-emerald-400"
                     : displayStatus === "wrong_answer" ||
-                        displayStatus === "runtime_error" ||
-                        displayStatus === "time_limit_exceeded" ||
-                        displayStatus === "memory_limit_exceeded"
-                    ? "text-rose-400"
-                    : "text-zinc-200"
-                }`}
+                      displayStatus === "runtime_error" ||
+                      displayStatus === "time_limit_exceeded" ||
+                      displayStatus === "memory_limit_exceeded"
+                      ? "text-rose-400"
+                      : "text-foreground"
+                  }`}
               >
                 {displayStatus === "idle" ? "Not submitted" : displayStatus}
               </span>
@@ -432,20 +435,20 @@ export default function Playground({ problem }: PlaygroundProps) {
               ) : null}
             </p>
             {displaySummary?.failedCases?.length ? (
-              <div className="max-h-40 overflow-auto rounded-md border border-zinc-700 bg-zinc-900/40 p-2 text-xs">
+              <div className="max-h-40 overflow-auto rounded-md border border-border bg-muted/40 p-2 text-xs">
                 {displaySummary.failedCases.slice(0, 3).map((failed, index) => (
-                  <div key={`failed-${index}`} className="mb-2 border-b border-zinc-800 pb-2 last:border-b-0">
+                  <div key={`failed-${index}`} className="mb-2 border-b border-border pb-2 last:border-b-0">
                     <p>
-                      <span className="text-zinc-300">Input:</span>{" "}
-                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.input)}</span>
+                      <span className="text-muted-foreground">Input:</span>{" "}
+                      <span className="font-mono text-foreground">{JSON.stringify(failed.input)}</span>
                     </p>
                     <p>
-                      <span className="text-zinc-300">Expected:</span>{" "}
-                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.expected)}</span>
+                      <span className="text-muted-foreground">Expected:</span>{" "}
+                      <span className="font-mono text-foreground">{JSON.stringify(failed.expected)}</span>
                     </p>
                     <p>
-                      <span className="text-zinc-300">Your output:</span>{" "}
-                      <span className="font-mono text-zinc-200">{JSON.stringify(failed.userOutput)}</span>
+                      <span className="text-muted-foreground">Your output:</span>{" "}
+                      <span className="font-mono text-foreground">{JSON.stringify(failed.userOutput)}</span>
                     </p>
                     {failed.errorMessage ? (
                       <p className="text-rose-300">Error: {failed.errorMessage}</p>
@@ -463,7 +466,7 @@ export default function Playground({ problem }: PlaygroundProps) {
               <p className="text-xs text-rose-300">{normalizationError}</p>
             ) : null}
             {submissionStatusQuery.data ? (
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-muted-foreground">
                 Runtime: {submissionStatusQuery.data.executionTime}ms | Memory:{" "}
                 {submissionStatusQuery.data.memoryUsed}MB
               </p>

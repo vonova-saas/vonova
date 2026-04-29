@@ -83,6 +83,31 @@ export class AdminDashboardController {
     };
   }
 
+  @MessagePattern({ cmd: 'admin.account.deleteUser' })
+  async handleDeleteUser(@Payload() data: { userId: string }) {
+    const result = await this.adminUsersService.deleteUser(data.userId);
+    return {
+      success: true,
+      data: result,
+      message: 'User deleted successfully',
+    };
+  }
+
+  @MessagePattern({ cmd: 'admin.account.updateUser' })
+  async handleUpdateUser(
+    @Payload() data: { userId: string; updateData: any },
+  ) {
+    const result = await this.adminUsersService.updateUser(
+      data.userId,
+      data.updateData,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'User updated successfully',
+    };
+  }
+
   @MessagePattern({ cmd: 'admin.activity.touch' })
   async handleActivityTouch(
     @Payload() data: { userId: string; lastAction: string },
