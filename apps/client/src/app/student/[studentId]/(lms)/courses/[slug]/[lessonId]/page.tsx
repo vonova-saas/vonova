@@ -1,26 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { getLessonContent } from "@/components/student/lms/courses/data/get-lesson-content";
+import type { LessonContentType } from "@/components/student/lms/courses/data/get-lesson-content";
 import { CourseContent } from "@/components/student/lms/courses/course-content";
-import { Suspense } from "react";
 import { LessonSkeleton } from "@/components/student/lms/courses/lessons/lesson-skeleton";
 
-type Params = Promise<{ lessonId: string }>;
+export default function LessonContentPage() {
+  const params = useParams<{ lessonId: string }>();
+  const lessonId = params.lessonId;
+  const [data, setData] = useState<LessonContentType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function LessonContentPage({
-  params,
-}: {
-  params: Params;
-}) {
-  const { lessonId } = await params;
+  useEffect(() => {
+    async function fetchData() {
+      if (lessonId) {
+        console.log("[LessonPage] Fetching lesson content for:", lessonId);
+        const lessonData = await getLessonContent(lessonId);
+        console.log("[LessonPage] Lesson data received:", lessonData);
+        setData(lessonData);
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [lessonId]);
 
-  return (
-    <Suspense fallback={<LessonSkeleton />}>
-      <LessonContentLoader lessonId={lessonId} />
-    </Suspense>
-  );
-}
-
-async function LessonContentLoader({ lessonId }: { lessonId: string }) {
-  const data = await getLessonContent(lessonId);
+  if (loading || !data) {
+    return <LessonSkeleton />;
+  }
 
   return <CourseContent data={data} />;
 }

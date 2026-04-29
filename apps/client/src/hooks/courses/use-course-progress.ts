@@ -22,13 +22,14 @@ export function useCourseProgress({
 
     let completedLessons = 0;
 
-    courseData.chapter.forEach((chapter: { lessons: any[]; }) => {
-      chapter.lessons.forEach((lesson) => {
+    (courseData?.chapter || []).forEach((chapter: { lessons?: any[] }) => {
+      (chapter?.lessons || []).forEach((lesson) => {
         totalLessons++;
 
         // check if this lesson is completed
-        const isCompleted = lesson.lessonProgress.some(
-          (progress: { lessonId: any; completed: any; }) => progress.lessonId === lesson.id && progress.completed
+        const isCompleted = (lesson?.lessonProgress || []).some(
+          (progress: { lessonId?: string; completed?: boolean }) =>
+            progress.lessonId === lesson?.id && progress.completed
         );
 
         if (isCompleted) {

@@ -4,6 +4,24 @@ import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { Menubar } from "./menubar";
 
+// Helper to safely parse content
+function parseContent(value: string | undefined) {
+  if (!value) return "<p>Hello world</p>";
+
+  try {
+    // Try to parse as JSON (TipTap format)
+    const parsed = JSON.parse(value);
+    return parsed;
+  } catch {
+    // If not JSON, treat as HTML/plain text
+    // Wrap plain text in paragraph tags
+    if (!value.trim().startsWith("<")) {
+      return `<p>${value}</p>`;
+    }
+    return value;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function RichTextEditor({ field }: { field: any }) {
   const editor = useEditor({
@@ -22,11 +40,10 @@ export function RichTextEditor({ field }: { field: any }) {
     },
 
     onUpdate: ({ editor }) => {
-
       field.onChange(JSON.stringify(editor.getJSON()));
     },
 
-    content: field.value ? JSON.parse(field.value) : <p> hello world </p>
+    content: parseContent(field.value),
   });
 
   if (!editor) return null;

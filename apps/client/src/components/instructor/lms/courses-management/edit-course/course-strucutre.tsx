@@ -32,6 +32,7 @@ import {
   ChevronRight,
   FileText,
   GripVertical,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -70,6 +71,7 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
         id: lesson._id,
         title: lesson.title,
         order: lesson.index,
+        videoKey: lesson.videoKey,
       })),
     })) || [];
 
@@ -89,6 +91,7 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
             id: lesson._id,
             title: lesson.title,
             order: lesson.index,
+            videoKey: lesson.videoKey,
           })),
         })) || [];
       return updatedItems;
@@ -360,7 +363,11 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
                                       >
                                         <GripVertical className="size-4" />
                                       </Button>
-                                      <FileText className="size-4" />
+                                      {lesson.videoKey ? (
+                                        <Video className="size-4 text-primary" />
+                                      ) : (
+                                        <FileText className="size-4" />
+                                      )}
                                       <Link
                                         href={`/instructor/${instructorId}/courses-management/${data._id}/${item.id}/${lesson.id}`}
                                       >

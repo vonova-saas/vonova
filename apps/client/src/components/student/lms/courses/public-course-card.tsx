@@ -1,3 +1,5 @@
+"use client";
+
 import { PublicCourseType } from "./data/get-all-courses";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -6,13 +8,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import useConstructUrl from "@/hooks/courses/use-construct-url";
 
 interface iAppProps {
   data: PublicCourseType;
+  studentId: string;
 }
 
-export function PublicCourseCard({ data }: iAppProps) {
-  const thumbnailUrl = data.thumbnailUrl || "/placeholder-course.jpg";
+export function PublicCourseCard({ data, studentId }: iAppProps) {
+  // Use useConstructUrl to resolve thumbnail from IndexedDB storage
+  const resolvedThumbnailUrl = useConstructUrl(data.thumbnailUrl || "");
+  const thumbnailUrl = resolvedThumbnailUrl && resolvedThumbnailUrl !== "/images/placeholder.svg"
+    ? resolvedThumbnailUrl
+    : (data.thumbnailUrl?.startsWith("http") || data.thumbnailUrl?.startsWith("/"))
+      ? data.thumbnailUrl
+      : "/placeholder-course.jpg";
   const difficulty = data.difficulty || "BEGINNER";
   const isFree = data.price?.isFree || false;
   const price = isFree ? "Free" : `${data.price?.amount || 0} ${data.price?.currency || "USD"}`;
@@ -33,7 +43,7 @@ export function PublicCourseCard({ data }: iAppProps) {
       <CardContent className="p-4">
         <Link
           className="font-medium text-lg line-clamp-2 hover:underline group-hover:text-primary transition-colors"
-          href={`/student/courses/${data.slug}/enroll`}
+          href={`/student/${studentId}/courses/${data.slug}/enroll`}
         >
           {data.title}
         </Link>
@@ -56,7 +66,7 @@ export function PublicCourseCard({ data }: iAppProps) {
         <div className="mt-2 flex items-center justify-between">
           <p className="text-lg font-bold text-primary">{price}</p>
           <Link
-            href={`/student/courses/${data.slug}/enroll`}
+            href={`/student/${studentId}/courses/${data.slug}/enroll`}
             className={buttonVariants({ className: "mt-2", size: "sm" })}
           >
             {data.price?.isFree ? "Enroll Free" : "Enroll Now"}

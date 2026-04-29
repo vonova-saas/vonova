@@ -11,12 +11,14 @@ import { ChevronDown, Play } from "lucide-react";
 import { LessonItem } from "./lessons/lesson-item";
 import { usePathname } from "next/navigation";
 import { useCourseProgress } from "@/hooks/courses/use-course-progress";
+import useUserId from "@/hooks/user/use-user-id";
 
 interface iAppProps {
   course: CourseSidebarDataType["course"];
 }
 
 export function CourseSidebar({ course }: iAppProps) {
+  const studentId = useUserId();
   const pathName = usePathname();
   const currentLessonId = pathName.split("/").pop();
   const { completedLessons, totalLessons, progressPercentage } =
@@ -77,6 +79,7 @@ export function CourseSidebar({ course }: iAppProps) {
                   key={lesson.id}
                   lesson={lesson}
                   slug={course.slug}
+                  studentId={studentId}
                   isActive={currentLessonId === lesson.id}
                   completed={
                     lesson.lessonProgress.find(

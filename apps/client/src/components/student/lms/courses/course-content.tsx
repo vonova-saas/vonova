@@ -29,7 +29,10 @@ export function CourseContent({ data }: iAppProps) {
     const videoUrl = useConstructUrl(videoKey);
     const thumbnailUrl = useConstructUrl(thumbnailKey);
 
-    if (!thumbnailKey) {
+    // Check if videoKey exists but videoUrl is placeholder (data lost)
+    const isVideoDataMissing = videoKey && videoUrl === "/images/placeholder.svg";
+
+    if (!videoKey) {
       return (
         <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center">
           <BookIcon className="size-16 text-primary mx-auto mb-4" />
@@ -40,12 +43,33 @@ export function CourseContent({ data }: iAppProps) {
       );
     }
 
+    if (isVideoDataMissing) {
+      return (
+        <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center p-6">
+          <BookIcon className="size-16 text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground text-center mb-2">
+            Video data is not available
+          </p>
+          <p className="text-sm text-muted-foreground text-center">
+            The video was uploaded but the data could not be retrieved.<br />
+            This may happen if the browser storage was cleared.<br />
+            Try re-uploading the video in the instructor dashboard.
+          </p>
+        </div>
+      );
+    }
+
+    // Don't use poster if it's a placeholder
+    const validPoster = thumbnailUrl && thumbnailUrl !== "/images/placeholder.svg" ? thumbnailUrl : undefined;
+
     return (
       <div className="aspect-video bg-black rounded-lg relative overflow-hidden">
         <video
           className="w-full h-full object-cover"
           controls
-          poster={thumbnailUrl}
+          poster={validPoster}
+          preload="metadata"
+          playsInline
         >
           <source src={videoUrl} type="video/mp4" />
           <source src={videoUrl} type="video/webm" />

@@ -1,3 +1,5 @@
+"use client";
+
 import { Course } from "@/types/api/lms/courses.type";
 import { getAllCoursesQueryFn } from "@/services/student/lms/courses/courses.api";
 import { getEnrollmentStatusQueryFn } from "@/services/student/lms/courses/courses.api";

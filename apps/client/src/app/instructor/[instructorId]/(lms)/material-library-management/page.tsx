@@ -21,6 +21,7 @@ import type {
   MaterialsListResponse 
 } from "@/types/api/shared/material-library/material.type";
 import { toast } from "@/hooks/app/use-toast";
+import { getStoredMaterials, storeMaterial, getStoredMaterial, deleteStoredMaterial } from "@/utils/indexedDB";
 
 // Local Material interface matching Unified LMS API backend response
 interface Material {
@@ -60,42 +61,103 @@ const staticTopics = [
 ];
 
 export default function MaterialLibraryManagementPage() {
-  const handleViewMaterial = (material: Material) => {
-    // Check if fileAssetId exists and has streamUrl
-    if (material.fileAssetId?.urls?.streamUrl) {
-      const url = material.fileAssetId.urls.streamUrl;
-      // Check if it's a PDF and handle accordingly
-      if (url.toLowerCase().includes('.pdf')) {
-        // For PDFs, open in new tab safely
-        window.open(url, '_blank', 'noopener,noreferrer');
+  const handleViewMaterial = async (material: Material) => {
+    try {
+      // Try to get stored material from IndexedDB
+      // @ts-ignore
+      const storedMaterial = await getStoredMaterial(material.id || material._id);
+      
+      if (storedMaterial?.fileBlob) {
+        // Create blob URL from stored file
+        const blobUrl = URL.createObjectURL(storedMaterial.fileBlob);
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      } else if (material.fileAssetId?.urls?.streamUrl) {
+        // Fallback to original streamUrl
+        const url = material.fileAssetId.urls.streamUrl;
+        if (url.toLowerCase().includes('.pdf')) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      } else if (material.fileUrl) {
+        // Fallback to original fileUrl
+        const url = material.fileUrl;
+        if (url.toLowerCase().includes('.pdf')) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
       } else {
-        // For other files, open in new tab
-        window.open(url, '_blank', 'noopener,noreferrer');
+        toast({
+          title: "No File Available",
+          description: "No file has been uploaded for this material yet.",
+          variant: "destructive",
+        });
       }
-    } else if (material.fileAssetId) {
-      // fileAssetId exists but no streamUrl
+    } catch (error) {
+      console.error('Error viewing material:', error);
       toast({
-        title: "Processing File",
-        description: "File is being processed. Please try again later.",
-        variant: "destructive",
-      });
-    } else if (material.fileUrl) {
-      // Fallback to fileUrl if available
-      const url = material.fileUrl;
-      if (url.toLowerCase().includes('.pdf')) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } else {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-    } else {
-      // No file asset at all
-      toast({
-        title: "No File Available",
-        description: "No file has been uploaded for this material yet.",
+        title: "Error",
+        description: "Failed to open material. Please try again.",
         variant: "destructive",
       });
     }
   };
+
+  // Static Mock Data for Demo
+  const staticMaterials: Material[] = [
+    {
+      _id: "1",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Introduction to Programming",
+      description: "A comprehensive guide to programming fundamentals",
+      type: "book",
+      status: "PUBLISHED",
+      topics: ["programming-basics"],
+      author: "Demo Author",
+      createdAt: "2024-04-20T10:00:00Z",
+      updatedAt: "2024-04-20T10:00:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "2", 
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Web Development Guide",
+      description: "Complete guide to modern web development",
+      type: "visual-guide",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-21T14:30:00Z",
+      updatedAt: "2024-04-21T14:30:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "3",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "React Presentation",
+      description: "Introduction to React framework",
+      type: "presentation",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-22T09:15:00Z",
+      updatedAt: "2024-04-22T09:15:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    }
+  ];
 
   const queryClient = useQueryClient();
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -104,23 +166,31 @@ export default function MaterialLibraryManagementPage() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load materials on mount
+  // Load materials from IndexedDB on mount
   useEffect(() => {
-    loadMaterials();
+    const loadMaterialsFromIndexedDB = async () => {
+      try {
+        setLoading(true);
+        const storedMaterials = await getStoredMaterials();
+        // Combine with static materials and convert to Material type
+        const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
+        setMaterials(combinedMaterials);
+      } catch (error) {
+        console.error('Failed to load materials from IndexedDB:', error);
+        // Fallback to static materials only
+        setMaterials(staticMaterials);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMaterialsFromIndexedDB();
   }, []);
 
+  // Fake loadMaterials function to satisfy calls during demo
   const loadMaterials = async () => {
-    try {
-      setLoading(true);
-      // Use Unified LMS Library API to fetch materials
-      const response = await fetchLibraryItemsQueryFn();
-      setMaterials(response.items || []);
-    } catch (error) {
-      console.error('Failed to load materials:', error);
-      setMaterials([]); // Fallback to empty array on error
-    } finally {
-      setLoading(false);
-    }
+    // Do nothing, just to satisfy calls during demo
+    console.log("Mock loadMaterials called");
   };
 
   // Calculate frontend stats from materials state
@@ -135,27 +205,77 @@ export default function MaterialLibraryManagementPage() {
     material.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddMaterial = async (data: CreateMaterialRequest) => {
+  const handleAddMaterial = async (data: any) => {
     try {
-      // Use Unified LMS Library API with proper field mapping
-      await createLibraryBookMutationFn(data);
-      
       // Create new Material object with required properties
-      const newMaterial: Material = {
+      const newMaterial: any = {
+        ...data,
         _id: Date.now().toString(),
-        title: data.title,
+        title: data.title || "Untitled",
         description: data.description,
         type: data.type || 'book',
         topics: data.topicId ? [data.topicId] : [],
         fileUrl: data.fileUrl,
+        author: data.author || "Demo User",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        status: 'DRAFT'
+        status: 'PUBLISHED'
+      };
+
+      // Store in IndexedDB if file is provided
+      if (data.file) {
+        const fileName = data.file.name;
+        const fileSize = `${(data.file.size / (1024 * 1024)).toFixed(2)} MB`;
+        const uploadDate = new Date().toISOString().split('T')[0];
+        
+        // Store file blob and metadata
+        const materialToStore: any = {
+          id: newMaterial._id,
+          fileName,
+          fileSize,
+          uploadDate,
+          fileBlob: new Blob([data.file], { type: data.file.type }),
+          title: newMaterial.title || "Untitled",
+          description: newMaterial.description,
+          type: newMaterial.type,
+          status: newMaterial.status,
+          topics: newMaterial.topics,
+          author: newMaterial.author || "Demo User",
+          createdAt: newMaterial.createdAt,
+          updatedAt: newMaterial.updatedAt
+        };
+        
+        await storeMaterial(materialToStore as any);
+      } else {
+        // Store metadata only
+        const metadataToStore: any = {
+          ...newMaterial,
+          title: newMaterial.title || "Untitled",
+          author: newMaterial.author || "Demo User"
+        };
+        await storeMaterial(metadataToStore as any);
+      }
+      
+      // Show upload progress for visual effect
+      setLoading(true);
+      setTimeout(() => setLoading(false), 2000);
+      
+      // Refresh materials list
+      const loadMaterialsFromIndexedDB = async () => {
+        try {
+          setLoading(true);
+          const storedMaterials = await getStoredMaterials();
+          const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
+          setMaterials(combinedMaterials);
+        } catch (error) {
+          console.error('Failed to load materials from IndexedDB:', error);
+          setMaterials(staticMaterials);
+        } finally {
+          setLoading(false);
+        }
       };
       
-      setMaterials(prev => [...prev, newMaterial]);
-      // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['library-items'] });
+      loadMaterialsFromIndexedDB();
       setIsAddModalOpen(false);
       toast({
         title: "Material Added",
@@ -171,35 +291,34 @@ export default function MaterialLibraryManagementPage() {
     }
   };
 
-  const handleEditMaterial = async (id: string, data: Partial<CreateMaterialRequest>) => {
+  const handleEditMaterial = async (id: string, data: any) => {
     try {
-      // For now, just reload materials since update functionality is not implemented in the new API
-      await loadMaterials();
+      // Create updated material object
+      const materialToUpdate: any = {
+        ...data,
+        id,
+        title: data.title || "Untitled",
+        description: data.description,
+        type: data.type || 'book',
+        status: data.isPublished ? 'PUBLISHED' : 'DRAFT',
+        topics: data.topicId ? [data.topicId] : [],
+        author: data.author || "Demo User",
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Update in IndexedDB (store again with same ID)
+      await storeMaterial(materialToUpdate as any);
+      
+      // Update local state immediately
+      setMaterials(prev => prev.map(m => ((m as any)._id === id || (m as any).id === id) ? { ...m, ...materialToUpdate } : m));
       setEditingMaterial(null);
       
-      // Invalidate both instructor and student library queries for immediate updates
-      queryClient.invalidateQueries({ queryKey: ['library-items'] });
-      queryClient.invalidateQueries({ queryKey: ['student-library'] });
+      toast({
+        title: "Material Updated Successfully",
+        description: "Material has been updated.",
+      });
       
-      // Show specific success message for status changes
-      if (data.isPublished !== undefined) {
-        if (data.isPublished) {
-          toast({
-            title: "Material Published Successfully",
-            description: "Material is now visible to students.",
-          });
-        } else {
-          toast({
-            title: "Material Status Updated",
-            description: "Material has been saved as a draft.",
-          });
-        }
-      } else {
-        toast({
-          title: "Material Updated Successfully",
-          description: "Material has been updated.",
-        });
-      }
+      console.log("Mock Edit Success: Material updated in IndexedDB");
     } catch (error) {
       console.error('Failed to edit material:', error);
       toast({
@@ -213,20 +332,24 @@ export default function MaterialLibraryManagementPage() {
   // Wrapper function for edit mode to match AddMaterialForm signature
   const handleEditMaterialWrapper = async (data: CreateMaterialRequest) => {
     if (editingMaterial) {
-      await handleEditMaterial(editingMaterial._id, data);
+      await handleEditMaterial((editingMaterial as any)._id || (editingMaterial as any).id, data);
     }
   };
 
   const handleDeleteMaterial = async (id: string, type?: string) => {
     try {
-      await deleteMaterialMutationFn(id, type);
-      // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['library-items'] });
-      await loadMaterials();
+      // Delete from IndexedDB
+      await deleteStoredMaterial(id);
+      
+      // Update local state immediately
+      setMaterials(prev => prev.filter(m => (m as any)._id !== id && (m as any).id !== id));
+      
       toast({
         title: "Material Deleted Successfully",
         description: "Material has been removed from your library.",
       });
+      
+      console.log("Mock Delete Success: Material removed from IndexedDB");
     } catch (error) {
       console.error('Failed to delete material:', error);
       toast({
@@ -237,43 +360,59 @@ export default function MaterialLibraryManagementPage() {
     }
   };
 
-  const handleFileUpload = async (file: File, materialData: Omit<CreateMaterialRequest, 'file'>) => {
+  const handleFileUpload = async (file: File, materialData: any) => {
     try {
-      // Create a complete request with file data
-      const requestData: CreateMaterialRequest = {
+      // Create new material object for IndexedDB storage
+      const materialToStore: any = {
         ...materialData,
-        file: file
+        file,
+        id: Date.now().toString(),
+        fileName: file.name,
+        fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        uploadDate: new Date().toISOString().split('T')[0],
+        fileBlob: new Blob([file], { type: file.type }),
+        title: materialData.title || "Untitled",
+        description: materialData.description,
+        type: materialData.type || 'book',
+        status: 'PUBLISHED',
+        topics: materialData.topicId ? [materialData.topicId] : [],
+        author: materialData.author || "Demo User",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
-      // Create the material first
-      const createResponse = await createLibraryBookMutationFn(requestData);
+      // Store in IndexedDB
+      await storeMaterial(materialToStore as any);
       
-      // Get the created item ID and type from response
-      const itemId = createResponse?.material?.id;
-      const itemType = requestData.type || 'book';
+      // Update local materials state immediately
+      const loadMaterialsFromIndexedDB = async () => {
+        try {
+          setLoading(true);
+          const storedMaterials = await getStoredMaterials();
+          const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
+          setMaterials(combinedMaterials);
+        } catch (error) {
+          console.error('Failed to load materials from IndexedDB:', error);
+          setMaterials(staticMaterials);
+        } finally {
+          setLoading(false);
+        }
+      };
       
-      if (itemId) {
-        // Call complete-upload endpoint to finalize file processing
-        await completeUploadMutationFn(itemId, itemType);
-        
-        // Invalidate both instructor and student library queries for immediate updates
-        queryClient.invalidateQueries({ queryKey: ['library-items'] });
-        queryClient.invalidateQueries({ queryKey: ['student-library'] });
-        
-        // Show success message
-        toast({
-          title: "Upload Complete",
-          description: "File has been uploaded and processed successfully.",
-        });
-      }
+      loadMaterialsFromIndexedDB();
       
-      await loadMaterials();
-      setIsAddModalOpen(false);
-    } catch (error) {
-      console.error('Failed to upload material:', error);
+      // Show success message
       toast({
-        title: "Upload Failed",
-        description: "There was an error uploading the material. Please try again.",
+        title: "Upload Complete",
+        description: "File has been uploaded and processed successfully.",
+      });
+      
+      console.log("Mock Upload Success: File stored in IndexedDB");
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload file. Please try again.",
         variant: "destructive",
       });
     }
@@ -484,7 +623,7 @@ export default function MaterialLibraryManagementPage() {
             ))
           ) : (
             filteredMaterials.map((material) => (
-              <Card key={material._id} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
+              <Card key={(material as any).id || (material as any)._id || Math.random().toString()} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
               {/* Material Type Badge */}
               <span className="absolute top-4 right-4 z-10 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow">
                 {material.type}
@@ -530,7 +669,7 @@ export default function MaterialLibraryManagementPage() {
                         size="sm" 
                         variant="outline" 
                         className="flex-1"
-                        disabled={!material.fileAssetId?.urls?.streamUrl && !material.fileUrl}
+                        disabled={!material.fileAssetId?.urls?.streamUrl && !material.fileUrl && !(material as any).fileBlob}
                         onClick={() => handleViewMaterial(material)}
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -545,7 +684,9 @@ export default function MaterialLibraryManagementPage() {
                             ? "Processing file..." 
                             : material.fileUrl 
                               ? "Open material in new tab" 
-                              : "No file attached"
+                              : (material as any).fileBlob
+                                ? "Open uploaded file in new tab"
+                                : "No file attached"
                         }
                       </p>
                     </TooltipContent>
@@ -554,7 +695,7 @@ export default function MaterialLibraryManagementPage() {
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
                   </Button>
-                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDeleteMaterial(material._id, material.type)}>
+                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDeleteMaterial((material as any)._id || (material as any).id, material.type)}>
                     <Trash2 className="w-4 h-4 mr-1" />
                     Delete
                   </Button>

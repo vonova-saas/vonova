@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLibraryItemsQueryFn } from "@/services/api/shared/material-library/material.api";
 import type { Material } from "@/types/api/shared/material-library/material.type";
+import { getStoredMaterials, getStoredMaterial } from "@/utils/indexedDB";
 
 // Helper function to get material icon
 function getMaterialIcon(type: string) {
@@ -47,17 +48,86 @@ function getMaterialIcon(type: string) {
   }
 }
 
+// Static Mock Data for Demo (same as Instructor)
+  const staticMaterials = [
+    {
+      _id: "1",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Introduction to Programming",
+      description: "A comprehensive guide to programming fundamentals",
+      type: "book",
+      status: "PUBLISHED",
+      topics: ["programming-basics"],
+      author: "Demo Author",
+      createdAt: "2024-04-20T10:00:00Z",
+      updatedAt: "2024-04-20T10:00:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "2", 
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "Web Development Guide",
+      description: "Complete guide to modern web development",
+      type: "visual-guide",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-21T14:30:00Z",
+      updatedAt: "2024-04-21T14:30:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    },
+    {
+      _id: "3",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      title: "React Presentation",
+      description: "Introduction to React framework",
+      type: "presentation",
+      status: "PUBLISHED",
+      topics: ["web-development"],
+      author: "Demo Author",
+      createdAt: "2024-04-22T09:15:00Z",
+      updatedAt: "2024-04-22T09:15:00Z",
+      fileAssetId: {
+        urls: {
+          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+      }
+    }
+  ];
+
 export default function MaterialLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch published materials from API
-  const { data: materialsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['student-library'],
-    queryFn: () => fetchLibraryItemsQueryFn(undefined, 'PUBLISHED'),
-  });
-
-  const materials = materialsData?.items || [];
-  const loading = isLoading;
+  // Load materials from IndexedDB on mount
+  useEffect(() => {
+    const loadMaterialsFromIndexedDB = async () => {
+      try {
+        setLoading(true);
+        const storedMaterials = await getStoredMaterials();
+        // Combine with static materials
+        const combinedMaterials = [...staticMaterials, ...storedMaterials.filter(m => m.status === 'PUBLISHED')] as any[];
+        setMaterials(combinedMaterials);
+      } catch (error) {
+        console.error('Failed to load materials from IndexedDB:', error);
+        // Fallback to static materials only
+        setMaterials(staticMaterials.filter(m => m.status === 'PUBLISHED'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMaterialsFromIndexedDB();
+  }, []);
 
   // Filter materials based on search query
   const filteredMaterials = materials.filter((material: any) =>
@@ -66,7 +136,7 @@ export default function MaterialLibrary() {
 
   // Real stats from materials
   const totalMaterials = materials.length;
-  const totalTopics = new Set(materials.map((m: any) => m.topicId).filter(Boolean)).size;
+  const totalTopics = new Set(materials.flatMap((m: any) => m.topics || [])).size;
 
   return (
     <div className="min-h-full w-full pb-16">
@@ -93,7 +163,7 @@ export default function MaterialLibrary() {
               size="lg"
               variant="outline"
               className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
-              onClick={() => refetch()}
+              onClick={() => console.log('Refresh clicked - using static data for demo')}
               disabled={loading}
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -174,7 +244,7 @@ export default function MaterialLibrary() {
         ) : filteredMaterials.length > 0 ? (
           // Materials List with enhanced hover effects
           filteredMaterials.map((material: any) => (
-            <Card key={material._id} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
+            <Card key={material.id || material._id} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
               {/* Material Type Badge */}
               <span className="absolute top-4 right-4 z-10 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow">
                 {material.type}
@@ -206,10 +276,32 @@ export default function MaterialLibrary() {
                 {/* Action Button */}
                 <Button 
                   className="w-full"
-                  disabled={!material.fileUrl}
-                  onClick={() => material.fileUrl && window.open(material.fileUrl, '_blank')}
+                  disabled={!material.fileUrl && !material.fileAssetId?.urls?.streamUrl && !(material as any).fileBlob}
+                  onClick={async () => {
+                    try {
+                      // Try to get stored material from IndexedDB
+                      // @ts-ignore
+                      const storedMaterial = await getStoredMaterial(material.id || material._id);
+                      
+                      if (storedMaterial?.fileBlob) {
+                        // Create blob URL from stored file
+                        const blobUrl = URL.createObjectURL(storedMaterial.fileBlob);
+                        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+                      } else if (material.fileAssetId?.urls?.streamUrl) {
+                        // Fallback to original streamUrl
+                        const url = material.fileAssetId.urls.streamUrl;
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      } else if (material.fileUrl) {
+                        // Fallback to original fileUrl
+                        const url = material.fileUrl;
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      }
+                    } catch (error) {
+                      console.error('Error viewing material:', error);
+                    }
+                  }}
                 >
-                  {material.fileUrl ? 'View Material' : 'Not Available'}
+                  {material.fileUrl || material.fileAssetId?.urls?.streamUrl ? 'View Material' : 'Not Available'}
                 </Button>
               </CardContent>
             </Card>
@@ -226,7 +318,7 @@ export default function MaterialLibrary() {
             <p className="text-muted-foreground text-center max-w-md">
               Materials will appear here once instructors add them to the library.
             </p>
-            <Button variant="outline" className="mt-4" onClick={() => refetch()} disabled={loading}>
+            <Button variant="outline" className="mt-4" onClick={() => console.log('Refresh clicked - using static data for demo')} disabled={loading}>
               <RefreshCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>

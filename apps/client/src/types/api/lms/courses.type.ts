@@ -132,6 +132,8 @@ export interface CreateLessonDto {
   type?: "VIDEO" | "ARTICLE" | "QUIZ";
   previewable?: boolean;
   content?: string;
+  videoKey?: string;
+  thumbnailKey?: string;
 }
 
 export interface UpdateLessonDto {
@@ -228,6 +230,8 @@ export interface LessonContent {
   resources: LessonResource[];
   isCompleted: boolean;
   progress: number;
+  videoKey?: string;
+  thumbnailKey?: string;
 }
 
 export interface LessonResource {

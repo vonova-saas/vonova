@@ -11,14 +11,15 @@ interface iAppProps {
     description: string | null;
   };
   slug: string;
+  studentId: string;
   isActive?: boolean;
   completed: boolean;
 }
 
-export function LessonItem({ lesson, slug, isActive, completed }: iAppProps) {
+export function LessonItem({ lesson, slug, studentId, isActive, completed }: iAppProps) {
   return (
     <Link
-      href={`/dashboard/${slug}/${lesson.id}`}
+      href={`/student/${studentId}/courses/${slug}/${lesson.id}`}
       className={buttonVariants({
         variant: completed ? "secondary" : "outline",
         className: cn(
