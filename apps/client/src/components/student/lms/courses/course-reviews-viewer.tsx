@@ -24,7 +24,7 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
     async function fetchReviews() {
       try {
         setLoading(true);
-        const data = await getCourseReviewsQueryFn(courseId, { page, limit: 10 });
+        const data = await getCourseReviewsQueryFn();
         setReviewsData(data);
         setError(null);
       } catch (err) {
@@ -121,10 +121,10 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
 function ReviewCard({ review }: { review: CourseReview }) {
   const initials = review.user?.name
     ? review.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
     : "U";
 
   return (

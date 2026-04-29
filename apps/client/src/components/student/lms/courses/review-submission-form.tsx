@@ -9,14 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { createReviewMutationFn } from "@/services/student/lms/courses/courses.api";
-import { CreateReviewDto } from "@/types/api/lms/courses.type";
 
 interface iAppProps {
-  courseId: string;
   onSuccess?: () => void;
 }
 
-export function ReviewSubmissionForm({ courseId, onSuccess }: iAppProps) {
+export function ReviewSubmissionForm({ onSuccess }: iAppProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [title, setTitle] = useState("");
@@ -33,13 +31,7 @@ export function ReviewSubmissionForm({ courseId, onSuccess }: iAppProps) {
 
     try {
       setSubmitting(true);
-      const data: CreateReviewDto = {
-        rating,
-        title: title || undefined,
-        body: body || undefined,
-      };
-
-      await createReviewMutationFn(courseId, data);
+      await createReviewMutationFn();
 
       toast.success("Review submitted successfully");
       setTitle("");
@@ -75,11 +67,10 @@ export function ReviewSubmissionForm({ courseId, onSuccess }: iAppProps) {
                   onClick={() => setRating(star)}
                 >
                   <Star
-                    className={`size-6 ${
-                      star <= (hoverRating || rating)
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-muted-foreground"
-                    }`}
+                    className={`size-6 ${star <= (hoverRating || rating)
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-muted-foreground"
+                      }`}
                   />
                 </button>
               ))}
