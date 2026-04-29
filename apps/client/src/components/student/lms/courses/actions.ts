@@ -2,12 +2,10 @@
 
 import { ApiResponse } from "@/lib/courses/types";
 import { markLessonCompleteMutationFn } from "@/services/student/lms/courses/courses.api";
-import { MarkLessonCompleteDto } from "@/types/api/lms/courses.type";
 
 export async function markLessonComlete(
   lessonId: string,
-  courseId: string,
-  timeSpentSec?: number
+  courseId: string
 ): Promise<ApiResponse> {
   try {
     const data: MarkLessonCompleteDto = {
@@ -16,6 +14,7 @@ export async function markLessonComlete(
     };
 
     // await markLessonCompleteMutationFn(courseId, lessonId, data);
+    await markLessonCompleteMutationFn(courseId, lessonId);
 
     return {
       status: "success",

@@ -54,6 +54,23 @@ export const updateUserStatusMutationFn = async (
   return response.data;
 };
 
+// Delete user permanently
+export const deleteUserMutationFn = async (
+  userId: string
+): Promise<{ success: boolean; message: string; data: any }> => {
+  const response = await API.delete(`/admin/users/${userId}`);
+  return response.data;
+};
+
+// Update user data
+export const updateUserMutationFn = async (
+  userId: string,
+  updateData: any
+): Promise<{ success: boolean; message: string; data: any }> => {
+  const response = await API.patch(`/admin/users/${userId}`, updateData);
+  return response.data;
+};
+
 // Get pending instructors for CV review
 export const getPendingInstructorsQueryFn = async (): Promise<GetPendingInstructorsResponse> => {
   const response = await API.get("/admin/instructors/pending");

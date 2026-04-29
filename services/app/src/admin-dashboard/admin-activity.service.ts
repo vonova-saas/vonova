@@ -8,7 +8,7 @@ export class AdminActivityService {
   constructor(
     @InjectModel(UserActivity.name)
     private readonly activityModel: Model<UserActivityDocument>,
-  ) {}
+  ) { }
 
   async touch(userId: string, lastAction: string): Promise<void> {
     const now = new Date();
@@ -36,5 +36,11 @@ export class AdminActivityService {
       map.set(String(row.userId), row);
     }
     return map;
+  }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    await this.activityModel.deleteMany({
+      userId: new Types.ObjectId(userId)
+    });
   }
 }

@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { User as UserType } from "./types"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getUsersQueryFn, getUserQueryFn, updateUserStatusMutationFn } from "@/services"
-import { getUserManagementOverviewQueryFn } from "@/services/admin/admin.api"
+import { getUserManagementOverviewQueryFn, deleteUserMutationFn, updateUserMutationFn } from "@/services/admin/admin.api"
 import { AdminUser } from "@/types/api/admin/admin.type"
 
 // Helper function to map API role to form role
@@ -105,6 +105,53 @@ export default function UserManagement() {
     },
   })
 
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: deleteUserMutationFn,
+    onSuccess: (data, variables) => {
+      toast({
+        title: "User deleted",
+        description: `${data.data.name} has been permanently removed from the system.`,
+      })
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] })
+      // If we're viewing the deleted user, go back to list
+      if (selectedUserId === variables) {
+        setSelectedUserId(null)
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, updateData }: { userId: string; updateData: Record<string, unknown> }) =>
+      updateUserMutationFn(userId, updateData),
+    onSuccess: (data, variables) => {
+      toast({
+        title: "User updated",
+        description: `${data.data.name}'s information has been updated successfully.`,
+      })
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] })
+      queryClient.invalidateQueries({ queryKey: ['adminUser', variables.userId] })
+      setIsEditing(false)
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update user. Please try again.",
+        variant: "destructive",
+      })
+    },
+  })
+
   const users = usersData?.data.users.map(mapAdminUserToUser) || []
   const pagination = usersData?.data.pagination
 
@@ -130,13 +177,10 @@ export default function UserManagement() {
   }
 
   const handleDeleteUser = (userId: string) => {
-    if (selectedUserId === userId) {
-      setSelectedUserId(null)
+    // Show confirmation dialog before deleting
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      deleteUserMutation.mutate(userId)
     }
-    toast({
-      title: "User deleted",
-      description: "The user has been removed from the system.",
-    })
   }
 
   const handleToggleUserStatus = (userId: string, currentStatus: boolean) => {
@@ -160,15 +204,28 @@ export default function UserManagement() {
         description: `Successfully created user ${data.name}`,
       })
     } else if (selectedUserId) {
-      toast({
-        title: "User updated",
-        description: `Successfully updated ${data.name}'s profile`,
+      // Map form data to API format
+      const updateData = {
+        name: data.name,
+        email: data.email,
+        role: data.role === 'admin' ? 'ADMIN' :
+          data.role === 'instructor' ? 'INSTRUCTOR_USER' : 'STUDENT_USER',
+        isActive: data.status === 'active',
+        bio: data.bio,
+        phone: data.phone,
+        address: data.address,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+      }
+
+      updateUserMutation.mutate({
+        userId: selectedUserId,
+        updateData
       })
-      queryClient.invalidateQueries({ queryKey: ['adminUser', selectedUserId] })
     }
 
-    setIsCreating(false)
-    setIsEditing(false)
+    if (isCreating) {
+      setIsCreating(false)
+    }
   }
 
   const handleCancel = () => {
@@ -324,6 +381,7 @@ export default function UserManagement() {
                     defaultValues={selectedUserDetail || undefined}
                     onSubmit={handleSaveUser}
                     onCancel={handleCancel}
+                    isSubmitting={updateUserMutation.isPending}
                   />
                 </CardContent>
               </Card>
@@ -366,6 +424,14 @@ export default function UserManagement() {
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => handleEditUser(selectedUserDetail)}>
                             Edit User
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteUser(selectedUserDetail.id)}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
                           </Button>
                         </div>
                       </CardHeader>

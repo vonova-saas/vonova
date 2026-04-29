@@ -27,11 +27,15 @@ export const createReviewMutationFn = async () => ({
 });
 
 export const getCourseReviewsQueryFn = async () => ({
-  items: [],
-  total: 0,
-  page: 1,
-  limit: 10,
-  totalPages: 0,
+  reviews: [],
+  pagination: {
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  },
+  averageRating: 0,
+  totalReviews: 0,
 });
 
 export const getMyReviewQueryFn = async () => {

@@ -10,7 +10,7 @@ import { UpdateAdminUserStatusDto } from './dto/update-user-status.dto';
 
 @Injectable()
 export class AdminGatewayService {
-  constructor(@Inject('NATS_SERVICE') private readonly client: ClientProxy) {}
+  constructor(@Inject('NATS_SERVICE') private readonly client: ClientProxy) { }
 
   getHealth() {
     return this.client.send({ cmd: 'admin.health.check' }, {});
@@ -31,6 +31,14 @@ export class AdminGatewayService {
 
   updateUserStatus(dto: UpdateAdminUserStatusDto) {
     return this.client.send({ cmd: 'admin.account.updateUserStatus' }, dto);
+  }
+
+  deleteUser(userId: string) {
+    return this.client.send({ cmd: 'admin.account.deleteUser' }, { userId });
+  }
+
+  updateUser(userId: string, updateData: any) {
+    return this.client.send({ cmd: 'admin.account.updateUser' }, { userId, updateData });
   }
 
   approveInstructor(instructorId: string) {

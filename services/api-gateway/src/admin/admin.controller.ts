@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Param,
@@ -199,6 +200,92 @@ export class AdminGatewayController {
   })
   updateUserStatus(@Body() dto: UpdateAdminUserStatusDto) {
     return firstValueFrom(this.adminService.updateUserStatus(dto));
+  }
+
+  @Delete('users/:userId')
+  @ApiOperation({
+    summary: 'Delete user',
+    description:
+      'Permanently deletes a user from the system via the admin microservice. This action cannot be undone.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'User MongoDB ObjectId',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'User deleted successfully',
+        data: {
+          deleted: true,
+          userId: '507f1f77bcf86cd799439011',
+          name: 'John Doe',
+          email: 'john@example.com',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'Invalid user ID or business rule failure' })
+  deleteUser(@Param('userId') userId: string) {
+    return firstValueFrom(this.adminService.deleteUser(userId));
+  }
+
+  @Patch('users/:userId')
+  @ApiOperation({
+    summary: 'Update user',
+    description:
+      'Updates user information via the admin microservice. All fields are optional.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'User MongoDB ObjectId',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'User full name' },
+        email: { type: 'string', description: 'User email address' },
+        role: { type: 'string', enum: ['ADMIN', 'STUDENT_USER', 'INSTRUCTOR_USER'], description: 'User role' },
+        isActive: { type: 'boolean', description: 'Whether the user account is active' },
+        isVerified: { type: 'boolean', description: 'Whether the user email is verified' },
+        bio: { type: 'string', description: 'User biography' },
+        profilePictureUrl: { type: 'string', description: 'URL to user profile picture' },
+        dateOfBirth: { type: 'string', format: 'date', description: 'User date of birth' },
+        address: { type: 'string', description: 'User address' },
+        phone: { type: 'string', description: 'User phone number' },
+        status: { type: 'string', description: 'User status' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'User updated successfully',
+        data: {
+          _id: '507f1f77bcf86cd799439011',
+          name: 'John Doe',
+          email: 'john@example.com',
+          role: 'STUDENT_USER',
+          isActive: true,
+          isVerified: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'Invalid data or business rule failure' })
+  updateUser(@Param('userId') userId: string, @Body() updateData: any) {
+    return firstValueFrom(this.adminService.updateUser(userId, updateData));
   }
 
   @Patch('support/:id/reply')

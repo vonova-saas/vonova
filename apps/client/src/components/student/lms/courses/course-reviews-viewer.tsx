@@ -26,6 +26,9 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
         setLoading(true);
         // const data = await getCourseReviewsQueryFn(courseId, { page, limit: 10 });
         // setReviewsData(data);
+        const data = await getCourseReviewsQueryFn();
+        setReviewsData(data);
+
         setError(null);
       } catch (err) {
         console.error("Error fetching reviews:", err);
@@ -121,10 +124,10 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
 function ReviewCard({ review }: { review: CourseReview }) {
   const initials = review.user?.name
     ? review.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
     : "U";
 
   return (

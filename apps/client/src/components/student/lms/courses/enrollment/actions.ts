@@ -2,11 +2,9 @@
 
 import { ApiResponse } from "@/lib/courses/types";
 import { enrollCourseMutationFn } from "@/services/student/lms/courses/courses.api";
-import { EnrollCourseDto } from "@/types/api/lms/courses.type";
 
 export async function enrollInCourseAction(
-  courseId: string,
-  couponCode?: string
+  courseId: string
 ): Promise<ApiResponse> {
   try {
     const data: EnrollCourseDto = couponCode ? { couponCode } : {};

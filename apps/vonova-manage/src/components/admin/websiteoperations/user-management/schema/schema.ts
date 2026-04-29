@@ -13,4 +13,10 @@ export const userFormSchema = z.object({
   status: z.enum(["active", "inactive", "suspended"], {
     message: "Please select a status.",
   }),
+  bio: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  profilePictureUrl: z.string().optional(),
+  isVerified: z.boolean().optional(),
 })

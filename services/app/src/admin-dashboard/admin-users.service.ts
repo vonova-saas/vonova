@@ -11,7 +11,7 @@ export class AdminUsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly activityService: AdminActivityService,
-  ) {}
+  ) { }
 
   async getAllUsersWithPresence(params: {
     page?: number;
@@ -112,5 +112,66 @@ export class AdminUsersService {
       throw new NotFoundException('User not found');
     }
     return { updated: true, userId: String(user._id), isActive: user.isActive };
+  }
+
+  async deleteUser(userId: string) {
+    const user = await this.userModel.findByIdAndDelete(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Clean up related data (optional - you might want to keep some data)
+    await this.activityService.deleteByUserId(userId);
+
+    return {
+      deleted: true,
+      userId: String(user._id),
+      name: user.name,
+      email: user.email
+    };
+  }
+
+  async updateUser(userId: string, updateData: {
+    name?: string;
+    email?: string;
+    role?: string;
+    isActive?: boolean;
+    isVerified?: boolean;
+    bio?: string;
+    profilePictureUrl?: string;
+    dateOfBirth?: Date | null;
+    address?: string;
+    phone?: string;
+    status?: string;
+  }) {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      )
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Get activity data for response
+    const activityMap = await this.activityService.findByUserIds([
+      user._id as Types.ObjectId,
+    ]);
+    const act = activityMap.get(String(user._id));
+    const lastSeenAt = act?.lastSeenAt ? new Date(act.lastSeenAt) : null;
+
+    const { password: _pw, ...rest } = user as Record<string, unknown> & {
+      password?: string;
+    };
+    void _pw;
+
+    return {
+      ...rest,
+      lastSeenAt,
+      isOnline: computeIsOnline(lastSeenAt),
+    };
   }
 }

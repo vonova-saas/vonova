@@ -2,6 +2,11 @@
 
 import { getMockCourses, getMockChaptersByCourse, getMockLessonsByChapter } from "@/lib/mock-data/courses/storage";
 
+interface LessonProgress {
+  lessonId: string;
+  completed: boolean;
+}
+
 export async function getCourseSidebarData(slug: string) {
   // Find course by slug from mock storage
   const courses = getMockCourses();
@@ -37,7 +42,7 @@ export async function getCourseSidebarData(slug: string) {
         title: lesson.title,
         position: lesson.index || lessonIndex + 1,
         description: lesson.content || "",
-        lessonProgress: [], // Will be populated based on user progress
+        lessonProgress: [] as LessonProgress[], // Will be populated based on user progress
       })),
     };
   });

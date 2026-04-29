@@ -45,34 +45,34 @@ type CourseManagementStore = {
   currentCourse: CourseWithChapters | null;
   chaptersById: Record<string, Chapter>;
   lessonsById: Record<string, Lesson>;
-  
+
   // Loading states
   loading: boolean;
   error: string | null;
   actionLoading: boolean;
-  
+
   // Actions - Courses
   fetchCourses: () => Promise<void>;
   fetchCourseById: (courseId: string) => Promise<CourseWithChapters | null>;
   createCourse: (payload: CreateCourseDto) => Promise<Course | null>;
   updateCourse: (courseId: string, payload: UpdateCourseDto) => Promise<Course | null>;
   deleteCourse: (courseId: string) => Promise<boolean>;
-  
+
   // Actions - Chapters
   createChapter: (courseId: string, payload: CreateChapterDto) => Promise<Chapter | null>;
   updateChapter: (courseId: string, chapterId: string, payload: UpdateChapterDto) => Promise<Chapter | null>;
   deleteChapter: (courseId: string, chapterId: string) => Promise<boolean>;
   reorderChapters: (courseId: string, data: ReorderChaptersDto) => Promise<boolean>;
-  
+
   // Actions - Lessons
   createLesson: (courseId: string, chapterId: string, payload: CreateLessonDto) => Promise<Lesson | null>;
   updateLesson: (courseId: string, chapterId: string, lessonId: string, payload: UpdateLessonDto) => Promise<Lesson | null>;
   deleteLesson: (courseId: string, chapterId: string, lessonId: string) => Promise<boolean>;
   reorderLessons: (courseId: string, chapterId: string, data: ReorderLessonsDto) => Promise<boolean>;
-  
+
   // Actions - Content Upload
   uploadContent: (courseId: string, file: File, contentType: "lesson" | "chapter" | "course", contentId: string) => Promise<{ fileUrl: string; objectKey: string } | null>;
-  
+
   // Helpers
   clearError: () => void;
   setCurrentCourse: (course: CourseWithChapters | null) => void;
@@ -121,7 +121,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         getInstructorCourseByIdQueryFn(courseId),
         getCourseContentTreeQueryFn(courseId),
       ]);
-      
+
       // Convert ContentChapter[] to Chapter[] with proper structure
       const chapters: Chapter[] = (tree.chapters || []).map((ch: ContentChapter) => ({
         _id: ch._id,
@@ -142,31 +142,31 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Chapter));
-      
+
       // Build CourseWithChapters using full course data + chapters from tree
       const courseWithChapters: CourseWithChapters = {
         ...course,
         chapters: chapters,
       } as CourseWithChapters;
-      
+
       // Update chapters and lessons in their respective maps
       const chaptersMap: Record<string, Chapter> = {};
       const lessonsMap: Record<string, Lesson> = {};
-      
+
       for (const chapter of chapters) {
         chaptersMap[chapter._id] = chapter;
         for (const lesson of chapter.lessons || []) {
           lessonsMap[lesson._id] = lesson;
         }
       }
-      
-      set({ 
+
+      set({
         currentCourse: courseWithChapters,
         chaptersById: chaptersMap,
         lessonsById: lessonsMap,
         coursesById: { ...get().coursesById, [course._id]: course }
       });
-      
+
       return courseWithChapters;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -201,8 +201,8 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       const course = await updateCourseMutationFn(courseId, payload);
       set((st) => ({
         coursesById: { ...st.coursesById, [course._id]: course },
-        currentCourse: st.currentCourse?._id === courseId 
-          ? { ...st.currentCourse, ...course } 
+        currentCourse: st.currentCourse?._id === courseId
+          ? { ...st.currentCourse, ...course }
           : st.currentCourse,
       }));
       return course;
@@ -222,8 +222,8 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       set((st) => {
         const rest = { ...st.coursesById };
         delete rest[courseId];
-        return { 
-          coursesById: rest, 
+        return {
+          coursesById: rest,
           allCourseIds: st.allCourseIds.filter((id) => id !== courseId),
           currentCourse: st.currentCourse?._id === courseId ? null : st.currentCourse,
         };
@@ -243,15 +243,15 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
     set({ actionLoading: true, error: null });
     try {
       const chapter = await createChapterMutationFn(courseId, payload);
-      
+
       // Update chapters map
       set((st) => ({
         chaptersById: { ...st.chaptersById, [chapter._id]: chapter },
       }));
-      
+
       // Refresh course to get updated chapters
       await get().fetchCourseById(courseId);
-      
+
       return chapter;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -269,16 +269,16 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       set((st) => ({
         chaptersById: { ...st.chaptersById, [chapter._id]: chapter },
       }));
-      
+
       // Update currentCourse if it has this chapter
       const currentCourse = get().currentCourse;
       if (currentCourse) {
-        const updatedChapters = currentCourse.chapters.map(c => 
+        const updatedChapters = currentCourse.chapters.map(c =>
           c._id === chapterId ? { ...c, ...chapter } : c
         );
         set({ currentCourse: { ...currentCourse, chapters: updatedChapters } });
       }
-      
+
       return chapter;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -293,17 +293,17 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
     set({ actionLoading: true, error: null });
     try {
       await deleteChapterMutationFn(courseId, chapterId);
-      
+
       // Update chapters map
       set((st) => {
         const rest = { ...st.chaptersById };
         delete rest[chapterId];
         return { chaptersById: rest };
       });
-      
+
       // Refresh course to get updated chapters
       await get().fetchCourseById(courseId);
-      
+
       return true;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -317,11 +317,11 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderChapters: async (courseId: string, data: ReorderChaptersDto) => {
     set({ actionLoading: true, error: null });
     try {
-      // await reorderChaptersMutationFn(courseId, data);
+      await reorderChaptersMutationFn(courseId, data);
       
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
-      
+
       return true;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -337,15 +337,15 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
     set({ actionLoading: true, error: null });
     try {
       const lesson = await createLessonMutationFn(courseId, chapterId, payload);
-      
+
       // Update lessons map
       set((st) => ({
         lessonsById: { ...st.lessonsById, [lesson._id]: lesson },
       }));
-      
+
       // Refresh course to get updated lessons
       await get().fetchCourseById(courseId);
-      
+
       return lesson;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -363,20 +363,20 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       set((st) => ({
         lessonsById: { ...st.lessonsById, [lesson._id]: lesson },
       }));
-      
+
       // Update currentCourse if it has this lesson
       const currentCourse = get().currentCourse;
       if (currentCourse) {
         const updatedChapters = currentCourse.chapters.map(ch => {
           if (ch._id !== chapterId) return ch;
-          const updatedLessons = (ch.lessons || []).map(l => 
+          const updatedLessons = (ch.lessons || []).map(l =>
             l._id === lessonId ? { ...l, ...lesson } : l
           );
           return { ...ch, lessons: updatedLessons };
         });
         set({ currentCourse: { ...currentCourse, chapters: updatedChapters } });
       }
-      
+
       return lesson;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -391,17 +391,17 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
     set({ actionLoading: true, error: null });
     try {
       await deleteLessonMutationFn(courseId, chapterId, lessonId);
-      
+
       // Update lessons map
       set((st) => {
         const rest = { ...st.lessonsById };
         delete rest[lessonId];
         return { lessonsById: rest };
       });
-      
+
       // Refresh course to get updated lessons
       await get().fetchCourseById(courseId);
-      
+
       return true;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -415,12 +415,11 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderLessons: async (courseId: string, chapterId: string, data: ReorderLessonsDto) => {
     set({ actionLoading: true, error: null });
     try {
-      // await reorderLessonsMutationFn(courseId, chapterId, data);
-      await reorderLessonsMutationFn(courseId, chapterId, data.order.map(o => o.lessonId));
+      await reorderLessonsMutationFn(courseId, chapterId, data);
       
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
-      
+
       return true;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;

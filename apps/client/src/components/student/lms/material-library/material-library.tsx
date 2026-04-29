@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLibraryItemsQueryFn } from "@/services/api/shared/material-library/material.api";
 import type { Material } from "@/types/api/shared/material-library/material.type";
+import { getStoredMaterials, getStoredMaterial } from "@/utils/indexedDB";
 
 // Helper function to get material icon
 function getMaterialIcon(type: string) {
@@ -104,17 +105,29 @@ function getMaterialIcon(type: string) {
 
 export default function MaterialLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  /*
-  // Fetch published materials from API - COMMENTED OUT FOR DEMO
-  const { data: materialsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['student-library'],
-    queryFn: () => fetchLibraryItemsQueryFn(undefined, 'PUBLISHED'),
-  });
-  */
-
-  const materials = staticMaterials;
-  const loading = false;
+  // Load materials from IndexedDB on mount
+  useEffect(() => {
+    const loadMaterialsFromIndexedDB = async () => {
+      try {
+        setLoading(true);
+        const storedMaterials = await getStoredMaterials();
+        // Combine with static materials
+        const combinedMaterials = [...staticMaterials, ...storedMaterials.filter(m => m.status === 'PUBLISHED')] as any[];
+        setMaterials(combinedMaterials);
+      } catch (error) {
+        console.error('Failed to load materials from IndexedDB:', error);
+        // Fallback to static materials only
+        setMaterials(staticMaterials.filter(m => m.status === 'PUBLISHED'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMaterialsFromIndexedDB();
+  }, []);
 
   // Filter materials based on search query
   const filteredMaterials = materials.filter((material: any) =>
@@ -231,7 +244,7 @@ export default function MaterialLibrary() {
         ) : filteredMaterials.length > 0 ? (
           // Materials List with enhanced hover effects
           filteredMaterials.map((material: any) => (
-            <Card key={material._id} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
+            <Card key={material.id || material._id} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
               {/* Material Type Badge */}
               <span className="absolute top-4 right-4 z-10 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow">
                 {material.type}
@@ -263,10 +276,32 @@ export default function MaterialLibrary() {
                 {/* Action Button */}
                 <Button 
                   className="w-full"
-                  disabled={!material.fileUrl}
-                  onClick={() => material.fileUrl && window.open(material.fileUrl, '_blank')}
+                  disabled={!material.fileUrl && !material.fileAssetId?.urls?.streamUrl && !(material as any).fileBlob}
+                  onClick={async () => {
+                    try {
+                      // Try to get stored material from IndexedDB
+                      // @ts-ignore
+                      const storedMaterial = await getStoredMaterial(material.id || material._id);
+                      
+                      if (storedMaterial?.fileBlob) {
+                        // Create blob URL from stored file
+                        const blobUrl = URL.createObjectURL(storedMaterial.fileBlob);
+                        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+                      } else if (material.fileAssetId?.urls?.streamUrl) {
+                        // Fallback to original streamUrl
+                        const url = material.fileAssetId.urls.streamUrl;
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      } else if (material.fileUrl) {
+                        // Fallback to original fileUrl
+                        const url = material.fileUrl;
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      }
+                    } catch (error) {
+                      console.error('Error viewing material:', error);
+                    }
+                  }}
                 >
-                  {material.fileUrl ? 'View Material' : 'Not Available'}
+                  {material.fileUrl || material.fileAssetId?.urls?.streamUrl ? 'View Material' : 'Not Available'}
                 </Button>
               </CardContent>
             </Card>
