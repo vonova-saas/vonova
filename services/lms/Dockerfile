@@ -4,7 +4,8 @@
 # ---- Builder ----
 FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm 11+ requires Node 22.13+. Pin to 10.x so the Node 20 base keeps working.
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 WORKDIR /app
 
