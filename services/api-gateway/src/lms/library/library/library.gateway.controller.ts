@@ -72,7 +72,7 @@ export class LibraryGatewayController {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Items per page (default: 10)',
+    description: 'Items per page, max 500 (server default 100 if omitted)',
   })
   @ApiQuery({
     name: 'status',
@@ -144,7 +144,7 @@ export class LibraryGatewayController {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Items per page (default: 10)',
+    description: 'Items per page, max 500 (server default 100 if omitted)',
   })
   @ApiQuery({
     name: 'status',

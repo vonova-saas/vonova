@@ -38,9 +38,37 @@ export const fetchMaterialSignedViewUrl = async (
   return response.data;
 };
 
+/** Default page size for catalog UIs (student + instructor). LMS used to cap at 10. */
+export const LIBRARY_CATALOG_DEFAULT_LIMIT = 500;
+
+/** Read `total` from GET /lms/library responses (shape varies slightly). */
+export function extractLibraryCatalogTotal(
+  response: unknown,
+): number | undefined {
+  const r = response as Record<string, unknown> | undefined;
+  if (!r) return undefined;
+  const top = r.total;
+  if (typeof top === "number" && Number.isFinite(top) && top >= 0) {
+    return top;
+  }
+  const d = r.data;
+  if (d && typeof d === "object" && !Array.isArray(d)) {
+    const nested = (d as Record<string, unknown>).total;
+    if (
+      typeof nested === "number" &&
+      Number.isFinite(nested) &&
+      nested >= 0
+    ) {
+      return nested;
+    }
+  }
+  return undefined;
+}
+
 export const fetchLibraryItemsQueryFn = async (
   type?: string,
-  status?: string
+  status?: string,
+  options?: { limit?: number; page?: number },
 ): Promise<any> => {
   const params = new URLSearchParams();
   if (type) {
@@ -49,6 +77,10 @@ export const fetchLibraryItemsQueryFn = async (
   if (status) {
     params.append('status', status);
   }
+  const limit = options?.limit ?? LIBRARY_CATALOG_DEFAULT_LIMIT;
+  const page = options?.page ?? 1;
+  params.append('limit', String(limit));
+  params.append('page', String(page));
 
   const response = await API.get(`/lms/library?${params.toString()}`);
   return response.data;
@@ -258,12 +290,48 @@ export const updateLibraryMaterialVisibilityMutationFn = async (params: {
 };
 
 /**
+ * Map a form `topicId` (kebab-case slug used by the page) to the API
+ * `LibraryTopics` enum value the backend DTOs validate against. Returns
+ * `undefined` for unknown values so we drop instead of sending an invalid
+ * topic that would 400 the whole PATCH.
+ *
+ * Keep in sync with `services/api-gateway/src/lms/library/library/dto/topics.dto.ts`.
+ */
+const LIBRARY_TOPIC_SLUG_TO_LABEL: Record<string, string> = {
+  "programming-basics": "Programming Basics",
+  "web-development": "Web Development",
+  "data-structure": "Data Structure",
+  "data-structures": "Data Structure",
+  algorithms: "Algorithms",
+  "database-design": "Database Design",
+  "machine-learning": "Machine Learning",
+  "mobile-development": "Mobile Development",
+  "cloud-computing": "Cloud Computing",
+};
+
+function mapClientTopicToApiTopic(input: string | undefined): string | undefined {
+  if (!input) return undefined;
+  const trimmed = input.trim();
+  if (trimmed === "") return undefined;
+  // Already a canonical label (e.g. "Programming Basics") -> pass through.
+  if (Object.values(LIBRARY_TOPIC_SLUG_TO_LABEL).includes(trimmed)) return trimmed;
+  return LIBRARY_TOPIC_SLUG_TO_LABEL[trimmed.toLowerCase()];
+}
+
+/**
  * Patch fields on a library material (title, description, category, level,
  * isPublished, visibility, …). Routes to the per-type PATCH endpoint based
  * on `viewType`, since the three resources live behind different controllers
  * but share equivalent `Update*Dto`s (`PartialType(Create*Dto)`).
  *
- * Only sends defined fields so we never overwrite values with `undefined`.
+ * IMPORTANT: the api-gateway DTOs use `topics: string[]` (with the
+ * `LibraryTopics` enum) and `status` ('DRAFT' | 'PUBLISHED' | 'ARCHIVED').
+ * The form however passes the higher-level `topicId` (kebab slug) and
+ * `isPublished` (boolean). This helper does the conversion, mirroring
+ * `createLibraryBookMutationFn`, so callers can keep using the form shape
+ * and validation `forbidNonWhitelisted: true` will not 400 the request.
+ *
+ * Only defined fields are sent (so we never overwrite values with `undefined`).
  */
 export const updateLibraryMaterialMutationFn = async (params: {
   materialId: string;
@@ -273,8 +341,9 @@ export const updateLibraryMaterialMutationFn = async (params: {
     description?: string;
     category?: string;
     level?: "Beginner" | "Intermediate" | "Advanced";
-    tags?: string[];
+    /** Kebab-slug from the form; mapped to the `LibraryTopics` enum before send. */
     topicId?: string;
+    /** Mapped to `status: 'PUBLISHED' | 'DRAFT'`. Guides always go to `PUBLISHED`. */
     isPublished?: boolean;
     visibility?: "PUBLIC" | "PRIVATE";
   };
@@ -288,9 +357,38 @@ export const updateLibraryMaterialMutationFn = async (params: {
         : `/lms/library/books/${encodeURIComponent(materialId)}`;
 
   const body: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(patch)) {
-    if (v !== undefined) body[k] = v;
+
+  if (patch.title !== undefined && patch.title.trim().length > 0) {
+    body.title = patch.title.trim();
   }
+  if (patch.description !== undefined) {
+    body.description = patch.description;
+  }
+  if (patch.category !== undefined && patch.category.trim().length > 0) {
+    body.category = patch.category;
+  }
+  if (patch.level !== undefined) {
+    body.level = patch.level;
+  }
+  if (patch.visibility !== undefined) {
+    body.visibility = patch.visibility;
+  }
+  if (patch.topicId !== undefined) {
+    const apiTopic = mapClientTopicToApiTopic(patch.topicId);
+    if (apiTopic) body.topics = [apiTopic];
+  }
+  if (patch.isPublished !== undefined) {
+    const published = patch.isPublished !== false;
+    // Guides only support PUBLISHED | ARCHIVED on LMS; keep them published
+    // until DRAFT support lands there (matches create behaviour).
+    body.status =
+      viewType === "guide"
+        ? "PUBLISHED"
+        : published
+          ? "PUBLISHED"
+          : "DRAFT";
+  }
+
   if (Object.keys(body).length === 0) return null;
 
   const response = await API.patch(endpoint, body);

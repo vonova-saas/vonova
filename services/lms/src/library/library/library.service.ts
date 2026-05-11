@@ -28,7 +28,7 @@ export interface GetAllByTypeQuery {
   sort?: string;
   /** Page number (default: 1) */
   page?: number;
-  /** Items per page (default: 10) */
+  /** Items per page (default: 100 per collection when aggregating all types) */
   limit?: number;
   /** Filter by status ('DRAFT' | 'PUBLISHED' | 'ARCHIVED') */
   status?: string;
@@ -189,7 +189,7 @@ export class LibraryService {
       level,
       sort,
       page = 1,
-      limit = 10,
+      limit = 100,
       status,
       userId,
     } = query;
@@ -283,14 +283,15 @@ export class LibraryService {
     }
 
     const sortOptions = this.getSortOptions(sort);
-    const skip = ((page || 1) - 1) * (limit || 10);
+    const pageSize = limit && limit > 0 ? limit : 100;
+    const skip = ((page || 1) - 1) * pageSize;
 
     const [items, total] = await Promise.all([
       model
         .find(filter)
         .sort(sortOptions)
         .skip(skip)
-        .limit(limit || 10)
+        .limit(pageSize)
         .populate('fileAssetId')
         .lean(),
       model.countDocuments(filter),
@@ -332,8 +333,8 @@ export class LibraryService {
       items: itemsWithUrls,
       total,
       page: page || 1,
-      limit: limit || 10,
-      totalPages: Math.ceil(total / (limit || 10)),
+      limit: pageSize,
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 
@@ -368,7 +369,7 @@ export class LibraryService {
       level,
       sort,
       page = 1,
-      limit = 10,
+      limit = 100,
       status,
     } = query;
 
@@ -382,7 +383,7 @@ export class LibraryService {
         total: allTopics.length,
         items: [], // No items when just getting topics list
         page: 1,
-        limit: 10,
+        limit: 100,
         totalPages: 1,
       };
     }

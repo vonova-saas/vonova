@@ -59,6 +59,7 @@ import {
   uploadLibraryFileMutationFn,
   deleteMaterialMutationFn,
   updateLibraryMaterialMutationFn,
+  extractLibraryCatalogTotal,
 } from "@/services/api/shared/material-library/material.api";
 import type { CreateMaterialRequest } from "@/types/api/shared/material-library/material.type";
 import { toast } from "@/hooks/app/use-toast";
@@ -149,7 +150,10 @@ export default function MaterialLibraryManagementPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   // ---------- Data ----------
-  const { data: materials = [], isLoading: loading } = useQuery<Material[]>({
+  const { data: catalogData, isLoading: loading } = useQuery<{
+    materials: Material[];
+    serverTotal?: number;
+  }>({
     queryKey: ["materials"],
     queryFn: async () => {
       const res = await fetchLibraryItemsQueryFn();
@@ -166,7 +170,7 @@ export default function MaterialLibraryManagementPage() {
       } else if (Array.isArray(res?.items)) items = res.items;
       else if (Array.isArray(res?.materials)) items = res.materials;
 
-      return items.map((item: any) => {
+      const materials = items.map((item: any) => {
         const rawType = String(item.type || "book").toLowerCase();
         const normType: Material["type"] =
           rawType === "presentation" || rawType === "presentations"
@@ -208,8 +212,14 @@ export default function MaterialLibraryManagementPage() {
           level: item.level,
         } satisfies Material;
       });
+      return {
+        materials,
+        serverTotal: extractLibraryCatalogTotal(res),
+      };
     },
   });
+
+  const materials = catalogData?.materials ?? [];
 
   // ---------- Derived ----------
   const stats = useMemo(() => {
@@ -224,12 +234,12 @@ export default function MaterialLibraryManagementPage() {
       if (m.status === "PUBLISHED") publishedCount += 1;
     }
     return {
-      total: materials.length,
+      total: catalogData?.serverTotal ?? materials.length,
       published: publishedCount,
       drafts: materials.length - publishedCount,
       counts,
     };
-  }, [materials]);
+  }, [materials, catalogData?.serverTotal]);
 
   const filtered = useMemo(() => {
     const needle = searchQuery.trim().toLowerCase();

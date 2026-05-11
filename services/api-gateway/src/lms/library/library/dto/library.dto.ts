@@ -5,6 +5,8 @@ import {
   IsString,
   IsNumber,
   IsArray,
+  Min,
+  Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { LibraryTopics } from './topics.dto';
@@ -54,19 +56,27 @@ export class GetAllByTypeQueryDto {
   @ApiPropertyOptional({
     description: 'Page number',
     default: 1,
+    minimum: 1,
+    maximum: 100,
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(1)
+  @Max(100)
   page?: number;
 
   @ApiPropertyOptional({
-    description: 'Items per page',
-    default: 10,
+    description: 'Items per page (per collection when no type filter)',
+    default: 100,
+    minimum: 1,
+    maximum: 500,
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(1)
+  @Max(500)
   limit?: number;
 
   @ApiPropertyOptional({

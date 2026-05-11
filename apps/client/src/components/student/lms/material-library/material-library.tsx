@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { fetchLibraryItemsQueryFn } from "@/services/api/shared/material-library/material.api";
+import { fetchLibraryItemsQueryFn, extractLibraryCatalogTotal } from "@/services/api/shared/material-library/material.api";
 import {
   ALL_CATEGORY,
   CategoryPills,
@@ -215,6 +215,11 @@ export default function MaterialLibrary() {
     queryFn: () => fetchLibraryItemsQueryFn(undefined, "PUBLISHED"),
   });
 
+  const serverCatalogTotal = useMemo(
+    () => extractLibraryCatalogTotal(materialsResponse),
+    [materialsResponse],
+  );
+
   const materials: StudentMaterial[] = useMemo(() => {
     return extractMaterials(materialsResponse)
       .map(normalizeMaterial)
@@ -229,11 +234,11 @@ export default function MaterialLibrary() {
     };
     for (const m of materials) counts[m.type] += 1;
     return {
-      total: materials.length,
+      total: serverCatalogTotal ?? materials.length,
       counts,
       topics: new Set(materials.flatMap((m) => m.topics)).size,
     };
-  }, [materials]);
+  }, [materials, serverCatalogTotal]);
 
   const filtered = useMemo(() => {
     const needle = searchQuery.trim().toLowerCase();
