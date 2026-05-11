@@ -23,6 +23,8 @@ export interface Course {
   price?: Price;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   ownerId?: string;
+  /** Display name of the course owner (populated by the LMS service). */
+  ownerName?: string;
   enrollmentCount?: number;
   averageRating?: number;
   completionRate?: number;

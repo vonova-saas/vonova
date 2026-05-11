@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCourseProgress } from "@/hooks/student/lms/use-courses";
 import { AIFeedbackButton } from "./ai-feedback-button";
+import { User } from "lucide-react";
 
 interface iAppProps {
   data: EnrolledCourseType;
@@ -52,6 +53,20 @@ export function CourseProgressCard({ data, studentId }: iAppProps) {
         >
           {data.Course.title}
         </Link>
+        {data.Course.ownerName ? (
+          <p
+            className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+            title={`Created by ${data.Course.ownerName}`}
+          >
+            <User className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">
+              by{" "}
+              <span className="font-medium text-foreground/80">
+                {data.Course.ownerName}
+              </span>
+            </span>
+          </p>
+        ) : null}
         <p className="line-clamp-2  text-sm text-muted-foreground leading-tight mt-2">
           {data.Course.smallDescription}
         </p>

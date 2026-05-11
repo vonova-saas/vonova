@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Star } from "lucide-react";
+import { Users, Star, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import useConstructUrl from "@/hooks/courses/use-construct-url";
@@ -47,6 +47,20 @@ export function PublicCourseCard({ data, studentId }: iAppProps) {
         >
           {data.title}
         </Link>
+        {data.ownerName ? (
+          <p
+            className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+            title={`Created by ${data.ownerName}`}
+          >
+            <User className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">
+              by{" "}
+              <span className="font-medium text-foreground/80">
+                {data.ownerName}
+              </span>
+            </span>
+          </p>
+        ) : null}
         <p className="line-clamp-2  text-sm text-muted-foreground leading-tight mt-2">
           {data.smallDescription}
         </p>

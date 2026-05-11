@@ -343,15 +343,26 @@ export class CourseService {
     }
 
     const skip = (page - 1) * limit;
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.courseModel
         .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
+        .populate('ownerId', 'name')
         .lean(),
       this.courseModel.countDocuments(filter),
     ]);
+    const items = rawItems.map((doc) => {
+      const populatedOwner = (doc as { ownerId?: unknown }).ownerId;
+      if (populatedOwner && typeof populatedOwner === 'object') {
+        const owner = populatedOwner as { _id?: unknown; name?: unknown };
+        (doc as Record<string, unknown>).ownerId = String(owner._id ?? '');
+        (doc as Record<string, unknown>).ownerName =
+          typeof owner.name === 'string' ? owner.name : undefined;
+      }
+      return doc;
+    });
     const totalPages = Math.ceil(total / limit);
     return { items, total, page, limit, totalPages };
   }
@@ -467,9 +478,23 @@ export class CourseService {
   }
 
   async getCourseById(courseId: string, requesterId?: string) {
-    const course = await this.courseModel.findById(courseId).lean();
+    const course = await this.courseModel
+      .findById(courseId)
+      .populate('ownerId', 'name')
+      .lean();
     if (!course) throw new NotFoundException('Course not found');
     await this.assertCanViewCourse(course, requesterId);
+
+    // Normalize the populated owner so `ownerId` stays a string id
+    // (backwards-compatible) and we expose a separate `ownerName`.
+    const populatedOwner = (course as { ownerId?: unknown }).ownerId;
+    if (populatedOwner && typeof populatedOwner === 'object') {
+      const owner = populatedOwner as { _id?: unknown; name?: unknown };
+      (course as Record<string, unknown>).ownerId = String(owner._id ?? '');
+      (course as Record<string, unknown>).ownerName =
+        typeof owner.name === 'string' ? owner.name : undefined;
+    }
+
     return course;
   }
 
