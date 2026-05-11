@@ -4,8 +4,8 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import {
   CreateCourseDto,
   UpdateCourseDto,
@@ -49,7 +49,68 @@ export class CourseService {
     private libraryAssetModel: Model<LibraryAssetDocument>,
     @InjectModel(Quiz.name) private quizModel: Model<QuizDocument>,
     private readonly s3Service: S3Service,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
+
+  /**
+   * Resolve { ownerId -> name } for a set of course owners.
+   *
+   * Users live in a separate database (`app`) on the same MongoDB cluster, so
+   * we can't use Mongoose populate (the `User` model isn't registered on the
+   * LMS connection). Instead, we re-use the existing connection via `useDb`
+   * and read the raw `users` collection.
+   *
+   * The user-DB name is read from `USER_DB_NAME_FROM_LMS` (fallback `'app'`).
+   * Returns an empty map if anything fails — owner name is best-effort UX
+   * sugar and must never break a course payload.
+   */
+  private async resolveOwnerNames(
+    ownerIds: Array<string | Types.ObjectId | null | undefined>,
+  ): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    const uniqueIds: Types.ObjectId[] = [];
+    const seen = new Set<string>();
+    for (const raw of ownerIds) {
+      if (!raw) continue;
+      try {
+        const oid =
+          raw instanceof Types.ObjectId
+            ? raw
+            : new Types.ObjectId(String(raw));
+        const key = oid.toHexString();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        uniqueIds.push(oid);
+      } catch {
+        // ignore invalid ObjectIds
+      }
+    }
+    if (uniqueIds.length === 0) return out;
+
+    try {
+      const userDbName = process.env.USER_DB_NAME_FROM_LMS ?? 'app';
+      const users = await this.connection
+        .useDb(userDbName, { useCache: true })
+        .collection('users')
+        .find(
+          { _id: { $in: uniqueIds } },
+          { projection: { _id: 1, name: 1 } },
+        )
+        .toArray();
+      for (const u of users) {
+        const id = (u as { _id?: unknown })._id;
+        const name = (u as { name?: unknown }).name;
+        if (id && typeof name === 'string' && name.trim().length > 0) {
+          out.set(String(id), name);
+        }
+      }
+    } catch (err) {
+      // Best-effort: swallow lookup failures so a User DB hiccup never
+      // breaks course listings.
+      console.warn('[CourseService] resolveOwnerNames failed:', err);
+    }
+    return out;
+  }
 
   private logS3Delete(payload: Record<string, unknown>) {
     console.log('[S3 DELETE]', payload);
@@ -349,20 +410,26 @@ export class CourseService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('ownerId', 'name')
         .lean(),
       this.courseModel.countDocuments(filter),
     ]);
+
+    const owners = await this.resolveOwnerNames(
+      rawItems.map(
+        (doc) =>
+          (doc as { ownerId?: unknown }).ownerId as
+            | string
+            | Types.ObjectId
+            | undefined,
+      ),
+    );
     const items = rawItems.map((doc) => {
-      const populatedOwner = (doc as { ownerId?: unknown }).ownerId;
-      if (populatedOwner && typeof populatedOwner === 'object') {
-        const owner = populatedOwner as { _id?: unknown; name?: unknown };
-        (doc as Record<string, unknown>).ownerId = String(owner._id ?? '');
-        (doc as Record<string, unknown>).ownerName =
-          typeof owner.name === 'string' ? owner.name : undefined;
-      }
+      const ownerKey = String((doc as { ownerId?: unknown }).ownerId ?? '');
+      const name = owners.get(ownerKey);
+      if (name) (doc as Record<string, unknown>).ownerName = name;
       return doc;
     });
+
     const totalPages = Math.ceil(total / limit);
     return { items, total, page, limit, totalPages };
   }
@@ -478,22 +545,19 @@ export class CourseService {
   }
 
   async getCourseById(courseId: string, requesterId?: string) {
-    const course = await this.courseModel
-      .findById(courseId)
-      .populate('ownerId', 'name')
-      .lean();
+    const course = await this.courseModel.findById(courseId).lean();
     if (!course) throw new NotFoundException('Course not found');
     await this.assertCanViewCourse(course, requesterId);
 
-    // Normalize the populated owner so `ownerId` stays a string id
-    // (backwards-compatible) and we expose a separate `ownerName`.
-    const populatedOwner = (course as { ownerId?: unknown }).ownerId;
-    if (populatedOwner && typeof populatedOwner === 'object') {
-      const owner = populatedOwner as { _id?: unknown; name?: unknown };
-      (course as Record<string, unknown>).ownerId = String(owner._id ?? '');
-      (course as Record<string, unknown>).ownerName =
-        typeof owner.name === 'string' ? owner.name : undefined;
-    }
+    const owners = await this.resolveOwnerNames([
+      (course as { ownerId?: unknown }).ownerId as
+        | string
+        | Types.ObjectId
+        | undefined,
+    ]);
+    const ownerKey = String((course as { ownerId?: unknown }).ownerId ?? '');
+    const name = owners.get(ownerKey);
+    if (name) (course as Record<string, unknown>).ownerName = name;
 
     return course;
   }
