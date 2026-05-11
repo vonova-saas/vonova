@@ -76,6 +76,8 @@ export class Course {
   @Prop({
     type: String,
     enum: [
+      'PROGRAMMING_BASICS',
+      'WEB_DEVELOPMENT',
       'FRONTEND',
       'BACKEND',
       'FULLSTACK',

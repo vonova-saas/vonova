@@ -62,6 +62,8 @@ export class CreateCourseDto {
 
   @IsOptional()
   @IsIn([
+    'PROGRAMMING_BASICS',
+    'WEB_DEVELOPMENT',
     'FRONTEND',
     'BACKEND',
     'FULLSTACK',

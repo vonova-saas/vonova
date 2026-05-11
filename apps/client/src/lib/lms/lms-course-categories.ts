@@ -3,6 +3,8 @@
  * Keep in sync with `services/lms/src/course/course/schema/course.schema.ts` (category enum).
  */
 export const LMS_COURSE_CATEGORIES = [
+  "PROGRAMMING_BASICS",
+  "WEB_DEVELOPMENT",
   "FRONTEND",
   "BACKEND",
   "FULLSTACK",

@@ -129,6 +129,8 @@ export class CreateCourseDto {
   @ApiPropertyOptional({
     description: 'Course subject category',
     enum: [
+      'PROGRAMMING_BASICS',
+      'WEB_DEVELOPMENT',
       'FRONTEND',
       'BACKEND',
       'FULLSTACK',
@@ -146,6 +148,8 @@ export class CreateCourseDto {
   })
   @IsOptional()
   @IsIn([
+    'PROGRAMMING_BASICS',
+    'WEB_DEVELOPMENT',
     'FRONTEND',
     'BACKEND',
     'FULLSTACK',
