@@ -21,9 +21,11 @@ import {
   SubmissionJob,
   SubmissionJobSchema,
 } from './schemas/submission-job.schema';
+import { EnrollModule } from '../../course/enroll/enroll.module';
 
 @Module({
   imports: [
+    EnrollModule,
     MongooseModule.forFeature(
       [
         { name: Problem.name, schema: ProblemSchema },

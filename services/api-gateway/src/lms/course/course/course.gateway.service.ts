@@ -11,7 +11,7 @@ export class CourseGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   createCourse(dto: CreateCourseDto, createdBy: string) {
     return this.client.send(
@@ -52,15 +52,42 @@ export class CourseGatewayService {
     );
   }
 
-  getAllCourses(filters?: any) {
+  getAllCourses(filters?: Record<string, unknown>) {
     return this.client.send({ cmd: 'app.courses.getAll' }, filters || {});
   }
 
-  getCourseBySlug(slug: string) {
-    return this.client.send({ cmd: 'app.courses.getBySlug' }, { slug });
+  getCourseBySlug(slug: string, requesterId?: string) {
+    return this.client.send(
+      { cmd: 'app.courses.getBySlug' },
+      {
+        slug,
+        requesterId,
+        userId: requesterId,
+        user: requesterId ? { id: requesterId, _id: requesterId } : undefined,
+      },
+    );
   }
 
-  getCourseById(courseId: string) {
-    return this.client.send({ cmd: 'app.courses.getById' }, { courseId });
+  getCourseById(courseId: string, requesterId?: string) {
+    return this.client.send(
+      { cmd: 'app.courses.getById' },
+      {
+        courseId,
+        requesterId,
+        userId: requesterId,
+        user: requesterId ? { id: requesterId, _id: requesterId } : undefined,
+      },
+    );
+  }
+
+  getCourseDetails(courseId: string) {
+    return this.client.send({ cmd: 'app.courses.getDetails' }, { courseId });
+  }
+
+  getMyCourses(ownerId: string) {
+    return this.client.send(
+      { cmd: 'app.courses.getMyCourses' },
+      { ownerId, user: { id: ownerId } },
+    );
   }
 }

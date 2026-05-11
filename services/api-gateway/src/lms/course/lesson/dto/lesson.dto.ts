@@ -71,6 +71,31 @@ export class CreateLessonDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson video',
+    example: 'course/abc123/lesson/video.mp4',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  videoKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson video (canonical; same as videoKey)',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  videoObjectKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson thumbnail',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
 }
 
 export class UpdateLessonDto {
@@ -132,6 +157,30 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson video',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  videoKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson video (canonical; same as videoKey)',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  videoObjectKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 object key for lesson thumbnail',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
 }
 
 export class ReorderLessonItemDto {
@@ -238,13 +287,39 @@ export class VideoUploadUrlDto {
   @IsString()
   objectKey: string;
 
-  @ApiProperty({
-    description: 'Content type of the video file',
+  @ApiPropertyOptional({
+    description: 'Optional MIME type (not used for presigned GET)',
     example: 'video/mp4',
     type: String,
   })
+  @IsOptional()
+  @IsString()
+  contentType?: string;
+}
+
+/** Body for requesting a presigned PUT URL (direct upload to S3). */
+export class VideoPresignPutBodyDto {
+  @ApiProperty({ example: 'intro.mp4' })
+  @IsString()
+  fileName: string;
+
+  @ApiProperty({ example: 'video/mp4' })
   @IsString()
   contentType: string;
+}
+
+/** Body after successful client PUT to S3. */
+export class VideoConfirmBodyDto {
+  @ApiProperty({
+    description: 'S3 object key returned from presign-put',
+  })
+  @IsString()
+  objectKey: string;
+
+  @ApiPropertyOptional({ description: 'Uploaded size in bytes (for logging)' })
+  @IsOptional()
+  @IsNumber()
+  fileSize?: number;
 }
 
 export class VideoUploadResponseDto {
@@ -274,13 +349,13 @@ export class VideoUploadResponseDto {
   size: number;
 }
 
-export class VideoUrlResponseDto {
+export class VideoPlaybackPresignResponseDto {
   @ApiProperty({
-    description: 'Presigned URL for accessing the video',
+    description: 'Short-lived presigned GET URL for S3 object key',
     example:
-      'https://your-bucket.s3.amazonaws.com/videos/...?presigned-parameters',
+      'https://your-bucket.s3.amazonaws.com/videos/...?X-Amz-Algorithm=...',
     type: String,
   })
   @IsString()
-  videoUrl: string;
+  streamUrl: string;
 }

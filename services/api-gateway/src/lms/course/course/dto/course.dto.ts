@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsEnum,
   IsUrl,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -42,7 +43,7 @@ export class CreateCourseDto {
     type: String,
   })
   @IsString()
-  title: string;
+  title?: string;
 
   @ApiProperty({
     description: 'URL-friendly slug for the course',
@@ -50,7 +51,7 @@ export class CreateCourseDto {
     type: String,
   })
   @IsString()
-  slug: string;
+  slug?: string;
 
   @ApiPropertyOptional({
     description: 'Brief description of the course',
@@ -100,6 +101,15 @@ export class CreateCourseDto {
   thumbnailUrl?: string;
 
   @ApiPropertyOptional({
+    description: 'S3 object key for the course thumbnail (set automatically on upload)',
+    example: 'courses/thumbnails/1710000000000_photo.jpg',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
+
+  @ApiPropertyOptional({
     description: 'Language of the course content',
     example: 'English',
     type: String,
@@ -107,6 +117,58 @@ export class CreateCourseDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @ApiPropertyOptional({
+    enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+    description: 'Course difficulty level (canonical)',
+  })
+  @IsOptional()
+  @IsIn(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'])
+  level?: string;
+
+  @ApiPropertyOptional({
+    description: 'Course subject category',
+    enum: [
+      'FRONTEND',
+      'BACKEND',
+      'FULLSTACK',
+      'FLUTTER',
+      'MOBILE',
+      'AI',
+      'DATA_SCIENCE',
+      'CYBER_SECURITY',
+      'DEVOPS',
+      'UI_UX',
+      'DATABASE',
+      'PROBLEM_SOLVING',
+      'OTHER',
+    ],
+  })
+  @IsOptional()
+  @IsIn([
+    'FRONTEND',
+    'BACKEND',
+    'FULLSTACK',
+    'FLUTTER',
+    'MOBILE',
+    'AI',
+    'DATA_SCIENCE',
+    'CYBER_SECURITY',
+    'DEVOPS',
+    'UI_UX',
+    'DATABASE',
+    'PROBLEM_SOLVING',
+    'OTHER',
+  ])
+  category?: string;
+
+  @ApiPropertyOptional({
+    enum: ['PUBLIC', 'PRIVATE'],
+    description: 'Who can discover this course when browsing',
+  })
+  @IsOptional()
+  @IsIn(['PUBLIC', 'PRIVATE'])
+  visibility?: string;
 
   @ApiPropertyOptional({
     description: 'Pricing information for the course',

@@ -12,7 +12,7 @@ import {
   LibraryAsset,
   LibraryAssetDocument,
 } from '../schema/library-asset.schema';
-import { UpdateGuideDto } from './dto/guide.dto';
+import { CreateGuideDto, UpdateGuideDto } from './dto/guide.dto';
 
 @Injectable()
 export class GuideService {
@@ -23,11 +23,17 @@ export class GuideService {
     private readonly libraryAssetModel: Model<LibraryAssetDocument>,
   ) {}
 
-  async createGuideService(payload: Partial<GuideDocument>, userId: string) {
+  async createGuideService(
+    payload: CreateGuideDto | Partial<GuideDocument>,
+    userId: string,
+  ) {
+    // Mongoose coerces ObjectId-shaped strings (courseId/lessonId) at create time,
+    // so accepting the DTO directly keeps the gateway → LMS spread chain clean.
     const guideData = {
-      ...payload,
+      ...(payload as Record<string, unknown>),
       createdBy: userId,
-      status: payload.status || 'PUBLISHED',
+      status:
+        (payload as { status?: string }).status ?? ('PUBLISHED' as const),
     };
     const guide = await this.guideModel.create(guideData);
     if (!guide) throw new BadRequestException('Guide not created');

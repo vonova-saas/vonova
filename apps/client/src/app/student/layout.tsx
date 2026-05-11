@@ -130,7 +130,7 @@ export default function DashboardLayout({ children }: Props) {
   return (
     <AuthProvider>
       <div className="flex min-h-screen w-full">
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
           <AppSidebar />
           <div className="flex flex-1 min-w-0 flex-col">
             <ChatSidebar open={chatOpen} onClose={() => setChatOpen(false)} />

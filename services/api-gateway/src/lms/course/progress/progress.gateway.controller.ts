@@ -79,7 +79,7 @@ export class ProgressGatewayController {
     @Body() dto: MarkLessonCompleteDto,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    const userId = req.user?._id || req.user?.id || req.user?.sub;
 
     if (!userId) {
       throw new Error('Authentication required - No user found');
@@ -155,12 +155,12 @@ export class ProgressGatewayController {
     status: 404,
     description: 'Course or progress not found',
   })
-  @Get('progress/me')
+  @Get(['progress/me', 'progress'])
   async getMyCourseProgress(
     @Param('courseId') courseId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?._id || req.user?.id || req.user?.sub;
     return firstValueFrom(
       this.progressService.getMyCourseProgress(courseId, userId),
     );

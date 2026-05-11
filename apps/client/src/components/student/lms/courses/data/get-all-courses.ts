@@ -10,7 +10,7 @@ export async function getAllCourses(): Promise<Course[]> {
     const allStorageCourses = getMockCourses();
     console.log("[Debug] All courses in storage:", allStorageCourses.length, allStorageCourses.map(c => ({ id: c._id, title: c.title, status: c.status })));
 
-    const response = await getAllCoursesQueryFn({ status: "PUBLISHED" });
+    const response = await getAllCoursesQueryFn();
     console.log("[Debug] Published courses response:", response.items.length, response.items.map(c => ({ id: c._id, title: c.title, status: c.status })));
     return response.items || [];
   } catch (error) {

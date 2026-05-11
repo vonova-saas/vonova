@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 function trimEnv(value: string | undefined): string | undefined {
   const t = value?.trim();
@@ -11,13 +12,9 @@ export class S3ConfigService {
   private s3Client: S3Client | null = null;
   private cachedBucket: string | null = null;
 
+  /** Lesson video pipeline must use the LMS content bucket only. */
   private resolveBucket(): string | undefined {
-    return (
-      trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
-      trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_BUCKET) ||
-      trimEnv(process.env.S3_BUCKET)
-    );
+    return trimEnv(process.env.AWS_S3_BUCKET_LMS);
   }
 
   private resolveRegion(): string | undefined {
@@ -67,14 +64,18 @@ export class S3ConfigService {
 
     if (!bucket || !region || !accessKeyId || !secretAccessKey) {
       throw new Error(
-        'Lesson S3: set bucket + region + credentials (e.g. AWS_S3_BUCKET_LMS, AWS_S3_REGION_LMS, AWS_S3_ACCESS_KEY_ID_LMS, AWS_S3_SECRET_ACCESS_KEY_LMS, or legacy AWS_S3_BUCKET / AWS_S3_REGION / AWS_S3_ACCESS_KEY_ID / AWS_S3_SECRET_ACCESS_KEY, or standard AWS_* + LMS-AI vars)',
+        'Lesson S3: set AWS_S3_BUCKET_LMS, AWS_S3_REGION_LMS, AWS_S3_ACCESS_KEY_ID_LMS, AWS_S3_SECRET_ACCESS_KEY_LMS (LMS bucket only — no app/AI bucket fallback).',
       );
     }
 
     this.cachedBucket = bucket;
+    // Presigned GET in <video src> + Range requests: default SDK checksum mode adds
+    // x-amz-checksum-mode to the URL and can break browser playback / DevTools.
     this.s3Client = new S3Client({
       region,
       credentials: { accessKeyId, secretAccessKey },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
     return { client: this.s3Client, bucket: this.cachedBucket };
   }
@@ -85,5 +86,18 @@ export class S3ConfigService {
 
   getBucketName(): string {
     return this.ensure().bucket;
+  }
+
+  /** Presigned GET for objects in AWS_S3_BUCKET_LMS (same bucket as lesson video PUT). */
+  async getPresignedGetUrl(
+    objectKey: string,
+    expiresInSeconds = 3600,
+  ): Promise<string> {
+    const { client, bucket } = this.ensure();
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+    });
+    return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
   }
 }

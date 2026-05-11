@@ -103,8 +103,13 @@ export class ProblemSolvingGatewayController {
     status: 200,
     description: 'Problems retrieved successfully.',
   })
-  async listProblemsForInstructor() {
-    return firstValueFrom(this.problemSolvingService.listProblems());
+  async listProblemsForInstructor(@Request() req: unknown) {
+    const user = this.getUser(req);
+    // Pass `user.id` so PRIVATE problems are scoped to the owner / enrolled
+    // courses inside the LMS `listProblems` filter (PUBLIC stays global).
+    return firstValueFrom(
+      this.problemSolvingService.listProblems(undefined, user.id),
+    );
   }
 
   @Get('instructor/problems/:id')
@@ -161,9 +166,13 @@ export class ProblemSolvingGatewayController {
     status: 200,
     description: 'Problems retrieved successfully.',
   })
-  async listProblemsForStudent(@Query() query: ListProblemsQueryDto) {
+  async listProblemsForStudent(
+    @Request() req: unknown,
+    @Query() query: ListProblemsQueryDto,
+  ) {
+    const user = this.getUser(req);
     const problems = (await firstValueFrom(
-      this.problemSolvingService.listProblems(query),
+      this.problemSolvingService.listProblems(query, user.id),
     )) as unknown[];
     return problems.map((problem) => this.sanitizeProblemForStudent(problem));
   }
@@ -205,9 +214,10 @@ export class ProblemSolvingGatewayController {
     status: 200,
     description: 'Problem retrieved successfully.',
   })
-  async getProblemForStudent(@Param('id') id: string) {
+  async getProblemForStudent(@Request() req: unknown, @Param('id') id: string) {
+    const user = this.getUser(req);
     const problem = await firstValueFrom(
-      this.problemSolvingService.getProblem(id),
+      this.problemSolvingService.getProblem(id, user.id),
     );
     return this.sanitizeProblemForStudent(problem);
   }

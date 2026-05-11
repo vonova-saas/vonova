@@ -11,7 +11,6 @@ export interface AssetMetadata {
   mimeType: string;
   size: number;
   objectKey: string;
-  fileUrl: string;
 }
 
 @Injectable()
@@ -59,33 +58,10 @@ export class LessonGatewayService {
     );
   }
 
-  uploadVideoDirectly(
+  getLessonVideoPresignedPut(
     courseId: string,
     lessonId: string,
-    videoMetadata: {
-      objectKey: string;
-      videoUrl: string;
-      hasVideo: boolean;
-      size: number;
-      mimetype: string;
-      originalName: string;
-    },
-    ownerId: string,
-  ) {
-    return this.client.send(
-      { cmd: 'app.courses.lessons.video.upload.direct' },
-      { courseId, lessonId, videoMetadata, ownerId, user: { id: ownerId } },
-    );
-  }
-
-  getVideoUploadUrl(
-    courseId: string,
-    lessonId: string,
-    uploadData: {
-      fileName: string;
-      contentType: string;
-      objectKey: string;
-    },
+    uploadData: { fileName: string; contentType: string },
     ownerId: string,
   ) {
     return this.client.send(
@@ -94,10 +70,23 @@ export class LessonGatewayService {
     );
   }
 
-  getPresignedUploadUrl(objectKey: string, contentType: string) {
+  confirmLessonVideoUpload(
+    courseId: string,
+    lessonId: string,
+    objectKey: string,
+    ownerId: string,
+    fileSize?: number,
+  ) {
     return this.client.send(
-      { cmd: 'app.courses.lessons.video.upload.presigned' },
-      { objectKey, contentType },
+      { cmd: 'app.courses.lessons.video.upload.confirm' },
+      {
+        courseId,
+        lessonId,
+        objectKey,
+        fileSize,
+        ownerId,
+        user: { id: ownerId },
+      },
     );
   }
 
@@ -131,6 +120,128 @@ export class LessonGatewayService {
         metadata,
         user: { id: instructorId },
       },
+    );
+  }
+
+  attachMaterial(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    dto: {
+      materialId: string;
+      materialType: string;
+      visibility?: string;
+    },
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.attachMaterial' },
+      { courseId, lessonId, dto, ownerId, user: { id: ownerId } },
+    );
+  }
+
+  detachMaterial(
+    courseId: string,
+    lessonId: string,
+    materialId: string,
+    ownerId: string,
+    materialType?: string,
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.detachMaterial' },
+      {
+        courseId,
+        lessonId,
+        materialId,
+        materialType,
+        ownerId,
+        user: { id: ownerId },
+      },
+    );
+  }
+
+  reorderLessonMaterials(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    dto: { orderedMaterialIds: string[] },
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.reorderMaterials' },
+      { courseId, lessonId, dto, ownerId, user: { id: ownerId } },
+    );
+  }
+
+  attachQuiz(courseId: string, lessonId: string, ownerId: string, quizId: string) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.attachQuiz' },
+      {
+        courseId,
+        lessonId,
+        dto: { quizId },
+        ownerId,
+        user: { id: ownerId },
+      },
+    );
+  }
+
+  detachQuiz(courseId: string, lessonId: string, quizId: string, ownerId: string) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.detachQuiz' },
+      { courseId, lessonId, quizId, ownerId, user: { id: ownerId } },
+    );
+  }
+
+  attachProblem(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    problemId: string,
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.attachProblem' },
+      {
+        courseId,
+        lessonId,
+        dto: { problemId },
+        ownerId,
+        user: { id: ownerId },
+      },
+    );
+  }
+
+  detachProblem(
+    courseId: string,
+    lessonId: string,
+    problemId: string,
+    ownerId: string,
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.detachProblem' },
+      { courseId, lessonId, problemId, ownerId, user: { id: ownerId } },
+    );
+  }
+
+  reorderLessonQuizzes(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    dto: { orderedQuizIds: string[] },
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.reorderQuizzes' },
+      { courseId, lessonId, dto, ownerId, user: { id: ownerId } },
+    );
+  }
+
+  reorderLessonProblems(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    dto: { orderedProblemIds: string[] },
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.lessons.reorderProblems' },
+      { courseId, lessonId, dto, ownerId, user: { id: ownerId } },
     );
   }
 }

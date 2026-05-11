@@ -1,9 +1,13 @@
 import z from "zod";
+import { LMS_COURSE_CATEGORIES } from "@/lib/lms/lms-course-categories";
 
 export const courseLevels = ["Beginner", "Intermidate", "Advanced"] as const;
 export const courseStatus = ["Draft", "Published", "Archive"] as const;
 
+export const lmsCourseCategories = LMS_COURSE_CATEGORIES;
+
 export const courseCategories = [
+  ...lmsCourseCategories,
   "Development",
   "Business",
   "Finance",
@@ -74,6 +78,8 @@ export const courseSchema = z.object({
   status: z.enum(courseStatus, {
     message: "status is required",
   }),
+
+  visibility: z.enum(["PUBLIC", "PRIVATE"]).optional(),
 });
 
 export const chapterSchema = z.object({

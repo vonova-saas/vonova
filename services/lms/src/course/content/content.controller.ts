@@ -18,8 +18,8 @@ export class ContentController {
     const { courseId, userId, user } = data;
     if (!courseId) throw new Error('courseId is required');
 
-    // Extract userId from multiple possible sources
-    const extractedUserId = userId || user?.id || user?.sub;
+    const extractedUserId =
+      userId || user?.id || user?.sub || (user as { _id?: string })?._id;
     if (!extractedUserId) throw new Error('User identification is required');
 
     return this.contentService.getCourseContentTree(courseId, extractedUserId);
@@ -39,8 +39,8 @@ export class ContentController {
     if (!courseId || !lessonId)
       throw new Error('courseId and lessonId are required');
 
-    // Extract userId from multiple possible sources
-    const extractedUserId = userId || user?.id || user?.sub;
+    const extractedUserId =
+      userId || user?.id || user?.sub || (user as { _id?: string })?._id;
     if (!extractedUserId) throw new Error('User identification is required');
 
     return this.contentService.getLessonContent(
@@ -66,8 +66,10 @@ export class ContentController {
       throw new Error('courseId, contentType, and contentId are required');
     }
 
-    // Extract userId from multiple possible sources
-    const extractedUserId = user?.id || user?.sub;
+    const extractedUserId =
+      user?.id ||
+      user?.sub ||
+      (user as { _id?: string } | undefined)?._id?.toString();
     if (!extractedUserId) throw new Error('User identification is required');
 
     return this.contentService.createAssetRecord(

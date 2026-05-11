@@ -20,15 +20,15 @@ export class ProblemSolvingGatewayService {
     return this.client.send({ cmd: PROBLEM_PATTERNS.CREATE }, { userId, dto });
   }
 
-  listProblems(filters?: ListProblemsQueryDto) {
+  listProblems(filters?: ListProblemsQueryDto, userId?: string) {
     return this.client.send(
       { cmd: PROBLEM_PATTERNS.LIST },
-      { dto: filters ?? {} },
+      { dto: filters ?? {}, userId },
     );
   }
 
-  getProblem(id: string) {
-    return this.client.send({ cmd: PROBLEM_PATTERNS.GET }, { id });
+  getProblem(id: string, userId?: string) {
+    return this.client.send({ cmd: PROBLEM_PATTERNS.GET }, { id, userId });
   }
 
   deleteProblem(userId: string, id: string) {

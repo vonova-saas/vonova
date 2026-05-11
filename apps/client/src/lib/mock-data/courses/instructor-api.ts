@@ -14,6 +14,8 @@ import type {
   ContentUploadResponse,
   CoursesResponse,
   CourseContentTree,
+  ReorderChaptersDto,
+  ReorderLessonsDto,
 } from "@/types/api/lms/courses.type";
 
 // Course with chapters (local type)
@@ -148,10 +150,10 @@ export async function deleteChapterMutationFn(courseId: string, chapterId: strin
 
 export async function reorderChaptersMutationFn(
   courseId: string,
-  chapterIds: string[]
+  dto: ReorderChaptersDto
 ): Promise<Chapter[]> {
-  chapterIds.forEach((id, index) => {
-    updateMockChapter(id, { index: index + 1 });
+  dto.order.forEach((o) => {
+    updateMockChapter(o.chapterId, { index: o.index });
   });
   return delay(Promise.resolve(getMockChaptersByCourse(courseId)));
 }
@@ -216,10 +218,10 @@ export async function deleteLessonMutationFn(
 export async function reorderLessonsMutationFn(
   courseId: string,
   chapterId: string,
-  lessonIds: string[]
+  dto: ReorderLessonsDto
 ): Promise<Lesson[]> {
-  lessonIds.forEach((id, index) => {
-    updateMockLesson(id, { index: index + 1 });
+  dto.order.forEach((o) => {
+    updateMockLesson(o.lessonId, { index: o.index });
   });
   return delay(Promise.resolve(getMockLessonsByChapter(chapterId)));
 }

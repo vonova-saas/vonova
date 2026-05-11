@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useStudentCoursesStore } from "@/lib/stores";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { queryClient } from "@/providers/providers";
 
 interface CourseEnrollButtonProps {
   courseId: string;
@@ -35,12 +36,20 @@ export function CourseEnrollButton({
 
     if (result) {
       toast.success("Successfully enrolled in course!");
-      // Redirect to course content
+      void queryClient.invalidateQueries({ queryKey: ["course-details"] });
+      void queryClient.invalidateQueries({ queryKey: ["course-content"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-enrollments"] });
+      void queryClient.invalidateQueries({ queryKey: ["courses"] });
+      router.refresh();
       router.push(`/student/${studentId}/courses/${slug}`);
     }
   }
 
-  if (enrolled || enrollment?.status === "ACTIVE") {
+  if (
+    enrolled ||
+    enrollment?.status === "ACTIVE" ||
+    enrollment?.status === "COMPLETED"
+  ) {
     return (
       <Button
         onClick={() => router.push(`/student/${studentId}/courses/${slug}`)}

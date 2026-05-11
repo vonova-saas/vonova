@@ -49,13 +49,67 @@ import { v4 as uuidv4 } from 'uuid';
 export class UploadGatewayController {
   constructor(private readonly uploadService: UploadGatewayService) {}
 
-  private readonly s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION_LMS,
-    credentials: {
-      accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
-      secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
-    },
-  });
+  private s3Client: S3Client | null = null;
+
+  private trimEnv(value: string | undefined): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
+  private resolveS3Config() {
+    const region =
+      this.trimEnv(process.env.AWS_S3_REGION_LMS) ||
+      this.trimEnv(process.env.AWS_S3_REGION_LMS_AI) ||
+      this.trimEnv(process.env.AWS_REGION_LMS_AI) ||
+      this.trimEnv(process.env.AWS_S3_REGION_APP) ||
+      this.trimEnv(process.env.AWS_REGION) ||
+      this.trimEnv(process.env.AWS_DEFAULT_REGION);
+
+    const bucket =
+      this.trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
+      this.trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
+      this.trimEnv(process.env.AWS_S3_BUCKET_APP) ||
+      this.trimEnv(process.env.AWS_S3_BUCKET) ||
+      this.trimEnv(process.env.S3_BUCKET);
+
+    const accessKeyId =
+      this.trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS) ||
+      this.trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS_AI) ||
+      this.trimEnv(process.env.AWS_ACCESS_KEY_ID_LMS_AI) ||
+      this.trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_APP) ||
+      this.trimEnv(process.env.AWS_ACCESS_KEY_ID) ||
+      this.trimEnv(process.env.AWS_S3_ACCESS_KEY_ID);
+
+    const secretAccessKey =
+      this.trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS) ||
+      this.trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS_AI) ||
+      this.trimEnv(process.env.AWS_SECRET_ACCESS_KEY_LMS_AI) ||
+      this.trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_APP) ||
+      this.trimEnv(process.env.AWS_SECRET_ACCESS_KEY) ||
+      this.trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY);
+
+    if (!region || !bucket || !accessKeyId || !secretAccessKey) {
+      throw new Error(
+        'S3 library upload is not configured on the gateway. Set AWS_S3_REGION_LMS, AWS_S3_BUCKET_LMS, AWS_S3_ACCESS_KEY_ID_LMS, and AWS_S3_SECRET_ACCESS_KEY_LMS, or provide the standard AWS/App fallback variables.',
+      );
+    }
+
+    return { region, bucket, accessKeyId, secretAccessKey };
+  }
+
+  private getS3Client(config: ReturnType<UploadGatewayController['resolveS3Config']>) {
+    if (!this.s3Client) {
+      this.s3Client = new S3Client({
+        region: config.region,
+        credentials: {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey,
+        },
+      });
+    }
+
+    return this.s3Client;
+  }
 
   @ApiOperation({
     summary: 'Upload file to library',
@@ -166,7 +220,9 @@ export class UploadGatewayController {
       const objectKey = `library/${itemType}/${itemId}/${uniqueId}-${file.originalname}`;
 
       // Upload directly to S3
-      const bucketName = process.env.AWS_S3_BUCKET_LMS;
+      const s3Config = this.resolveS3Config();
+      const bucketName = s3Config.bucket;
+      const s3Client = this.getS3Client(s3Config);
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: objectKey,
@@ -174,7 +230,7 @@ export class UploadGatewayController {
         ContentType: file.mimetype,
       });
 
-      await this.s3Client.send(command);
+      await s3Client.send(command);
       console.log('S3 upload successful:', objectKey);
 
       // Generate presigned URL for downloading the uploaded file
@@ -182,7 +238,7 @@ export class UploadGatewayController {
         Bucket: bucketName,
         Key: objectKey,
       });
-      const presignedUrl = await getSignedUrl(this.s3Client, getCommand, {
+      const presignedUrl = await getSignedUrl(s3Client, getCommand, {
         expiresIn: 3600,
       }); // 1 hour expiry
 
@@ -197,7 +253,7 @@ export class UploadGatewayController {
             mimeType: file.mimetype,
             size: file.size,
             objectKey,
-            fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
+            fileUrl: `https://${bucketName}.s3.${s3Config.region}.amazonaws.com/${objectKey}`,
           },
         ),
       )) as {
@@ -213,7 +269,7 @@ export class UploadGatewayController {
       return {
         message: 'File uploaded successfully',
         presignedUrl, // This is the presigned URL for accessing the file
-        fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`, // Direct URL for reference
+        fileUrl: `https://${bucketName}.s3.${s3Config.region}.amazonaws.com/${objectKey}`, // Direct URL for reference
         objectKey,
         size: file.size,
         assetId: result.assetId,
@@ -223,12 +279,15 @@ export class UploadGatewayController {
       };
     } catch (error) {
       console.error('File upload error:', error);
-      if (error.message.includes('credential')) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown upload error';
+
+      if (errorMessage.toLowerCase().includes('credential')) {
         throw new Error(
-          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
+          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID_LMS, AWS_S3_SECRET_ACCESS_KEY_LMS, AWS_S3_REGION_LMS, and AWS_S3_BUCKET_LMS environment variables in API Gateway.',
         );
       }
-      throw new Error(`Failed to upload file: ${error.message}`);
+      throw new Error(`Failed to upload file: ${errorMessage}`);
     }
   }
 

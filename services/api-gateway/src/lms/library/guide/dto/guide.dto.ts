@@ -110,6 +110,15 @@ export class CreateGuideDto {
   level?: Level;
 
   @ApiPropertyOptional({
+    description: 'Subject category (e.g. FRONTEND, CYBER_SECURITY)',
+    example: 'FRONTEND',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({
     description: 'URL for the guide cover image',
     example: 'https://example.com/guide-cover.jpg',
     type: String,
@@ -146,6 +155,35 @@ export class CreateGuideDto {
   @IsOptional()
   @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
+
+  @ApiPropertyOptional({
+    description:
+      'Visibility. PUBLIC guides appear in the global Material Library. PRIVATE guides only show to students enrolled in `courseId`.',
+    enum: ['PUBLIC', 'PRIVATE'],
+    example: 'PRIVATE',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @ApiPropertyOptional({
+    description: 'Course this guide is scoped to (PRIVATE visibility).',
+    example: '507f1f77bcf86cd799439011',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Lesson this guide was created from (back-reference).',
+    example: '507f1f77bcf86cd799439012',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdateGuideDto extends CreateGuideDto {}

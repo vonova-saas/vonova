@@ -12,6 +12,7 @@ import {
   submitQuizTypeResponse,
   getAttemptsTypeResponse,
   getSpecificAttemptTypeResponse,
+  type QuizType,
 } from "@/types/api/student/lms/quizzes/quiz.type";
 
 const LMS_QUIZZES_INSTRUCTOR = "/lms/instructor/quizzes";
@@ -34,7 +35,7 @@ export function getAttemptRecordId(attempt: unknown): string {
 }
 
 /** Backend DTOs expect `noOfQuestions` as a number; UI forms use string inputs. */
-function withNumericQuestionCount<T extends { noOfQuestions?: string | number; questions: unknown[] }>(
+function withNumericQuestionCount<T extends { noOfQuestions?: string | number; questions?: unknown[] }>(
   body: T,
 ): T & { noOfQuestions: number } {
   const raw = body.noOfQuestions;
@@ -88,6 +89,33 @@ export const getInstructorQuizzesMutationFn = async (): Promise<getAllQuizzesTyp
   const response = await API.get<getAllQuizzesTypeResponse>(`${LMS_QUIZZES_INSTRUCTOR}`);
   return response.data;
 };
+
+/** Normalize instructor quiz list for lesson editor (shared React Query cache = array). */
+export function normalizeInstructorQuizzesListPayload(res: unknown): QuizType[] {
+  if (Array.isArray(res)) return res as QuizType[];
+  if (
+    res &&
+    typeof res === "object" &&
+    Array.isArray((res as { data?: QuizType[] }).data)
+  ) {
+    return (res as { data: QuizType[] }).data;
+  }
+  return [];
+}
+
+export async function fetchInstructorLessonEditorQuizzesQueryFn(): Promise<
+  QuizType[]
+> {
+  const res = await getInstructorQuizzesMutationFn();
+  return normalizeInstructorQuizzesListPayload(res);
+}
+
+/** Shared key; `list` avoids cache collisions with the old map-shaped data. */
+export const instructorLessonEditorQuizzesQueryKey = [
+  "instructor-lesson-editor",
+  "quizzes",
+  "list",
+] as const;
 
 /** Instructor view: fetch one owned quiz by id. */
 export const getInstructorQuizByIdMutationFn = async (

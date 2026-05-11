@@ -12,6 +12,8 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+export type LessonTypeDto = 'VIDEO' | 'ARTICLE' | 'QUIZ' | 'ASSIGNMENT' | 'MIXED';
+
 export class CreateLessonDto {
   @IsString()
   title: string;
@@ -27,8 +29,8 @@ export class CreateLessonDto {
   durationMinutes?: number;
 
   @IsOptional()
-  @IsEnum(['VIDEO', 'ARTICLE', 'QUIZ'])
-  type?: 'VIDEO' | 'ARTICLE' | 'QUIZ';
+  @IsEnum(['VIDEO', 'ARTICLE', 'QUIZ', 'ASSIGNMENT', 'MIXED'])
+  type?: LessonTypeDto;
 
   @IsOptional()
   @IsBoolean()
@@ -37,6 +39,34 @@ export class CreateLessonDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for quizId',
+  })
+  quizId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for assignmentId',
+  })
+  assignmentId?: string;
+
+  /** S3 object key for uploaded video (stored as videoObjectKey on the document). */
+  @IsOptional()
+  @IsString()
+  videoKey?: string;
+
+  /** Same as videoKey; preferred wire name (matches Mongoose field). */
+  @IsOptional()
+  @IsString()
+  videoObjectKey?: string;
+
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
 }
 
 export class UpdateLessonDto {
@@ -55,8 +85,8 @@ export class UpdateLessonDto {
   durationMinutes?: number;
 
   @IsOptional()
-  @IsEnum(['VIDEO', 'ARTICLE', 'QUIZ'])
-  type?: 'VIDEO' | 'ARTICLE' | 'QUIZ';
+  @IsEnum(['VIDEO', 'ARTICLE', 'QUIZ', 'ASSIGNMENT', 'MIXED'])
+  type?: LessonTypeDto;
 
   @IsOptional()
   @IsBoolean()
@@ -65,6 +95,32 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for quizId',
+  })
+  quizId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for assignmentId',
+  })
+  assignmentId?: string;
+
+  @IsOptional()
+  @IsString()
+  videoKey?: string;
+
+  @IsOptional()
+  @IsString()
+  videoObjectKey?: string;
+
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
 }
 
 export class ReorderLessonItemDto {
@@ -105,7 +161,7 @@ export class VideoUploadResponseDto {
   size: number;
 }
 
-export class VideoUrlResponseDto {
+export class VideoPlaybackPresignResponseDto {
   @IsString()
-  videoUrl: string;
+  streamUrl: string;
 }

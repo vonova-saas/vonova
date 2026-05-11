@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LessonContent, LessonResource } from "@/types/api/lms/courses.type";
 import { getLessonContentQueryFn } from "@/services/student/lms/courses/courses.api";
-import { Play, FileText, Download, Clock } from "lucide-react";
+import { FileText, Download, Clock, RefreshCw } from "lucide-react";
 
 interface iAppProps {
   courseId: string;
@@ -17,13 +17,48 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     async function fetchLessonContent() {
       try {
         setLoading(true);
-        const content = await getLessonContentQueryFn(courseId, lessonId);
-        setLessonContent(content);
+        const body = await getLessonContentQueryFn(courseId, lessonId);
+        const l = body.lesson;
+        const r = l.resources;
+        const flatResources =
+          r != null
+            ? [
+                ...r.materials.map((m) => ({
+                  type: "PDF" as const,
+                  title: `${m.title} (${m.materialType ?? "material"})`,
+                  url: `#material-${m.id}`,
+                })),
+                ...r.quizzes.map((q) => ({
+                  type: "DOC" as const,
+                  title: q.title,
+                  url: `#quiz-${q.id}`,
+                })),
+                ...r.problems.map((p) => ({
+                  type: "DOC" as const,
+                  title: p.title,
+                  url: `#problem-${p.id}`,
+                })),
+              ]
+            : [];
+        setLessonContent({
+          _id: l.id,
+          title: l.title,
+          content: l.content ?? "",
+          type: l.type as LessonContent["type"],
+          durationMinutes: l.durationMinutes,
+          resources: flatResources,
+          isCompleted: false,
+          progress: 0,
+          videoStreamUrl: l.video?.streamUrl ?? undefined,
+          videoObjectKey: l.video?.videoObjectKey ?? undefined,
+          videoPosterUrl: l.video?.thumbnailUrl ?? l.video?.posterUrl,
+        });
         setError(null);
       } catch (err) {
         console.error("Error fetching lesson content:", err);
@@ -34,7 +69,7 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
     }
 
     fetchLessonContent();
-  }, [courseId, lessonId]);
+  }, [courseId, lessonId, retryCount]);
 
   if (loading) {
     return <LessonContentSkeleton />;
@@ -48,6 +83,19 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
         </CardContent>
       </Card>
     );
+  }
+
+  /** Show video chrome when we have a playback URL or a stored key (not lesson.type). */
+  const streamUrl = (lessonContent.videoStreamUrl ?? "").trim();
+  const videoLayoutMode = !!(streamUrl || lessonContent.videoObjectKey?.trim());
+  const bodyHtml = lessonContent.content?.trim();
+
+  if (
+    process.env.NODE_ENV === "development" &&
+    typeof window !== "undefined" &&
+    streamUrl
+  ) {
+    console.log("STREAM URL:", streamUrl);
   }
 
   return (
@@ -85,38 +133,60 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
       {/* Lesson Content */}
       <Card>
         <CardContent className="p-6">
-          {lessonContent.type === "VIDEO" && (
+          {videoLayoutMode && (
             <div className="space-y-4">
-              <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
-                <Button size="lg" className="bg-white/20 hover:bg-white/30 backdrop-blur">
-                  <Play className="size-6 mr-2" />
-                  Play Video
-                </Button>
+              <div className="aspect-video min-h-48 bg-black rounded-lg overflow-hidden">
+                {streamUrl ? (
+                  <video
+                    key={streamUrl}
+                    src={streamUrl}
+                    controls
+                    preload="metadata"
+                    playsInline
+                    className="block h-full w-full min-h-48 object-contain bg-black"
+                  />
+                ) : lessonContent.videoObjectKey?.trim() ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 bg-muted px-4 text-center">
+                    <p className="text-sm font-medium text-foreground">
+                      Video temporarily unavailable
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Playback could not be started. This is usually temporary.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setRetryCount((n) => n + 1)}
+                    >
+                      <RefreshCw className="size-4 mr-2" />
+                      Retry
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-              <div className="prose dark:prose-invert max-w-none">
-                {lessonContent.content && (
-                  <div dangerouslySetInnerHTML={{ __html: lessonContent.content }} />
-                )}
-              </div>
+              {bodyHtml ? (
+                <div className="prose dark:prose-invert max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+                </div>
+              ) : null}
             </div>
           )}
 
-          {lessonContent.type === "ARTICLE" && (
+          {!videoLayoutMode && bodyHtml && lessonContent.type === "ARTICLE" && (
             <div className="prose dark:prose-invert max-w-none">
-              {lessonContent.content && (
-                <div dangerouslySetInnerHTML={{ __html: lessonContent.content }} />
-              )}
+              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
             </div>
           )}
 
           {lessonContent.type === "QUIZ" && (
             <div className="space-y-4">
-              <div className="bg-muted p-6 rounded-lg">
-                <p className="text-lg font-medium mb-2">Quiz Content</p>
-                {lessonContent.content && (
-                  <div dangerouslySetInnerHTML={{ __html: lessonContent.content }} />
-                )}
-              </div>
+              {!videoLayoutMode && bodyHtml ? (
+                <div className="bg-muted p-6 rounded-lg">
+                  <p className="text-lg font-medium mb-2">Quiz Content</p>
+                  <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+                </div>
+              ) : null}
               <Button>Start Quiz</Button>
             </div>
           )}

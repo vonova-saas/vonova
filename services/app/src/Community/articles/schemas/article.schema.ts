@@ -151,7 +151,7 @@ export const ArticleSchema = new Schema({
 });
 
 // Indexes for performance
-ArticleSchema.index({ slug: 1 });
+// Note: slug has unique: true in schema definition, no need for separate index
 ArticleSchema.index({ author: 1, createdAt: -1 });
 ArticleSchema.index({ publishedStatus: 1, createdAt: -1 });
 ArticleSchema.index({

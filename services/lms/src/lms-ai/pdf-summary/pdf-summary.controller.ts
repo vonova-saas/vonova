@@ -5,7 +5,7 @@ import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { PdfSummaryService } from './pdf-summary.service';
-import { DailyUsageLimitService } from '../usage/daily-usage-limit.service';
+import { DailyUsageLimitService } from '../usage/daily-usage-limit.service.refactored';
 
 @Controller()
 export class PdfSummaryController {
@@ -14,7 +14,7 @@ export class PdfSummaryController {
   constructor(
     private readonly pdfSummaryService: PdfSummaryService,
     private readonly dailyUsageLimitService: DailyUsageLimitService,
-  ) {}
+  ) { }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
   async uploadPDF(@Payload() data: any, @Ctx() _ctx: NatsContext) {

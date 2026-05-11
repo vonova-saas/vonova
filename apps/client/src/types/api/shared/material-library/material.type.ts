@@ -1,5 +1,8 @@
+export type MaterialVisibility = 'PUBLIC' | 'PRIVATE';
+
 export interface Material {
   id: string;
+  _id?: string;  // MongoDB format from backend
   title: string;
   description?: string;
   type: 'book' | 'visual-guide' | 'presentation' | 'document' | 'video' | 'audio';
@@ -8,12 +11,22 @@ export interface Material {
   thumbnailUrl?: string;
   author?: string;
   topicId?: string;
+  topics?: string[];
+  level?: 'Beginner' | 'Intermediate' | 'Advanced';
   createdAt: string;
   updatedAt: string;
   tags?: string[];
   category?: string;
   isPublic?: boolean;
   isPublished?: boolean;
+  /**
+   * Public materials show in the global Material Library.
+   * Private materials are limited to students enrolled in the
+   * `courseId` they were created under.
+   */
+  visibility?: MaterialVisibility;
+  courseId?: string | null;
+  lessonId?: string | null;
   downloadCount?: number;
   viewCount?: number;
 }
@@ -33,6 +46,8 @@ export interface CreateMaterialRequest {
   title: string;
   description?: string;
   type: Material['type'];
+  authorName?: string;
+  authors?: Array<{ name: string; avatarUrl?: string }>;
   url?: string;
   fileUrl?: string;
   file?: File;
@@ -40,7 +55,15 @@ export interface CreateMaterialRequest {
   category?: string;
   isPublic?: boolean;
   topicId?: string;
+  topics?: string[];
+  level?: 'Beginner' | 'Intermediate' | 'Advanced';
   isPublished?: boolean;
+  /** PUBLIC = global library; PRIVATE = course-only (requires `courseId`). */
+  visibility?: MaterialVisibility;
+  /** When set, the material is scoped to the course (and only enrolled students can access it). */
+  courseId?: string;
+  /** Optional lesson scope for analytics/back-references. */
+  lessonId?: string;
 }
 
 export interface UpdateMaterialRequest {
@@ -110,4 +133,16 @@ export interface CreateMaterialResponse {
 export interface DeleteMaterialResponse {
   message: string;
   success: boolean;
+}
+
+export interface UploadFileResponse {
+  message: string;
+  presignedUrl: string;
+  fileUrl: string;
+  objectKey: string;
+  size: number;
+  assetId: string;
+  fileName: string;
+  mimeType: string;
+  expiresInSeconds: number;
 }

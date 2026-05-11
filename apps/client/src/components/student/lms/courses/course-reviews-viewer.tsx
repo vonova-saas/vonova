@@ -24,7 +24,10 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
     async function fetchReviews() {
       try {
         setLoading(true);
-        const data = await getCourseReviewsQueryFn();
+        const data = await getCourseReviewsQueryFn(courseId, {
+          page,
+          limit: 10,
+        });
         setReviewsData(data);
         setError(null);
       } catch (err) {

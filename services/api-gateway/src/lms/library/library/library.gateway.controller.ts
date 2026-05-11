@@ -1,10 +1,11 @@
-import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -22,7 +23,7 @@ import {
 @Controller('api/v1/lms/library')
 @UseGuards(JwtAuthGuard)
 export class LibraryGatewayController {
-  constructor(private readonly libraryService: LibraryGatewayService) {}
+  constructor(private readonly libraryService: LibraryGatewayService) { }
 
   @ApiOperation({
     summary: 'Get all library items by type',
@@ -84,7 +85,9 @@ export class LibraryGatewayController {
     @Query() query: GetAllByTypeQueryDto,
     @Request() req: any,
   ) {
-    return this.libraryService.getAllByType(query);
+    const userId: string | undefined =
+      req?.user?.id ?? req?.user?.sub ?? req?.user?._id;
+    return this.libraryService.getAllByType({ ...query, userId });
   }
 
   @ApiOperation({
@@ -151,7 +154,9 @@ export class LibraryGatewayController {
   })
   @Get('topics')
   async getTopics(@Query() query: GetTopicsQueryDto, @Request() req: any) {
-    return this.libraryService.getTopics(query);
+    const userId: string | undefined =
+      req?.user?.id ?? req?.user?.sub ?? req?.user?._id;
+    return this.libraryService.getTopics({ ...query, userId });
   }
 
   @ApiOperation({
@@ -201,5 +206,86 @@ export class LibraryGatewayController {
   @Get('total')
   async getTotalMaterials(@Request() req: any) {
     return this.libraryService.getTotalMaterials();
+  }
+
+  @ApiOperation({
+    summary: 'Get presigned URL to view or download a material file',
+    description:
+      'Returns a short-lived S3 signed URL for PDFs, presentations, and other library files.',
+  })
+  @ApiParam({ name: 'id', description: 'Material document id' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ['book', 'guide', 'presentation'],
+    description:
+      'Material collection hint (speeds lookup). If omitted, book → guide → presentation is tried.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Signed URL returned',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: { url: { type: 'string' } },
+        },
+      },
+    },
+  })
+  @Get('materials/:id/view')
+  async getMaterialView(
+    @Param('id') id: string,
+    @Query('type') type?: string,
+    @Request() req?: any,
+  ) {
+    const userId = req?.user?.id ?? req?.user?.sub ?? req?.user?._id;
+    return this.libraryService.getMaterialViewSignedUrl(id, type, userId);
+  }
+
+  @ApiOperation({
+    summary: 'Get unified materials list',
+    description:
+      'Retrieves all library materials (books, guides, presentations, uploads) in a unified format for the frontend.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Unified materials retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Materials retrieved successfully' },
+        data: {
+          type: 'object',
+          properties: {
+            books: { type: 'array', items: { type: 'object' } },
+            guides: { type: 'array', items: { type: 'object' } },
+            presentations: { type: 'array', items: { type: 'object' } },
+            uploads: { type: 'array', items: { type: 'object' } },
+            total: { type: 'number', example: 100 },
+          },
+        },
+      },
+    },
+  })
+  @Get('materials')
+  async getUnifiedMaterials(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Request() req?: any,
+  ) {
+    const userId = req?.user?.id || req?.user?.sub || req?.user?._id;
+    const userRole = req?.user?.role;
+
+    return this.libraryService.getUnifiedMaterials({
+      page: page || 1,
+      limit: limit || 20,
+      search,
+      userId,
+      userRole,
+    });
   }
 }

@@ -18,7 +18,9 @@ import {
 import { ArrowLeft, Loader2, PlusIcon, SparkleIcon } from "lucide-react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import {
   Form,
   FormControl,
@@ -52,6 +54,8 @@ export default function CourseCreationPage() {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const { triggerConfetti } = useConfetti();
+  const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
   // 1. Define your form.
   const form = useForm<CourseSchemaType>({
     resolver: zodResolver(courseSchema),
@@ -80,29 +84,33 @@ export default function CourseCreationPage() {
           return;
         }
 
-        // Map form values to API DTO
-        const courseData: CreateCourseDto = {
-          title: values.title,
-          slug: values.slug,
-          smallDescription: values.smallDescription,
-          description: values.description,
-          difficulty: values.level === "Intermidate" ? "Intermediate" : values.level === "Beginner" ? "Beginner" : "Advanced",
-          tags: [],
-          thumbnailUrl: values.fileKey || "https://images.unsplash.com/photo-1593720213428-28a5b9e94613?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-          language: "English",
-          price: {
-            amount: Number(values.price),
-            currency: "USD",
-            isFree: Number(values.price) === 0,
-          },
-        };
+        const formData = new FormData();
+        formData.append("title", values.title);
+        formData.append("slug", values.slug);
+        formData.append("smallDescription", values.smallDescription);
+        formData.append("description", values.description);
+        formData.append("difficulty", values.level === "Intermidate" ? "Intermediate" : values.level === "Beginner" ? "Beginner" : "Advanced");
+        formData.append("language", "English");
+        formData.append("price[amount]", String(values.price));
+        formData.append("price[currency]", "USD");
+        formData.append("price[isFree]", String(Number(values.price) === 0));
+
+        if (imageFile) {
+          formData.append("image", imageFile);
+        }
 
         // Call API directly
-        await createCourseMutationFn(courseData);
+        await createCourseMutationFn(formData as any);
 
         toast.success("Course created successfully");
         triggerConfetti();
         form.reset();
+
+        queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        queryClient.invalidateQueries({ queryKey: ["course-details"] });
+        queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+
         router.push(`/instructor/${userId}/courses-management`);
       } catch (error) {
         console.error("Error creating course:", error);
@@ -215,7 +223,11 @@ export default function CourseCreationPage() {
                   <FormItem className="w-full">
                     <FormLabel>Thumbnail image</FormLabel>
                     <FormControl>
-                      <Uploader onChange={field.onChange} value={field.value} fileTypeAccepted='image' />
+                      <Input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

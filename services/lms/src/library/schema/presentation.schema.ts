@@ -38,6 +38,9 @@ export class Presentation extends Document {
   })
   level: Level;
 
+  @Prop({ trim: true, index: true })
+  category?: string;
+
   @Prop() coverUrl?: string;
   @Prop({ default: 'en' }) language?: string;
 
@@ -56,6 +59,20 @@ export class Presentation extends Document {
 
   @Prop({ type: Types.ObjectId, ref: 'LibraryAsset', default: null })
   fileAssetId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Lesson', default: null, index: true })
+  lessonId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Course', default: null, index: true })
+  courseId?: Types.ObjectId | null;
+
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibility?: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;

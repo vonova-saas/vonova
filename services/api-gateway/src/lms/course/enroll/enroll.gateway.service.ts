@@ -34,4 +34,18 @@ export class EnrollGatewayService {
       { courseId, lessonId, userId },
     );
   }
+
+  listStudentEnrollments(userId: string) {
+    return this.client.send(
+      { cmd: 'app.courses.enrollment.listByUser' },
+      { userId },
+    );
+  }
+
+  getInstructorCourseAnalytics(courseId: string, instructorId: string) {
+    return this.client.send(
+      { cmd: 'app.courses.enrollment.instructorAnalytics' },
+      { courseId, instructorId },
+    );
+  }
 }

@@ -129,7 +129,10 @@ export class EnrollGatewayController {
     @Param('courseId') courseId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
     return firstValueFrom(this.enrollService.getEnrollment(courseId, userId));
   }
 
@@ -181,7 +184,10 @@ export class EnrollGatewayController {
     @Param('lessonId') lessonId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub;
+    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    if (!userId) {
+      throw new Error('Authentication required - No user found');
+    }
     return firstValueFrom(
       this.enrollService.getLessonAccess(courseId, lessonId, userId),
     );

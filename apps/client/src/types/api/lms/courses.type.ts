@@ -13,6 +13,10 @@ export interface Course {
   smallDescription?: string;
   description?: string;
   difficulty?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  /** LMS enum; preferred over difficulty for new data */
+  level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  category?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
   tags?: string[];
   thumbnailUrl?: string;
   language?: string;
@@ -38,6 +42,8 @@ export interface Chapter {
   lessons?: Lesson[];
 }
 
+export type LessonType = "VIDEO" | "ARTICLE" | "QUIZ" | "ASSIGNMENT" | "MIXED";
+
 export interface Lesson {
   _id: string;
   courseId: string;
@@ -45,11 +51,19 @@ export interface Lesson {
   title: string;
   index: number;
   durationMinutes?: number;
-  type?: "VIDEO" | "ARTICLE" | "QUIZ";
+  type?: LessonType;
   previewable?: boolean;
   content?: string;
   videoKey?: string;
   thumbnailKey?: string;
+  quizId?: string | null;
+  assignmentId?: string | null;
+  /** Library material ids attached to this lesson (in display order). */
+  materials?: string[];
+  quizzes?: string[];
+  problems?: string[];
+  /** Presigned playback URL from GET lesson (not stored in DB) */
+  streamUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,8 +74,12 @@ export interface CreateCourseDto {
   smallDescription?: string;
   description?: string;
   difficulty?: string;
+  level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  category?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
   tags?: string[];
   thumbnailUrl?: string;
+  thumbnailKey?: string;
   language?: string;
   price?: Price;
 }
@@ -72,8 +90,12 @@ export interface UpdateCourseDto {
   smallDescription?: string;
   description?: string;
   difficulty?: string;
+  level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  category?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
   tags?: string[];
   thumbnailUrl?: string;
+  thumbnailKey?: string;
   language?: string;
   price?: Price;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -129,22 +151,26 @@ export interface CreateLessonDto {
   title: string;
   index?: number;
   durationMinutes?: number;
-  type?: "VIDEO" | "ARTICLE" | "QUIZ";
+  type?: LessonType;
   previewable?: boolean;
   content?: string;
   videoKey?: string;
   thumbnailKey?: string;
+  quizId?: string;
+  assignmentId?: string;
 }
 
 export interface UpdateLessonDto {
   title?: string;
   index?: number;
   durationMinutes?: number;
-  type?: "VIDEO" | "ARTICLE" | "QUIZ";
+  type?: LessonType;
   previewable?: boolean;
   content?: string;
   videoKey?: string;
   thumbnailKey?: string;
+  quizId?: string;
+  assignmentId?: string;
 }
 
 export interface ReorderLessonsDto {
@@ -159,9 +185,10 @@ export interface VideoUploadUrlDto {
   contentType: string;
 }
 
+/** @deprecated Legacy multipart response; lesson video uses presign-put + confirm */
 export interface VideoUploadResponse {
   message: string;
-  videoUrl: string;
+  streamUrl?: string;
   objectKey: string;
   size: number;
 }
@@ -200,24 +227,28 @@ export interface LessonAccess {
   nextLessonAvailable: boolean;
 }
 
-// Content Types
+// Content Types (LMS content tree uses `id`; some gateways may use `_id`)
 export interface ContentChapter {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   index: number;
   lessons: ContentLesson[];
 }
 
 export interface ContentLesson {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   index: number;
   content?: string;
   duration?: number;
+  durationMinutes?: number;
 }
 
 export interface CourseContentTree {
-  courseId: string;
+  courseId?: string;
+  course?: { id: string; title?: string };
   chapters: ContentChapter[];
 }
 
@@ -225,13 +256,22 @@ export interface LessonContent {
   _id: string;
   title: string;
   content: string;
-  type: "VIDEO" | "ARTICLE" | "QUIZ";
+  type: LessonType;
   durationMinutes: number;
   resources: LessonResource[];
   isCompleted: boolean;
   progress: number;
   videoKey?: string;
   thumbnailKey?: string;
+  /** Presigned URL from LMS lesson content endpoint. */
+  videoStreamUrl?: string;
+  /** LMS `video.videoObjectKey` — show video chrome when set (do not use lesson.type). */
+  videoObjectKey?: string;
+  videoError?: boolean;
+  videoStreamError?: { code: string; reason: string } | null;
+  videoPosterUrl?: string;
+  quizId?: string | null;
+  assignmentId?: string | null;
 }
 
 export interface LessonResource {
@@ -242,7 +282,8 @@ export interface LessonResource {
 
 export interface ContentUploadResponse {
   message: string;
-  fileUrl: string;
+  /** @deprecated Use objectKey + presigned GET; not returned for new uploads */
+  fileUrl?: string;
   objectKey: string;
   size: number;
   assetId: string;
@@ -278,6 +319,21 @@ export interface NextLesson {
   chapterTitle: string;
 }
 
+/** LMS GET /courses/:courseId/progress (aggregated; backed by LessonProgress + Enrollment). */
+export interface StudentCourseProgress {
+  success: true;
+  courseId: string;
+  studentId: string;
+  completedLessonIds: string[];
+  completedLessonsCount: number;
+  totalLessons: number;
+  progressPercentage: number;
+  completed: boolean;
+  lastLessonId: string | null;
+  lastAccessedAt: string | null;
+}
+
+/** @deprecated Legacy shape — use StudentCourseProgress */
 export interface CourseProgress {
   courseId: string;
   userId: string;

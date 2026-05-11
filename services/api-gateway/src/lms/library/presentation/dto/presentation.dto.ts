@@ -88,6 +88,15 @@ export class CreatePresentationDto {
   level?: string;
 
   @ApiPropertyOptional({
+    description: 'Subject category (e.g. FRONTEND, CYBER_SECURITY)',
+    example: 'FRONTEND',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({
     description: 'URL for the presentation cover image',
     example: 'https://example.com/presentation-cover.jpg',
     type: String,
@@ -123,6 +132,35 @@ export class CreatePresentationDto {
   @IsOptional()
   @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
+
+  @ApiPropertyOptional({
+    description:
+      'Visibility. PUBLIC presentations appear in the global Material Library. PRIVATE presentations only show to students enrolled in `courseId`.',
+    enum: ['PUBLIC', 'PRIVATE'],
+    example: 'PRIVATE',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @ApiPropertyOptional({
+    description: 'Course this presentation is scoped to (PRIVATE visibility).',
+    example: '507f1f77bcf86cd799439011',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Lesson this presentation was created from (back-reference).',
+    example: '507f1f77bcf86cd799439012',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}

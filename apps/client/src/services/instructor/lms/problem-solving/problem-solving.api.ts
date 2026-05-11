@@ -7,6 +7,13 @@ import type {
 
 const INSTRUCTOR_PROBLEMS_BASE = "/instructor/problems";
 
+/** Shared key; `list` avoids cache collisions with map-shaped lesson-editor data. */
+export const instructorLessonEditorProblemsQueryKey = [
+  "instructor-lesson-editor",
+  "problems",
+  "list",
+] as const;
+
 export const getInstructorProblemsQueryFn = async (): Promise<
   InstructorProblemEntity[]
 > => {

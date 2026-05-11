@@ -3,7 +3,11 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export type EnrollmentDocument = HydratedDocument<Enrollment>;
 
-export type EnrollmentStatus = 'ACTIVE' | 'CANCELED' | 'REFUNDED';
+export type EnrollmentStatus =
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELED'
+  | 'REFUNDED';
 
 @Schema({ timestamps: true })
 export class Enrollment {
@@ -18,10 +22,16 @@ export class Enrollment {
 
   @Prop({
     type: String,
-    enum: ['ACTIVE', 'CANCELED', 'REFUNDED'],
+    enum: ['ACTIVE', 'COMPLETED', 'CANCELED', 'REFUNDED'],
     default: 'ACTIVE',
   })
   status: EnrollmentStatus;
+
+  @Prop({ type: Number, default: 0, min: 0, max: 100 })
+  progressPercentage?: number;
+
+  @Prop({ type: Date })
+  completedAt?: Date;
 
   @Prop({ type: Date })
   purchasedAt?: Date;
@@ -34,6 +44,13 @@ export class Enrollment {
 
   @Prop({ type: String, default: null })
   couponCode: string | null;
+
+  /** Last lesson the student interacted with (resume / Continue learning). */
+  @Prop({ type: Types.ObjectId, ref: 'Lesson', default: null })
+  lastLessonId?: Types.ObjectId | null;
+
+  @Prop({ type: Date })
+  lastAccessedAt?: Date;
 }
 
 export const EnrollmentSchema = SchemaFactory.createForClass(Enrollment);

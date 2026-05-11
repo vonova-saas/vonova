@@ -43,6 +43,10 @@ export class Book {
   @Prop({ enum: ['Beginner', 'Intermediate', 'Advanced'], default: 'Beginner' })
   level?: Level;
 
+  /** Broad subject area (aligned with course categories, e.g. FRONTEND, CYBER_SECURITY). */
+  @Prop({ trim: true, index: true })
+  category?: string;
+
   @Prop()
   coverUrl?: string;
 
@@ -68,6 +72,20 @@ export class Book {
 
   @Prop({ type: Types.ObjectId, ref: 'LibraryAsset', default: null })
   fileAssetId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Lesson', default: null, index: true })
+  lessonId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Course', default: null, index: true })
+  courseId?: Types.ObjectId | null;
+
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibility?: string;
 
   @Prop({ default: 0 })
   pageCount?: number;

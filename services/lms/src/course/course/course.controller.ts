@@ -9,7 +9,7 @@ import {
 
 @Controller()
 export class CourseController {
-  constructor(private readonly courseService: CourseService) {}
+  constructor(private readonly courseService: CourseService) { }
 
   @MessagePattern({ cmd: 'app.courses.create' })
   createCourse(
@@ -103,18 +103,63 @@ export class CourseController {
   }
 
   @MessagePattern({ cmd: 'app.courses.getBySlug' })
-  getCourseBySlug(@Payload() data: { slug: string }) {
-    const { slug } = data;
+  getCourseBySlug(
+    @Payload()
+    data: {
+      slug: string;
+      requesterId?: string;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
+    const { slug, requesterId, userId, user } = data;
     if (!slug) throw new Error('slug is required');
 
-    return this.courseService.getCourseBySlug(slug);
+    const uid =
+      requesterId || userId || user?.id || user?.sub || user?._id;
+    return this.courseService.getCourseBySlug(slug, uid);
   }
 
   @MessagePattern({ cmd: 'app.courses.getById' })
-  getCourseById(@Payload() data: { courseId: string }) {
+  getCourseById(
+    @Payload()
+    data: {
+      courseId: string;
+      requesterId?: string;
+      userId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
+    const { courseId, requesterId, userId, user } = data;
+    if (!courseId) throw new Error('courseId is required');
+
+    const uid =
+      requesterId || userId || user?.id || user?.sub || user?._id;
+    return this.courseService.getCourseById(courseId, uid);
+  }
+
+  @MessagePattern({ cmd: 'app.courses.getDetails' })
+  getCourseDetails(@Payload() data: { courseId: string }) {
     const { courseId } = data;
     if (!courseId) throw new Error('courseId is required');
 
-    return this.courseService.getCourseById(courseId);
+    return this.courseService.getCourseDetails(courseId);
+  }
+
+  @MessagePattern({ cmd: 'app.courses.getMyCourses' })
+  getMyCourses(
+    @Payload()
+    data: {
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const { ownerId, user } = data;
+
+    // Extract ownerId from multiple possible sources
+    const userId = ownerId || user?.id || user?.sub;
+    if (!userId) throw new Error('User identification is required');
+
+    return this.courseService.getMyCourses(userId);
   }
 }

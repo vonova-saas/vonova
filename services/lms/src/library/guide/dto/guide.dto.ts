@@ -60,6 +60,10 @@ export class CreateGuideDto {
   level?: Level;
 
   @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
   @IsUrl()
   coverUrl?: string;
 
@@ -75,6 +79,18 @@ export class CreateGuideDto {
   @IsOptional()
   @IsEnum(GuideStatus)
   status?: GuideStatus = GuideStatus.PUBLISHED;
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdateGuideDto extends CreateGuideDto {}

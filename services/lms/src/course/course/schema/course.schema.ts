@@ -37,6 +37,10 @@ export class Course {
   @Prop()
   thumbnailUrl?: string;
 
+  /** S3 object key for thumbnail (used to issue presigned GET URLs). */
+  @Prop({ index: true })
+  thumbnailKey?: string;
+
   @Prop({ default: 'en' })
   language?: string;
 
@@ -58,6 +62,50 @@ export class Course {
   @Prop({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' })
   status: CourseStatus;
 
+  @Prop()
+  publishedAt?: Date;
+
+  @Prop({
+    type: String,
+    enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+    default: 'BEGINNER',
+    index: true,
+  })
+  level?: string;
+
+  @Prop({
+    type: String,
+    enum: [
+      'FRONTEND',
+      'BACKEND',
+      'FULLSTACK',
+      'FLUTTER',
+      'MOBILE',
+      'AI',
+      'DATA_SCIENCE',
+      'CYBER_SECURITY',
+      'DEVOPS',
+      'UI_UX',
+      'DATABASE',
+      'PROBLEM_SOLVING',
+      'OTHER',
+    ],
+    default: 'OTHER',
+    index: true,
+  })
+  category?: string;
+
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibility?: string;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Chapter' }], default: [] })
+  chapters?: Types.ObjectId[];
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   ownerId: Types.ObjectId;
 }
@@ -71,3 +119,5 @@ CourseSchema.index({
   smallDescription: 'text',
   description: 'text',
 });
+CourseSchema.index({ ownerId: 1, status: 1 });
+CourseSchema.index({ category: 1, level: 1, visibility: 1 });

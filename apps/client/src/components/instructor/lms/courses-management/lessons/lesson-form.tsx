@@ -30,14 +30,21 @@ import { updateLessonMutationFn } from "@/services/instructor/course-managment/c
 import { queryClient } from "@/providers/providers";
 import { toast } from "sonner";
 import useUserId from "@/hooks/user/use-user-id";
+import { LessonResourcesPanel } from "@/components/instructor/lesson-editor/lesson-resources-panel";
 
 interface iAppProps {
   data: Lesson;
   chapterId: string;
   courseId: string;
+  lessonId: string;
 }
 
-export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
+export default function LessonForm({
+  chapterId,
+  data,
+  courseId,
+  lessonId,
+}: iAppProps) {
   const [pending, startTransition] = useTransition();
 
   const userId = useUserId();
@@ -74,8 +81,10 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
         // Call API directly
         await updateLessonMutationFn(courseId, chapterId, data._id, updateData);
 
-        // Refetch lesson data
-        await queryClient.refetchQueries({ queryKey: ["lesson", courseId, chapterId, data._id], type: 'active' });
+        await queryClient.refetchQueries({
+          queryKey: ["lesson", courseId, chapterId, lessonId],
+          type: "active",
+        });
 
         toast.success("Lesson updated successfully");
       } catch (error) {
@@ -97,9 +106,12 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lesson Configration</CardTitle>
+          <CardTitle>Lesson Configuration</CardTitle>
           <CardDescription>
-            Configure the video and description for this lesson.
+            Configure the video and description for this lesson. Scroll down
+            past the save button to open <strong>Lesson resources</strong>,
+            where you can add a quiz, learning materials, and coding problems
+            to this lesson.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -147,6 +159,7 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
                         courseId={courseId}
                         contentType="lesson"
                         contentId={data._id}
+                        chapterId={chapterId}
                       />
                     </FormControl>
                     <FormMessage />
@@ -168,6 +181,7 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
                         courseId={courseId}
                         contentType="lesson"
                         contentId={data._id}
+                        chapterId={chapterId}
                       />
                     </FormControl>
                     <FormMessage />
@@ -182,6 +196,12 @@ export default function LessonForm({ chapterId, data, courseId }: iAppProps) {
           </Form>
         </CardContent>
       </Card>
+
+      <LessonResourcesPanel
+        courseId={courseId}
+        chapterId={chapterId}
+        lesson={data}
+      />
     </div>
   );
 }

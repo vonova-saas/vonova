@@ -68,6 +68,12 @@ export function NewChapterModal({ courseId }: NewChapterModalProps) {
   }
 
   function handleOpenChange(open: boolean) {
+    if (!open && actionLoading) {
+      toast.message("Please wait", {
+        description: "Saving chapter… Please wait until it finishes.",
+      });
+      return;
+    }
     if (!open) {
       form.reset();
     }
@@ -80,7 +86,16 @@ export function NewChapterModal({ courseId }: NewChapterModalProps) {
           <Plus className="size-4" /> New Chapter
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        showCloseButton={!actionLoading}
+        onPointerDownOutside={(e) => {
+          if (actionLoading) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (actionLoading) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create New Chapter</DialogTitle>
           <DialogDescription>

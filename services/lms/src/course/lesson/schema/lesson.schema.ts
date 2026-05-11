@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type LessonType = 'VIDEO' | 'ARTICLE' | 'QUIZ';
+export type LessonType = 'VIDEO' | 'ARTICLE' | 'QUIZ' | 'ASSIGNMENT' | 'MIXED';
 
 @Schema({ timestamps: true })
 export class Lesson {
@@ -23,11 +23,17 @@ export class Lesson {
   @Prop({ default: 0 })
   durationMinutes?: number;
 
-  @Prop({ enum: ['VIDEO', 'ARTICLE', 'QUIZ'], default: 'VIDEO' })
+  @Prop({ enum: ['VIDEO', 'ARTICLE', 'QUIZ', 'ASSIGNMENT', 'MIXED'], default: 'VIDEO' })
   type: LessonType;
 
   @Prop({ default: false })
   previewable: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'Quiz', default: null, index: true })
+  quizId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Assignment', default: null, index: true })
+  assignmentId?: Types.ObjectId | null;
 
   @Prop()
   content?: string;
@@ -35,14 +41,28 @@ export class Lesson {
   @Prop({ type: Types.ObjectId, ref: 'Asset', default: null })
   videoAssetId?: Types.ObjectId | null;
 
+  /** @deprecated Removed from API; use videoObjectKey + presigned GET only */
   @Prop()
   videoUrl?: string;
 
   @Prop()
   videoObjectKey?: string;
 
+  /** S3 object key for lesson thumbnail (optional). */
+  @Prop()
+  thumbnailKey?: string;
+
   @Prop({ default: false })
   hasVideo?: boolean;
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  materials?: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Quiz' }], default: [] })
+  quizzes?: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  problems?: Types.ObjectId[];
 }
 
 export type LessonDocument = Lesson & Document;

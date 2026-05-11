@@ -2,12 +2,14 @@ import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
 import {
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   ValidateNested,
   Min,
+  Matches,
 } from 'class-validator';
 
 // ===== Option DTO =====
@@ -64,10 +66,28 @@ export class CreateQuizDto {
   @ValidateNested({ each: true })
   @Type(() => QuestionDto)
   questions: QuestionDto[];
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for courseId',
+  })
+  courseId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for lessonId',
+  })
+  lessonId?: string;
 }
 
 // ===== Update Quiz DTO =====
-export class UpdateQuizDto extends PartialType(CreateQuizDto) {}
+export class UpdateQuizDto extends PartialType(CreateQuizDto) { }
 
 // ===== Submit Answers DTO =====
 export class SubmitAnswerItemDto {

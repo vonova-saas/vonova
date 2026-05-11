@@ -6,7 +6,6 @@ export interface AssetMetadata {
   mimeType: string;
   size: number;
   objectKey: string;
-  fileUrl: string;
 }
 
 @Injectable()

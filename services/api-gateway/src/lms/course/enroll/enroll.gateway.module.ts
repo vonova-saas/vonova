@@ -1,14 +1,22 @@
 import { Module } from '@nestjs/common';
 import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 import { AuthGatewayModule } from 'src/app/auth/auth.module';
 import { EnrollGatewayController } from './enroll.gateway.controller';
 import { EnrollGatewayService } from './enroll.gateway.service';
+import { StudentEnrollmentsGatewayController } from './student-enrollments.gateway.controller';
+import { InstructorCourseAnalyticsGatewayController } from './instructor-course-analytics.gateway.controller';
+import { CourseGatewayModule } from '../course/course.gateway.module';
 
 @Module({
-  imports: [NatsClientModule, AuthGatewayModule],
-  controllers: [EnrollGatewayController],
-  providers: [EnrollGatewayService, JwtAuthGuard],
-  exports: [JwtAuthGuard],
+  imports: [NatsClientModule, AuthGatewayModule, CourseGatewayModule],
+  controllers: [
+    EnrollGatewayController,
+    StudentEnrollmentsGatewayController,
+    InstructorCourseAnalyticsGatewayController,
+  ],
+  providers: [EnrollGatewayService, JwtAuthGuard, RolesGuard],
+  exports: [EnrollGatewayService, JwtAuthGuard, RolesGuard],
 })
 export class EnrollGatewayModule {}

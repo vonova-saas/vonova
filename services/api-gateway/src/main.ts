@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
@@ -11,6 +12,9 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
 import configuration from './common/config/configuration';
+
+loadEnv({ path: join(__dirname, '..', '.env') });
+loadEnv();
 
 async function bootstrap() {
   // Initialize logger first to create logs directory

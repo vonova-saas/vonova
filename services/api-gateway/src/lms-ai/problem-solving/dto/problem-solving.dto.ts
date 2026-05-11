@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsDefined,
+  IsEnum,
   IsIn,
   IsArray,
   IsMongoId,
@@ -149,6 +150,34 @@ export class CreateProblemDto {
   @IsString({ each: true })
   @IsIn(PROBLEM_CATEGORIES, { each: true })
   categories: (typeof PROBLEM_CATEGORIES)[number][];
+
+  @ApiPropertyOptional({
+    description:
+      'Visibility. PUBLIC problems appear in the global Problem Solving library for everyone. PRIVATE problems are only accessible to students enrolled in `courseId` (typically via the attached lesson).',
+    enum: ['PUBLIC', 'PRIVATE'],
+    example: 'PRIVATE',
+  })
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @ApiPropertyOptional({
+    description:
+      'Course this problem is scoped to. Required to enforce PRIVATE visibility.',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Lesson this problem was created from (optional back-reference for the editor).',
+    example: '507f1f77bcf86cd799439012',
+  })
+  @IsOptional()
+  @IsMongoId()
+  lessonId?: string;
 }
 
 export class ListProblemsQueryDto {

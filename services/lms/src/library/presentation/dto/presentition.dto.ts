@@ -20,6 +20,10 @@ export class CreatePresentationDto {
   @IsEnum(['Beginner', 'Intermediate', 'Advanced'])
   level?: string;
 
+  @IsOptional()
+  @IsString()
+  category?: string;
+
   @IsOptional() @IsUrl() coverUrl?: string;
   @IsOptional() @IsString() language?: string;
 
@@ -28,6 +32,18 @@ export class CreatePresentationDto {
   @IsOptional()
   @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdatePresentationDto extends PartialType(CreatePresentationDto) {}

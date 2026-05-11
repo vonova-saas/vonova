@@ -10,8 +10,10 @@ import { Progress } from "@/components/ui/progress";
 import { ChevronDown, Play } from "lucide-react";
 import { LessonItem } from "./lessons/lesson-item";
 import { usePathname } from "next/navigation";
-import { useCourseProgress } from "@/hooks/courses/use-course-progress";
+import { deriveProgressFromContentTree } from "@/hooks/courses/use-course-progress";
+import { useCourseProgress } from "@/hooks/student/lms/use-courses";
 import useUserId from "@/hooks/user/use-user-id";
+import { useMemo } from "react";
 
 interface iAppProps {
   course: CourseSidebarDataType["course"];
@@ -21,8 +23,24 @@ export function CourseSidebar({ course }: iAppProps) {
   const studentId = useUserId();
   const pathName = usePathname();
   const currentLessonId = pathName.split("/").pop();
-  const { completedLessons, totalLessons, progressPercentage } =
-    useCourseProgress({ courseData: course });
+
+  const { data: progressApi, isFetching } = useCourseProgress(course.id);
+  const treeFallback = useMemo(
+    () => deriveProgressFromContentTree(course),
+    [course],
+  );
+
+  const completedLessonIds = useMemo(
+    () => new Set(progressApi?.completedLessonIds ?? []),
+    [progressApi?.completedLessonIds],
+  );
+
+  const completedLessons =
+    progressApi?.completedLessonsCount ?? treeFallback.completedLessons;
+  const totalLessons = progressApi?.totalLessons ?? treeFallback.totalLessons;
+  const progressPercentage =
+    progressApi?.progressPercentage ?? treeFallback.progressPercentage;
+
   return (
     <div className="flex flex-col h-full">
       <div className="pb-4 pr-4 border-b border-border">
@@ -44,10 +62,15 @@ export function CourseSidebar({ course }: iAppProps) {
         <div className="space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{completedLessons}/{totalLessons} lessons</span>
+            <span className="font-medium">
+              {completedLessons}/{totalLessons} lessons
+              {isFetching ? " · updating…" : ""}
+            </span>
           </div>
           <Progress value={progressPercentage} className="h-1.5" />
-          <p className="text-xs text-muted-foreground">{progressPercentage}% Complete</p>
+          <p className="text-xs text-muted-foreground">
+            {progressPercentage}% Complete
+          </p>
         </div>
       </div>
 
@@ -82,9 +105,11 @@ export function CourseSidebar({ course }: iAppProps) {
                   studentId={studentId}
                   isActive={currentLessonId === lesson.id}
                   completed={
+                    completedLessonIds.has(lesson.id) ||
                     lesson.lessonProgress.find(
-                      (progress) => progress.lessonId === lesson.id
-                    )?.completed || false
+                      (progress) =>
+                        progress.lessonId === lesson.id && progress.completed,
+                    )?.completed === true
                   }
                 />
               ))}

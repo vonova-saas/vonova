@@ -11,10 +11,20 @@ const options = {
 const API = axios.create(options);
 let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;
+const API_VERSION_PREFIX = "/api/v1";
+const baseURLIncludesApiVersion = baseURL?.replace(/\/+$/, "").endsWith(API_VERSION_PREFIX);
 
 // Add request interceptor to include Authorization header
 API.interceptors.request.use(
   (config) => {
+    if (
+      baseURLIncludesApiVersion &&
+      typeof config.url === "string" &&
+      config.url.startsWith(API_VERSION_PREFIX)
+    ) {
+      config.url = config.url.slice(API_VERSION_PREFIX.length) || "/";
+    }
+
     // Get token from localStorage or cookies
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token) {

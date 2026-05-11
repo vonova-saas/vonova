@@ -106,6 +106,15 @@ export class CreateBookDto {
   level?: 'Beginner' | 'Intermediate' | 'Advanced';
 
   @ApiPropertyOptional({
+    description: 'Subject category (e.g. FRONTEND, CYBER_SECURITY)',
+    example: 'FRONTEND',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({
     description: 'URL for the book cover image',
     example: 'https://example.com/book-cover.jpg',
     type: String,
@@ -162,6 +171,37 @@ export class CreateBookDto {
   @IsOptional()
   @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
+
+  @ApiPropertyOptional({
+    description:
+      'Visibility. PUBLIC books appear in the global Material Library. PRIVATE books only show to students enrolled in `courseId` (typically via the attached lesson).',
+    enum: ['PUBLIC', 'PRIVATE'],
+    example: 'PRIVATE',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @ApiPropertyOptional({
+    description:
+      'Course this material is scoped to. Required to enforce PRIVATE visibility.',
+    example: '507f1f77bcf86cd799439011',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Lesson this material was created from (optional back-reference).',
+    example: '507f1f77bcf86cd799439012',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdateBookDto extends PartialType(CreateBookDto) {}

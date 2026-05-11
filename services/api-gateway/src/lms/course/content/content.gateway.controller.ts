@@ -2,8 +2,10 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
+  BadRequestException,
   Controller,
   Get,
+  Logger,
   Post,
   Param,
   Request,
@@ -29,7 +31,8 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { ContentGatewayService } from './content.gateway.service';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { resolveRequesterUserId } from 'src/common/utils/request-user-id';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
 @ApiTags('LMS Course Content')
@@ -37,6 +40,8 @@ import { v4 as uuidv4 } from 'uuid';
 @Controller('api/v1/lms/courses/:courseId/content')
 @UseGuards(JwtAuthGuard)
 export class ContentGatewayController {
+  private readonly logger = new Logger(ContentGatewayController.name);
+
   constructor(private readonly contentService: ContentGatewayService) {}
 
   private readonly s3Client = new S3Client({
@@ -113,7 +118,7 @@ export class ContentGatewayController {
     @Param('courseId') courseId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    const userId = resolveRequesterUserId(req);
 
     if (!userId) {
       throw new Error('Authentication required - No user found');
@@ -194,7 +199,12 @@ export class ContentGatewayController {
     @Param('lessonId') lessonId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || req.user?.sub || req.user?._id;
+    const raw =
+      req.user?.id ??
+      req.user?.sub ??
+      req.user?._id ??
+      req.user?.userId;
+    const userId = raw != null ? String(raw) : undefined;
 
     if (!userId) {
       throw new Error('Authentication required - No user found');
@@ -287,7 +297,11 @@ export class ContentGatewayController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    const instructorId = req.user?.id || req.user?.sub || req.user?._id;
+    const instructorId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
 
     if (!instructorId) {
       throw new Error('Authentication required - No user found');
@@ -297,14 +311,24 @@ export class ContentGatewayController {
       throw new Error('File is required');
     }
 
+    if (contentType === 'lesson' && file.mimetype.startsWith('video/')) {
+      throw new BadRequestException(
+        'Video upload must use presigned S3 flow only: POST .../lessons/:lessonId/video/presign-put, browser PUT to AWS_S3_BUCKET_LMS, then POST .../video/confirm.',
+      );
+    }
+
     try {
       // Generate unique object key
       const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `course/${courseId}/content/${contentType}/${contentId}/${uniqueId}-${file.originalname}`;
 
-      // Upload directly to S3
-      const bucketName = process.env.AWS_S3_BUCKET_LMS;
+      const bucketName = process.env.AWS_S3_BUCKET_LMS?.trim();
+      if (!bucketName) {
+        throw new BadRequestException(
+          'AWS_S3_BUCKET_LMS is required (no app-bucket or legacy fallback).',
+        );
+      }
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: objectKey,
@@ -313,9 +337,34 @@ export class ContentGatewayController {
       });
 
       await this.s3Client.send(command);
-      console.log('S3 upload successful:', objectKey);
+      this.logger.log(
+        `S3 PutObject ok bucket=${bucketName} key=${objectKey} bytes=${file.size} contentType=${file.mimetype}`,
+      );
 
-      // Create asset record via LMS service (only metadata)
+      try {
+        await this.s3Client.send(
+          new HeadObjectCommand({
+            Bucket: bucketName,
+            Key: objectKey,
+          }),
+        );
+        this.logger.log(
+          `S3_UPLOAD_SUCCESS: ${JSON.stringify({
+            bucket: bucketName,
+            key: objectKey,
+            size: file.size,
+          })}`,
+        );
+      } catch (verifyErr) {
+        this.logger.error(
+          `S3 object missing after PutObject key=${objectKey}: ${(verifyErr as Error).message}`,
+        );
+        throw new Error(
+          'Upload failed verification: object not found in bucket after PUT.',
+        );
+      }
+
+      // Create asset record via LMS service (objectKey only; no public URL stored)
       const result = (await firstValueFrom(
         this.contentService.createAssetRecord(
           courseId,
@@ -327,7 +376,6 @@ export class ContentGatewayController {
             mimeType: file.mimetype,
             size: file.size,
             objectKey,
-            fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
           },
         ),
       )) as {
@@ -337,26 +385,30 @@ export class ContentGatewayController {
         fileName: string;
         size: number;
         mimeType: string;
-        fileUrl: string;
       };
 
-      const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
+      this.logger.log(
+        `Content upload complete courseId=${courseId} contentType=${contentType} contentId=${contentId} objectKey=${objectKey} assetId=${result.assetId}`,
+      );
 
       return {
         message: 'File uploaded successfully',
-        fileUrl,
         objectKey,
         size: file.size,
         assetId: result.assetId,
       };
-    } catch (error) {
-      console.error('File upload error:', error);
-      if (error.message.includes('credential')) {
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error(
+        `Content upload failed courseId=${courseId}: ${err?.message ?? error}`,
+        err?.stack,
+      );
+      if (err?.message?.includes('credential')) {
         throw new Error(
           'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
         );
       }
-      throw new Error(`Failed to upload file: ${error.message}`);
+      throw new Error(`Failed to upload file: ${err?.message ?? String(error)}`);
     }
   }
 }

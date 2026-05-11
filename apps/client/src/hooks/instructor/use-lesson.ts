@@ -6,8 +6,8 @@ export const useLesson = (courseId: string, chapterId: string, lessonId: string)
   return useQuery<Lesson, Error>({
     queryKey: ["lesson", courseId, chapterId, lessonId],
     queryFn: async () => {
-      const lesson = await getLessonByIdQueryFn(courseId, chapterId, lessonId);
-      return lesson;
+      const response = await getLessonByIdQueryFn(courseId, chapterId, lessonId);
+      return response.data;
     },
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,

@@ -1,52 +1,44 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client"
+"use client";
 
 import { CourseSidebarDataType } from "@/components/student/lms/courses/data/get-course-sidebar-data";
 import { useMemo } from "react";
 
-interface iAppProps {
-  courseData: CourseSidebarDataType["course"];
-}
-
-interface CourseProgressReult {
+export interface ContentTreeProgressSummary {
   totalLessons: number;
   completedLessons: number;
   progressPercentage: number;
 }
 
-export function useCourseProgress({
-  courseData,
-}: iAppProps): CourseProgressReult {
-  return useMemo(() => {
-    let totalLessons = 0;
+/**
+ * Fallback when LMS progress API is unavailable: derive counts from embedded
+ * `lessonProgress` on the sidebar tree (often empty — prefer React Query + GET /progress).
+ */
+export function deriveProgressFromContentTree(
+  courseData: CourseSidebarDataType["course"],
+): ContentTreeProgressSummary {
+  let totalLessons = 0;
+  let completedLessons = 0;
 
-    let completedLessons = 0;
-
-    (courseData?.chapter || []).forEach((chapter: { lessons?: any[] }) => {
-      (chapter?.lessons || []).forEach((lesson) => {
-        totalLessons++;
-
-        // check if this lesson is completed
-        const isCompleted = (lesson?.lessonProgress || []).some(
-          (progress: { lessonId?: string; completed?: boolean }) =>
-            progress.lessonId === lesson?.id && progress.completed
-        );
-
-        if (isCompleted) {
-          completedLessons++;
-        }
-      });
+  (courseData?.chapter || []).forEach((chapter: { lessons?: unknown[] }) => {
+    (chapter?.lessons || []).forEach((lesson: unknown) => {
+      const le = lesson as { id?: string; lessonProgress?: { lessonId?: string; completed?: boolean }[] };
+      totalLessons += 1;
+      const isCompleted = (le?.lessonProgress || []).some(
+        (progress) =>
+          progress.lessonId === le?.id && progress.completed === true,
+      );
+      if (isCompleted) completedLessons += 1;
     });
+  });
 
-    const progressPercentage =
-      totalLessons > 0
-        ? Math.round((completedLessons / totalLessons) * 100)
-        : 0;
+  const progressPercentage =
+    totalLessons > 0
+      ? Math.round((completedLessons / totalLessons) * 100)
+      : 0;
 
-    return {
-      totalLessons,
-      completedLessons,
-      progressPercentage,
-    };
-  }, [courseData]);
+  return {
+    totalLessons,
+    completedLessons,
+    progressPercentage,
+  };
 }

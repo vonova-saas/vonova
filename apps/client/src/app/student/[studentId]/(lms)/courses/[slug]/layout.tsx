@@ -1,9 +1,9 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { ReactNode } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { CourseSidebar } from "@/components/student/lms/courses/course-sidebar";
-import { getCourseSidebarData, CourseSidebarDataType } from "@/components/student/lms/courses/data/get-course-sidebar-data";
+import { useCourseSidebarData } from "@/hooks/student/lms/use-courses";
 
 interface iAppProps {
   children: ReactNode;
@@ -11,22 +11,16 @@ interface iAppProps {
 
 export default function CourseLayout({ children }: iAppProps) {
   const params = useParams<{ slug: string }>();
+  const searchParams = useSearchParams();
   const slug = params.slug;
-  const [courseData, setCourseData] = useState<CourseSidebarDataType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const courseIdHint = searchParams.get("cid");
 
-  useEffect(() => {
-    async function fetchData() {
-      if (slug) {
-        const data = await getCourseSidebarData(slug);
-        setCourseData(data);
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [slug]);
+  const { data: courseData, isLoading } = useCourseSidebarData(
+    slug ?? "",
+    courseIdHint,
+  );
 
-  if (loading || !courseData) {
+  if (isLoading || !courseData?.course) {
     return (
       <div className="flex flex-1">
         <div className="w-80 border-r border-border shrink-0 p-4">
@@ -43,12 +37,9 @@ export default function CourseLayout({ children }: iAppProps) {
 
   return (
     <div className="flex flex-1">
-      {/* sidebar - 30% */}
       <div className="w-80 border-r border-border shrink-0">
-        <CourseSidebar course={courseData.course}/>
+        <CourseSidebar course={courseData.course} />
       </div>
-
-      {/* main Content - 70% */}
       <div className="flex-1 overflow-hidden">{children}</div>
     </div>
   );

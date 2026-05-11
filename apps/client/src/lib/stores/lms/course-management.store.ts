@@ -17,14 +17,16 @@ import {
 import {
   getCourseContentTreeQueryFn,
   uploadContentFileMutationFn,
-} from "@/services/student/lms/courses/courses.api";
+} from "@/services/student/lms/courses/real-courses.api";
+import { unwrapLmsData } from "@/lib/api/unwrap-lms-body";
+import { getErrorMessageFromUnknown } from "@/lib/utils/error-message";
 import type {
   Course,
+  CourseContentTree,
   Chapter,
   Lesson,
   ContentChapter,
   ContentLesson,
-  CreateCourseDto,
   UpdateCourseDto,
   CreateChapterDto,
   UpdateChapterDto,
@@ -33,6 +35,39 @@ import type {
   ReorderChaptersDto,
   ReorderLessonsDto,
 } from "@/types/api/lms/courses.type";
+
+function contentNodeId(node: { _id?: string; id?: string }): string {
+  const raw = node._id ?? node.id;
+  return raw != null ? String(raw) : "";
+}
+
+// Wrapper functions to extract data from API responses
+const api = {
+  createCourse: async (payload: FormData) => {
+    const res = await createCourseMutationFn(payload);
+    return unwrapLmsData<Course>(res);
+  },
+  updateCourse: async (courseId: string, payload: UpdateCourseDto) => {
+    const res = await updateCourseMutationFn(courseId, payload);
+    return unwrapLmsData<Course>(res);
+  },
+  createChapter: async (courseId: string, payload: CreateChapterDto) => {
+    const res = await createChapterMutationFn(courseId, payload);
+    return res.data;
+  },
+  updateChapter: async (courseId: string, chapterId: string, payload: UpdateChapterDto) => {
+    const res = await updateChapterMutationFn(courseId, chapterId, payload);
+    return res.data;
+  },
+  createLesson: async (courseId: string, chapterId: string, payload: CreateLessonDto) => {
+    const res = await createLessonMutationFn(courseId, chapterId, payload);
+    return res.data;
+  },
+  updateLesson: async (courseId: string, chapterId: string, lessonId: string, payload: UpdateLessonDto) => {
+    const res = await updateLessonMutationFn(courseId, chapterId, lessonId, payload);
+    return res.data;
+  },
+};
 
 type CourseWithChapters = Course & {
   chapters: Chapter[];
@@ -54,7 +89,7 @@ type CourseManagementStore = {
   // Actions - Courses
   fetchCourses: () => Promise<void>;
   fetchCourseById: (courseId: string) => Promise<CourseWithChapters | null>;
-  createCourse: (payload: CreateCourseDto) => Promise<Course | null>;
+  createCourse: (payload: FormData) => Promise<Course | null>;
   updateCourse: (courseId: string, payload: UpdateCourseDto) => Promise<Course | null>;
   deleteCourse: (courseId: string) => Promise<boolean>;
 
@@ -76,6 +111,8 @@ type CourseManagementStore = {
   // Helpers
   clearError: () => void;
   setCurrentCourse: (course: CourseWithChapters | null) => void;
+  /** Merge a fresh lesson (e.g. after video upload + GET lesson) into currentCourse + lessonsById. */
+  applyLessonSnapshot: (lesson: Lesson) => void;
 };
 
 export const useCourseManagementStore = create<CourseManagementStore>((set, get) => ({
@@ -92,12 +129,41 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   clearError: () => set({ error: null }),
   setCurrentCourse: (course) => set({ currentCourse: course }),
 
+  applyLessonSnapshot: (lesson) =>
+    set((st) => {
+      const cc = st.currentCourse;
+      if (!cc || String(cc._id) !== String(lesson.courseId)) {
+        return {
+          lessonsById: {
+            ...st.lessonsById,
+            [lesson._id]: { ...st.lessonsById[lesson._id], ...lesson },
+          },
+        };
+      }
+      const chapters = cc.chapters.map((ch) => {
+        if (String(ch._id) !== String(lesson.chapterId)) return ch;
+        return {
+          ...ch,
+          lessons: (ch.lessons || []).map((l) =>
+            String(l._id) === String(lesson._id) ? { ...l, ...lesson } : l,
+          ),
+        };
+      });
+      return {
+        currentCourse: { ...cc, chapters },
+        lessonsById: {
+          ...st.lessonsById,
+          [lesson._id]: { ...st.lessonsById[lesson._id], ...lesson },
+        },
+      };
+    }),
+
   // ==================== COURSES ====================
   fetchCourses: async () => {
     set({ loading: true, error: null });
     try {
       const res = await getInstructorCoursesQueryFn();
-      const list = Array.isArray(res) ? res : (res as any)?.courses || [];
+      const list = Array.isArray(res) ? res : res.items || [];
       const map: Record<string, Course> = {};
       const ids: string[] = [];
       for (const c of list) {
@@ -106,7 +172,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       }
       set({ coursesById: map, allCourseIds: ids });
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to load courses" });
     } finally {
       set({ loading: false });
@@ -114,34 +180,72 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   },
 
   fetchCourseById: async (courseId: string) => {
-    set({ loading: true, error: null });
+    const previousCourse = get().currentCourse;
+    const showFullPageLoader =
+      !previousCourse || String(previousCourse._id) !== String(courseId);
+
+    set({
+      ...(showFullPageLoader ? { loading: true } : {}),
+      error: null,
+    });
+
     try {
+      const prevLessons = get().lessonsById;
+
       // Fetch both course details and content tree in parallel
       const [course, tree] = await Promise.all([
         getInstructorCourseByIdQueryFn(courseId),
-        getCourseContentTreeQueryFn(courseId),
+        getCourseContentTreeQueryFn(courseId).catch((): CourseContentTree => ({
+          courseId,
+          chapters: [],
+        })),
       ]);
 
-      // Convert ContentChapter[] to Chapter[] with proper structure
-      const chapters: Chapter[] = (tree.chapters || []).map((ch: ContentChapter) => ({
-        _id: ch._id,
-        courseId: tree.courseId,
-        title: ch.title,
-        index: ch.index,
-        lessons: (ch.lessons || []).map((l: ContentLesson) => ({
-          _id: l._id,
-          courseId: tree.courseId,
-          chapterId: ch._id,
-          title: l.title,
-          index: l.index,
-          content: l.content,
-          durationMinutes: l.duration,
+      if (course == null || typeof course !== "object" || !course._id) {
+        throw new Error("Course not found or invalid response");
+      }
+
+      const contentTree = tree;
+      const treeCourseId =
+        contentTree.courseId ??
+        contentTree.course?.id ??
+        courseId;
+
+      // Convert ContentChapter[] to Chapter[] (LMS tree uses `id`, not `_id`)
+      const chapters: Chapter[] = (contentTree.chapters || []).map((ch: ContentChapter) => {
+        const chapterId = contentNodeId(ch);
+        return {
+          _id: chapterId,
+          courseId: treeCourseId,
+          title: ch.title,
+          index: ch.index,
+          lessons: (ch.lessons || []).map((l: ContentLesson) => {
+            const lessonId = contentNodeId(l);
+            const ext = l as ContentLesson & { videoKey?: string; streamUrl?: string };
+            const base: Lesson = {
+              _id: lessonId,
+              courseId: treeCourseId,
+              chapterId,
+              title: l.title,
+              index: l.index,
+              content: l.content,
+              durationMinutes: l.durationMinutes ?? l.duration ?? 0,
+              videoKey: ext.videoKey != null ? String(ext.videoKey) : undefined,
+              streamUrl: ext.streamUrl != null ? String(ext.streamUrl) : undefined,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            const prev = prevLessons[lessonId];
+            return {
+              ...base,
+              videoKey: base.videoKey ?? prev?.videoKey,
+              streamUrl: base.streamUrl ?? prev?.streamUrl,
+            };
+          }),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as Lesson)),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as Chapter));
+        } as Chapter;
+      });
 
       // Build CourseWithChapters using full course data + chapters from tree
       const courseWithChapters: CourseWithChapters = {
@@ -154,9 +258,13 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       const lessonsMap: Record<string, Lesson> = {};
 
       for (const chapter of chapters) {
-        chaptersMap[chapter._id] = chapter;
+        if (chapter._id) {
+          chaptersMap[chapter._id] = chapter;
+        }
         for (const lesson of chapter.lessons || []) {
-          lessonsMap[lesson._id] = lesson;
+          if (lesson._id) {
+            lessonsMap[lesson._id] = lesson;
+          }
         }
       }
 
@@ -164,30 +272,35 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         currentCourse: courseWithChapters,
         chaptersById: chaptersMap,
         lessonsById: lessonsMap,
-        coursesById: { ...get().coursesById, [course._id]: course }
+        coursesById: { ...get().coursesById, [course._id]: course },
+        error: null,
       });
 
       return courseWithChapters;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
-      set({ error: msg || "Failed to load course" });
+      const msg = getErrorMessageFromUnknown(e);
+      if (showFullPageLoader) {
+        set({ error: msg || "Failed to load course" });
+      }
       return null;
     } finally {
-      set({ loading: false });
+      if (showFullPageLoader) {
+        set({ loading: false });
+      }
     }
   },
 
-  createCourse: async (payload: CreateCourseDto) => {
+  createCourse: async (payload: FormData) => {
     set({ actionLoading: true, error: null });
     try {
-      const course = await createCourseMutationFn(payload);
+      const course = unwrapLmsData<Course>(await createCourseMutationFn(payload));
       set((st) => ({
         coursesById: { ...st.coursesById, [course._id]: course },
         allCourseIds: st.allCourseIds.includes(course._id) ? st.allCourseIds : [course._id, ...st.allCourseIds],
       }));
       return course;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to create course" });
       return null;
     } finally {
@@ -198,7 +311,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   updateCourse: async (courseId: string, payload: UpdateCourseDto) => {
     set({ actionLoading: true, error: null });
     try {
-      const course = await updateCourseMutationFn(courseId, payload);
+      const { data: course } = await updateCourseMutationFn(courseId, payload);
       set((st) => ({
         coursesById: { ...st.coursesById, [course._id]: course },
         currentCourse: st.currentCourse?._id === courseId
@@ -207,7 +320,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       }));
       return course;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to update course" });
       return null;
     } finally {
@@ -230,7 +343,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       });
       return true;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to delete course" });
       return false;
     } finally {
@@ -242,19 +355,32 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   createChapter: async (courseId: string, payload: CreateChapterDto) => {
     set({ actionLoading: true, error: null });
     try {
-      const chapter = await createChapterMutationFn(courseId, payload);
+      const res = await createChapterMutationFn(courseId, payload);
+      const chapter = unwrapLmsData<Chapter & { id?: string }>(res);
+      const chapterId =
+        chapter?._id != null
+          ? String(chapter._id)
+          : chapter?.id != null
+            ? String(chapter.id)
+            : "";
 
-      // Update chapters map
+      if (!chapter || !chapterId) {
+        set({ error: "Chapter created but server response was invalid." });
+        return null;
+      }
+
+      const normalized = { ...chapter, _id: chapterId } as Chapter;
+
       set((st) => ({
-        chaptersById: { ...st.chaptersById, [chapter._id]: chapter },
+        chaptersById: { ...st.chaptersById, [chapterId]: normalized },
       }));
 
       // Refresh course to get updated chapters
       await get().fetchCourseById(courseId);
 
-      return chapter;
+      return normalized;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to create chapter" });
       return null;
     } finally {
@@ -265,7 +391,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   updateChapter: async (courseId: string, chapterId: string, payload: UpdateChapterDto) => {
     set({ actionLoading: true, error: null });
     try {
-      const chapter = await updateChapterMutationFn(courseId, chapterId, payload);
+      const { data: chapter } = await updateChapterMutationFn(courseId, chapterId, payload);
       set((st) => ({
         chaptersById: { ...st.chaptersById, [chapter._id]: chapter },
       }));
@@ -281,7 +407,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       return chapter;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to update chapter" });
       return null;
     } finally {
@@ -306,7 +432,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       return true;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to delete chapter" });
       return false;
     } finally {
@@ -317,14 +443,14 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderChapters: async (courseId: string, data: ReorderChaptersDto) => {
     set({ actionLoading: true, error: null });
     try {
-      await reorderChaptersMutationFn(courseId, data.order.map(item => item.chapterId));
+      await reorderChaptersMutationFn(courseId, data);
 
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
 
       return true;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to reorder chapters" });
       return false;
     } finally {
@@ -336,7 +462,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   createLesson: async (courseId: string, chapterId: string, payload: CreateLessonDto) => {
     set({ actionLoading: true, error: null });
     try {
-      const lesson = await createLessonMutationFn(courseId, chapterId, payload);
+      const { data: lesson } = await createLessonMutationFn(courseId, chapterId, payload);
 
       // Update lessons map
       set((st) => ({
@@ -348,7 +474,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       return lesson;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to create lesson" });
       return null;
     } finally {
@@ -359,7 +485,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   updateLesson: async (courseId: string, chapterId: string, lessonId: string, payload: UpdateLessonDto) => {
     set({ actionLoading: true, error: null });
     try {
-      const lesson = await updateLessonMutationFn(courseId, chapterId, lessonId, payload);
+      const { data: lesson } = await updateLessonMutationFn(courseId, chapterId, lessonId, payload);
       set((st) => ({
         lessonsById: { ...st.lessonsById, [lesson._id]: lesson },
       }));
@@ -379,7 +505,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       return lesson;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to update lesson" });
       return null;
     } finally {
@@ -404,7 +530,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       return true;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to delete lesson" });
       return false;
     } finally {
@@ -415,14 +541,14 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   reorderLessons: async (courseId: string, chapterId: string, data: ReorderLessonsDto) => {
     set({ actionLoading: true, error: null });
     try {
-      await reorderLessonsMutationFn(courseId, chapterId, data.order.map(item => item.lessonId));
+      await reorderLessonsMutationFn(courseId, chapterId, data);
 
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
 
       return true;
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to reorder lessons" });
       return false;
     } finally {
@@ -434,10 +560,16 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
   uploadContent: async (courseId: string, file: File, contentType: "lesson" | "chapter" | "course", contentId: string) => {
     set({ actionLoading: true, error: null });
     try {
-      const result = await uploadContentFileMutationFn(courseId, file, contentType, contentId);
-      return { fileUrl: result.fileUrl, objectKey: result.objectKey };
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("courseId", courseId);
+      formData.append("contentType", contentType);
+      formData.append("contentId", contentId);
+
+      const result = await uploadContentFileMutationFn(formData);
+      return { fileUrl: result.data.fileUrl, objectKey: result.data.assetId };
     } catch (e: unknown) {
-      const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
+      const msg = getErrorMessageFromUnknown(e);
       set({ error: msg || "Failed to upload file" });
       return null;
     } finally {

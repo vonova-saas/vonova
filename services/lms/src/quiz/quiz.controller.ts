@@ -10,7 +10,7 @@ import {
 
 @Controller('quizzes')
 export class QuizController {
-  constructor(private readonly quizService: QuizService) {}
+  constructor(private readonly quizService: QuizService) { }
 
   // ===== INSTRUCTOR-SPECIFIC MESSAGE PATTERNS =====
 
@@ -32,8 +32,19 @@ export class QuizController {
   }
 
   @MessagePattern({ cmd: 'quiz.getInstructorQuizzes' })
-  getInstructorQuizzes(@Payload('userId') userId: string) {
-    return this.quizService.getInstructorQuizzes(userId);
+  getInstructorQuizzes(
+    @Payload('userId') userId: string,
+    @Payload('courseId') courseId?: string,
+  ) {
+    return this.quizService.getInstructorQuizzes(userId, courseId);
+  }
+
+  @MessagePattern({ cmd: 'quiz.getInstructorQuizzesByCourse' })
+  getInstructorQuizzesByCourse(
+    @Payload('userId') userId: string,
+    @Payload('courseId') courseId: string,
+  ) {
+    return this.quizService.getInstructorQuizzesByCourse(userId, courseId);
   }
 
   @MessagePattern({ cmd: 'quiz.getInstructorQuizById' })
@@ -71,16 +82,20 @@ export class QuizController {
   // ===== STUDENT-SPECIFIC MESSAGE PATTERNS =====
 
   @MessagePattern({ cmd: 'quiz.getAvailableForStudents' })
-  getAvailableQuizzesForStudents() {
-    return this.quizService.getAvailableQuizzesForStudents();
+  getAvailableQuizzesForStudents(
+    @Payload('userId') userId?: string,
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
+  ) {
+    return this.quizService.getAvailableQuizzesForStudents(userId, enrolledCourseIds);
   }
 
   @MessagePattern({ cmd: 'quiz.getQuizForStudent' })
   getQuizForStudent(
     @Payload('quizId') quizId: string,
     @Payload('userId') userId: string,
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
   ) {
-    return this.quizService.getQuizForStudent(quizId, userId);
+    return this.quizService.getQuizForStudent(quizId, userId, enrolledCourseIds);
   }
 
   @MessagePattern({ cmd: 'quiz.submitStudent' })
@@ -88,8 +103,9 @@ export class QuizController {
     @Payload('quizId') quizId: string,
     @Payload('answers') answers: SubmitAnswerItemDto[],
     @Payload('userId') userId: string,
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
   ) {
-    return this.quizService.submitStudentQuiz(quizId, answers, userId);
+    return this.quizService.submitStudentQuiz(quizId, answers, userId, enrolledCourseIds);
   }
 
   @MessagePattern({ cmd: 'quiz.getStudentAttempt' })

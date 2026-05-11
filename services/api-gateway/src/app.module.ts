@@ -42,6 +42,8 @@ import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module'
 import { AdminGatewayModule } from './admin/admin.module';
 import { AdminAuthGatewayModule } from './admin-auth/admin-auth.module';
 import { CommunityGatewayModule } from './app/community/community.module';
+import { SubscriptionGatewayModule } from './lms/subscription/subscription.gateway.module';
+import { PaymentsGatewayModule } from './lms/payments/payments.gateway.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 @Module({
@@ -89,6 +91,9 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     RoadmapGatewayModule,
     PdfSummaryGatewayModule,
     ProblemSolvingGatewayModule,
+    //* Subscription & Payments
+    SubscriptionGatewayModule,
+    PaymentsGatewayModule,
     //* Generative AI Services
   ],
   controllers: [AppController, FaviconController, RootRedirectController],

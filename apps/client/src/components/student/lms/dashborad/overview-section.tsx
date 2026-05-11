@@ -1,151 +1,158 @@
-import React, { useState } from "react";
+"use client";
+
 import {
   BookOpen,
-  GraduationCap,
-  MessageCircle,
   Brain,
+  GraduationCap,
   Layers3,
-  TrendingUp,
-  TrendingDown,
+  MessageCircle,
   Play,
   Plus,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
-  LineChart,
+  Bar,
+  BarChart,
+  Cell,
   Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
 } from "recharts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useStudentDashboardData } from "@/hooks/student/lms/use-student-dashboard";
 
-const mockStats = [
-  {
-    title: "Courses Enrolled",
-    value: 5,
-    icon: GraduationCap,
-    color: "text-orange-400 bg-orange-900/30",
-    statColor: "text-orange-400",
-    trend: "+12%",
-    trendDirection: "up",
-  },
-  {
-    title: "Quizzes Completed",
-    value: 12,
-    icon: Layers3,
-    color: "text-green-400 bg-green-900/30",
-    statColor: "text-green-400",
-    trend: "+8%",
-    trendDirection: "up",
-  },
-  {
-    title: "Books Read",
-    value: 8,
-    icon: BookOpen,
-    color: "text-blue-400 bg-blue-900/30",
-    statColor: "text-blue-400",
-    trend: "+15%",
-    trendDirection: "up",
-  },
-  {
-    title: "AI Tools Used",
-    value: 23,
-    icon: Brain,
-    color: "text-purple-400 bg-purple-900/30",
-    statColor: "text-purple-400",
-    trend: "+25%",
-    trendDirection: "up",
-  },
-  {
-    title: "Community Posts",
-    value: 4,
-    icon: MessageCircle,
-    color: "text-orange-300 bg-orange-900/30",
-    statColor: "text-orange-300",
-    trend: "-2%",
-    trendDirection: "down",
-  },
-];
-
-// Mock data for charts
-const lineData = [
-  { month: "Jan", hours: 12 },
-  { month: "Feb", hours: 18 },
-  { month: "Mar", hours: 24 },
-  { month: "Apr", hours: 20 },
-  { month: "May", hours: 28 },
-  { month: "Jun", hours: 32 },
-  { month: "Jul", hours: 30 },
-];
-
-const barData = [
-  { topic: "Math", progress: 80 },
-  { topic: "Science", progress: 65 },
-  { topic: "CS", progress: 90 },
-  { topic: "AI", progress: 50 },
-  { topic: "English", progress: 70 },
-];
-
-const pieData = [
-  { name: "Courses", value: 40, color: "#6366f1" },
-  { name: "Quizzes", value: 25, color: "#22c55e" },
-  { name: "Books", value: 20, color: "#3b82f6" },
-  { name: "AI Tools", value: 10, color: "#a21caf" },
-  { name: "Community", value: 5, color: "#f59e42" },
-];
-
-const quickActions = [
-  { title: "Continue Learning", icon: Play, href: "/dashboard/courses" },
-  { title: "Start New Quiz", icon: Plus, href: "/dashboard/quizzes" },
-  { title: "Ask AI Assistant", icon: Brain, href: "/dashboard/ai-assistant" },
-];
+const PIE_COLORS = ["#6366f1", "#22c55e", "#3b82f6", "#f59e42"];
 
 export default function OverviewSection() {
-  const [isLoading] = useState(false);
+  const params = useParams();
+  const studentId = (params?.studentId as string) || "";
+  const base = studentId ? `/student/${studentId}` : "";
+
+  const {
+    isLoading,
+    stats,
+    monthlyAttempts,
+    activityDistribution,
+    perCourseProgress,
+  } = useStudentDashboardData();
+
+  const topProgress = perCourseProgress.slice(0, 5).map((c) => ({
+    name: c.title.length > 14 ? `${c.title.slice(0, 14)}…` : c.title,
+    progress: Math.round(c.progress),
+  }));
+
+  const statCards = [
+    {
+      title: "Courses enrolled",
+      value: stats.coursesEnrolled,
+      icon: GraduationCap,
+      trend:
+        stats.coursesCompleted > 0
+          ? `${stats.coursesCompleted} completed`
+          : stats.coursesEnrolled > 0
+            ? "Active"
+            : "No enrolls",
+      trendUp: stats.coursesCompleted > 0,
+    },
+    {
+      title: "Quizzes completed",
+      value: stats.quizzesCompleted,
+      icon: Layers3,
+      trend:
+        stats.quizzesCompleted > 0
+          ? `${stats.averageQuizScore}% avg`
+          : "Try one",
+      trendUp: stats.averageQuizScore >= 60,
+    },
+    {
+      title: "Library favorites",
+      value: stats.booksFavorited,
+      icon: BookOpen,
+      trend: stats.booksFavorited > 0 ? "Saved" : "Browse",
+      trendUp: stats.booksFavorited > 0,
+    },
+    {
+      title: "Average progress",
+      value: `${stats.averageProgress}%`,
+      icon: Brain,
+      trend:
+        stats.averageProgress >= 50
+          ? "On track"
+          : stats.averageProgress > 0
+            ? "Keep going"
+            : "Start a lesson",
+      trendUp: stats.averageProgress >= 50,
+    },
+    {
+      title: "In progress",
+      value: stats.coursesInProgress,
+      icon: MessageCircle,
+      trend:
+        stats.coursesInProgress > 0
+          ? `${stats.coursesInProgress} active`
+          : "All clear",
+      trendUp: stats.coursesInProgress > 0,
+    },
+  ];
+
+  const quickActions = [
+    { title: "Continue learning", icon: Play, href: `${base}/courses` },
+    { title: "Take a quiz", icon: Plus, href: `${base}/quizzes` },
+    {
+      title: "Open AI assistant",
+      icon: Brain,
+      href: `${base}/ai-assistant`,
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1. Stat Cards with Trend Indicators */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {mockStats.map((stat) => {
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card
               key={stat.title}
-              className="shadow-lg border-2 backdrop-blur-sm hover:shadow-xl transition-shadow"
+              className="border-2 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md"
             >
-              <CardContent className="p-6 flex flex-col items-center">
-                <div className="rounded-full p-4 mb-3 bg-primary/10 text-primary flex items-center justify-center">
-                  <Icon className="w-8 h-8" />
+              <CardContent className="flex flex-col items-center gap-2 p-4 sm:p-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary sm:h-12 sm:w-12">
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div className="text-3xl font-bold mb-1 text-primary">
-                  {stat.value}
-                </div>
-                <div className="flex items-center gap-1 mb-2">
-                  {stat.trendDirection === "up" ? (
-                    <TrendingUp className="w-4 h-4 text-green-500" />
+                {isLoading ? (
+                  <Skeleton className="mt-1 h-7 w-12" />
+                ) : (
+                  <div className="text-2xl font-bold tabular-nums text-primary sm:text-3xl">
+                    {stat.value}
+                  </div>
+                )}
+                <div className="flex items-center gap-1 text-[11px] font-medium sm:text-xs">
+                  {stat.trendUp ? (
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
                   ) : (
-                    <TrendingDown className="w-4 h-4 text-red-500" />
+                    <TrendingDown className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                   <span
-                    className={`text-sm font-medium ${
-                      stat.trendDirection === "up"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
+                    className={
+                      stat.trendUp
+                        ? "text-emerald-500"
+                        : "text-muted-foreground"
+                    }
                   >
                     {stat.trend}
                   </span>
                 </div>
-                <div className="text-sm text-muted-foreground text-center font-medium">
+                <div className="text-center text-xs font-medium leading-snug text-muted-foreground sm:text-sm">
                   {stat.title}
                 </div>
               </CardContent>
@@ -154,120 +161,126 @@ export default function OverviewSection() {
         })}
       </div>
 
-      {/* 2. Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Quick actions */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {quickActions.map((action) => {
           const Icon = action.icon;
           return (
-            <Button
+            <Link
               key={action.title}
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-center gap-2 border-2 backdrop-blur-sm"
-              asChild
+              href={action.href}
+              className="flex h-auto items-center justify-center gap-2 rounded-2xl border-2 bg-card/70 p-4 text-sm font-medium shadow-sm backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:flex-col sm:gap-2 sm:py-5"
             >
-              <a href={action.href}>
-                <Icon className="w-6 h-6 text-primary" />
-                <span className="font-medium">{action.title}</span>
-              </a>
-            </Button>
+              <Icon className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
+              <span>{action.title}</span>
+            </Link>
           );
         })}
       </div>
 
-      {/* 3. Analytics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Line Chart */}
-        <Card className="col-span-2 border-2 backdrop-blur-sm shadow-lg">
-          <div className="pb-4 px-6 pt-6">
-            <div className="text-muted-foreground font-semibold text-lg">
-              Learning Activity Over Time
-            </div>
+      {/* Analytics row */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+        {/* Line — monthly attempts */}
+        <Card className="border-2 shadow-sm backdrop-blur-sm lg:col-span-2">
+          <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+            <p className="text-base font-semibold text-foreground sm:text-lg">
+              Quiz activity (last 7 months)
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Real submissions on your account
+            </p>
           </div>
-          <CardContent className="pt-0">
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart
-                data={lineData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#374151",
-                    border: "1px solid #4b5563",
-                    borderRadius: "8px",
-                    color: "#f9fafb",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="hours"
-                  stroke="#d97757"
-                  strokeWidth={3}
-                  dot={{
-                    r: 6,
-                    fill: "#d97757",
-                    stroke: "#ffffff",
-                    strokeWidth: 2,
-                  }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <CardContent className="px-2 pb-4 pt-0 sm:px-4">
+            <div className="h-[220px] w-full sm:h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={monthlyAttempts}
+                  margin={{ top: 10, right: 12, left: -10, bottom: 0 }}
+                >
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 12 }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="attempts"
+                    stroke="#d97757"
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: "#d97757",
+                      stroke: "#fff",
+                      strokeWidth: 2,
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Pie Chart */}
-        <Card className="rounded-2xl shadow-lg backdrop-blur-sm border-2 flex flex-col p-0">
-          <div className="pb-4 px-6 pt-6">
-            <div className="text-muted-foreground font-semibold text-lg">
-              Activity Distribution
-            </div>
+        {/* Pie — activity distribution */}
+        <Card className="border-2 shadow-sm backdrop-blur-sm">
+          <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+            <p className="text-base font-semibold text-foreground sm:text-lg">
+              Activity distribution
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Across your account
+            </p>
           </div>
-          <CardContent className="flex flex-row items-center gap-8 p-0 w-full">
-            <div className="w-1/2 flex justify-center">
-              <ResponsiveContainer width={180} height={180}>
+          <CardContent className="flex flex-col items-center gap-4 px-4 pb-5 pt-0 sm:flex-row sm:gap-2">
+            <div className="h-[160px] w-[160px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={activityDistribution}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    stroke="bg-primary/10 text-primary"
-                    strokeWidth={8}
-                    paddingAngle={2}
-                    cornerRadius={5}
+                    innerRadius={48}
+                    outerRadius={70}
+                    paddingAngle={3}
                   >
-                    {pieData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={entry.color} />
+                    {activityDistribution.map((_, idx) => (
+                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="w-1/2 flex flex-col justify-center gap-3">
-              {pieData.map((entry) => (
-                <div key={entry.name} className="flex items-center gap-3">
-                  <span
-                    className="inline-block w-3 h-3 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                  ></span>
-                  <span className="text-muted-foreground font-medium">
-                    {entry.name}
-                  </span>
-                  <span className="text-muted-foreground font-semibold">
-                    {entry.value}%
+            <div className="flex w-full flex-col gap-1.5 text-sm">
+              {activityDistribution.map((entry, idx) => (
+                <div
+                  key={entry.name}
+                  className="flex items-center justify-between gap-2 text-muted-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{
+                        backgroundColor: PIE_COLORS[idx % PIE_COLORS.length],
+                      }}
+                    />
+                    <span className="text-xs sm:text-sm">{entry.name}</span>
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums sm:text-sm">
+                    {entry.value}
                   </span>
                 </div>
               ))}
@@ -276,115 +289,58 @@ export default function OverviewSection() {
         </Card>
       </div>
 
-      {/* 4. Bar Chart */}
-      <Card className="border-2 backdrop-blur-sm shadow-lg">
-        <div className="pb-4 px-6 pt-6">
-          <div className="text-primary font-semibold text-lg">
-            Progress by Topic
-          </div>
+      {/* Bar — top courses by progress */}
+      <Card className="border-2 shadow-sm backdrop-blur-sm">
+        <div className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+          <p className="text-base font-semibold text-primary sm:text-lg">
+            Top courses by progress
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your 5 most advanced enrollments
+          </p>
         </div>
-        <CardContent className="pt-0">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart
-              data={barData}
-              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-            >
-              <XAxis
-                dataKey="topic"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 12 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#374151",
-                  border: "1px solid #4b5563",
-                  borderRadius: "8px",
-                  color: "#f9fafb",
-                }}
-              />
-              <Bar dataKey="progress" fill="#d97757" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <CardContent className="px-2 pb-4 pt-0 sm:px-4">
+          {topProgress.length === 0 ? (
+            <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
+              No enrollments yet — once you start a course, it shows up here.
+            </div>
+          ) : (
+            <div className="h-[220px] w-full sm:h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topProgress}
+                  margin={{ top: 10, right: 12, left: -10, bottom: 0 }}
+                >
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 11 }}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                    }}
+                    formatter={(v) => [`${v ?? 0}%`, "Progress"]}
+                  />
+                  <Bar
+                    dataKey="progress"
+                    fill="#d97757"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* 5. Loading State with Skeletons (Hidden by default, can be toggled) */}
-      {isLoading && (
-        <div className="flex flex-col gap-6">
-          {/* Welcome Card Skeleton */}
-          <Card className="border-2 backdrop-blur-sm shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex-1">
-                  <Skeleton className="h-8 w-64 mb-2" />
-                  <Skeleton className="h-4 w-80" />
-                </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-
-          {/* Stat Cards Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Card key={i} className="shadow-lg border-2 backdrop-blur-sm">
-                <CardContent className="p-6 flex flex-col items-center">
-                  <Skeleton className="h-16 w-16 rounded-full mb-3" />
-                  <Skeleton className="h-8 w-12 mb-2" />
-                  <Skeleton className="h-4 w-16 mb-2" />
-                  <Skeleton className="h-4 w-20" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Analytics Section Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="col-span-2 border-2 backdrop-blur-sm shadow-lg">
-              <div className="pb-4 px-6 pt-6">
-                <Skeleton className="h-6 w-48" />
-              </div>
-              <CardContent className="pt-0">
-                <Skeleton className="h-64 w-full" />
-              </CardContent>
-            </Card>
-            <Card className="rounded-2xl shadow-lg backdrop-blur-sm border-2">
-              <div className="pb-4 px-6 pt-6">
-                <Skeleton className="h-6 w-32" />
-              </div>
-              <CardContent className="p-6">
-                <Skeleton className="h-48 w-full" />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bar Chart Skeleton */}
-          <Card className="border-2 backdrop-blur-sm shadow-lg">
-            <div className="pb-4 px-6 pt-6">
-              <Skeleton className="h-6 w-36" />
-            </div>
-            <CardContent className="pt-0">
-              <Skeleton className="h-56 w-full" />
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

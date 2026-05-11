@@ -5,7 +5,7 @@ import { LibraryService } from './library.service';
 
 @Controller()
 export class LibraryController {
-  constructor(private readonly libraryService: LibraryService) {}
+  constructor(private readonly libraryService: LibraryService) { }
 
   @MessagePattern({ cmd: 'library.getAllByType' })
   async getAllByType(@Payload() query: GetAllByTypeQuery) {
@@ -20,5 +20,31 @@ export class LibraryController {
   @MessagePattern({ cmd: 'library.getTotalMaterials' })
   async getTotalMaterials() {
     return this.libraryService.getTotalMaterials();
+  }
+
+  @MessagePattern({ cmd: 'library.getUnifiedMaterials' })
+  async getUnifiedMaterials(
+    @Payload()
+    query: {
+      page: number;
+      limit: number;
+      search?: string;
+      userId?: string;
+      userRole?: string;
+    },
+  ) {
+    return this.libraryService.getUnifiedMaterials(query);
+  }
+
+  @MessagePattern({ cmd: 'library.getMaterialViewSignedUrl' })
+  async getMaterialViewSignedUrl(
+    @Payload()
+    data: { materialId: string; materialType?: string; userId?: string },
+  ) {
+    return this.libraryService.getMaterialViewSignedUrl(
+      data.materialId,
+      data.materialType,
+      data.userId,
+    );
   }
 }

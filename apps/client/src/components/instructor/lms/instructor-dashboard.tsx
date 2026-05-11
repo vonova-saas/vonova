@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -38,36 +38,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthContext } from "@/context/app/auth/auth-context";
-import { useQuizStore } from "@/lib/stores";
+import { useInstructorDashboardData } from "@/hooks/instructor/use-instructor-dashboard";
 import { cn } from "@/lib/utils";
 import type { QuizType } from "@/types/api/student/lms/quizzes/quiz.type";
-
-const instructorOutputData = [
-  { month: "Jan", value: 3 },
-  { month: "Feb", value: 5 },
-  { month: "Mar", value: 7 },
-  { month: "Apr", value: 6 },
-  { month: "May", value: 9 },
-  { month: "Jun", value: 11 },
-  { month: "Jul", value: 10 },
-];
-
-const instructorWorkloadDistributionData = [
-  { name: "Course design", value: 34, color: "#4f6bff" },
-  { name: "Quiz building", value: 27, color: "#24d05a" },
-  { name: "Lesson prep", value: 21, color: "#2b8fff" },
-  { name: "Presentation", value: 12, color: "#7e53ff" },
-  { name: "Review/Q&A", value: 6, color: "#f5a623" },
-];
-
-const instructorCourseHealthData = [
-  { area: "Frontend", score: 82 },
-  { area: "Backend", score: 68 },
-  { area: "Databases", score: 91 },
-  { area: "DevOps", score: 57 },
-  { area: "System Design", score: 74 },
-];
 
 function greetingForHour(date: Date) {
   const h = date.getHours();
@@ -201,40 +176,26 @@ function CompactNavLink({ href, label, icon: Icon, disabled }: CompactLinkProps)
 export default function InstructorDashboard() {
   const { user } = useAuthContext();
   const params = useParams();
-  const instructorId =
-    (params.instructorId as string) || user?._id || "";
+  const instructorId = (params.instructorId as string) || user?._id || "";
 
-  const { quizzesById, allIds, loading, fetchInstructorQuizzes } =
-    useQuizStore();
+  const {
+    isLoading,
+    stats,
+    monthlyOutput,
+    workloadDistribution,
+    coursesByCategory,
+    quizzes,
+  } = useInstructorDashboardData();
 
-  useEffect(() => {
-    if (user?._id) {
-      void fetchInstructorQuizzes();
-    }
-  }, [user?._id, fetchInstructorQuizzes]);
-
-  const totalQuizzes = allIds.length;
-  const totalQuestions = useMemo(() => {
-    return allIds.reduce((sum, id) => {
-      const q = quizzesById[id];
-      return sum + (q?.questions?.length ?? 0);
-    }, 0);
-  }, [allIds, quizzesById]);
-
-  const recentQuizzes = useMemo(() => {
-    const list = allIds
-      .map((id) => quizzesById[id])
-      .filter(Boolean) as QuizType[];
-    return list.slice(0, 4);
-  }, [allIds, quizzesById]);
+  const recentQuizzes: QuizType[] = quizzes.slice(0, 4);
 
   const displayName = user?.name?.split(" ")[0] || "there";
   const now = new Date();
   const base = instructorId ? `/instructor/${instructorId}` : "";
   const disabledNav = !instructorId;
-  const [activeTab, setActiveTab] = useState<"overview" | "workspace" | "quizzes">(
-    "overview",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "workspace" | "quizzes"
+  >("overview");
 
   return (
     <div className="min-h-full w-full pb-16">
@@ -247,22 +208,26 @@ export default function InstructorDashboard() {
           aria-hidden
           className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
         />
-        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
-          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
+        <div className="relative mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-14 md:py-20 md:text-center">
+          <Badge
+            variant="secondary"
+            className="mb-4 rounded-full px-3 py-1 text-xs font-medium"
+          >
             <Sparkles className="mr-1 inline h-3.5 w-3.5" />
             Instructor hub
           </Badge>
-          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">
-            Learn together. Share what you build.
+          <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            {greetingForHour(now)}, {displayName}.
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            {greetingForHour(now)}, {displayName}. Shape courses and quizzes in one clear workspace.
+          <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm text-muted-foreground sm:text-base md:text-lg">
+            Shape courses and quizzes in one clear workspace. All numbers below
+            are live.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:mt-8">
             <Button
               asChild
               size="lg"
-              className="rounded-full px-8"
+              className="rounded-full px-6 sm:px-8"
               disabled={disabledNav}
             >
               <Link href={`${base}/quiz-managment/create`}>
@@ -274,7 +239,7 @@ export default function InstructorDashboard() {
               asChild
               size="lg"
               variant="outline"
-              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+              className="rounded-full border-primary/25 bg-background/60 px-6 backdrop-blur sm:px-8"
               disabled={disabledNav}
             >
               <Link href={`${base}/courses-management/create`}>
@@ -282,31 +247,38 @@ export default function InstructorDashboard() {
               </Link>
             </Button>
           </div>
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
-            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{loading ? "—" : totalQuizzes}</div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                Quizzes
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{loading ? "—" : totalQuestions}</div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                Questions
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-              <div className="text-2xl font-semibold tabular-nums md:text-3xl">{formatShortDate(now)}</div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                Today
-              </div>
-            </div>
+          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 text-center sm:grid-cols-4 sm:gap-3 md:mt-12 md:gap-6">
+            <HeroStat
+              label="Courses"
+              value={stats.totalCourses}
+              sub={`${stats.publishedCourses} live`}
+              loading={isLoading}
+            />
+            <HeroStat
+              label="Quizzes"
+              value={stats.totalQuizzes}
+              sub={`${stats.totalQuestions} questions`}
+              loading={isLoading}
+            />
+            <HeroStat
+              label="Problems"
+              value={stats.totalProblems}
+              sub={stats.totalProblems > 0 ? "Ready" : "None yet"}
+              loading={isLoading}
+            />
+            <HeroStat
+              label="Today"
+              value={formatShortDate(now)}
+              sub=""
+              loading={false}
+              compact
+            />
           </div>
         </div>
       </section>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pt-10 md:gap-10">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-3 pt-8 sm:px-4 sm:gap-8 md:gap-10 md:pt-10">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-12 lg:gap-6">
           <Card className="relative overflow-hidden border-2 shadow-lg backdrop-blur-sm lg:col-span-7">
             <div
               aria-hidden
@@ -323,12 +295,12 @@ export default function InstructorDashboard() {
                   Today&apos;s focus
                 </span>
               </div>
-              <CardTitle className="text-2xl sm:text-3xl">
+              <CardTitle className="text-xl sm:text-2xl">
                 Ship something learners will remember
               </CardTitle>
-              <CardDescription className="text-base">
-                Pair a tight quiz with a fresh lesson — small iterations compound
-                into standout courses.
+              <CardDescription className="text-sm sm:text-base">
+                Pair a tight quiz with a fresh lesson — small iterations
+                compound into standout courses.
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10 flex flex-wrap gap-3 pb-6">
@@ -356,8 +328,8 @@ export default function InstructorDashboard() {
                   Micro-tip: lead with one outcome
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Start each lesson with a single sentence: “After this, you can
-                  ___.” It anchors attention before the details.
+                  Start each lesson with a single sentence: &ldquo;After this,
+                  you can ___.&rdquo; It anchors attention before the details.
                 </p>
               </div>
             </CardContent>
@@ -365,91 +337,69 @@ export default function InstructorDashboard() {
         </div>
 
         <section className="w-full">
-          <div className="flex justify-center">
-            <div className="flex gap-2 rounded-[10px] border-2 px-2 py-2 shadow-md backdrop-blur-sm">
-              <button
-                type="button"
-                onClick={() => setActiveTab("overview")}
-                className={cn(
-                  "relative rounded-[25px] px-6 py-2 text-base font-medium transition-colors duration-200 focus:outline-none",
-                  activeTab === "overview"
-                    ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:rounded-full after:bg-foreground after:content-['']"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Overview
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("workspace")}
-                className={cn(
-                  "relative rounded-[25px] px-6 py-2 text-base font-medium transition-colors duration-200 focus:outline-none",
-                  activeTab === "workspace"
-                    ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:rounded-full after:bg-foreground after:content-['']"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Workspace
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("quizzes")}
-                className={cn(
-                  "relative rounded-[25px] px-6 py-2 text-base font-medium transition-colors duration-200 focus:outline-none",
-                  activeTab === "quizzes"
-                    ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:rounded-full after:bg-foreground after:content-['']"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Recent quizzes
-              </button>
+          <div className="flex justify-center overflow-x-auto pb-1">
+            <div className="flex gap-1.5 rounded-[10px] border-2 px-1.5 py-1.5 shadow-md backdrop-blur-sm sm:gap-2 sm:px-2 sm:py-2">
+              {(
+                [
+                  { key: "overview", label: "Overview" },
+                  { key: "workspace", label: "Workspace" },
+                  { key: "quizzes", label: "Recent quizzes" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "relative rounded-[25px] px-3 py-1.5 text-sm font-medium transition-colors duration-200 focus:outline-none sm:px-6 sm:py-2 sm:text-base",
+                    activeTab === tab.key
+                      ? "text-foreground after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:rounded-full after:bg-foreground after:content-['']"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             {activeTab === "overview" ? (
               <div className="space-y-5">
                 <Card className="border-2 shadow-lg backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle>At a glance</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">
+                      At a glance
+                    </CardTitle>
                     <CardDescription>
                       Your core instructor momentum and quick actions.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-border/80 bg-background/50 px-4 py-4">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Quizzes
-                        </p>
-                        {loading ? (
-                          <div className="mt-2 h-9 w-16 animate-pulse rounded-md bg-muted" />
-                        ) : (
-                          <p className="mt-1 text-3xl font-bold tabular-nums text-primary">
-                            {totalQuizzes}
-                          </p>
-                        )}
-                      </div>
-                      <div className="rounded-2xl border border-border/80 bg-background/50 px-4 py-4">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Questions
-                        </p>
-                        {loading ? (
-                          <div className="mt-2 h-9 w-20 animate-pulse rounded-md bg-muted" />
-                        ) : (
-                          <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
-                            {totalQuestions}
-                          </p>
-                        )}
-                      </div>
-                      <div className="col-span-2 rounded-2xl border border-dashed border-primary/25 bg-primary/6 px-4 py-4 sm:col-span-1">
-                        <p className="text-xs font-medium uppercase tracking-wide text-primary/90">
-                          Momentum
-                        </p>
-                        <p className="mt-2 text-sm leading-snug text-muted-foreground">
-                          Small edits today keep learners engaged tomorrow.
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <StatTile
+                        label="Quizzes"
+                        value={stats.totalQuizzes}
+                        loading={isLoading}
+                        accent="text-primary"
+                      />
+                      <StatTile
+                        label="Questions"
+                        value={stats.totalQuestions}
+                        loading={isLoading}
+                      />
+                      <StatTile
+                        label="Courses"
+                        value={stats.totalCourses}
+                        loading={isLoading}
+                        accent="text-emerald-500"
+                      />
+                      <StatTile
+                        label="Problems"
+                        value={stats.totalProblems}
+                        loading={isLoading}
+                        accent="text-sky-500"
+                      />
                     </div>
                     <div className="flex flex-wrap gap-3">
                       <Button asChild disabled={disabledNav}>
@@ -458,7 +408,11 @@ export default function InstructorDashboard() {
                           New quiz
                         </Link>
                       </Button>
-                      <Button asChild variant="outline" disabled={disabledNav}>
+                      <Button
+                        asChild
+                        variant="outline"
+                        disabled={disabledNav}
+                      >
                         <Link href={`${base}/courses-management/create`}>
                           Start a course
                         </Link>
@@ -470,59 +424,71 @@ export default function InstructorDashboard() {
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                   <Card className="border-2 shadow-lg backdrop-blur-sm lg:col-span-8">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base text-muted-foreground">
-                        Instructor Output (monthly)
+                      <CardTitle className="text-base text-foreground">
+                        Resources you shipped (last 7 months)
                       </CardTitle>
+                      <CardDescription className="text-xs">
+                        Courses · problems · quizzes you created
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <ResponsiveContainer width="100%" height={220}>
-                        <LineChart data={instructorOutputData}>
-                          <XAxis
-                            dataKey="month"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                          />
-                          <YAxis
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              borderRadius: "8px",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#d97a57"
-                            strokeWidth={3}
-                            dot={{
-                              r: 4,
-                              fill: "#d97a57",
-                              stroke: "#fff",
-                              strokeWidth: 1.5,
-                            }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <CardContent className="px-2 pt-0 sm:px-4">
+                      <div className="h-[220px] w-full sm:h-[240px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={monthlyOutput}
+                            margin={{ top: 10, right: 12, left: -10, bottom: 0 }}
+                          >
+                            <XAxis
+                              dataKey="month"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                borderRadius: "8px",
+                                border: "1px solid rgba(0,0,0,0.08)",
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#d97a57"
+                              strokeWidth={3}
+                              dot={{
+                                r: 4,
+                                fill: "#d97a57",
+                                stroke: "#fff",
+                                strokeWidth: 1.5,
+                              }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
                   <Card className="border-2 shadow-lg backdrop-blur-sm lg:col-span-4">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base text-muted-foreground">
-                        Instructor workload split
+                      <CardTitle className="text-base text-foreground">
+                        Workload split
                       </CardTitle>
+                      <CardDescription className="text-xs">
+                        By resource type
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex items-center gap-4 pt-0">
-                      <div className="h-[180px] w-[180px] shrink-0">
+                    <CardContent className="flex flex-col items-center gap-3 px-4 pt-0 sm:flex-row sm:gap-2">
+                      <div className="h-[160px] w-[160px] shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
-                              data={instructorWorkloadDistributionData}
+                              data={workloadDistribution}
                               dataKey="value"
                               nameKey="name"
                               cx="50%"
@@ -531,25 +497,31 @@ export default function InstructorDashboard() {
                               outerRadius={64}
                               paddingAngle={3}
                             >
-                              {instructorWorkloadDistributionData.map((entry) => (
+                              {workloadDistribution.map((entry) => (
                                 <Cell key={entry.name} fill={entry.color} />
                               ))}
                             </Pie>
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="space-y-2 text-sm">
-                        {instructorWorkloadDistributionData.map((entry) => (
+                      <div className="flex w-full flex-col gap-1.5 text-sm">
+                        {workloadDistribution.map((entry) => (
                           <div
                             key={entry.name}
-                            className="flex items-center gap-2 text-muted-foreground"
+                            className="flex items-center justify-between gap-2 text-muted-foreground"
                           >
-                            <span
-                              className="inline-block h-2.5 w-2.5 rounded-full"
-                              style={{ backgroundColor: entry.color }}
-                            />
-                            <span>{entry.name}</span>
-                            <span className="ml-1 font-medium">{entry.value}%</span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-block h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: entry.color }}
+                              />
+                              <span className="text-xs sm:text-sm">
+                                {entry.name}
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold tabular-nums sm:text-sm">
+                              {entry.value}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -560,32 +532,51 @@ export default function InstructorDashboard() {
                 <Card className="border-2 shadow-lg backdrop-blur-sm">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base text-primary">
-                      Course health by track
+                      Your courses by track
                     </CardTitle>
+                    <CardDescription className="text-xs">
+                      Grouped by course category or level
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={instructorCourseHealthData}>
-                        <XAxis
-                          dataKey="area"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                        />
-                        <YAxis
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                          }}
-                        />
-                        <Bar dataKey="score" fill="#d97a57" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <CardContent className="px-2 pt-0 sm:px-4">
+                    {coursesByCategory.length === 0 ? (
+                      <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
+                        Create your first course to see this breakdown.
+                      </div>
+                    ) : (
+                      <div className="h-[220px] w-full sm:h-[240px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={coursesByCategory}
+                            margin={{ top: 10, right: 12, left: -10, bottom: 0 }}
+                          >
+                            <XAxis
+                              dataKey="area"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                borderRadius: "8px",
+                                border: "1px solid rgba(0,0,0,0.08)",
+                              }}
+                            />
+                            <Bar
+                              dataKey="count"
+                              fill="#d97a57"
+                              radius={[8, 8, 0, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -608,7 +599,7 @@ export default function InstructorDashboard() {
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Build &amp; teach
                     </p>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                       <LaunchTile
                         href={`${base}/courses-management`}
                         title="Courses"
@@ -639,7 +630,7 @@ export default function InstructorDashboard() {
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Studio tools
                     </p>
-                    <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                       <ToolPairTile
                         href={`${base}/presentation-builder`}
                         title="Presentation builder"
@@ -716,7 +707,7 @@ export default function InstructorDashboard() {
                 </div>
                 <Card className="border-2 shadow-lg backdrop-blur-sm">
                   <CardContent className="py-6">
-                    {loading ? (
+                    {isLoading ? (
                       <div className="grid gap-3 sm:grid-cols-2">
                         {Array.from({ length: 4 }).map((_, i) => (
                           <div
@@ -731,8 +722,8 @@ export default function InstructorDashboard() {
                           <BookOpen className="h-8 w-8" />
                         </div>
                         <p className="max-w-sm text-muted-foreground">
-                          No quizzes yet — your first assessment sets the tone for the
-                          whole course.
+                          No quizzes yet — your first assessment sets the tone
+                          for the whole course.
                         </p>
                         <Button
                           asChild
@@ -774,6 +765,72 @@ export default function InstructorDashboard() {
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function HeroStat({
+  label,
+  value,
+  sub,
+  loading,
+  compact,
+}: {
+  label: string;
+  value: number | string;
+  sub: string;
+  loading: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/70 px-2 py-3 shadow-sm backdrop-blur-sm sm:px-3 sm:py-4 md:py-5">
+      {loading ? (
+        <Skeleton className="mx-auto h-7 w-14 sm:h-8 sm:w-16" />
+      ) : (
+        <div
+          className={cn(
+            "font-semibold tabular-nums",
+            compact ? "text-sm sm:text-base md:text-lg" : "text-xl sm:text-2xl md:text-3xl",
+          )}
+        >
+          {value}
+        </div>
+      )}
+      <div className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs md:text-sm">
+        {label}
+      </div>
+      {sub ? (
+        <div className="mt-0.5 hidden text-[10px] text-muted-foreground sm:block">
+          {sub}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  loading,
+  accent = "text-foreground",
+}: {
+  label: string;
+  value: number;
+  loading: boolean;
+  accent?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/80 bg-background/50 px-3 py-3 sm:px-4 sm:py-4">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
+        {label}
+      </p>
+      {loading ? (
+        <Skeleton className="mt-2 h-8 w-16" />
+      ) : (
+        <p className={cn("mt-1 text-2xl font-bold tabular-nums sm:text-3xl", accent)}>
+          {value}
+        </p>
+      )}
     </div>
   );
 }

@@ -28,8 +28,10 @@ export default function DeleteCourseRoute() {
       try {
         await deleteCourseMutationFn(courseId);
         
-        // Invalidate courses cache to refresh the list
         queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        queryClient.invalidateQueries({ queryKey: ["course-details"] });
+        queryClient.invalidateQueries({ queryKey: ["my-courses"] });
         
         toast.success("Course deleted successfully");
         router.push(`/instructor/${userId}/courses-management`);

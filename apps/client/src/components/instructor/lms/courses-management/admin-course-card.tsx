@@ -104,7 +104,9 @@ export function AdminCourseCard({ data }: iAppProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/student/courses/${data.slug}`}>
+              <Link
+                href={`/student/${userId}/courses/${encodeURIComponent(data.slug)}?cid=${encodeURIComponent(data._id)}`}
+              >
                 <Eye className="size-4 mr-2" />
                 Preview
               </Link>

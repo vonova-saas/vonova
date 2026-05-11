@@ -39,34 +39,39 @@ export class S3Service {
 
   private resolveRegion(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_REGION_LMS) ||
+      trimEnv(process.env.AWS_REGION) ||
+      trimEnv(process.env.AWS_DEFAULT_REGION) ||
       trimEnv(process.env.AWS_REGION_LMS_AI) ||
       trimEnv(process.env.AWS_S3_REGION_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_REGION_LMS) ||
-      trimEnv(process.env.S3_REGION_LMS_AI) ||
-      trimEnv(process.env.AWS_REGION) ||
-      trimEnv(process.env.AWS_DEFAULT_REGION)
+      trimEnv(process.env.S3_REGION_LMS_AI)
     );
   }
 
+  /**
+   * Prefer LMS bucket IAM user before LMS-AI / PDF-summary credentials.
+   * Otherwise deletes (e.g. course thumbnails) may use an AI-only user that
+   * has Put/Get but not s3:DeleteObject on AWS_S3_BUCKET_LMS.
+   */
   private resolveAccessKeyId(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS) ||
+      trimEnv(process.env.AWS_ACCESS_KEY_ID) ||
+      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID) ||
       trimEnv(process.env.AWS_ACCESS_KEY_ID_LMS_AI) ||
       trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS) ||
-      trimEnv(process.env.S3_ACCESS_KEY_ID_LMS_AI) ||
-      trimEnv(process.env.AWS_ACCESS_KEY_ID) ||
-      trimEnv(process.env.AWS_S3_ACCESS_KEY_ID)
+      trimEnv(process.env.S3_ACCESS_KEY_ID_LMS_AI)
     );
   }
 
   private resolveSecretAccessKey(): string | undefined {
     return (
+      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS) ||
+      trimEnv(process.env.AWS_SECRET_ACCESS_KEY) ||
+      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY) ||
       trimEnv(process.env.AWS_SECRET_ACCESS_KEY_LMS_AI) ||
       trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS_AI) ||
-      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS) ||
-      trimEnv(process.env.S3_SECRET_ACCESS_KEY_LMS_AI) ||
-      trimEnv(process.env.AWS_SECRET_ACCESS_KEY) ||
-      trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY)
+      trimEnv(process.env.S3_SECRET_ACCESS_KEY_LMS_AI)
     );
   }
 
@@ -241,6 +246,30 @@ export class S3Service {
       );
       return true;
     } catch {
+      return false;
+    }
+  }
+
+  /** Delete one object from the configured LMS bucket (idempotent). */
+  async deleteFileFromS3(objectKey: string): Promise<boolean> {
+    if (!objectKey?.trim()) {
+      console.log('[S3 DELETE]', { key: objectKey, success: false, reason: 'empty_key' });
+      return false;
+    }
+    try {
+      const { client, bucket } = this.ensureClient();
+      const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+      await client.send(
+        new DeleteObjectCommand({ Bucket: bucket, Key: objectKey.trim() }),
+      );
+      console.log('[S3 DELETE]', { key: objectKey, success: true });
+      return true;
+    } catch (err) {
+      console.log('[S3 DELETE]', {
+        key: objectKey,
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
       return false;
     }
   }

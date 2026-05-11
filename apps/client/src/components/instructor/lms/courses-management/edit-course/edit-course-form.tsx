@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { RichTextEditor } from "../rich-text-editor/editor";
 import { Uploader } from "../file-uploader/uploader";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,10 +43,27 @@ interface iAppProps {
   data: Course
 }
 
-export function EditCourseForm({ data } : iAppProps) {
+function mapApiLevelToForm(data: Course): CourseSchemaType["level"] {
+  const L = (data.level || data.difficulty || "").toString().toUpperCase();
+  if (L === "BEGINNER") return "Beginner";
+  if (L === "INTERMEDIATE") return "Intermidate";
+  return "Advanced";
+}
+
+function mapApiCategoryToForm(data: Course): CourseSchemaType["category"] {
+  const cat = data.category || "";
+  const allowed = courseCategories as readonly string[];
+  if (cat && allowed.includes(cat)) {
+    return cat as CourseSchemaType["category"];
+  }
+  return "Development";
+}
+
+export function EditCourseForm({ data }: iAppProps) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const userId = useUserId();
+  const [selectedImageFile, setSelectedImageFile] = useState<File | undefined>(undefined);
 
   const form = useForm<CourseSchemaType>({
     resolver: zodResolver(courseSchema),
@@ -55,12 +72,13 @@ export function EditCourseForm({ data } : iAppProps) {
       description: data.description || "",
       fileKey: data.thumbnailUrl || "",
       price: data.price?.amount || 0,
-      duration: 0, // Not in API response
-      level: data.difficulty === "INTERMEDIATE" ? "Intermidate" : data.difficulty === "BEGINNER" ? "Beginner" : "Advanced",
-      category: "Development" as CourseSchemaType['category'], // Default since not in API
+      duration: 0,
+      level: mapApiLevelToForm(data),
+      category: mapApiCategoryToForm(data),
       status: data.status === "DRAFT" ? "Draft" : data.status === "PUBLISHED" ? "Published" : "Archive",
       slug: data.slug,
       smallDescription: data.smallDescription || "",
+      visibility: data.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
     },
   });
 
@@ -80,27 +98,50 @@ export function EditCourseForm({ data } : iAppProps) {
           slug: values.slug,
           smallDescription: values.smallDescription,
           description: values.description,
-          difficulty: values.level === "Intermidate" ? "Intermediate" : values.level === "Beginner" ? "Beginner" : "Advanced",
+          difficulty:
+            values.level === "Intermidate"
+              ? "INTERMEDIATE"
+              : values.level === "Beginner"
+                ? "BEGINNER"
+                : "ADVANCED",
+          level:
+            values.level === "Intermidate"
+              ? "INTERMEDIATE"
+              : values.level === "Beginner"
+                ? "BEGINNER"
+                : "ADVANCED",
+          category: values.category,
+          visibility: values.visibility || "PUBLIC",
           tags: [],
-          thumbnailUrl: values.fileKey || undefined,
           language: "English",
           price: {
             amount: Number(values.price),
             currency: "USD",
             isFree: Number(values.price) === 0,
           },
-          status: values.status === "Draft" ? "DRAFT" : values.status === "Published" ? "PUBLISHED" : "ARCHIVED",
+          status:
+            values.status === "Draft"
+              ? "DRAFT"
+              : values.status === "Published"
+                ? "PUBLISHED"
+                : "ARCHIVED",
         };
 
-        // Call API directly
-        await updateCourseMutationFn(data._id, updateData);
+        if (selectedImageFile) {
+          updateData.thumbnailUrl = values.fileKey || undefined;
+        }
 
-        // Invalidate cache to refresh course data
+        await updateCourseMutationFn(data._id, updateData, selectedImageFile);
+
         queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
         queryClient.invalidateQueries({ queryKey: ["instructor-course", data._id] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        queryClient.invalidateQueries({ queryKey: ["course-details"] });
+        queryClient.invalidateQueries({ queryKey: ["course-details", data._id] });
+        queryClient.invalidateQueries({ queryKey: ["my-courses"] });
 
         toast.success("Course updated successfully");
-        form.reset();
+        setSelectedImageFile(undefined);
         router.push(`/instructor/${userId}/courses-management`);
       } catch (error) {
         console.error("Error updating course:", error);
@@ -109,8 +150,10 @@ export function EditCourseForm({ data } : iAppProps) {
     });
   }
 
+  const formRemountKey = `${data._id}-${(data as { updatedAt?: string }).updatedAt ?? ""}-${data.thumbnailUrl ?? ""}`;
+
   return (
-    <Form {...form}>
+    <Form {...form} key={formRemountKey}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
@@ -194,7 +237,15 @@ export function EditCourseForm({ data } : iAppProps) {
             <FormItem className="w-full">
               <FormLabel>Thumbnail image</FormLabel>
               <FormControl>
-                <Uploader fileTypeAccepted="image" onChange={field.onChange} value={field.value} />
+                <Uploader
+                  key={`course-thumb-${data._id}-${data.thumbnailUrl ?? ""}`}
+                  fileTypeAccepted="image"
+                  onChange={(url: string, file?: File) => {
+                    field.onChange(url);
+                    setSelectedImageFile(file);
+                  }}
+                  value={field.value}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -210,7 +261,7 @@ export function EditCourseForm({ data } : iAppProps) {
                 <FormLabel>Category</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -238,7 +289,7 @@ export function EditCourseForm({ data } : iAppProps) {
                 <FormLabel>Level</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -289,11 +340,33 @@ export function EditCourseForm({ data } : iAppProps) {
 
         <FormField
           control={form.control}
+          name="visibility"
+          render={({ field }) => (
+            <FormItem className="w-full">
+              <FormLabel>Visibility</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select visibility" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="PUBLIC">Public (discoverable)</SelectItem>
+                  <SelectItem value="PRIVATE">Private (restricted)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="status"
           render={({ field }) => (
             <FormItem className="w-full">
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Status" />

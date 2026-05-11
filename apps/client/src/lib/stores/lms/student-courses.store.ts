@@ -7,6 +7,7 @@ import {
   enrollCourseMutationFn,
   getEnrollmentStatusQueryFn,
   getCourseContentTreeQueryFn,
+  getMyEnrollmentsQueryFn,
 } from "@/services/student/lms/courses/courses.api";
 import type {
   Course,
@@ -36,6 +37,7 @@ type StudentCoursesStore = {
   // Actions - Enrollment
   enrollInCourse: (courseId: string) => Promise<Enrollment | null>;
   checkEnrollmentStatus: (courseId: string) => Promise<Enrollment | null>;
+  hydrateMyEnrollments: () => Promise<void>;
   isEnrolled: (courseId: string) => boolean;
   
   // Helpers
@@ -73,6 +75,7 @@ export const useStudentCoursesStore = create<StudentCoursesStore>((set, get) => 
       }
       
       set({ coursesById: map, allCourseIds: ids });
+      await get().hydrateMyEnrollments();
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
       set({ error: msg || "Failed to load courses" });
@@ -140,6 +143,7 @@ export const useStudentCoursesStore = create<StudentCoursesStore>((set, get) => 
       set((st) => ({
         enrollmentsByCourseId: { ...st.enrollmentsByCourseId, [courseId]: enrollment },
       }));
+      await get().hydrateMyEnrollments();
       return enrollment;
     } catch (e: unknown) {
       const msg = (e && typeof e === "object" && "message" in e) ? String((e as { message?: string }).message) : undefined;
@@ -154,15 +158,46 @@ export const useStudentCoursesStore = create<StudentCoursesStore>((set, get) => 
     set({ loading: true, error: null });
     try {
       const enrollment = await getEnrollmentStatusQueryFn(courseId);
-      set((st) => ({
-        enrollmentsByCourseId: { ...st.enrollmentsByCourseId, [courseId]: enrollment },
-      }));
+      if (enrollment) {
+        set((st) => ({
+          enrollmentsByCourseId: { ...st.enrollmentsByCourseId, [courseId]: enrollment },
+        }));
+      }
       return enrollment;
     } catch (e: unknown) {
       // Don't set error - just means not enrolled
       return null;
     } finally {
       set({ loading: false });
+    }
+  },
+
+  hydrateMyEnrollments: async () => {
+    try {
+      const rows = await getMyEnrollmentsQueryFn();
+      const enrollmentsByCourseId: Record<string, Enrollment> = {};
+      for (const row of rows) {
+        const c = row.course as Course | undefined;
+        if (c?._id) {
+          const st =
+            row.status === "COMPLETED"
+              ? "COMPLETED"
+              : row.status === "ACTIVE"
+                ? "ACTIVE"
+                : "INACTIVE";
+          enrollmentsByCourseId[c._id] = {
+            _id: row.enrollmentId ?? "",
+            courseId: c._id,
+            userId: "",
+            enrolledAt: "",
+            status: st as Enrollment["status"],
+            progress: row.progress,
+          } as unknown as Enrollment;
+        }
+      }
+      set({ enrollmentsByCourseId: { ...get().enrollmentsByCourseId, ...enrollmentsByCourseId } });
+    } catch {
+      /* ignore */
     }
   },
 

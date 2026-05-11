@@ -10,6 +10,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function formatCurrency(amount: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function SanitiseJSON(text: string) {
   // ugly hack to remove the first and last part of response to get the JSON
   const json = text.split("```json")[1].split("```")[0];

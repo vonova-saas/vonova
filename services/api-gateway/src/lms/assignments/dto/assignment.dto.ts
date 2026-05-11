@@ -2,12 +2,14 @@ import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/swagger';
 import {
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   ValidateNested,
   Min,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -117,9 +119,43 @@ export class CreateAssignmentDto {
   @ValidateNested({ each: true })
   @Type(() => QuestionDto)
   questions: QuestionDto[];
+
+  @ApiPropertyOptional({
+    description: 'Visibility of the assignment - PUBLIC (visible globally) or PRIVATE (visible only within course)',
+    example: 'PUBLIC',
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+  })
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @ApiPropertyOptional({
+    description: 'Course ID to associate this assignment with (for private visibility)',
+    example: '507f1f77bcf86cd799439011',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for courseId',
+  })
+  courseId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Lesson ID to associate this assignment with',
+    example: '507f1f77bcf86cd799439012',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{24}$/, {
+    message: 'Invalid ObjectId format for lessonId',
+  })
+  lessonId?: string;
 }
 
-export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {}
+export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) { }
 
 export class SubmitAnswerItemDto {
   @ApiProperty({

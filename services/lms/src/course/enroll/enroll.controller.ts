@@ -51,4 +51,24 @@ export class EnrollController {
 
     return this.enrollService.getLessonAccess(courseId, lessonId, userId);
   }
+
+  @MessagePattern({ cmd: 'app.courses.enrollment.listByUser' })
+  listByUser(@Payload() data: { userId: string }) {
+    const { userId } = data;
+    if (!userId) throw new Error('userId is required');
+    return this.enrollService.listActiveEnrollmentsForUser(userId);
+  }
+
+  @MessagePattern({ cmd: 'app.courses.enrollment.instructorAnalytics' })
+  instructorAnalytics(
+    @Payload() data: { courseId: string; instructorId: string },
+  ) {
+    const { courseId, instructorId } = data;
+    if (!courseId || !instructorId)
+      throw new Error('courseId and instructorId are required');
+    return this.enrollService.getInstructorCourseAnalytics(
+      courseId,
+      instructorId,
+    );
+  }
 }

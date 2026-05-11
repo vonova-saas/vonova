@@ -57,6 +57,10 @@ export class CreateBookDto {
   level?: 'Beginner' | 'Intermediate' | 'Advanced';
 
   @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
   @IsUrl()
   coverUrl?: string;
 
@@ -82,6 +86,18 @@ export class CreateBookDto {
   @IsOptional()
   @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'PUBLISHED';
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 }
 
 export class UpdateBookDto extends PartialType(CreateBookDto) {}

@@ -1,48 +1,73 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import EmptyState from "./general/empty-state";
 import { PublicCourseCard, PublicCourseCardSkeleton } from "./public-course-card";
 import { CourseProgressCard } from "./course-progress-card";
 import { BookOpen, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getAllCourses, PublicCourseType } from "./data/get-all-courses";
-import { getEnrolledCourses, EnrolledCourseType } from "./data/get-enrolled-courses";
+import { getAllCourses } from "./data/get-all-courses";
+import { getEnrolledCourses } from "./data/get-enrolled-courses";
 import useUserId from "@/hooks/user/use-user-id";
+import {
+  ALL_CATEGORY,
+  CategoryPills,
+  CategoryValue,
+} from "@/components/shared/category-pills";
+import type { Course } from "@/types/api/lms/courses.type";
+import {
+  LMS_COURSE_CATEGORIES,
+  formatLmsCourseCategoryLabel,
+  normalizeLmsCourseCategory,
+} from "@/lib/lms/lms-course-categories";
+
+const courseCategoryPills: readonly string[] = LMS_COURSE_CATEGORIES;
+
+function courseMatchesSelectedCategory(
+  course: Course | undefined | null,
+  selected: CategoryValue,
+): boolean {
+  if (selected === ALL_CATEGORY) return true;
+  return normalizeLmsCourseCategory(course?.category) === selected;
+}
 
 export function CoursesPageClient() {
   const studentId = useUserId();
-  const [courses, setCourses] = useState<PublicCourseType[]>([]);
-  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseType[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [allCourses, enrolled] = await Promise.all([
-          getAllCourses(),
-          getEnrolledCourses(),
-        ]);
-        console.log("[Debug] All courses fetched:", allCourses.length, allCourses);
-        console.log("[Debug] Enrolled courses:", enrolled.length, enrolled);
-        console.log("[Debug] Available courses:", allCourses.filter(c => !enrolled.some(e => e.Course._id === c._id)).length);
-        setCourses(allCourses);
-        setEnrolledCourses(enrolled);
-      } catch (error) {
-        console.error("Error fetching courses:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: ["student-courses-hub", "catalog"],
+    queryFn: getAllCourses,
+  });
+  const { data: enrolledCourses = [], isLoading: enrollLoading } = useQuery({
+    queryKey: ["my-enrollments"],
+    queryFn: getEnrolledCourses,
+  });
+  const loading = coursesLoading || enrollLoading;
 
   const availableCourses = courses.filter(
     (course) =>
       !enrolledCourses.some(
         ({ Course: enrolled }) => enrolled._id === course._id
       ),
+  );
+
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryValue>(ALL_CATEGORY);
+
+  const filteredEnrolled = useMemo(
+    () =>
+      enrolledCourses.filter((e) =>
+        courseMatchesSelectedCategory(e.Course, selectedCategory),
+      ),
+    [enrolledCourses, selectedCategory],
+  );
+
+  const filteredAvailable = useMemo(
+    () =>
+      availableCourses.filter((c) =>
+        courseMatchesSelectedCategory(c, selectedCategory),
+      ),
+    [availableCourses, selectedCategory],
   );
 
   if (loading) {
@@ -115,6 +140,16 @@ export function CoursesPageClient() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 pt-10">
+        <div className="mb-8">
+          <CategoryPills
+            categories={[...courseCategoryPills]}
+            value={selectedCategory}
+            onChange={setSelectedCategory}
+            getCategoryLabel={formatLmsCourseCategoryLabel}
+            hideWhenEmpty={false}
+          />
+        </div>
+
         <div className="flex flex-col gap-2 mb-5">
           <h2 className="text-3xl font-bold">Enrolled Courses</h2>
           <p className="text-muted-foreground">
@@ -122,16 +157,33 @@ export function CoursesPageClient() {
           </p>
         </div>
 
-        {enrolledCourses.length === 0 ? (
-          <EmptyState
-            title="No courses purchased yet"
-            description="You have not purchased any courses yet"
-            buttonText="Browse Courses"
-            href="#available"
-          />
+        {filteredEnrolled.length === 0 ? (
+          enrolledCourses.length === 0 ? (
+            <EmptyState
+              title="No courses purchased yet"
+              description="You have not purchased any courses yet"
+              buttonText="Browse Courses"
+              href="#available"
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-border p-8 text-center">
+              <h3 className="text-lg font-semibold mb-2">
+                No enrolled courses match this category
+              </h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                Try a different category or clear the filter to see all your enrolled courses.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setSelectedCategory(ALL_CATEGORY)}
+              >
+                Clear filter
+              </Button>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {enrolledCourses.map((course) => (
+            {filteredEnrolled.map((course) => (
               <CourseProgressCard key={course.Course._id} data={course} studentId={studentId} />
             ))}
           </div>
@@ -145,32 +197,46 @@ export function CoursesPageClient() {
             </p>
           </div>
 
-          {availableCourses.length === 0 ? (
+          {filteredAvailable.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
                 <BookOpen className="h-6 w-6 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No courses available</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {availableCourses.length === 0
+                  ? "No courses available"
+                  : "No courses match this category"}
+              </h3>
               <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                {courses.length === 0 
-                  ? "There are no courses in the system yet. Ask an instructor to create and publish a course."
-                  : enrolledCourses.length === courses.length
-                    ? "You have enrolled in all available courses! Great job!"
-                    : "Courses exist but they may be in DRAFT status. Instructors need to publish courses before students can see them."
-                }
+                {availableCourses.length === 0
+                  ? courses.length === 0
+                    ? "There are no courses in the system yet. Ask an instructor to create and publish a course."
+                    : enrolledCourses.length === courses.length
+                      ? "You have enrolled in all available courses! Great job!"
+                      : "Courses exist but they may be in DRAFT status. Instructors need to publish courses before students can see them."
+                  : "Try a different category or clear the filter to see every available course."}
               </p>
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
+              {availableCourses.length === 0 ? (
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.reload()}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedCategory(ALL_CATEGORY)}
+                >
+                  Clear filter
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {availableCourses.map((course) => (
+              {filteredAvailable.map((course) => (
                 <PublicCourseCard key={course._id} data={course} studentId={studentId} />
               ))}
             </div>

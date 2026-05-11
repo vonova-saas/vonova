@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+export type AssetVisibility = 'PUBLIC' | 'PRIVATE';
+
 export type AssetDocument = Asset & Document;
 
 @Schema({ _id: false })
@@ -26,6 +28,14 @@ export class Asset {
 
   @Prop({ type: Types.ObjectId, ref: 'Lesson', required: true })
   lessonId: Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PRIVATE',
+    index: true,
+  })
+  visibility: AssetVisibility;
 
   @Prop({ default: 'S3' })
   provider: 'S3';

@@ -2,7 +2,7 @@ import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { RoadmapService } from './roadmap.service';
-import { DailyUsageLimitService } from '../usage/daily-usage-limit.service';
+import { DailyUsageLimitService } from '../usage/daily-usage-limit.service.refactored';
 
 @Controller()
 export class RoadmapController {
@@ -11,7 +11,7 @@ export class RoadmapController {
   constructor(
     private readonly roadmapService: RoadmapService,
     private readonly dailyUsageLimitService: DailyUsageLimitService,
-  ) {}
+  ) { }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
   async generateRoadmap(@Payload() data: any, @Ctx() _ctx: NatsContext) {

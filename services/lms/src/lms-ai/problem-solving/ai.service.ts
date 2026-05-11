@@ -19,6 +19,7 @@ import {
   ProblemSolvingProgress,
   ProblemSolvingProgressDocument,
 } from './schemas/problem-solving-progress.schema';
+import { EnrollService } from '../../course/enroll/enroll.service';
 
 @Injectable()
 export class AiService {
@@ -33,6 +34,7 @@ export class AiService {
     private readonly progressModel: Model<ProblemSolvingProgressDocument>,
     private readonly submissionService: SubmissionService,
     private readonly aiClient: ProblemSolvingAiClient,
+    private readonly enrollService: EnrollService,
   ) {}
 
   async requestHint(dto: RequestHintDto, userId: string) {
@@ -40,6 +42,7 @@ export class AiService {
     if (!problem) {
       throw new NotFoundException('Problem not found');
     }
+    await this.enrollService.assertProblemAccess(userId, dto.problemId);
 
     const progress = await this.ensureProgressState(userId, dto.problemId);
     if (progress.hintsUsed >= 3) {
@@ -120,6 +123,7 @@ export class AiService {
     if (!problem) {
       throw new NotFoundException('Problem not found');
     }
+    await this.enrollService.assertProblemAccess(userId, dto.problemId);
 
     const progress = await this.ensureProgressState(userId, dto.problemId);
     if (progress.solutionUsed) {
@@ -183,6 +187,7 @@ export class AiService {
 
   async getHints(userId: string, problemId: string) {
     await this.ensureProblemExists(problemId);
+    await this.enrollService.assertProblemAccess(userId, problemId);
     const progress = await this.ensureProgressState(userId, problemId);
 
     return {

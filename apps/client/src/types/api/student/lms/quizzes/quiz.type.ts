@@ -1,4 +1,6 @@
 // ========== Quiz types for Vonova LMS quiz feature ==========
+export type QuizVisibility = 'PUBLIC' | 'PRIVATE';
+
 export type QuizType = {
   _id: string; // backend id
   title: string;
@@ -13,6 +15,10 @@ export type QuizType = {
   percentage?: number | null;
   alreadyAttempted?: boolean;
   attemptId?: string | null;
+  /** Visibility: PUBLIC (global) or PRIVATE (course-only) */
+  visibility?: QuizVisibility;
+  courseId?: string | null;
+  lessonId?: string | null;
 };
 
 export type Question = {
@@ -44,6 +50,9 @@ export type createQuizType = {
   topic: string;
   noOfQuestions: string;
   questions: Question[];
+  visibility?: QuizVisibility;
+  courseId?: string;
+  lessonId?: string;
 };
 
 export type createQuizTypeResponse = {
@@ -62,11 +71,14 @@ export type createQuizTypeResponse = {
 }
 
 export type updateQuizType = {
-  title: string;
+  title?: string;
   description?: string;
   topic?: string;
   noOfQuestions?: string;
-  questions: Question[];
+  questions?: Question[];
+  visibility?: QuizVisibility;
+  courseId?: string;
+  lessonId?: string;
 }
 
 export type updateQuizTypeResponse = {

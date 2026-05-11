@@ -24,6 +24,7 @@ import {
   isSafeJudgeParameterName,
 } from './utils/judge-invocation.util';
 import { runInDocker } from './utils/docker-judge.util';
+import { EnrollService } from '../../course/enroll/enroll.service';
 
 @Injectable()
 export class SubmissionService {
@@ -38,6 +39,7 @@ export class SubmissionService {
     @InjectModel(SubmissionJob.name, 'lms-ai')
     private readonly submissionJobModel: Model<SubmissionJobDocument>,
     private readonly judgeQueue: SubmissionJudgeQueue,
+    private readonly enrollService: EnrollService,
   ) {}
 
   async createSubmission(dto: CreateSubmissionDto, userId: string) {
@@ -45,6 +47,7 @@ export class SubmissionService {
     if (!problem) {
       throw new NotFoundException('Problem not found');
     }
+    await this.enrollService.assertProblemAccess(userId, dto.problemId);
 
     const normalizedCode = normalizeAIResponse(dto.code);
     this.logger.debug(

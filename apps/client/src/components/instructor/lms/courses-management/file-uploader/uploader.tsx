@@ -12,7 +12,14 @@ import {
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useConstructUrl } from "@/hooks";
-import { uploadContentFileMutationFn } from "@/services/student/lms/courses/courses.api";
+import {
+  uploadFileMutationFn,
+  getLessonVideoPresignedUrlMutationFn,
+} from "@/services/instructor/course-managment/courses.api";
+import {
+  uploadLessonVideoViaPresignedPut,
+  isAllowedLessonVideoFile,
+} from "@/lib/lms/lesson-video-s3-upload";
 
 interface UploaderState {
   id: string | null;
@@ -28,15 +35,73 @@ interface UploaderState {
 
 interface iAppProps {
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, file?: File) => void;
   fileTypeAccepted: "image" | "video";
   courseId?: string;
   contentType?: "lesson" | "chapter" | "course";
   contentId?: string;
+  /** Required with lesson video to resolve presigned preview from objectKey. */
+  chapterId?: string;
 }
 
-export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentType, contentId }: iAppProps) {
-  const fileUrl = useConstructUrl(value || "");
+export function Uploader({
+  value,
+  onChange,
+  fileTypeAccepted,
+  courseId,
+  contentType,
+  contentId,
+  chapterId,
+}: iAppProps) {
+  const [presignedPreview, setPresignedPreview] = useState<string | undefined>(
+    undefined,
+  );
+
+  // Always call hook unconditionally - React Hook rule
+  const constructedUrl = useConstructUrl(value || "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const key = value?.trim() ?? "";
+    if (!key || key.startsWith("http")) {
+      setPresignedPreview(undefined);
+      return;
+    }
+    if (
+      fileTypeAccepted !== "video" ||
+      contentType !== "lesson" ||
+      !courseId ||
+      !contentId ||
+      !chapterId
+    ) {
+      setPresignedPreview(undefined);
+      return;
+    }
+    void (async () => {
+      try {
+        const { streamUrl } = await getLessonVideoPresignedUrlMutationFn(
+          courseId,
+          chapterId,
+          contentId,
+          key,
+        );
+        if (!cancelled) setPresignedPreview(streamUrl);
+      } catch {
+        if (!cancelled) setPresignedPreview(undefined);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [value, fileTypeAccepted, contentType, courseId, contentId, chapterId]);
+
+  // For full S3 URLs, use directly; lesson video keys use presigned URL; else legacy constructUrl
+  const fileUrl = value?.startsWith("http")
+    ? value
+    : fileTypeAccepted === "video" && presignedPreview
+      ? presignedPreview
+      : constructedUrl;
+
   const [fileState, setFileState] = useState<UploaderState>({
     error: false,
     file: null,
@@ -46,8 +111,33 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
     isDeleting: false,
     fileType: fileTypeAccepted,
     key: value,
-    objectUrl: value ? fileUrl : undefined,
+    objectUrl: value?.startsWith("http") ? value : undefined,
   });
+
+  useEffect(() => {
+    setFileState((prev) => {
+      if (prev.uploading) return prev;
+      if (!value) {
+        return {
+          ...prev,
+          objectUrl: undefined,
+          key: undefined,
+          file: null,
+        };
+      }
+      if (value.startsWith("http")) {
+        return { ...prev, objectUrl: value, key: value };
+      }
+      const next =
+        fileTypeAccepted === "video" && presignedPreview
+          ? presignedPreview
+          : constructedUrl;
+      if (next && next !== "/images/placeholder.svg") {
+        return { ...prev, objectUrl: next, key: value };
+      }
+      return prev;
+    });
+  }, [value, fileTypeAccepted, presignedPreview, constructedUrl]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -58,37 +148,15 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
       }));
 
       try {
-        // Check if we have LMS context for content upload
-        if (courseId && contentType && contentId) {
-          // Use LMS Content Upload API
-          const result = await uploadContentFileMutationFn(
-            courseId,
-            file,
-            contentType,
-            contentId
-          );
-
-          setFileState((prev) => ({
-            ...prev,
-            progress: 100,
-            uploading: false,
-            key: result.objectKey,
-          }));
-          onChange?.(result.fileUrl);
-          toast.success("File uploaded successfully");
-        } else {
-          // Fallback to legacy S3 upload
-          const presignedResponse = await fetch("/api/s3/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              fileName: file.name,
-              contentType: file.type,
-              size: file.size,
-            }),
-          });
-          if (!presignedResponse.ok) {
-            toast.error("Failed to get presigned URL");
+        if (
+          fileTypeAccepted === "video" &&
+          contentType === "lesson" &&
+          courseId &&
+          contentId &&
+          chapterId
+        ) {
+          if (!isAllowedLessonVideoFile(file)) {
+            toast.error("Only MP4, MOV, or WebM lesson videos are allowed.");
             setFileState((prev) => ({
               ...prev,
               uploading: false,
@@ -97,44 +165,54 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
             }));
             return;
           }
-          const { presignedUrl, key } = await presignedResponse.json();
+          const objectKey = await uploadLessonVideoViaPresignedPut(
+            courseId,
+            chapterId,
+            contentId,
+            file,
+            (pct) => {
+              setFileState((prev) => ({ ...prev, progress: pct }));
+            },
+          );
 
-          const presignedUrlObj = new URL(presignedUrl);
-          const publicUrl = `${presignedUrlObj.protocol}//${presignedUrlObj.host}/${key}`;
+          setFileState((prev) => ({
+            ...prev,
+            progress: 100,
+            uploading: false,
+            key: objectKey,
+            file,
+          }));
+          onChange?.(objectKey, file);
+          toast.success("File uploaded successfully");
+        } else if (courseId && contentType && contentId) {
+          const result = await uploadFileMutationFn(
+            courseId,
+            contentType,
+            contentId,
+            file,
+          );
 
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                const percentageComplete = (event.loaded / event.total) * 100;
-                setFileState((prev) => ({
-                  ...prev,
-                  progress: Math.round(percentageComplete),
-                }));
-              }
-            };
-            xhr.onload = () => {
-              if (xhr.status === 200 || xhr.status === 204) {
-                setFileState((prev) => ({
-                  ...prev,
-                  progress: 100,
-                  uploading: false,
-                  key: key,
-                }));
-                onChange?.(publicUrl);
-                toast.success("File uploaded successfully");
-                resolve();
-              } else {
-                reject(new Error("upload Failed..."));
-              }
-            };
-            xhr.onerror = () => {
-              reject(new Error("upload Failed"));
-            };
-            xhr.open("PUT", presignedUrl);
-            xhr.setRequestHeader("Content-Type", file.type);
-            xhr.send(file);
-          });
+          setFileState((prev) => ({
+            ...prev,
+            progress: 100,
+            uploading: false,
+            key: result.objectKey,
+            file: file,
+          }));
+          onChange?.(result.objectKey, file);
+          toast.success("File uploaded successfully");
+        } else {
+          toast.error(
+            fileTypeAccepted === "video"
+              ? "Open a lesson in the editor to upload video (presigned S3 upload)."
+              : "Select where this file belongs (course/lesson) before uploading.",
+          );
+          setFileState((prev) => ({
+            ...prev,
+            uploading: false,
+            progress: 0,
+            error: true,
+          }));
         }
       } catch {
         toast.error("something went wrong");
@@ -146,7 +224,14 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
         }));
       }
     },
-    [fileTypeAccepted, onChange, courseId, contentType, contentId]
+    [
+      onChange,
+      courseId,
+      contentType,
+      contentId,
+      chapterId,
+      fileTypeAccepted,
+    ],
   );
 
   const onDrop = useCallback(
@@ -207,7 +292,7 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
         URL.revokeObjectURL(fileState.objectUrl);
       }
 
-      onChange?.("");
+      onChange?.("", undefined);
 
       setFileState(() => ({
         file: null,
@@ -282,7 +367,7 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
 
   useEffect(() => {
     return () => {
-      if (fileState.objectUrl && !fileState.objectUrl.startsWith("http")) {
+      if (fileState.objectUrl && fileState.objectUrl.startsWith("blob:")) {
         URL.revokeObjectURL(fileState.objectUrl);
       }
     };
@@ -291,7 +376,13 @@ export function Uploader({ value, onChange, fileTypeAccepted, courseId, contentT
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept:
-      fileTypeAccepted === "video" ? { "video/*": [] } : { "image/*": [] },
+      fileTypeAccepted === "video"
+        ? {
+            "video/mp4": [".mp4"],
+            "video/quicktime": [".mov"],
+            "video/webm": [".webm"],
+          }
+        : { "image/*": [] },
     maxFiles: 1,
     multiple: false,                     //  5 MB            : 5000 MB
     maxSize: fileTypeAccepted === 'image' ? 5 * 1024 * 1024 : 5000 * 1024 * 1024,

@@ -11,10 +11,11 @@ import { toast } from "sonner";
 import { createReviewMutationFn } from "@/services/student/lms/courses/courses.api";
 
 interface iAppProps {
+  courseId: string;
   onSuccess?: () => void;
 }
 
-export function ReviewSubmissionForm({ onSuccess }: iAppProps) {
+export function ReviewSubmissionForm({ courseId, onSuccess }: iAppProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [title, setTitle] = useState("");
@@ -31,7 +32,11 @@ export function ReviewSubmissionForm({ onSuccess }: iAppProps) {
 
     try {
       setSubmitting(true);
-      await createReviewMutationFn();
+      await createReviewMutationFn(courseId, {
+        rating,
+        title: title.trim() || undefined,
+        body: body.trim() || undefined,
+      });
 
       toast.success("Review submitted successfully");
       setTitle("");
@@ -55,12 +60,17 @@ export function ReviewSubmissionForm({ onSuccess }: iAppProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Rating */}
           <div className="space-y-2">
-            <Label>Rating *</Label>
-            <div className="flex gap-1">
+            <Label id="review-rating-label">Rating *</Label>
+            <div
+              className="flex gap-1"
+              role="group"
+              aria-labelledby="review-rating-label"
+            >
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   type="button"
+                  aria-label={`Rate ${star} out of 5 stars`}
                   className="p-1 transition-transform hover:scale-110"
                   onMouseEnter={() => setHoverRating(star)}
                   onMouseLeave={() => setHoverRating(0)}

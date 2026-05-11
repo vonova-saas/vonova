@@ -1,5 +1,5 @@
-// Mock API exports - using fake data stored in localStorage
-// All functions are re-exported from the mock data layer
+// Real API exports - connecting to backend API Gateway
+// All functions are re-exported from the real API layer
 
 export {
   // Browse Courses
@@ -9,6 +9,7 @@ export {
   // Enrollment
   enrollCourseMutationFn,
   getEnrollmentStatusQueryFn,
+  getMyEnrollmentsQueryFn,
   // Content
   getCourseContentTreeQueryFn,
   getLessonAccessQueryFn,
@@ -18,31 +19,19 @@ export {
   // Progress
   getCourseProgressQueryFn,
   markLessonCompleteMutationFn,
-} from "@/lib/mock-data/courses/student-api";
-
-// Placeholder exports for functions not yet implemented in mock
-export const createReviewMutationFn = async () => ({
-  _id: "mock_review",
-  message: "Review created",
-});
-
-export const getCourseReviewsQueryFn = async () => ({
-  reviews: [],
-  pagination: {
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  },
-  averageRating: 0,
-  totalReviews: 0,
-});
-
-export const getMyReviewQueryFn = async () => {
-  throw new Error("No review found");
-};
+  // Reviews
+  createReviewMutationFn,
+  getCourseReviewsQueryFn,
+  getMyReviewQueryFn,
+} from "@/services/student/lms/courses/real-courses.api";
 
 // Types
+export type {
+  StudentEnrollmentRow,
+  LessonContentApiEnvelope,
+  LessonContentResourceItem,
+} from "@/services/student/lms/courses/real-courses.api";
+
 export type {
   Course,
   Enrollment,
@@ -52,6 +41,7 @@ export type {
   LessonContent,
   ContentUploadResponse,
   LessonProgress,
+  StudentCourseProgress,
   CourseProgress,
   CourseReview,
   CreateReviewDto,

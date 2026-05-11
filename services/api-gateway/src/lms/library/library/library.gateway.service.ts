@@ -8,9 +8,9 @@ export class LibraryGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
-  async getAllByType(query: GetAllByTypeQueryDto) {
+  async getAllByType(query: GetAllByTypeQueryDto & { userId?: string }) {
     const pattern = { cmd: 'library.getAllByType' };
 
     // Convert topics from string to array if present
@@ -24,7 +24,7 @@ export class LibraryGatewayService {
     return firstValueFrom(this.client.send(pattern, payload));
   }
 
-  async getTopics(query: GetTopicsQueryDto) {
+  async getTopics(query: GetTopicsQueryDto & { userId?: string }) {
     const pattern = { cmd: 'library.getTopics' };
 
     // Convert topics from string to array if present
@@ -41,5 +41,27 @@ export class LibraryGatewayService {
   async getTotalMaterials() {
     const pattern = { cmd: 'library.getTotalMaterials' };
     return firstValueFrom(this.client.send(pattern, {}));
+  }
+
+  async getUnifiedMaterials(query: {
+    page: number;
+    limit: number;
+    search?: string;
+    userId?: string;
+    userRole?: string;
+  }) {
+    const pattern = { cmd: 'library.getUnifiedMaterials' };
+    return firstValueFrom(this.client.send(pattern, query));
+  }
+
+  async getMaterialViewSignedUrl(
+    materialId: string,
+    materialType?: string,
+    userId?: string,
+  ) {
+    const pattern = { cmd: 'library.getMaterialViewSignedUrl' };
+    return firstValueFrom(
+      this.client.send(pattern, { materialId, materialType, userId }),
+    );
   }
 }

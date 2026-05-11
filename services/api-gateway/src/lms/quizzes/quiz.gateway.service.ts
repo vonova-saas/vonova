@@ -11,7 +11,7 @@ export class QuizGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   // ===== INSTRUCTOR-SPECIFIC METHODS =====
 
@@ -26,8 +26,12 @@ export class QuizGatewayService {
     );
   }
 
-  getInstructorQuizzes(userId: string) {
-    return this.client.send({ cmd: 'quiz.getInstructorQuizzes' }, { userId });
+  getInstructorQuizzes(userId: string, courseId?: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorQuizzes' }, { userId, courseId });
+  }
+
+  getInstructorQuizzesByCourse(userId: string, courseId: string) {
+    return this.client.send({ cmd: 'quiz.getInstructorQuizzesByCourse' }, { userId, courseId });
   }
 
   getInstructorQuizById(quizId: string, userId: string) {
@@ -60,27 +64,28 @@ export class QuizGatewayService {
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
-  getAvailableQuizzesForStudents(userId?: string) {
+  getAvailableQuizzesForStudents(userId?: string, enrolledCourseIds?: string[]) {
     return this.client.send(
       { cmd: 'quiz.getAvailableForStudents' },
-      { userId },
+      { userId, enrolledCourseIds },
     );
   }
 
-  getQuizForStudent(quizId: string, userId: string) {
+  getQuizForStudent(quizId: string, userId: string, enrolledCourseIds?: string[]) {
     return this.client.send(
       { cmd: 'quiz.getQuizForStudent' },
-      { quizId, userId },
+      { quizId, userId, enrolledCourseIds },
     );
   }
 
-  submitStudentQuiz(quizId: string, dto: SubmitQuizAnswersDto, userId: string) {
+  submitStudentQuiz(quizId: string, dto: SubmitQuizAnswersDto, userId: string, enrolledCourseIds?: string[]) {
     return this.client.send(
       { cmd: 'quiz.submitStudent' },
       {
         quizId,
         answers: dto.answers,
         userId,
+        enrolledCourseIds,
       },
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -16,6 +16,10 @@ import useUserId from "@/hooks/user/use-user-id";
 import { useParams } from "next/navigation";
 import { AdminCourseCardSkeleton } from "@/components/instructor/lms/courses-management/admin-course-card";
 
+const EDIT_TAB_STORAGE_PREFIX = "vonova-instructor-edit-course-tab-";
+
+type EditCourseTab = "basic-info" | "course-strucutre";
+
 export default function EditRoute() {
   const params = useParams<{ courseId: string; instructorId: string }>();
   const courseId = params.courseId;
@@ -24,7 +28,30 @@ export default function EditRoute() {
   const effectiveInstructorId = instructorId || userId;
   
   const { currentCourse, loading, error, fetchCourseById } = useCourseManagementStore();
-  
+
+  const [activeTab, setActiveTab] = useState<EditCourseTab>("basic-info");
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !courseId) return;
+    const key = `${EDIT_TAB_STORAGE_PREFIX}${courseId}`;
+    const saved = sessionStorage.getItem(key);
+    if (saved === "course-strucutre" || saved === "basic-info") {
+      setActiveTab(saved);
+    } else {
+      setActiveTab("basic-info");
+    }
+  }, [courseId]);
+
+  const persistTab = useCallback(
+    (tab: EditCourseTab) => {
+      setActiveTab(tab);
+      if (typeof window !== "undefined" && courseId) {
+        sessionStorage.setItem(`${EDIT_TAB_STORAGE_PREFIX}${courseId}`, tab);
+      }
+    },
+    [courseId],
+  );
+
   useEffect(() => {
     if (courseId) {
       fetchCourseById(courseId);
@@ -47,8 +74,8 @@ export default function EditRoute() {
     return (
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">Error</h1>
-        <div className="p-4 border border-red-200 bg-red-50 rounded-lg text-red-600">
-          Failed to load course: {error}
+        <div className="p-4 border border-red-200 bg-red-50 rounded-lg text-red-600 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+          {error}
         </div>
       </div>
     );
@@ -72,7 +99,11 @@ export default function EditRoute() {
         <span className="text-primary underline">{currentCourse.title || "Untitled"}</span>
       </h1>
 
-      <Tabs defaultValue="basic-info" className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => persistTab(v as EditCourseTab)}
+        className="w-full"
+      >
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
           <TabsTrigger value="course-strucutre">Course Structure</TabsTrigger>
@@ -87,7 +118,10 @@ export default function EditRoute() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EditCourseForm data={currentCourse} />
+              <EditCourseForm
+                key={`${currentCourse._id}-${currentCourse.updatedAt ?? ""}`}
+                data={currentCourse}
+              />
             </CardContent>
           </Card>
         </TabsContent>

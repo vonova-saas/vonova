@@ -13,6 +13,8 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
+  GoneException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,11 +37,11 @@ import {
   UpdateLessonDto,
   ReorderLessonDto,
   VideoUploadUrlDto,
+  VideoPresignPutBodyDto,
+  VideoConfirmBodyDto,
 } from './dto/lesson.dto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
-import { Readable } from 'stream';
-
 @ApiTags('LMS Course Lessons')
 @ApiBearerAuth()
 @ApiTags('lessons')
@@ -295,35 +297,87 @@ export class LessonGatewayController {
   }
 
   @ApiOperation({
-    summary: 'Get presigned URL for video access',
+    summary: 'Get presigned PUT URL for lesson video (upload to S3 from browser)',
+  })
+  @Post(':lessonId/video/presign-put')
+  @UseGuards(RolesGuard)
+  @Roles(Role.INSTRUCTOR_USER)
+  async getLessonVideoPresignPut(
+    @Param('courseId') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @Body() body: VideoPresignPutBodyDto,
+    @Request() req: any,
+  ) {
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+    if (!ownerId) {
+      throw new Error('Authentication required - No user found');
+    }
+    if (!body?.fileName?.trim() || !body?.contentType?.trim()) {
+      throw new BadRequestException('fileName and contentType are required');
+    }
+    return firstValueFrom(
+      this.lessonService.getLessonVideoPresignedPut(
+        courseId,
+        lessonId,
+        { fileName: body.fileName.trim(), contentType: body.contentType.trim() },
+        ownerId,
+      ),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Confirm lesson video after direct S3 PUT (validates object exists, saves videoObjectKey)',
+  })
+  @Post(':lessonId/video/confirm')
+  @UseGuards(RolesGuard)
+  @Roles(Role.INSTRUCTOR_USER)
+  async confirmLessonVideo(
+    @Param('courseId') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @Body() body: VideoConfirmBodyDto,
+    @Request() req: any,
+  ) {
+    const ownerId =
+      req.user?.id ||
+      req.user?.sub ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
+    if (!ownerId) {
+      throw new Error('Authentication required - No user found');
+    }
+    if (!body?.objectKey?.trim()) {
+      throw new BadRequestException('objectKey is required');
+    }
+    return firstValueFrom(
+      this.lessonService.confirmLessonVideoUpload(
+        courseId,
+        lessonId,
+        body.objectKey.trim(),
+        ownerId,
+        body.fileSize,
+      ),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Get presigned URL for video playback (instructor/student player)',
     description:
-      'Generates a presigned S3 URL for accessing a video. Use this to get a temporary URL that works for 1 hour.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'The unique identifier of the course',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiParam({
-    name: 'chapterId',
-    description: 'The unique identifier of the chapter',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiParam({
-    name: 'lessonId',
-    description: 'The unique identifier of the lesson',
-    example: '507f1f77bcf86cd799439011',
+      'Generates a presigned S3 GET URL from a stored object key (expires in 1 hour).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Presigned URL generated successfully',
+    description: 'Presigned GET URL generated successfully',
     schema: {
       type: 'object',
       properties: {
-        videoUrl: {
+        streamUrl: {
           type: 'string',
           example: 'https://your-bucket.s3.amazonaws.com/videos/...',
-          description: 'Presigned URL for video access (expires in 1 hour)',
+          description: 'Presigned URL for playback (expires in 1 hour)',
         },
       },
     },
@@ -332,213 +386,34 @@ export class LessonGatewayController {
     status: 400,
     description: 'Bad request - Missing objectKey',
   })
-  @Post(':chapterId/:lessonId/video/url')
+  @Post(':lessonId/video/url')
   async getVideoUrl(
     @Param('courseId') courseId: string,
-    @Param('chapterId') chapterId: string,
     @Param('lessonId') lessonId: string,
     @Body() body: VideoUploadUrlDto,
     @Request() req: any,
   ) {
+    void courseId;
+    void lessonId;
+    void req;
     if (!body.objectKey) {
-      throw new Error('objectKey is required');
+      throw new BadRequestException('objectKey is required');
     }
 
     return firstValueFrom(this.lessonService.getVideoUrl(body.objectKey));
   }
 
   @ApiOperation({
-    summary: 'Upload video directly to S3',
-    description:
-      'Uploads a video file directly to AWS S3 storage. Works with any file size by bypassing NATS limitations.',
+    summary: 'Deprecated — use presign-put + S3 PUT + confirm',
   })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Video file to upload',
-    schema: {
-      type: 'object',
-      properties: {
-        video: {
-          type: 'string',
-          format: 'binary',
-          description: 'Video file (MP4, AVI, MOV, WMV, WebM) - Max 3GB',
-        },
-      },
-      required: ['video'],
-    },
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'The unique identifier of the course',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiParam({
-    name: 'chapterId',
-    description: 'The unique identifier of the chapter',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiParam({
-    name: 'lessonId',
-    description: 'The unique identifier of the lesson',
-    example: '507f1f77bcf86cd799439011',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Video uploaded successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string', example: 'Video uploaded successfully' },
-        videoUrl: {
-          type: 'string',
-          example: 'https://your-bucket.s3.amazonaws.com/...',
-          description: 'Direct S3 URL of the uploaded video',
-        },
-        objectKey: {
-          type: 'string',
-          example: 'userId/courses/courseId/lessons/lessonId/uuid-video.mp4',
-          description: 'S3 object key for the uploaded video',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - Invalid file or missing data',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token is required',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Only INSTRUCTOR_USER role can upload videos',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Course or lesson not found',
-  })
-  @Post(':chapterId/:lessonId/video/upload-direct')
+  @Post(':lessonId/video/upload-direct')
   @UseGuards(RolesGuard)
   @Roles(Role.INSTRUCTOR_USER)
   @UseInterceptors(FileInterceptor('video'))
-  async uploadVideoDirectly(
-    @Param('courseId') courseId: string,
-    @Param('chapterId') chapterId: string,
-    @Param('lessonId') lessonId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req: any,
-  ) {
-    console.log('Direct video upload request user:', req.user);
-    const ownerId =
-      req.user?.id ||
-      req.user?.sub ||
-      req.user?._id?.toString() ||
-      req.user?.userId;
-
-    if (!ownerId) {
-      console.error('User identification failed. User object:', req.user);
-      throw new Error('Authentication required - No user found');
-    }
-
-    if (!file) {
-      throw new Error('Video file is required');
-    }
-
-    console.log('File details:', {
-      mimetype: file.mimetype,
-      size: file.size,
-      name: file.originalname,
-    });
-
-    // Validate file size (3GB limit for S3)
-    const maxSize = 3 * 1024 * 1024 * 1024; // 3GB
-    if (file.size > maxSize) {
-      throw new Error(
-        `File size too large. Maximum size is 3GB. Your file is ${Math.round(file.size / 1024 / 1024)}MB.`,
-      );
-    }
-
-    try {
-      const awsRegion = process.env.AWS_S3_REGION_LMS;
-      if (!awsRegion) {
-        throw new Error('AWS_S3_REGION is required in .env');
-      }
-      // Get lesson details to determine userId
-      const lessonResponse = await firstValueFrom(
-        this.lessonService.getLesson(lessonId, courseId),
-      );
-      const lesson = lessonResponse.lesson;
-      const userId = lesson.createdBy || ownerId;
-
-      // Create S3 client directly (bypass NATS)
-      const s3Client = new S3Client({
-        region: awsRegion,
-        credentials: {
-          accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
-          secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
-        },
-      });
-
-      // Generate object key with chapterId included
-      const objectKey = `courses/${userId}/${courseId}/chapters/${lesson.chapterId}/lessons/${lessonId}/${uuidv4()}-${file.originalname}`;
-      const bucketName = process.env.AWS_S3_BUCKET_LMS;
-
-      console.log('Uploading to S3:', {
-        bucketName,
-        objectKey,
-        fileSize: file.size,
-      });
-
-      // Convert buffer to stream for S3 upload
-      const stream = Readable.from(file.buffer);
-
-      // Upload directly to S3 (no NATS involvement)
-      const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: objectKey,
-        Body: stream,
-        ContentType: file.mimetype,
-        ContentLength: file.size,
-      });
-
-      await s3Client.send(command);
-      console.log('S3 upload successful:', objectKey);
-
-      // Update lesson with video information (only small metadata via NATS)
-      await firstValueFrom(
-        this.lessonService.uploadVideoDirectly(
-          courseId,
-          lessonId,
-          {
-            objectKey,
-            videoUrl: `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`,
-            hasVideo: true,
-            size: file.size,
-            mimetype: file.mimetype,
-            originalName: file.originalname,
-          },
-          ownerId,
-        ),
-      );
-
-      const videoUrl = `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${objectKey}`;
-
-      return {
-        message: 'Video uploaded successfully',
-        videoUrl,
-        objectKey,
-        size: file.size,
-      };
-    } catch (error) {
-      console.error('Video upload error:', error);
-      if (error.message.includes('credential')) {
-        throw new Error(
-          'AWS credentials are invalid or missing. Please check AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables in API Gateway.',
-        );
-      }
-      throw new Error(`Failed to upload video: ${error.message}`);
-    }
+  async uploadVideoDirectlyDeprecated() {
+    throw new GoneException(
+      'Multipart video upload is disabled. Use POST .../lessons/:lessonId/video/presign-put, PUT the file to the returned URL, then POST .../video/confirm.',
+    );
   }
 
   @Get(':lessonId')
@@ -619,7 +494,7 @@ export class LessonGatewayController {
     status: 404,
     description: 'Course, chapter, or lesson not found',
   })
-  @Post(':chapterId/:lessonId/upload')
+  @Post(':lessonId/upload')
   @UseGuards(RolesGuard)
   @Roles(Role.INSTRUCTOR_USER)
   @UseInterceptors(FileInterceptor('file'))
@@ -644,14 +519,23 @@ export class LessonGatewayController {
       throw new Error('File is required');
     }
 
+    if (file.mimetype.startsWith('video/')) {
+      throw new BadRequestException(
+        'Lesson videos must use presigned S3 upload (presign-put → PUT → confirm), not multipart upload.',
+      );
+    }
+
     try {
       // Generate unique object key
-      const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/${uniqueId}-${file.originalname}`;
 
-      // Upload directly to S3
-      const bucketName = process.env.AWS_S3_BUCKET_LMS;
+      const bucketName = process.env.AWS_S3_BUCKET_LMS?.trim();
+      if (!bucketName) {
+        throw new BadRequestException(
+          'AWS_S3_BUCKET_LMS is required (no fallback bucket).',
+        );
+      }
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: objectKey,
@@ -660,9 +544,18 @@ export class LessonGatewayController {
       });
 
       await this.s3Client.send(command);
-      console.log('S3 upload successful:', objectKey);
+      await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: bucketName, Key: objectKey }),
+      );
+      console.log(
+        `S3_UPLOAD_SUCCESS: ${JSON.stringify({
+          bucket: bucketName,
+          key: objectKey,
+          size: file.size,
+        })}`,
+      );
 
-      // Create asset record via LMS service (only metadata)
+      // Create asset record via LMS service (objectKey only)
       const result = (await firstValueFrom(
         this.lessonService.createAssetRecord(
           courseId,
@@ -674,7 +567,6 @@ export class LessonGatewayController {
             mimeType: file.mimetype,
             size: file.size,
             objectKey,
-            fileUrl: `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`,
           },
         ),
       )) as {
@@ -684,14 +576,10 @@ export class LessonGatewayController {
         fileName: string;
         size: number;
         mimeType: string;
-        fileUrl: string;
       };
-
-      const fileUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION_LMS}.amazonaws.com/${objectKey}`;
 
       return {
         message: 'File uploaded successfully',
-        fileUrl,
         objectKey,
         size: file.size,
         assetId: result.assetId,

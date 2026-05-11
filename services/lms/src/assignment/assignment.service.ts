@@ -22,23 +22,71 @@ export class AssignmentService {
     @InjectModel(Assignment.name) private assignmentModel: Model<Assignment>,
     @InjectModel(AssignmentAnswer.name)
     private answerModel: Model<AssignmentAnswer>,
-  ) {}
+  ) { }
 
   async createAssignment(dto: CreateAssignmentDto, createdBy?: string | null) {
-    const assignment = await this.assignmentModel.create({
+    const createData: any = {
       ...dto,
       createdBy: createdBy ? new Types.ObjectId(createdBy) : null,
-    });
+      visibility: dto.visibility || 'PUBLIC',
+    };
+
+    if (dto.courseId) {
+      createData.courseId = new Types.ObjectId(dto.courseId);
+    }
+    if (dto.lessonId) {
+      createData.lessonId = new Types.ObjectId(dto.lessonId);
+    }
+
+    const assignment = await this.assignmentModel.create(createData);
     return assignment;
   }
 
-  async getAllAssignments() {
-    return this.assignmentModel.find();
+  async getAllAssignments(enrolledCourseIds?: string[]) {
+    // Build filter: only PUBLIC assignments OR private assignments from enrolled courses
+    const filter: any = {
+      $or: [
+        { visibility: 'PUBLIC' },
+        { visibility: { $exists: false } },
+        { visibility: null },
+      ],
+    };
+
+    // If user has enrolled courses, also include private assignments from those courses
+    if (enrolledCourseIds && enrolledCourseIds.length > 0) {
+      filter.$or.push({
+        visibility: 'PRIVATE',
+        courseId: { $in: enrolledCourseIds.map(id => new Types.ObjectId(id)) },
+      });
+    }
+
+    return this.assignmentModel.find(filter);
   }
 
-  async getAssignmentById(id: string) {
+  async getInstructorAssignments(userId: string, courseId?: string) {
+    const filter: any = { createdBy: new Types.ObjectId(userId) };
+    if (courseId) {
+      filter.$or = [
+        { courseId: new Types.ObjectId(courseId) },
+        { courseId: null },
+        { courseId: { $exists: false } },
+      ];
+    }
+    return this.assignmentModel.find(filter).sort({ createdAt: -1 });
+  }
+
+  async getAssignmentById(id: string, enrolledCourseIds?: string[]) {
     const assignment = await this.assignmentModel.findById(id);
     if (!assignment) throw new NotFoundException('Assignment not found');
+
+    // Check visibility access
+    if (assignment.visibility === 'PRIVATE') {
+      const isEnrolled = assignment.courseId && enrolledCourseIds?.includes(assignment.courseId.toString());
+      if (!isEnrolled) {
+        throw new NotFoundException('Assignment not found or access denied');
+      }
+    }
+
     return assignment;
   }
 
@@ -59,6 +107,15 @@ export class AssignmentService {
     if (dto.topic !== undefined) assignment.topic = dto.topic;
     if (dto.noOfQuestions !== undefined)
       assignment.noOfQuestions = dto.noOfQuestions;
+    if (dto.visibility !== undefined) assignment.visibility = dto.visibility;
+
+    // Update course/lesson linking if provided
+    if (dto.courseId !== undefined) {
+      assignment.courseId = dto.courseId ? new Types.ObjectId(dto.courseId) : null;
+    }
+    if (dto.lessonId !== undefined) {
+      assignment.lessonId = dto.lessonId ? new Types.ObjectId(dto.lessonId) : null;
+    }
 
     if (dto.questions) {
       dto.questions.forEach((updatedQ: QuestionDto) => {
@@ -96,9 +153,18 @@ export class AssignmentService {
     assignmentId: string,
     answers: SubmitAnswerItemDto[],
     userId?: string,
+    enrolledCourseIds?: string[],
   ) {
     const assignment = await this.assignmentModel.findById(assignmentId);
     if (!assignment) throw new NotFoundException('Assignment not found');
+
+    // Check visibility access
+    if (assignment.visibility === 'PRIVATE') {
+      const isEnrolled = assignment.courseId && enrolledCourseIds?.includes(assignment.courseId.toString());
+      if (!isEnrolled) {
+        throw new NotFoundException('Assignment not found or access denied');
+      }
+    }
 
     const total = assignment.questions.length;
     let score = 0;

@@ -9,11 +9,23 @@ import {
 
 @Controller('assignments')
 export class AssignmentController {
-  constructor(private readonly assignmentService: AssignmentService) {}
+  constructor(private readonly assignmentService: AssignmentService) { }
 
   @MessagePattern({ cmd: 'assignment.create' })
-  async create(@Payload() dto: CreateAssignmentDto) {
-    const data = await this.assignmentService.createAssignment(dto, null);
+  async create(
+    @Payload() dto: CreateAssignmentDto,
+    @Payload('userId') userId?: string,
+  ) {
+    const data = await this.assignmentService.createAssignment(dto, userId);
+    return { message: 'Assignment created successfully', data };
+  }
+
+  @MessagePattern({ cmd: 'assignment.createInstructor' })
+  async createInstructor(
+    @Payload('dto') dto: CreateAssignmentDto,
+    @Payload('userId') userId: string,
+  ) {
+    const data = await this.assignmentService.createAssignment(dto, userId);
     return { message: 'Assignment created successfully', data };
   }
 
@@ -21,26 +33,44 @@ export class AssignmentController {
   async update(
     @Payload('id') id: string,
     @Payload('dto') dto: UpdateAssignmentDto,
+    @Payload('userId') userId?: string,
   ) {
-    const data = await this.assignmentService.updateAssignment(id, dto);
+    const data = await this.assignmentService.updateAssignment(id, dto, userId);
     return { message: 'Assignment updated successfully', data };
   }
 
   @MessagePattern({ cmd: 'assignment.getAll' })
-  async getAll() {
-    const data = await this.assignmentService.getAllAssignments();
+  async getAll(
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
+  ) {
+    const data = await this.assignmentService.getAllAssignments(enrolledCourseIds);
+    return { message: 'Assignments retrieved successfully', data };
+  }
+
+  @MessagePattern({ cmd: 'assignment.getInstructorAssignments' })
+  async getInstructorAssignments(
+    @Payload('userId') userId: string,
+    @Payload('courseId') courseId?: string,
+  ) {
+    const data = await this.assignmentService.getInstructorAssignments(userId, courseId);
     return { message: 'Assignments retrieved successfully', data };
   }
 
   @MessagePattern({ cmd: 'assignment.getById' })
-  async getById(@Payload('id') id: string) {
-    const data = await this.assignmentService.getAssignmentById(id);
+  async getById(
+    @Payload('id') id: string,
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
+  ) {
+    const data = await this.assignmentService.getAssignmentById(id, enrolledCourseIds);
     return { message: 'Assignment retrieved successfully', data };
   }
 
   @MessagePattern({ cmd: 'assignment.delete' })
-  async delete(@Payload('id') id: string) {
-    const data = await this.assignmentService.deleteAssignment(id);
+  async delete(
+    @Payload('id') id: string,
+    @Payload('userId') userId?: string,
+  ) {
+    const data = await this.assignmentService.deleteAssignment(id, userId);
     return { message: 'Assignment deleted successfully', data };
   }
 
@@ -49,10 +79,14 @@ export class AssignmentController {
   async submit(
     @Payload('assignmentId') assignmentId: string,
     @Payload('answers') dto: SubmitAssignmentDto['answers'],
+    @Payload('userId') userId?: string,
+    @Payload('enrolledCourseIds') enrolledCourseIds?: string[],
   ) {
     const result = await this.assignmentService.submitAssignmentAnswers(
       assignmentId,
       dto,
+      userId,
+      enrolledCourseIds,
     );
     return { message: 'Assignment submitted successfully', data: result };
   }

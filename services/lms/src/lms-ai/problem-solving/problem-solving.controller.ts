@@ -41,15 +41,22 @@ export class ProblemSolvingController {
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.LIST })
-  async listProblems(@Payload() data?: { dto?: ListProblemsDto }) {
+  async listProblems(
+    @Payload() data?: { dto?: ListProblemsDto; userId?: string },
+  ) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.LIST} received`);
-    return this.problemService.listProblems(data?.dto);
+    return this.problemService.listProblems(data?.dto, data?.userId);
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.GET })
-  async getProblem(@Payload() data: { id?: string; problemId?: string }) {
+  async getProblem(
+    @Payload() data: { id?: string; problemId?: string; userId?: string },
+  ) {
     this.logger.log(`NATS ${PROBLEM_PATTERNS.GET} received`);
-    return this.problemService.getProblem(data.id || data.problemId || '');
+    return this.problemService.getProblem(
+      data.id || data.problemId || '',
+      data.userId,
+    );
   }
 
   @MessagePattern({ cmd: PROBLEM_PATTERNS.SUBMIT })

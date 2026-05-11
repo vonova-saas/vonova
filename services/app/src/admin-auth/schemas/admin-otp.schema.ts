@@ -16,7 +16,7 @@ export class AdminOtp {
   @IsString()
   code: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   expiresAt: Date;
 
   @Prop({ default: false })
@@ -36,5 +36,5 @@ export class AdminOtp {
 
 export const AdminOtpSchema = SchemaFactory.createForClass(AdminOtp);
 
-// Create index for automatic cleanup of expired OTPs
+// TTL index for automatic cleanup of expired OTPs (field has index: true, adding TTL option)
 AdminOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

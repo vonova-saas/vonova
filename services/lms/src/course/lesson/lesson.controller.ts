@@ -1,11 +1,19 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { LessonService } from './lesson.service';
 import {
   CreateLessonDto,
   ReorderLessonDto,
   UpdateLessonDto,
 } from './dto/lesson.dto';
+import {
+  AttachLessonMaterialDto,
+  AttachLessonQuizDto,
+  AttachLessonProblemDto,
+  ReorderLessonMaterialsDto,
+  ReorderLessonQuizzesDto,
+  ReorderLessonProblemsDto,
+} from './dto/lesson-resources.dto';
 import { Types } from 'mongoose';
 
 @Controller()
@@ -107,14 +115,10 @@ export class LessonController {
   }
 
   @MessagePattern({ cmd: 'app.courses.lessons.video.upload.presigned' })
-  getPresignedUploadUrl(
-    @Payload() data: { objectKey: string; contentType: string },
-  ) {
-    const { objectKey, contentType } = data;
-    if (!objectKey || !contentType)
-      throw new Error('objectKey and contentType are required');
-
-    return this.lessonService.getPresignedUploadUrl(objectKey, contentType);
+  getPresignedUploadUrl() {
+    throw new RpcException(
+      'Video upload must use presigned S3 flow only: presign-put → browser PUT to S3 → confirm.',
+    );
   }
 
   @MessagePattern({ cmd: 'app.courses.lessons.video.url' })
@@ -125,34 +129,72 @@ export class LessonController {
     return this.lessonService.getVideoUrl(objectKey);
   }
 
-  @MessagePattern({ cmd: 'app.courses.lessons.video.upload.direct' })
-  uploadVideoDirectly(
+  @MessagePattern({ cmd: 'app.courses.lessons.video.upload.url' })
+  getLessonVideoPresignedPut(
     @Payload()
     data: {
       courseId: string;
       lessonId: string;
-      videoMetadata: {
-        objectKey: string;
-        videoUrl: string;
-        hasVideo: boolean;
-        size: number;
-        mimetype: string;
-        originalName: string;
-      };
-      ownerId: string;
+      uploadData: { fileName: string; contentType: string };
+      ownerId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
     },
   ) {
-    const { courseId, lessonId, videoMetadata, ownerId } = data;
-    if (!courseId || !lessonId || !videoMetadata || !ownerId)
-      throw new Error(
-        'courseId, lessonId, videoMetadata and ownerId are required',
-      );
+    const { courseId, lessonId, uploadData, ownerId, user } = data;
+    if (!courseId || !lessonId || !uploadData?.fileName || !uploadData?.contentType) {
+      throw new Error('courseId, lessonId, fileName, and contentType are required');
+    }
+    const userId =
+      ownerId ||
+      user?.id ||
+      user?.sub ||
+      (user?._id != null ? String(user._id) : undefined);
+    if (!userId) throw new Error('User identification is required');
 
-    return this.lessonService.uploadVideoDirectly(
+    return this.lessonService.getLessonVideoPresignedPut(
       courseId,
       lessonId,
-      videoMetadata,
-      ownerId,
+      userId,
+      uploadData,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.video.upload.confirm' })
+  confirmLessonVideoUpload(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      objectKey: string;
+      fileSize?: number;
+      ownerId?: string;
+      user?: { id?: string; sub?: string; _id?: string };
+    },
+  ) {
+    const { courseId, lessonId, objectKey, fileSize, ownerId, user } = data;
+    if (!courseId || !lessonId || !objectKey) {
+      throw new Error('courseId, lessonId, and objectKey are required');
+    }
+    const userId =
+      ownerId ||
+      user?.id ||
+      user?.sub ||
+      (user?._id != null ? String(user._id) : undefined);
+    if (!userId) throw new Error('User identification is required');
+
+    return this.lessonService.confirmLessonVideoUpload(
+      courseId,
+      lessonId,
+      userId,
+      objectKey,
+      fileSize,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.video.upload.direct' })
+  uploadVideoDirectly() {
+    throw new RpcException(
+      'Multipart / direct video upload is disabled. Use presign-put → S3 PUT → confirm only.',
     );
   }
 
@@ -191,6 +233,199 @@ export class LessonController {
       lessonId,
       extractedUserId,
       metadata,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.attachMaterial' })
+  attachMaterial(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: AttachLessonMaterialDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.attachMaterial(
+      data.courseId,
+      data.lessonId,
+      data.dto.materialId,
+      data.dto.materialType,
+      userId,
+      data.dto.visibility,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.detachMaterial' })
+  detachMaterial(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      materialId: string;
+      materialType?: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.detachMaterial(
+      data.courseId,
+      data.lessonId,
+      data.materialId,
+      userId,
+      data.materialType,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.reorderMaterials' })
+  reorderMaterials(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: ReorderLessonMaterialsDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.reorderLessonMaterials(
+      data.courseId,
+      data.lessonId,
+      data.dto.orderedMaterialIds,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.attachQuiz' })
+  attachQuiz(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: AttachLessonQuizDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.attachQuiz(
+      data.courseId,
+      data.lessonId,
+      data.dto.quizId,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.detachQuiz' })
+  detachQuiz(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      quizId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.detachQuiz(
+      data.courseId,
+      data.lessonId,
+      data.quizId,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.attachProblem' })
+  attachProblem(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: AttachLessonProblemDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.attachProblem(
+      data.courseId,
+      data.lessonId,
+      data.dto.problemId,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.detachProblem' })
+  detachProblem(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      problemId: string;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.detachProblem(
+      data.courseId,
+      data.lessonId,
+      data.problemId,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.reorderQuizzes' })
+  reorderQuizzes(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: ReorderLessonQuizzesDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.reorderLessonQuizzes(
+      data.courseId,
+      data.lessonId,
+      data.dto.orderedQuizIds,
+      userId,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.lessons.reorderProblems' })
+  reorderProblems(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      dto: ReorderLessonProblemsDto;
+      ownerId?: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const userId = data.ownerId || data.user?.id || data.user?.sub;
+    if (!userId) throw new Error('User identification is required');
+    return this.lessonService.reorderLessonProblems(
+      data.courseId,
+      data.lessonId,
+      data.dto.orderedProblemIds,
+      userId,
     );
   }
 }

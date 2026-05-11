@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   SubmitAnswerItemDto,
   UpdateQuizDto,
 } from './dto/quiz.dto';
+import { EnrollService } from '../course/enroll/enroll.service';
 
 type QuestionLike = {
   id: string;
@@ -50,12 +52,50 @@ export class QuizService {
   constructor(
     @InjectModel(Quiz.name) private quizModel: Model<Quiz>,
     @InjectModel(QuizAnswer.name) private answerModel: Model<QuizAnswer>,
-  ) {}
+    private readonly enrollService: EnrollService,
+  ) { }
+
+  private async assertQuizAccess(
+    quiz: Quiz,
+    userId: string,
+    enrolledCourseIds?: string[],
+  ) {
+    if (quiz.visibility !== 'PRIVATE') return;
+
+    if (!quiz.courseId) {
+      throw new ForbiddenException('Quiz not available');
+    }
+
+    const cid = quiz.courseId.toString();
+    const allowed = await this.enrollService.canAccessCourseContent(
+      userId,
+      cid,
+    );
+    if (allowed) return;
+
+    if (enrolledCourseIds?.includes(cid)) return;
+
+    throw new ForbiddenException('You do not have access to this quiz');
+  }
 
   // ===== INSTRUCTOR-SPECIFIC METHODS =====
 
   async createInstructorQuiz(dto: CreateQuizDto, userId: string) {
-    const quiz = await this.quizModel.create({ ...dto, createdBy: userId });
+    // Convert string IDs to ObjectIds if provided
+    const createData: any = {
+      ...dto,
+      createdBy: userId,
+      visibility: dto.visibility || 'PUBLIC',
+    };
+
+    if (dto.courseId) {
+      createData.courseId = new Types.ObjectId(dto.courseId);
+    }
+    if (dto.lessonId) {
+      createData.lessonId = new Types.ObjectId(dto.lessonId);
+    }
+
+    const quiz = await this.quizModel.create(createData);
     return quiz;
   }
 
@@ -73,9 +113,18 @@ export class QuizService {
     }
 
     if (dto.title) quiz.title = dto.title;
-    if (dto.description) quiz.description = dto.description;
+    if (dto.description !== undefined) quiz.description = dto.description;
     if (dto.topic) quiz.topic = dto.topic;
     if (dto.noOfQuestions) quiz.noOfQuestions = dto.noOfQuestions;
+    if (dto.visibility) quiz.visibility = dto.visibility;
+
+    // Update course/lesson linking if provided
+    if (dto.courseId !== undefined) {
+      quiz.courseId = dto.courseId ? new Types.ObjectId(dto.courseId) : null;
+    }
+    if (dto.lessonId !== undefined) {
+      quiz.lessonId = dto.lessonId ? new Types.ObjectId(dto.lessonId) : null;
+    }
 
     if (dto.questions) {
       dto.questions.forEach((updatedQ: QuestionDto) => {
@@ -92,8 +141,23 @@ export class QuizService {
     return quiz;
   }
 
-  async getInstructorQuizzes(userId: string) {
-    return this.quizModel.find({ createdBy: userId }).sort({ createdAt: -1 });
+  async getInstructorQuizzes(userId: string, courseId?: string) {
+    const filter: any = { createdBy: userId };
+    if (courseId) {
+      filter.$or = [
+        { courseId: new Types.ObjectId(courseId) },
+        { courseId: null },
+        { courseId: { $exists: false } },
+      ];
+    }
+    return this.quizModel.find(filter).sort({ createdAt: -1 });
+  }
+
+  async getInstructorQuizzesByCourse(userId: string, courseId: string) {
+    return this.quizModel.find({
+      createdBy: userId,
+      courseId: new Types.ObjectId(courseId),
+    }).sort({ createdAt: -1 });
   }
 
   async getInstructorQuizById(quizId: string, userId: string) {
@@ -176,19 +240,38 @@ export class QuizService {
 
   // ===== STUDENT-SPECIFIC METHODS =====
 
-  async getAvailableQuizzesForStudents(userId?: string) {
-    // Return quizzes with completion status
+  async getAvailableQuizzesForStudents(userId?: string, enrolledCourseIds?: string[]) {
+    void enrolledCourseIds;
+
     const quizzes = await this.quizModel
       .find()
-      .select('-questions.correctOptionId');
+      .select('-questions.correctOptionId')
+      .sort({ createdAt: -1 });
 
-    if (!userId) {
-      return quizzes;
+    // PRIVATE quizzes are course-only and must not appear in the global Quiz
+    // listing — even for enrolled students. They reach a PRIVATE quiz only
+    // by clicking it from the lesson page, where `getQuizForStudent` runs
+    // `assertQuizAccess` to enforce enrollment. The creator (instructor)
+    // still sees their own private quizzes here so they can manage them.
+    const filtered: typeof quizzes = [];
+    for (const quiz of quizzes) {
+      const visibility = quiz.visibility ?? 'PUBLIC';
+      const isOwner = !!userId && String(quiz.createdBy) === userId;
+
+      if (visibility === 'PRIVATE') {
+        if (isOwner) filtered.push(quiz);
+        continue;
+      }
+
+      filtered.push(quiz);
     }
 
-    // Add completion status for authenticated user
+    if (!userId) {
+      return filtered;
+    }
+
     const quizzesWithStatus = await Promise.all(
-      quizzes.map(async (quiz) => {
+      filtered.map(async (quiz) => {
         const existingAttempt = await this.answerModel.findOne({
           quiz: quiz._id,
           userId,
@@ -208,9 +291,11 @@ export class QuizService {
     return quizzesWithStatus;
   }
 
-  async getQuizForStudent(quizId: string, userId: string) {
+  async getQuizForStudent(quizId: string, userId: string, enrolledCourseIds?: string[]) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
+
+    await this.assertQuizAccess(quiz, userId, enrolledCourseIds);
 
     // Prefer the quiz document's ObjectId so the query matches how attempts are stored.
     const existingAttempt = await this.answerModel.findOne({
@@ -275,9 +360,12 @@ export class QuizService {
     quizId: string,
     answers: SubmitAnswerItemDto[],
     userId: string,
+    enrolledCourseIds?: string[],
   ) {
     const quiz = await this.quizModel.findById(quizId);
     if (!quiz) throw new NotFoundException('Quiz not found');
+
+    await this.assertQuizAccess(quiz, userId, enrolledCourseIds);
 
     const existingAttempt = await this.answerModel.findOne({
       quiz: quiz._id,

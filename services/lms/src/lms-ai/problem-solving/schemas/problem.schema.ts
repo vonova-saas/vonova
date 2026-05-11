@@ -89,8 +89,42 @@ export class Problem {
 
   @Prop({ required: true, trim: true, index: true })
   createdBy: string;
+
+  /**
+   * PUBLIC = problem is listed in the global Problem Solving library for everyone.
+   * PRIVATE = problem is hidden from the public list and is only accessible to
+   * students enrolled in `courseId` (typically through the attached lesson).
+   * Defaults to PUBLIC for backward compatibility with previously created
+   * problems that don't carry a visibility field.
+   */
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibility: 'PUBLIC' | 'PRIVATE';
+
+  /** Course this problem is scoped to when `visibility === 'PRIVATE'`. */
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Course',
+    default: null,
+    index: true,
+  })
+  courseId?: MongooseSchema.Types.ObjectId | null;
+
+  /** Optional lesson back-reference (set when created from the lesson editor). */
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Lesson',
+    default: null,
+    index: true,
+  })
+  lessonId?: MongooseSchema.Types.ObjectId | null;
 }
 
 export const ProblemSchema = SchemaFactory.createForClass(Problem);
 ProblemSchema.index({ createdBy: 1, createdAt: -1 });
 ProblemSchema.index({ difficulty: 1, categories: 1, createdAt: -1 });
+ProblemSchema.index({ visibility: 1, courseId: 1, createdAt: -1 });

@@ -11,6 +11,46 @@ import { LibraryAsset } from '../schema/library-asset.schema';
 import { Presentation } from '../schema/presentation.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 
+/**
+ * TTL for library file **GET** presigns (seconds). Must match what we persist in
+ * `urls.presignedUrlExpiresAt` — otherwise Mongo thinks a URL is valid for 1h
+ * while S3 rejects it after `AWS_S3_PRESIGN_EXPIRES_LMS_AI` (often 180s).
+ */
+const LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS = (() => {
+  const raw = process.env.AWS_S3_LIBRARY_GET_PRESIGN_EXPIRES?.trim();
+  const n = raw ? Number.parseInt(raw, 10) : NaN;
+  if (Number.isFinite(n) && n >= 60 && n <= 604800) return n;
+  return 3600;
+})();
+
+/**
+ * When the cached presigned URL is no longer acceptable for S3 SigV4 URLs
+ * (parses `X-Amz-Date` + `X-Amz-Expires`). Returns null if params are missing.
+ */
+function awsSigV4GetUrlRefreshAfter(url: string): Date | null {
+  try {
+    const u = new URL(url);
+    const amzDate = u.searchParams.get('X-Amz-Date');
+    const amzExpires = u.searchParams.get('X-Amz-Expires');
+    if (!amzDate || !amzExpires) return null;
+    const sec = Number.parseInt(amzExpires, 10);
+    if (!Number.isFinite(sec) || sec <= 0) return null;
+    if (!/^\d{8}T\d{6}Z$/.test(amzDate)) return null;
+    const y = Number(amzDate.slice(0, 4));
+    const mo = Number(amzDate.slice(4, 6)) - 1;
+    const d = Number(amzDate.slice(6, 8));
+    const h = Number(amzDate.slice(9, 11));
+    const mi = Number(amzDate.slice(11, 13));
+    const s = Number(amzDate.slice(13, 15));
+    const issuedMs = Date.UTC(y, mo, d, h, mi, s);
+    // Refresh ~2 minutes before AWS hard-expires the signature.
+    const skewMs = 120_000;
+    return new Date(issuedMs + sec * 1000 - skewMs);
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class UploadService {
   constructor(
@@ -230,6 +270,7 @@ export class UploadService {
     try {
       const presignedUrl = await this.s3Service.getPresignedGetUrl(
         asset.objectKey,
+        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
       );
       return {
         assetId: asset.id,
@@ -238,7 +279,7 @@ export class UploadService {
         fileName: asset.originalFileName,
         mimeType: asset.mimeType,
         size: asset.size,
-        expiresInSeconds: 3600,
+        expiresInSeconds: LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
       };
     } catch (error) {
       console.error('Failed to generate presigned URL:', error);
@@ -283,6 +324,7 @@ export class UploadService {
     try {
       const presignedUrl = await this.s3Service.getPresignedGetUrl(
         asset.objectKey,
+        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
       );
       return {
         presignedUrl,
@@ -310,6 +352,7 @@ export class UploadService {
     try {
       const presignedUrl = await this.s3Service.getPresignedGetUrl(
         asset.objectKey,
+        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
       );
       return {
         presignedUrl,
@@ -334,12 +377,14 @@ export class UploadService {
     }
 
     try {
+      const ttl = LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS;
       const presignedUrl = await this.s3Service.getPresignedGetUrl(
         asset.objectKey,
+        ttl,
       );
 
-      // Store presigned URL in database with expiration time (1 hour from now)
-      const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour from now
+      // Must align with S3 SigV4 lifetime (same as `ttl`), not a hard-coded 1h.
+      const expiresAt = new Date(Date.now() + ttl * 1000 - 120_000);
       await this.assetModel.findByIdAndUpdate(assetId, {
         'urls.presignedUrl': presignedUrl,
         'urls.presignedUrlExpiresAt': expiresAt,
@@ -364,8 +409,12 @@ export class UploadService {
     if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
       const now = new Date();
       const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
+      const sigRefreshAfter = awsSigV4GetUrlRefreshAfter(asset.urls.presignedUrl);
+      const withinDbTtl = now < expiresAt;
+      const withinSigTtl =
+        sigRefreshAfter == null ? true : now < sigRefreshAfter;
 
-      if (now < expiresAt) {
+      if (withinDbTtl && withinSigTtl) {
         return asset.urls.presignedUrl;
       }
     }

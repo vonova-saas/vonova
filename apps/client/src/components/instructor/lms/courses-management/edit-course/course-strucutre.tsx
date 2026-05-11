@@ -58,6 +58,34 @@ interface SortableItemProps {
   };
 }
 
+/** Module scope so list keys reconcile correctly under SortableContext (not a new type each parent render). */
+function SortableItem({ children, id, className, data }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: id, data: data });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={cn("touch-none", className, isDragging ? "z-10" : "")}
+    >
+      {children(listeners)}
+    </div>
+  );
+}
+
 export function CourseStrucutre({ data, instructorId }: iAppProps) {
   const { reorderChapters, reorderLessons } = useCourseManagementStore();
   
@@ -76,7 +104,6 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
     })) || [];
 
   const [items, setItems] = useState(initialItems);
-  console.log(items);
 
   useEffect(() => {
     setItems((prevItems) => {
@@ -97,33 +124,6 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
       return updatedItems;
     });
   }, [data]);
-
-  function SortableItem({ children, id, className, data }: SortableItemProps) {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: id, data: data });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    };
-
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        className={cn("touch-none", className, isDragging ? "z-10" : "")}
-      >
-        {children(listeners)}
-      </div>
-    );
-  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -301,12 +301,15 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
           <NewChapterModal courseId={data._id} />
         </CardHeader>
         <CardContent className="space-y-8">
-          <SortableContext items={items} strategy={verticalListSortingStrategy}>
-            {items.map((item) => (
+          <SortableContext
+            items={items.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {items.map((item, chapterIndex) => (
               <SortableItem
                 id={item.id}
                 data={{ type: "chapter" }}
-                key={item.id}
+                key={item.id || `chapter-${chapterIndex}`}
               >
                 {(listeners) => (
                   <Card>
@@ -347,10 +350,13 @@ export function CourseStrucutre({ data, instructorId }: iAppProps) {
                             items={item.lessons.map((lesson) => lesson.id)}
                             strategy={verticalListSortingStrategy}
                           >
-                            {item.lessons.map((lesson) => (
+                            {item.lessons.map((lesson, lessonIndex) => (
                               <SortableItem
                                 id={lesson.id}
-                                key={lesson.id}
+                                key={
+                                  lesson.id ||
+                                  `lesson-${item.id}-${lessonIndex}`
+                                }
                                 data={{ type: "lesson", chapterId: item.id }}
                               >
                                 {(lessonListeners) => (

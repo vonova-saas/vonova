@@ -31,5 +31,12 @@ export default function LessonIdPage() {
     );
   }
 
-  return <LessonForm data={lesson} chapterId={chapterId} courseId={courseId} />;
+  return (
+    <LessonForm
+      data={lesson}
+      chapterId={chapterId}
+      courseId={courseId}
+      lessonId={lessonId}
+    />
+  );
 }

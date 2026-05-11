@@ -14,6 +14,19 @@ export class Chapter {
 
   @Prop({ required: true, default: 0 })
   index: number;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Lesson' }], default: [] })
+  lessons?: Types.ObjectId[];
+
+  /** Future: chapter-level library attachments (same shape as lessons). */
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  materials?: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Quiz' }], default: [] })
+  quizzes?: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId }], default: [] })
+  problems?: Types.ObjectId[];
 }
 
 export type ChapterDocument = Chapter & Document;

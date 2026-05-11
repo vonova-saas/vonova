@@ -24,6 +24,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { QuizGatewayService } from './quiz.gateway.service';
 import { SubmitQuizAnswersDto } from './dto/quiz.dto';
+import { EnrollGatewayService } from '../course/enroll/enroll.gateway.service';
 
 @ApiTags('LMS Student Quizzes')
 @ApiBearerAuth()
@@ -31,8 +32,22 @@ import { SubmitQuizAnswersDto } from './dto/quiz.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.STUDENT_USER)
 export class QuizStudentController {
-  constructor(private readonly quizService: QuizGatewayService) {
-    console.log('QuizStudentController initialized');
+  constructor(
+    private readonly quizService: QuizGatewayService,
+    private readonly enrollGateway: EnrollGatewayService,
+  ) {}
+
+  private async enrolledCourseIds(userId: string): Promise<string[]> {
+    try {
+      const rows = (await firstValueFrom(
+        this.enrollGateway.listStudentEnrollments(userId),
+      )) as Array<{ courseId: { toString: () => string } | string }>;
+      return rows.map((r) =>
+        typeof r.courseId === 'string' ? r.courseId : r.courseId.toString(),
+      );
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -75,9 +90,10 @@ export class QuizStudentController {
   })
   @Get()
   async getAvailableQuizzes(@Request() req) {
-    const userId = req.user._id;
+    const userId = req.user._id ?? req.user?.id ?? req.user?.sub;
+    const ids = await this.enrolledCourseIds(userId);
     return firstValueFrom(
-      this.quizService.getAvailableQuizzesForStudents(userId),
+      this.quizService.getAvailableQuizzesForStudents(userId, ids),
     );
   }
 
@@ -217,7 +233,8 @@ export class QuizStudentController {
     @Param('quizId') quizId: string,
     @Body() dto: SubmitQuizAnswersDto,
   ) {
-    const userId = req.user._id;
+    const userId = req.user._id ?? req.user?.id ?? req.user?.sub;
+    const ids = await this.enrolledCourseIds(userId);
 
     // Keep guard at gateway level for fast rejection before forwarding submit.
     const existingAttempts = await firstValueFrom(
@@ -237,7 +254,7 @@ export class QuizStudentController {
     }
 
     return firstValueFrom(
-      this.quizService.submitStudentQuiz(quizId, dto, userId),
+      this.quizService.submitStudentQuiz(quizId, dto, userId, ids),
     );
   }
 
@@ -459,7 +476,10 @@ export class QuizStudentController {
   })
   @Get('/:quizId')
   async getQuizForTaking(@Request() req, @Param('quizId') quizId: string) {
-    const userId = req.user._id;
-    return firstValueFrom(this.quizService.getQuizForStudent(quizId, userId));
+    const userId = req.user._id ?? req.user?.id ?? req.user?.sub;
+    const ids = await this.enrolledCourseIds(userId);
+    return firstValueFrom(
+      this.quizService.getQuizForStudent(quizId, userId, ids),
+    );
   }
 }

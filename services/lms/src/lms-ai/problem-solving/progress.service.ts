@@ -5,6 +5,7 @@ import {
   ProblemSolvingProgress,
   ProblemSolvingProgressDocument,
 } from './schemas/problem-solving-progress.schema';
+import { EnrollService } from '../../course/enroll/enroll.service';
 
 @Injectable()
 export class ProgressService {
@@ -13,12 +14,14 @@ export class ProgressService {
   constructor(
     @InjectModel(ProblemSolvingProgress.name, 'lms-ai')
     private readonly progressModel: Model<ProblemSolvingProgressDocument>,
+    private readonly enrollService: EnrollService,
   ) {}
 
   async markAsSolved(userId: string, problemId: string): Promise<boolean> {
     this.logger.log(
       `Marking problem ${problemId} as solved for user ${userId}`,
     );
+    await this.enrollService.assertProblemAccess(userId, problemId);
 
     const progress = await this.progressModel.findOneAndUpdate(
       { userId, problemId },

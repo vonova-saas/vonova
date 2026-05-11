@@ -6,6 +6,7 @@ import { Book, BookSchema } from '../schema/book/book.schema';
 import { Guide, GuideSchema } from '../schema/guide.schema';
 import { Presentation, PresentationSchema } from '../schema/presentation.schema';
 import { UploadModule } from '../upload/upload.module';
+import { EnrollModule } from '../../course/enroll/enroll.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UploadModule } from '../upload/upload.module';
       { name: Presentation.name, schema: PresentationSchema },
     ]),
     UploadModule,
+    EnrollModule,
   ],
   controllers: [LibraryController],
   providers: [LibraryService],

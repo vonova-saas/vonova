@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsEnum,
   IsUrl,
+  IsIn,
 } from 'class-validator';
 
 export class CoursePriceDto {
@@ -49,7 +50,37 @@ export class CreateCourseDto {
 
   @IsOptional()
   @IsString()
+  thumbnailKey?: string;
+
+  @IsOptional()
+  @IsString()
   language?: string;
+
+  @IsOptional()
+  @IsIn(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'])
+  level?: string;
+
+  @IsOptional()
+  @IsIn([
+    'FRONTEND',
+    'BACKEND',
+    'FULLSTACK',
+    'FLUTTER',
+    'MOBILE',
+    'AI',
+    'DATA_SCIENCE',
+    'CYBER_SECURITY',
+    'DEVOPS',
+    'UI_UX',
+    'DATABASE',
+    'PROBLEM_SOLVING',
+    'OTHER',
+  ])
+  category?: string;
+
+  @IsOptional()
+  @IsIn(['PUBLIC', 'PRIVATE'])
+  visibility?: string;
 
   @IsOptional()
   price?: CoursePriceDto;

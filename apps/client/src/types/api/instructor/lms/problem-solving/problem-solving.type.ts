@@ -5,6 +5,8 @@ export type InstructorProblemTestCase = {
   isHidden?: boolean;
 };
 
+export type InstructorProblemVisibility = "PUBLIC" | "PRIVATE";
+
 export type InstructorProblemEntity = {
   _id: string;
   title: string;
@@ -26,6 +28,10 @@ export type InstructorProblemEntity = {
     | "sorting"
   )[];
   createdBy: string;
+  /** PUBLIC = appears in Problem Solving library; PRIVATE = course-scoped. */
+  visibility?: InstructorProblemVisibility;
+  courseId?: string | null;
+  lessonId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -41,6 +47,12 @@ export type CreateInstructorProblemRequest = {
   testCases: InstructorProblemTestCase[];
   difficulty: InstructorProblemEntity["difficulty"];
   categories: InstructorProblemEntity["categories"];
+  /** PUBLIC = global; PRIVATE = course-only (requires `courseId`). */
+  visibility?: InstructorProblemVisibility;
+  /** Course this problem belongs to when private. */
+  courseId?: string;
+  /** Optional lesson back-reference for the editor. */
+  lessonId?: string;
 };
 
 export type DeleteInstructorProblemResponse = {

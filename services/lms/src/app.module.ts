@@ -27,6 +27,9 @@ import { PdfSummaryModule } from './lms-ai/pdf-summary/pdf-summary.module';
 import { ProblemSolvingModule } from './lms-ai/problem-solving/problem-solving.module';
 import { OutboundNatsModule } from './common/nats/outbound-nats.module';
 import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.interceptor';
+import { SubscriptionModule } from './subscription/subscription.module';
+import { AIUsageModule } from './ai-usage/ai-usage.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -73,6 +76,10 @@ import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.i
     PdfSummaryModule,
     ProblemSolvingModule,
     OutboundNatsModule,
+    // Subscription and Payments
+    SubscriptionModule,
+    AIUsageModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -82,4 +89,4 @@ import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.i
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

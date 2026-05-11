@@ -2,6 +2,7 @@ import {
   IsInt,
   IsBoolean,
   IsDefined,
+  IsEnum,
   IsIn,
   IsArray,
   ArrayMinSize,
@@ -80,6 +81,18 @@ export class CreateProblemDto {
   @IsString({ each: true })
   @IsIn(PROBLEM_CATEGORIES, { each: true })
   categories: (typeof PROBLEM_CATEGORIES)[number][];
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'PRIVATE'])
+  visibility?: 'PUBLIC' | 'PRIVATE';
+
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  lessonId?: string;
 }
 
 export class DeleteProblemDto {

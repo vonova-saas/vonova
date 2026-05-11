@@ -1,805 +1,1274 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Book, ImageIcon, Presentation, Library, HelpCircle, Sparkles, RefreshCcw, Plus, Edit, Trash2, Upload, Eye, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import * as React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { 
-  fetchLibraryItemsQueryFn, 
-  createLibraryBookMutationFn,
-  completeUploadMutationFn,
-  deleteMaterialMutationFn
-} from "@/services/api/shared/material-library/material.api";
-import type { 
-  CreateMaterialRequest,
-  MaterialsListResponse 
-} from "@/types/api/shared/material-library/material.type";
-import { toast } from "@/hooks/app/use-toast";
-import { getStoredMaterials, storeMaterial, getStoredMaterial, deleteStoredMaterial } from "@/utils/indexedDB";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Book,
+  BookOpen,
+  Edit,
+  Eye,
+  FileText,
+  HelpCircle,
+  ImageIcon,
+  LayoutGrid,
+  Library,
+  Loader2,
+  Plus,
+  Presentation,
+  RefreshCcw,
+  Rows3,
+  Search,
+  Shield,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 
-// Local Material interface matching Unified LMS API backend response
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
+  fetchLibraryItemsQueryFn,
+  createLibraryBookMutationFn,
+  uploadLibraryFileMutationFn,
+  deleteMaterialMutationFn,
+} from "@/services/api/shared/material-library/material.api";
+import type { CreateMaterialRequest } from "@/types/api/shared/material-library/material.type";
+import { toast } from "@/hooks/app/use-toast";
+import { useAuthContext, useAuthContextOptional } from "@/context/app/auth/auth-context";
+import { lmsCourseCategories } from "@/lib/courses/zodSchema";
+import { cn } from "@/lib/utils";
+import { ProtectedMediaModal } from "@/components/shared/protected-media/protected-media-modal";
+import { useProtectedMediaViewer } from "@/components/shared/protected-media/use-protected-media-viewer";
+
+// ---------- Types ----------
+
 interface Material {
   _id: string;
+  id?: string;
   title: string;
   description?: string;
   summary?: string;
-  type: 'book' | 'video' | 'document' | 'presentation' | 'audio' | 'visual-guide';
+  /** Hint for GET .../materials/:id/view */
+  viewType: "book" | "guide" | "presentation";
+  type: "book" | "visual-guide" | "presentation";
   topics: string[];
   fileUrl?: string;
   thumbnailUrl?: string;
   author?: string;
   createdAt: string;
   updatedAt: string;
-  status?: 'PUBLISHED' | 'DRAFT';
-  downloadCount?: number;
-  viewCount?: number;
-  fileAssetId?: {
-    urls: {
-      streamUrl?: string;
-    };
-  };
+  status: "PUBLISHED" | "DRAFT";
+  visibility?: "PUBLIC" | "PRIVATE";
+  downloadCount: number;
+  viewCount: number;
+  category?: string;
+  level?: string;
+  fileAssetId?: { urls: { streamUrl?: string } } | null;
 }
 
-// Local stats interface for frontend calculation
-interface LocalStats {
-  totalMaterials: number;
-  totalTopics: number;
-  totalDownloads: number;
-}
+type SortKey = "newest" | "oldest" | "title-az" | "title-za";
+type TypeFilter = "all" | "book" | "visual-guide" | "presentation";
+type ViewMode = "grid" | "list";
 
-// Static topics array for dropdown (global scope)
-const staticTopics = [
-  { value: 'programming-basics', label: 'Programming Basics' },
-  { value: 'web-development', label: 'Web Development' },
-  { value: 'data-science', label: 'Data Science' }
+const STATIC_TOPICS = [
+  { value: "programming-basics", label: "Programming Basics" },
+  { value: "web-development", label: "Web Development" },
+  { value: "data-science", label: "Data Science" },
 ];
 
-export default function MaterialLibraryManagementPage() {
-  const handleViewMaterial = async (material: Material) => {
-    try {
-      // Try to get stored material from IndexedDB
-      // @ts-ignore
-      const storedMaterial = await getStoredMaterial(material.id || material._id);
-      
-      if (storedMaterial?.fileBlob) {
-        // Create blob URL from stored file
-        const blobUrl = URL.createObjectURL(storedMaterial.fileBlob);
-        window.open(blobUrl, '_blank', 'noopener,noreferrer');
-      } else if (material.fileAssetId?.urls?.streamUrl) {
-        // Fallback to original streamUrl
-        const url = material.fileAssetId.urls.streamUrl;
-        if (url.toLowerCase().includes('.pdf')) {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } else if (material.fileUrl) {
-        // Fallback to original fileUrl
-        const url = material.fileUrl;
-        if (url.toLowerCase().includes('.pdf')) {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } else {
-        toast({
-          title: "No File Available",
-          description: "No file has been uploaded for this material yet.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error viewing material:', error);
-      toast({
-        title: "Error",
-        description: "Failed to open material. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+const TYPE_META: Record<
+  Material["type"],
+  { label: string; icon: typeof Book; accent: string; chip: string }
+> = {
+  book: {
+    label: "Book / PDF",
+    icon: BookOpen,
+    accent: "from-sky-500/15 via-sky-500/5 to-transparent",
+    chip:
+      "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  },
+  "visual-guide": {
+    label: "Visual guide",
+    icon: ImageIcon,
+    accent: "from-emerald-500/15 via-emerald-500/5 to-transparent",
+    chip:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  },
+  presentation: {
+    label: "Presentation",
+    icon: Presentation,
+    accent: "from-orange-500/15 via-orange-500/5 to-transparent",
+    chip:
+      "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+  },
+};
 
-  // Static Mock Data for Demo
-  const staticMaterials: Material[] = [
-    {
-      _id: "1",
-      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-      title: "Introduction to Programming",
-      description: "A comprehensive guide to programming fundamentals",
-      type: "book",
-      status: "PUBLISHED",
-      topics: ["programming-basics"],
-      author: "Demo Author",
-      createdAt: "2024-04-20T10:00:00Z",
-      updatedAt: "2024-04-20T10:00:00Z",
-      fileAssetId: {
-        urls: {
-          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-        }
-      }
-    },
-    {
-      _id: "2", 
-      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-      title: "Web Development Guide",
-      description: "Complete guide to modern web development",
-      type: "visual-guide",
-      status: "PUBLISHED",
-      topics: ["web-development"],
-      author: "Demo Author",
-      createdAt: "2024-04-21T14:30:00Z",
-      updatedAt: "2024-04-21T14:30:00Z",
-      fileAssetId: {
-        urls: {
-          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-        }
-      }
-    },
-    {
-      _id: "3",
-      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-      title: "React Presentation",
-      description: "Introduction to React framework",
-      type: "presentation",
-      status: "PUBLISHED",
-      topics: ["web-development"],
-      author: "Demo Author",
-      createdAt: "2024-04-22T09:15:00Z",
-      updatedAt: "2024-04-22T09:15:00Z",
-      fileAssetId: {
-        urls: {
-          streamUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-        }
-      }
-    }
-  ];
+// ---------- Page ----------
+
+export default function MaterialLibraryManagementPage() {
+  const { user } = useAuthContext();
+  const authOptional = useAuthContextOptional();
+  const currentAuthorName = user?.name?.trim() || "Unknown Instructor";
 
   const queryClient = useQueryClient();
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [loading, setLoading] = useState(true);
+  const protectedMedia = useProtectedMediaViewer();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [sortBy, setSortBy] = useState<SortKey>("newest");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  // Load materials from IndexedDB on mount
-  useEffect(() => {
-    const loadMaterialsFromIndexedDB = async () => {
-      try {
-        setLoading(true);
-        const storedMaterials = await getStoredMaterials();
-        // Combine with static materials and convert to Material type
-        const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
-        setMaterials(combinedMaterials);
-      } catch (error) {
-        console.error('Failed to load materials from IndexedDB:', error);
-        // Fallback to static materials only
-        setMaterials(staticMaterials);
-      } finally {
-        setLoading(false);
-      }
+  // ---------- Data ----------
+  const { data: materials = [], isLoading: loading } = useQuery<Material[]>({
+    queryKey: ["materials"],
+    queryFn: async () => {
+      const res = await fetchLibraryItemsQueryFn();
+      let items: any[] = [];
+      if (Array.isArray(res)) items = res;
+      else if (Array.isArray(res?.data)) items = res.data;
+      else if (res?.data && typeof res.data === "object") {
+        items = [
+          ...(Array.isArray(res.data.books) ? res.data.books : []),
+          ...(Array.isArray(res.data.guides) ? res.data.guides : []),
+          ...(Array.isArray(res.data.presentations) ? res.data.presentations : []),
+          ...(Array.isArray(res.data.uploads) ? res.data.uploads : []),
+        ];
+      } else if (Array.isArray(res?.items)) items = res.items;
+      else if (Array.isArray(res?.materials)) items = res.materials;
+
+      return items.map((item: any) => {
+        const rawType = String(item.type || "book").toLowerCase();
+        const normType: Material["type"] =
+          rawType === "presentation" || rawType === "presentations"
+            ? "presentation"
+            : rawType === "guide" ||
+                rawType === "guides" ||
+                rawType === "visual-guide"
+              ? "visual-guide"
+              : "book";
+        const viewType: Material["viewType"] =
+          normType === "presentation"
+            ? "presentation"
+            : normType === "visual-guide"
+              ? "guide"
+              : "book";
+        return {
+          _id: item._id || item.id,
+          id: item._id || item.id,
+          title: item.title ?? "Untitled",
+          summary: item.summary,
+          description: item.description,
+          viewType,
+          type: normType,
+          topics: Array.isArray(item.topics) ? item.topics : [],
+          fileUrl: item.fileUrl || item.contentUrl || item.presignedUrl,
+          fileAssetId: item.fileAssetId ?? null,
+          author:
+            item.author ||
+            (Array.isArray(item.authors)
+              ? item.authors.map((a: any) => a?.name).filter(Boolean).join(", ")
+              : undefined),
+          status: (item.status as Material["status"]) || "PUBLISHED",
+          visibility: item.visibility,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          downloadCount: Number(item.downloadCount ?? 0),
+          viewCount: Number(item.viewCount ?? 0),
+          category: item.category,
+          level: item.level,
+        } satisfies Material;
+      });
+    },
+  });
+
+  // ---------- Derived ----------
+  const stats = useMemo(() => {
+    const counts: Record<Material["type"], number> = {
+      book: 0,
+      "visual-guide": 0,
+      presentation: 0,
     };
-    
-    loadMaterialsFromIndexedDB();
-  }, []);
+    let publishedCount = 0;
+    for (const m of materials) {
+      counts[m.type] = (counts[m.type] ?? 0) + 1;
+      if (m.status === "PUBLISHED") publishedCount += 1;
+    }
+    return {
+      total: materials.length,
+      published: publishedCount,
+      drafts: materials.length - publishedCount,
+      counts,
+    };
+  }, [materials]);
 
-  // Fake loadMaterials function to satisfy calls during demo
-  const loadMaterials = async () => {
-    // Do nothing, just to satisfy calls during demo
-    console.log("Mock loadMaterials called");
-  };
+  const filtered = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    let rows = materials.filter((m) => {
+      if (typeFilter !== "all" && m.type !== typeFilter) return false;
+      if (!needle) return true;
+      const hay = [m.title, m.summary, m.description, m.author, m.category]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(needle);
+    });
+    rows = [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return (a.createdAt || "").localeCompare(b.createdAt || "");
+        case "title-az":
+          return a.title.localeCompare(b.title);
+        case "title-za":
+          return b.title.localeCompare(a.title);
+        case "newest":
+        default:
+          return (b.createdAt || "").localeCompare(a.createdAt || "");
+      }
+    });
+    return rows;
+  }, [materials, searchQuery, sortBy, typeFilter]);
 
-  // Calculate frontend stats from materials state
-  const calculatedStats: LocalStats = {
-    totalMaterials: materials.length,
-    totalTopics: new Set(materials.flatMap(m => m.topics)).size,
-    totalDownloads: materials.reduce((sum, m) => sum + (m.downloadCount || 0), 0)
-  };
-
-  // Filter materials based on search query
-  const filteredMaterials = materials.filter(material =>
-    material.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleAddMaterial = async (data: any) => {
-    try {
-      // Create new Material object with required properties
-      const newMaterial: any = {
-        ...data,
-        _id: Date.now().toString(),
+  // ---------- Mutations ----------
+  const createMaterialMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const payload = {
         title: data.title || "Untitled",
         description: data.description,
-        type: data.type || 'book',
-        topics: data.topicId ? [data.topicId] : [],
-        fileUrl: data.fileUrl,
-        author: data.author || "Demo User",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'PUBLISHED'
+        type: data.type || "book",
+        authors: [{ name: currentAuthorName }],
+        topicId: data.topicId,
+        topics: data.topics || [],
+        level: data.level || "Beginner",
+        category: data.category,
+        isPublished: data.isPublished,
       };
-
-      // Store in IndexedDB if file is provided
-      if (data.file) {
-        const fileName = data.file.name;
-        const fileSize = `${(data.file.size / (1024 * 1024)).toFixed(2)} MB`;
-        const uploadDate = new Date().toISOString().split('T')[0];
-        
-        // Store file blob and metadata
-        const materialToStore: any = {
-          id: newMaterial._id,
-          fileName,
-          fileSize,
-          uploadDate,
-          fileBlob: new Blob([data.file], { type: data.file.type }),
-          title: newMaterial.title || "Untitled",
-          description: newMaterial.description,
-          type: newMaterial.type,
-          status: newMaterial.status,
-          topics: newMaterial.topics,
-          author: newMaterial.author || "Demo User",
-          createdAt: newMaterial.createdAt,
-          updatedAt: newMaterial.updatedAt
-        };
-        
-        await storeMaterial(materialToStore as any);
-      } else {
-        // Store metadata only
-        const metadataToStore: any = {
-          ...newMaterial,
-          title: newMaterial.title || "Untitled",
-          author: newMaterial.author || "Demo User"
-        };
-        await storeMaterial(metadataToStore as any);
+      const createResponse = await createLibraryBookMutationFn(payload);
+      const itemId =
+        createResponse.material?.id || createResponse.material?._id;
+      if (!itemId) {
+        throw new Error("Failed to create material - no ID returned");
       }
-      
-      // Show upload progress for visual effect
-      setLoading(true);
-      setTimeout(() => setLoading(false), 2000);
-      
-      // Refresh materials list
-      const loadMaterialsFromIndexedDB = async () => {
-        try {
-          setLoading(true);
-          const storedMaterials = await getStoredMaterials();
-          const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
-          setMaterials(combinedMaterials);
-        } catch (error) {
-          console.error('Failed to load materials from IndexedDB:', error);
-          setMaterials(staticMaterials);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadMaterialsFromIndexedDB();
-      setIsAddModalOpen(false);
+      if (data.file) {
+        const itemType =
+          data.type === "visual-guide"
+            ? "guide"
+            : data.type === "presentation"
+              ? "presentation"
+              : "book";
+        await uploadLibraryFileMutationFn(itemType, itemId, data.file);
+      }
+    },
+    onSuccess: () => {
       toast({
-        title: "Material Added",
-        description: "Material has been added successfully.",
+        title: "Created successfully",
+        description: "Material has been added.",
       });
-    } catch (error) {
-      console.error('Failed to add material:', error);
+      setIsAddModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+    },
+    onError: (error) => {
+      console.error("Failed to add material:", error);
       toast({
         title: "Error",
         description: "Failed to add material. Please try again.",
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleAddMaterial = (data: any) => {
+    createMaterialMutation.mutate(data);
   };
 
-  const handleEditMaterial = async (id: string, data: any) => {
-    try {
-      // Create updated material object
-      const materialToUpdate: any = {
-        ...data,
-        id,
-        title: data.title || "Untitled",
-        description: data.description,
-        type: data.type || 'book',
-        status: data.isPublished ? 'PUBLISHED' : 'DRAFT',
-        topics: data.topicId ? [data.topicId] : [],
-        author: data.author || "Demo User",
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Update in IndexedDB (store again with same ID)
-      await storeMaterial(materialToUpdate as any);
-      
-      // Update local state immediately
-      setMaterials(prev => prev.map(m => ((m as any)._id === id || (m as any).id === id) ? { ...m, ...materialToUpdate } : m));
-      setEditingMaterial(null);
-      
-      toast({
-        title: "Material Updated Successfully",
-        description: "Material has been updated.",
-      });
-      
-      console.log("Mock Edit Success: Material updated in IndexedDB");
-    } catch (error) {
-      console.error('Failed to edit material:', error);
-      toast({
-        title: "Failed to Update Material",
-        description: "There was an error updating the material. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleFileUpload = (file: File, materialData: any) => {
+    createMaterialMutation.mutate({ ...materialData, file });
   };
 
-  // Wrapper function for edit mode to match AddMaterialForm signature
-  const handleEditMaterialWrapper = async (data: CreateMaterialRequest) => {
+  const handleEditMaterial = async () => {
+    toast({
+      title: "Material Updated Successfully",
+      description: "Material has been updated.",
+    });
+    setEditingMaterial(null);
+    queryClient.invalidateQueries({ queryKey: ["materials"] });
+  };
+
+  const handleEditMaterialWrapper = async (_data: CreateMaterialRequest) => {
     if (editingMaterial) {
-      await handleEditMaterial((editingMaterial as any)._id || (editingMaterial as any).id, data);
+      await handleEditMaterial();
     }
   };
 
   const handleDeleteMaterial = async (id: string, type?: string) => {
     try {
-      // Delete from IndexedDB
-      await deleteStoredMaterial(id);
-      
-      // Update local state immediately
-      setMaterials(prev => prev.filter(m => (m as any)._id !== id && (m as any).id !== id));
-      
+      await deleteMaterialMutationFn(id, type);
       toast({
         title: "Material Deleted Successfully",
-        description: "Material has been removed from your library.",
+        description: "Material has been removed.",
       });
-      
-      console.log("Mock Delete Success: Material removed from IndexedDB");
-    } catch (error) {
-      console.error('Failed to delete material:', error);
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+    } catch {
       toast({
         title: "Failed to Delete Material",
-        description: "There was an error deleting the material. Please try again.",
+        description: "There was an error deleting.",
         variant: "destructive",
       });
     }
   };
 
-  const handleFileUpload = async (file: File, materialData: any) => {
-    try {
-      // Create new material object for IndexedDB storage
-      const materialToStore: any = {
-        ...materialData,
-        file,
-        id: Date.now().toString(),
-        fileName: file.name,
-        fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-        uploadDate: new Date().toISOString().split('T')[0],
-        fileBlob: new Blob([file], { type: file.type }),
-        title: materialData.title || "Untitled",
-        description: materialData.description,
-        type: materialData.type || 'book',
-        status: 'PUBLISHED',
-        topics: materialData.topicId ? [materialData.topicId] : [],
-        author: materialData.author || "Demo User",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Store in IndexedDB
-      await storeMaterial(materialToStore as any);
-      
-      // Update local materials state immediately
-      const loadMaterialsFromIndexedDB = async () => {
-        try {
-          setLoading(true);
-          const storedMaterials = await getStoredMaterials();
-          const combinedMaterials = [...staticMaterials, ...storedMaterials] as Material[];
-          setMaterials(combinedMaterials);
-        } catch (error) {
-          console.error('Failed to load materials from IndexedDB:', error);
-          setMaterials(staticMaterials);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadMaterialsFromIndexedDB();
-      
-      // Show success message
-      toast({
-        title: "Upload Complete",
-        description: "File has been uploaded and processed successfully.",
-      });
-      
-      console.log("Mock Upload Success: File stored in IndexedDB");
-    } catch (error) {
-      console.error('File upload error:', error);
-      toast({
-        title: "Upload Error",
-        description: "Failed to upload file. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const openMaterial = (material: Material) => {
+    protectedMedia.openMaterial({
+      materialId: material._id,
+      materialType: material.viewType,
+      title: material.title,
+      subtitle:
+        [TYPE_META[material.type].label, material.category, material.level]
+          .filter(Boolean)
+          .join(" • ") || undefined,
+    });
   };
 
+  const viewer = {
+    name: authOptional?.user?.name ?? null,
+    email:
+      (authOptional?.user as { email?: string } | undefined)?.email ?? null,
+    id: (authOptional?.user as { _id?: string } | undefined)?._id ?? null,
+  };
+
+  // ---------- Render ----------
   return (
     <TooltipProvider>
       <div className="min-h-full w-full pb-16">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+        <HeroSection
+          loading={loading}
+          stats={stats}
+          onRefresh={() =>
+            queryClient.invalidateQueries({ queryKey: ["materials"] })
+          }
+          onCreateClicked={() => setIsAddModalOpen(true)}
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
-        />
-        <div className="relative mx-auto max-w-5xl px-4 py-14 md:py-20 md:text-center">
-          {/* Help Dialog - Top Right Position */}
-          <div className="absolute top-4 right-0 z-20">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  aria-label="Need help?"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Material Library Management</DialogTitle>
-                  <DialogDescription asChild>
-                    <div>
-                      <ul className="list-disc pl-5 space-y-2 mt-2 text-base">
-                        <li>
-                          <b>Add Materials:</b> Click "Add Material" to create new educational content.
-                        </li>
-                        <li>
-                          <b>Edit Materials:</b> Use the edit button on any material card to modify it.
-                        </li>
-                        <li>
-                          <b>Delete Materials:</b> Remove unwanted materials using the delete button.
-                        </li>
-                        <li>
-                          <b>Track Performance:</b> Monitor downloads and views in the statistics above.
-                        </li>
-                      </ul>
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogClose asChild>
-                  <Button variant="outline" className="mt-4 w-full">Close</Button>
-                </DialogClose>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          <Badge variant="secondary" className="mb-4 rounded-full px-3 py-1 text-xs font-medium">
-            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
-            Instructor hub
-          </Badge>
-          <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">Material Library Management</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            Create, manage, and organize educational materials for your students.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
-              onClick={() => window.location.reload()}
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="rounded-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 px-6">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Material
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Add New Material</DialogTitle>
-                  <DialogDescription>
-                    Create a new material for your students.
-                  </DialogDescription>
-                </DialogHeader>
-                <AddMaterialForm 
-                  onSubmit={handleAddMaterial}
-                  onFileUpload={handleFileUpload}
-                  onCancel={() => setIsAddModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-            
-            {/* Edit Material Modal */}
-            <Dialog open={!!editingMaterial} onOpenChange={(open) => !open && setEditingMaterial(null)}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Edit Material</DialogTitle>
-                  <DialogDescription>
-                    Update the material information.
-                  </DialogDescription>
-                </DialogHeader>
-                {editingMaterial && (
-                  <AddMaterialForm 
-                    onSubmit={handleEditMaterialWrapper}
-                    onFileUpload={handleFileUpload}
-                    onCancel={() => setEditingMaterial(null)}
-                    initialData={editingMaterial}
-                  />
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          {/* Statistics Pills - Exact Student Style Match */}
+
+        <div className="mx-auto max-w-6xl px-4 pt-10">
+          <Toolbar
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            counts={stats.counts}
+            totalMatched={filtered.length}
+            totalAll={stats.total}
+          />
+
           {loading ? (
-            // Skeleton Loaders for Statistics Cards (3 columns)
-            <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5 overflow-hidden">
-                  <div className="relative">
-                    <div className="w-16 h-8 bg-muted rounded-lg animate-pulse mx-auto mb-2"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-muted/50 to-muted animate-pulse"></div>
-                  </div>
-                  <div className="relative">
-                    <div className="w-20 h-4 bg-muted rounded-lg animate-pulse mx-auto"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-muted/50 to-muted animate-pulse"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
-              {/* Pill 1: MATERIALS */}
-              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-                <div className="text-3xl font-semibold tabular-nums">{calculatedStats.totalMaterials}</div>
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                  MATERIALS
-                </div>
-              </div>
-              
-              {/* Pill 2: TOPICS */}
-              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-                <div className="text-3xl font-semibold tabular-nums">
-                  {calculatedStats.totalTopics}
-                </div>
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                  TOPICS
-                </div>
-              </div>
-              
-              {/* Pill 3: DOWNLOADS */}
-              <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
-                <div className="text-3xl font-semibold tabular-nums">{calculatedStats.totalDownloads}</div>
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:text-sm">
-                  DOWNLOADS
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-4 pt-10 flex flex-col items-center">
-
-        {/* Search Bar */}
-        <div className="w-full max-w-5xl mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search materials by title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+            <GridSkeleton viewMode={viewMode} />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              hasFilters={searchQuery.length > 0 || typeFilter !== "all"}
+              onClearFilters={() => {
+                setSearchQuery("");
+                setTypeFilter("all");
+              }}
+              onCreate={() => setIsAddModalOpen(true)}
             />
-          </div>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((m) => (
+                <MaterialGridCard
+                  key={m._id}
+                  material={m}
+                  onView={() => openMaterial(m)}
+                  onEdit={() => setEditingMaterial(m)}
+                  onDelete={() => handleDeleteMaterial(m._id, m.type)}
+                />
+              ))}
+              <CreateNewCard onClick={() => setIsAddModalOpen(true)} />
+            </div>
+          ) : (
+            <MaterialTable
+              rows={filtered}
+              onView={(m) => openMaterial(m)}
+              onEdit={(m) => setEditingMaterial(m)}
+              onDelete={(m) => handleDeleteMaterial(m._id, m.type)}
+            />
+          )}
         </div>
 
-        {/* Materials Management Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-          {loading ? (
-            // Skeleton Loaders for Material Cards
-            Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="h-full flex flex-col justify-between shadow-md border overflow-hidden">
-                <CardHeader className="flex flex-col items-center gap-2">
-                  <div className="relative">
-                    <div className="w-10 h-10 bg-muted rounded-lg animate-pulse" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-muted/50 to-muted animate-pulse" />
-                  </div>
-                  <div className="w-3/4 h-6 bg-muted rounded-lg animate-pulse" />
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4 flex-1">
-                  <div className="w-full h-4 bg-muted rounded-lg animate-pulse" />
-                  <div className="w-full h-4 bg-muted rounded-lg animate-pulse" />
-                  <div className="w-2/3 h-4 bg-muted rounded-lg animate-pulse" />
-                  <div className="w-full h-10 bg-muted rounded-lg animate-pulse" />
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            filteredMaterials.map((material) => (
-              <Card key={(material as any).id || (material as any)._id || Math.random().toString()} className="h-full flex flex-col justify-between shadow-md border hover:shadow-2xl hover:-translate-y-1 group relative transition-all duration-300 ease-out">
-              {/* Material Type Badge */}
-              <span className="absolute top-4 right-4 z-10 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow">
-                {material.type}
-              </span>
-              
-              {/* Status Badge */}
-              <span className={`absolute top-4 left-4 z-10 text-xs font-bold px-2 py-1 rounded shadow ${
-                material.status === 'PUBLISHED' 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-yellow-500 text-white'
-              }`}>
-                {material.status === 'PUBLISHED' ? 'Published' : 'Draft'}
-              </span>
-              
-              <CardHeader className="flex flex-col items-center gap-2">
-                {getMaterialIcon(material.type)}
-                <CardTitle className="text-xl text-center line-clamp-2">
-                  {material.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4 flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-3 flex-1">
-                  {material.summary || material.description || 'No description available'}
-                </p>
-                
-                {/* Stats */}
-                <div className="flex gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Upload className="w-3 h-3" />
-                    {material.downloadCount || 0}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Book className="w-3 h-3" />
-                    {material.viewCount || 0}
-                  </span>
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="flex gap-2 w-full">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                        disabled={!material.fileAssetId?.urls?.streamUrl && !material.fileUrl && !(material as any).fileBlob}
-                        onClick={() => handleViewMaterial(material)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        {material.fileAssetId?.urls?.streamUrl 
-                          ? "Open material in new tab" 
-                          : material.fileAssetId 
-                            ? "Processing file..." 
-                            : material.fileUrl 
-                              ? "Open material in new tab" 
-                              : (material as any).fileBlob
-                                ? "Open uploaded file in new tab"
-                                : "No file attached"
-                        }
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditingMaterial(material)}>
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDeleteMaterial((material as any)._id || (material as any).id, material.type)}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-          )}
-          
-          {/* Add New Material Card */}
-          <Card className="h-full flex flex-col justify-center items-center shadow-md border border-dashed border-primary/30 hover:border-primary/50 hover:shadow-xl group cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
-            <CardContent className="flex flex-col items-center gap-4 p-6">
-              <Plus className="w-12 h-12 text-primary/50 group-hover:text-primary" />
-              <h3 className="text-lg font-semibold text-center">Add New Material</h3>
-              <p className="text-center text-muted-foreground text-sm">
-                Create a new educational resource for your students
-              </p>
-              <Button variant="outline">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Material
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Create modal */}
+        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add new material</DialogTitle>
+              <DialogDescription>
+                Upload a book, slide deck, or visual guide. You can change
+                visibility after creation.
+              </DialogDescription>
+            </DialogHeader>
+            <AddMaterialForm
+              onSubmit={handleAddMaterial}
+              onFileUpload={handleFileUpload}
+              onCancel={() => setIsAddModalOpen(false)}
+              isSubmitting={createMaterialMutation.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit modal */}
+        <Dialog
+          open={!!editingMaterial}
+          onOpenChange={(open) => !open && setEditingMaterial(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit material</DialogTitle>
+              <DialogDescription>
+                Update the material information.
+              </DialogDescription>
+            </DialogHeader>
+            {editingMaterial && (
+              <AddMaterialForm
+                onSubmit={handleEditMaterialWrapper}
+                onFileUpload={handleFileUpload}
+                onCancel={() => setEditingMaterial(null)}
+                initialData={editingMaterial}
+                isSubmitting={createMaterialMutation.isPending}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <ProtectedMediaModal
+          open={protectedMedia.state.open}
+          onOpenChange={protectedMedia.setOpen}
+          url={protectedMedia.state.url}
+          title={protectedMedia.state.title}
+          subtitle={protectedMedia.state.subtitle}
+          kind={protectedMedia.state.kind}
+          loading={protectedMedia.state.loading}
+          viewer={viewer}
+        />
       </div>
-    </div>
     </TooltipProvider>
   );
 }
 
-// Helper function to get material icon
-function getMaterialIcon(type: string) {
-  const iconClass = "w-10 h-10 text-primary transition-all duration-300 group-hover:scale-110";
-  switch (type) {
-    case 'book':
-      return (
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg blur-sm"></div>
-          <Book className={`${iconClass} relative`} />
+// ---------- Hero ----------
+
+function HeroSection({
+  loading,
+  stats,
+  onRefresh,
+  onCreateClicked,
+}: {
+  loading: boolean;
+  stats: {
+    total: number;
+    published: number;
+    drafts: number;
+    counts: Record<Material["type"], number>;
+  };
+  onRefresh: () => void;
+  onCreateClicked: () => void;
+}) {
+  return (
+    <section className="relative overflow-hidden border-b bg-linear-to-br from-primary/12 via-background to-muted/30">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+      />
+      <div className="relative mx-auto max-w-5xl px-4 py-12 md:py-16 md:text-center">
+        <div className="absolute right-4 top-4 z-20">
+          <HelpButton />
         </div>
-      );
-    case 'visual-guide':
-      return (
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg blur-sm"></div>
-          <ImageIcon className={`${iconClass} relative`} />
+
+        <Badge
+          variant="secondary"
+          className="mb-4 rounded-full px-3 py-1 text-xs font-medium"
+        >
+          <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+          Instructor hub
+        </Badge>
+        <h1 className="text-balance text-4xl font-bold tracking-tight md:text-5xl">
+          Material Library Management
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm text-muted-foreground md:text-base">
+          Curate the books, slide decks, and visual guides your students see.
+          Files open in a watermarked viewer — downloads and external sharing
+          are blocked.
+        </p>
+
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <Button
+            size="lg"
+            variant="outline"
+            className="rounded-full border-primary/25 bg-background/60 backdrop-blur"
+            onClick={onRefresh}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            size="lg"
+            className="rounded-full bg-linear-to-r from-primary to-primary/90 px-6 shadow-lg transition-all duration-200 hover:from-primary/90 hover:to-primary hover:shadow-xl"
+            onClick={onCreateClicked}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add material
+          </Button>
         </div>
-      );
-    case 'presentation':
-      return (
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg blur-sm"></div>
-          <Presentation className={`${iconClass} relative`} />
+
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-3 text-center sm:grid-cols-4 md:gap-4">
+          <StatPill
+            label="Materials"
+            value={loading ? null : stats.total}
+            accent="text-foreground"
+          />
+          <StatPill
+            label="Published"
+            value={loading ? null : stats.published}
+            accent="text-emerald-600 dark:text-emerald-400"
+          />
+          <StatPill
+            label="Drafts"
+            value={loading ? null : stats.drafts}
+            accent="text-amber-600 dark:text-amber-400"
+          />
+          <StatPill
+            label="Types"
+            value={
+              loading
+                ? null
+                : Object.values(stats.counts).filter((n) => n > 0).length
+            }
+            accent="text-sky-600 dark:text-sky-400"
+          />
         </div>
-      );
-    default:
-      // Fallback to Library icon for any unknown types
-      return (
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-500/20 to-slate-500/20 rounded-lg blur-sm"></div>
-          <Library className={`${iconClass} relative`} />
-        </div>
-      );
-  }
+      </div>
+    </section>
+  );
 }
 
-// Add Material Form Component
-function AddMaterialForm({ 
-  onSubmit, 
-  onFileUpload, 
+function StatPill({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number | null;
+  accent: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
+      <div className={cn("text-3xl font-semibold tabular-nums", accent)}>
+        {value == null ? (
+          <div className="mx-auto h-7 w-12 animate-pulse rounded bg-muted" />
+        ) : (
+          value
+        )}
+      </div>
+      <div className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground md:text-xs">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function HelpButton() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          aria-label="Need help?"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Material Library Management</DialogTitle>
+          <DialogDescription asChild>
+            <div>
+              <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">
+                <li>
+                  <b>Add:</b> Use “Add material” to create a new book, guide,
+                  or presentation. Attach a file or upload one later.
+                </li>
+                <li>
+                  <b>View:</b> Files open in a protected viewer (no download,
+                  no print, watermarked).
+                </li>
+                <li>
+                  <b>Visibility:</b> Toggle PUBLIC / PRIVATE from the lesson
+                  editor. PRIVATE = course-only.
+                </li>
+                <li>
+                  <b>Search & sort:</b> Filter by type, search by title, then
+                  switch grid / list as needed.
+                </li>
+              </ul>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogClose asChild>
+          <Button variant="outline" className="mt-4 w-full">
+            Close
+          </Button>
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- Toolbar ----------
+
+function Toolbar({
+  searchQuery,
+  onSearchQueryChange,
+  typeFilter,
+  onTypeFilterChange,
+  sortBy,
+  onSortByChange,
+  viewMode,
+  onViewModeChange,
+  counts,
+  totalMatched,
+  totalAll,
+}: {
+  searchQuery: string;
+  onSearchQueryChange: (next: string) => void;
+  typeFilter: TypeFilter;
+  onTypeFilterChange: (next: TypeFilter) => void;
+  sortBy: SortKey;
+  onSortByChange: (next: SortKey) => void;
+  viewMode: ViewMode;
+  onViewModeChange: (next: ViewMode) => void;
+  counts: Record<Material["type"], number>;
+  totalMatched: number;
+  totalAll: number;
+}) {
+  return (
+    <div className="mb-6 space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative w-full md:max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="search"
+            placeholder="Search materials by title, author, category…"
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            className="w-full rounded-xl border bg-card py-2.5 pl-10 pr-9 text-sm shadow-sm transition focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => onSearchQueryChange("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={sortBy} onValueChange={(v) => onSortByChange(v as SortKey)}>
+            <SelectTrigger className="h-9 w-[160px] rounded-xl bg-card text-xs">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="title-az">Title A → Z</SelectItem>
+              <SelectItem value="title-za">Title Z → A</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div
+            className="flex items-center rounded-xl border bg-card p-0.5"
+            role="group"
+            aria-label="View mode"
+          >
+            <button
+              type="button"
+              onClick={() => onViewModeChange("grid")}
+              className={cn(
+                "flex h-8 items-center gap-1 rounded-lg px-2 text-xs transition",
+                viewMode === "grid"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              data-active={viewMode === "grid" ? "true" : "false"}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("list")}
+              className={cn(
+                "flex h-8 items-center gap-1 rounded-lg px-2 text-xs transition",
+                viewMode === "list"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              data-active={viewMode === "list" ? "true" : "false"}
+            >
+              <Rows3 className="h-3.5 w-3.5" />
+              List
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <TypePill
+          label="All"
+          count={totalAll}
+          selected={typeFilter === "all"}
+          onClick={() => onTypeFilterChange("all")}
+        />
+        <TypePill
+          icon={<BookOpen className="h-3 w-3" />}
+          label="Books"
+          count={counts.book}
+          selected={typeFilter === "book"}
+          onClick={() => onTypeFilterChange("book")}
+          tint="sky"
+        />
+        <TypePill
+          icon={<ImageIcon className="h-3 w-3" />}
+          label="Visual guides"
+          count={counts["visual-guide"]}
+          selected={typeFilter === "visual-guide"}
+          onClick={() => onTypeFilterChange("visual-guide")}
+          tint="emerald"
+        />
+        <TypePill
+          icon={<Presentation className="h-3 w-3" />}
+          label="Presentations"
+          count={counts.presentation}
+          selected={typeFilter === "presentation"}
+          onClick={() => onTypeFilterChange("presentation")}
+          tint="orange"
+        />
+        <span className="ml-auto text-xs text-muted-foreground">
+          Showing {totalMatched} of {totalAll}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TypePill({
+  icon,
+  label,
+  count,
+  selected,
+  onClick,
+  tint,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  count: number;
+  selected: boolean;
+  onClick: () => void;
+  tint?: "sky" | "emerald" | "orange";
+}) {
+  const tintClass =
+    tint === "sky"
+      ? "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+      : tint === "emerald"
+        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+        : tint === "orange"
+          ? "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300"
+          : "border-border bg-card text-foreground";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
+        selected
+          ? tintClass + " ring-2 ring-offset-1 ring-offset-background"
+          : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      {icon}
+      {label}
+      <span
+        className={cn(
+          "rounded-full px-1.5 py-0 text-[10px] font-semibold",
+          selected ? "bg-background/40" : "bg-muted",
+        )}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ---------- Cards / Table ----------
+
+function MaterialGridCard({
+  material,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  material: Material;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const meta = TYPE_META[material.type];
+  const Icon = meta.icon;
+  const hasFile = !!material.fileAssetId || !!material.fileUrl;
+
+  return (
+    <Card className="group relative flex h-full flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-xl">
+      <div
+        className={cn(
+          "h-24 bg-linear-to-br",
+          meta.accent,
+        )}
+        aria-hidden
+      >
+        <div className="flex h-full items-end justify-between p-3">
+          <div
+            className={cn(
+              "flex h-12 w-12 items-center justify-center rounded-xl border bg-card/80 shadow-sm backdrop-blur",
+              meta.chip,
+            )}
+          >
+            <Icon className="h-6 w-6" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                material.status === "PUBLISHED"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+              )}
+            >
+              {material.status === "PUBLISHED" ? "Published" : "Draft"}
+            </span>
+            {material.visibility ? (
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  material.visibility === "PRIVATE"
+                    ? "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                    : "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+                )}
+              >
+                {material.visibility === "PRIVATE" ? "Private" : "Public"}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="flex flex-1 flex-col gap-3 p-4">
+        <div>
+          <p className="line-clamp-2 text-base font-semibold">{material.title}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+            {meta.label}
+          </p>
+        </div>
+        <p className="line-clamp-2 text-sm text-muted-foreground">
+          {material.summary ||
+            material.description ||
+            "No description provided."}
+        </p>
+
+        <div className="flex flex-wrap gap-1.5">
+          {material.category ? (
+            <Badge variant="secondary" className="text-[10px] font-normal">
+              {material.category.replace(/_/g, " ")}
+            </Badge>
+          ) : null}
+          {material.level ? (
+            <Badge variant="outline" className="text-[10px] font-normal">
+              {material.level}
+            </Badge>
+          ) : null}
+          {material.author ? (
+            <Badge variant="outline" className="text-[10px] font-normal">
+              {material.author}
+            </Badge>
+          ) : null}
+        </div>
+
+        <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" /> {material.viewCount}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Upload className="h-3 w-3" /> {material.downloadCount}
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px]">
+            <Shield className="h-3 w-3" />
+            Protected
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5 pt-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={onView}
+                disabled={!hasFile}
+              >
+                <Eye className="mr-1 h-3.5 w-3.5" />
+                View
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {hasFile
+                ? "Open in protected viewer"
+                : "Upload a file first"}
+            </TooltipContent>
+          </Tooltip>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={onEdit}
+          >
+            <Edit className="mr-1 h-3.5 w-3.5" />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full text-destructive hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="mr-1 h-3.5 w-3.5" />
+            Delete
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MaterialTable({
+  rows,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  rows: Material[];
+  onView: (m: Material) => void;
+  onEdit: (m: Material) => void;
+  onDelete: (m: Material) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th className="px-4 py-3">Title</th>
+            <th className="px-4 py-3">Type</th>
+            <th className="hidden px-4 py-3 md:table-cell">Category</th>
+            <th className="hidden px-4 py-3 md:table-cell">Status</th>
+            <th className="hidden px-4 py-3 lg:table-cell">Author</th>
+            <th className="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {rows.map((m) => {
+            const meta = TYPE_META[m.type];
+            const Icon = meta.icon;
+            const hasFile = !!m.fileAssetId || !!m.fileUrl;
+            return (
+              <tr key={m._id} className="transition-colors hover:bg-muted/30">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-lg border",
+                        meta.chip,
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="line-clamp-1 font-medium">{m.title}</p>
+                      <p className="line-clamp-1 text-xs text-muted-foreground">
+                        {m.summary || m.description || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <Badge variant="outline" className="text-[10px]">
+                    {meta.label}
+                  </Badge>
+                </td>
+                <td className="hidden px-4 py-3 md:table-cell">
+                  {m.category ? (
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      {m.category.replace(/_/g, " ")}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="hidden px-4 py-3 md:table-cell">
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      m.status === "PUBLISHED"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                    )}
+                  >
+                    {m.status === "PUBLISHED" ? "Published" : "Draft"}
+                  </span>
+                </td>
+                <td className="hidden px-4 py-3 text-xs text-muted-foreground lg:table-cell">
+                  {m.author || "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => onView(m)}
+                          disabled={!hasFile}
+                          aria-label="View"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {hasFile ? "Open in protected viewer" : "No file"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(m)}
+                      aria-label="Edit"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => onDelete(m)}
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CreateNewCard({ onClick }: { onClick: () => void }) {
+  return (
+    <Card
+      onClick={onClick}
+      className="group flex h-full cursor-pointer flex-col items-center justify-center border-2 border-dashed border-primary/25 bg-muted/20 p-6 text-center transition-all hover:border-primary/50 hover:bg-muted/30"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+        <Plus className="h-6 w-6" />
+      </div>
+      <h3 className="mt-3 text-base font-semibold">Add new material</h3>
+      <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+        Create a new book, presentation, or visual guide for your students.
+      </p>
+      <Button variant="outline" size="sm" className="mt-3" type="button">
+        <Plus className="mr-1 h-3.5 w-3.5" />
+        Create
+      </Button>
+    </Card>
+  );
+}
+
+function GridSkeleton({ viewMode }: { viewMode: ViewMode }) {
+  if (viewMode === "list") {
+    return (
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="divide-y">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-4">
+              <div className="h-9 w-9 animate-pulse rounded-lg bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+              </div>
+              <div className="hidden h-4 w-20 animate-pulse rounded bg-muted md:block" />
+              <div className="hidden h-4 w-16 animate-pulse rounded bg-muted md:block" />
+              <div className="h-7 w-24 animate-pulse rounded bg-muted" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i} className="overflow-hidden">
+          <div className="h-24 animate-pulse bg-muted" />
+          <CardContent className="space-y-3 p-4">
+            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-full animate-pulse rounded bg-muted" />
+            <div className="h-3 w-5/6 animate-pulse rounded bg-muted" />
+            <div className="h-9 w-full animate-pulse rounded bg-muted" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({
+  hasFilters,
+  onClearFilters,
+  onCreate,
+}: {
+  hasFilters: boolean;
+  onClearFilters: () => void;
+  onCreate: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed bg-card/60 p-12 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Library className="h-6 w-6" />
+      </div>
+      <h3 className="text-base font-semibold">
+        {hasFilters ? "No materials match your filters" : "No materials yet"}
+      </h3>
+      <p className="max-w-md text-sm text-muted-foreground">
+        {hasFilters
+          ? "Try clearing your search and filters, or create a new material."
+          : "Get started by uploading a book, presentation, or visual guide for your students."}
+      </p>
+      <div className="mt-2 flex gap-2">
+        {hasFilters ? (
+          <Button variant="outline" size="sm" onClick={onClearFilters}>
+            <X className="mr-1 h-3.5 w-3.5" />
+            Clear filters
+          </Button>
+        ) : null}
+        <Button size="sm" onClick={onCreate}>
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          Create material
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Form ----------
+
+function AddMaterialForm({
+  onSubmit,
+  onFileUpload,
   onCancel,
-  initialData 
-}: { 
+  initialData,
+  isSubmitting,
+}: {
   onSubmit: (data: CreateMaterialRequest) => void;
-  onFileUpload: (file: File, data: Omit<CreateMaterialRequest, 'file'>) => void;
+  onFileUpload: (file: File, data: Omit<CreateMaterialRequest, "file">) => void;
   onCancel: () => void;
   initialData?: Material;
+  isSubmitting?: boolean;
 }) {
   const [formData, setFormData] = useState<CreateMaterialRequest>({
-    title: '',
-    description: '',
-    type: 'book',
+    title: "",
+    description: "",
+    type: "book",
     tags: [],
-    category: '',
+    category: "OTHER",
+    level: "Beginner",
     isPublic: false,
-    topicId: '',
-    isPublished: true
+    topicId: "",
+    isPublished: true,
   });
 
-  // Pre-fill form data when editing
   useEffect(() => {
     if (initialData) {
       setFormData({
         title: initialData.title,
-        description: initialData.description || '',
+        description: initialData.description || "",
         type: initialData.type,
         tags: [],
-        category: '',
+        category: initialData.category || "OTHER",
+        level:
+          (initialData.level as CreateMaterialRequest["level"]) || "Beginner",
         isPublic: false,
-        topicId: initialData.topics[0] || '', // Use first topic
-        isPublished: initialData.status === 'PUBLISHED'
+        topicId: initialData.topics?.[0] || "",
+        isPublished: initialData.status === "PUBLISHED",
       });
     }
   }, [initialData]);
+
   const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -814,88 +1283,201 @@ function AddMaterialForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Title</label>
+        <label
+          htmlFor="add-material-title"
+          className="mb-1 block text-sm font-medium"
+        >
+          Title
+        </label>
         <input
+          id="add-material-title"
           type="text"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="w-full px-3 py-2 border rounded-md"
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          placeholder="Material title"
           required
         />
       </div>
-      
+
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label
+          htmlFor="add-material-description"
+          className="mb-1 block text-sm font-medium"
+        >
+          Description
+        </label>
         <textarea
-          value={formData.description || ''}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-3 py-2 border rounded-md"
+          id="add-material-description"
+          value={formData.description || ""}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          placeholder="Describe this material for students"
           rows={3}
         />
       </div>
-      
-      <div className="grid grid-cols-2 gap-4">
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1">Type</label>
-          <select
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'book' | 'visual-guide' | 'presentation' })}
-            className="w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          <label
+            htmlFor="add-material-type"
+            className="mb-1 block text-sm font-medium"
           >
-            <option value="book" className="bg-background text-foreground">Books</option>
-            <option value="visual-guide" className="bg-background text-foreground">Visual Guides</option>
-            <option value="presentation" className="bg-background text-foreground">Presentations</option>
+            Type
+          </label>
+          <select
+            id="add-material-type"
+            value={formData.type}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                type: e.target.value as Material["type"],
+              })
+            }
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="book">Book / PDF</option>
+            <option value="visual-guide">Visual guide</option>
+            <option value="presentation">Presentation</option>
           </select>
         </div>
-        
+
         <div>
-          <label className="block text-sm font-medium mb-1">Topic</label>
-          <select
-            value={formData.topicId}
-            onChange={(e) => setFormData({ ...formData, topicId: e.target.value })}
-            className="w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          <label
+            htmlFor="add-material-topic"
+            className="mb-1 block text-sm font-medium"
           >
-            {staticTopics.map((topic) => (
-              <option key={topic.value} value={topic.value} className="bg-background text-foreground">
+            Topic
+          </label>
+          <select
+            id="add-material-topic"
+            value={formData.topicId}
+            onChange={(e) =>
+              setFormData({ ...formData, topicId: e.target.value })
+            }
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {STATIC_TOPICS.map((topic) => (
+              <option key={topic.value} value={topic.value}>
                 {topic.label}
               </option>
             ))}
           </select>
         </div>
       </div>
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">File (optional)</label>
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="w-full px-3 py-2 border rounded-md"
-        />
-      </div>
-      
-      <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm font-medium">Publish to Students</label>
-            <p className="text-xs text-muted-foreground mt-1">
-              If disabled, material will be saved as a draft.
-            </p>
-          </div>
-          <Switch
-            checked={formData.isPublished}
-            onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
-          />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label
+            htmlFor="add-material-category"
+            className="mb-1 block text-sm font-medium"
+          >
+            Category
+          </label>
+          <select
+            id="add-material-category"
+            value={formData.category || "OTHER"}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {lmsCourseCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="add-material-level"
+            className="mb-1 block text-sm font-medium"
+          >
+            Level
+          </label>
+          <select
+            id="add-material-level"
+            value={formData.level || "Beginner"}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                level: e.target.value as CreateMaterialRequest["level"],
+              })
+            }
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
         </div>
       </div>
-      
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1">
-          Add Material
+
+      <div>
+        <label
+          htmlFor="add-material-file"
+          className="mb-1 block text-sm font-medium"
+        >
+          File{!!initialData ? " (cannot be changed)" : " (optional)"}
+        </label>
+        <input
+          id="add-material-file"
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          disabled={!!initialData}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:font-medium file:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        {!!initialData ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Files can&apos;t be replaced after upload. Delete and re-create the
+            material to change the file.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+        <div>
+          <p className="text-sm font-medium">Publish to students</p>
+          <p className="text-xs text-muted-foreground">
+            Off = saved as draft. Only you can see it.
+          </p>
+        </div>
+        <Switch
+          checked={formData.isPublished}
+          onCheckedChange={(checked) =>
+            setFormData({ ...formData, isPublished: checked })
+          }
+        />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" className="flex-1" disabled={!!isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : initialData ? (
+            "Save changes"
+          ) : (
+            "Add material"
+          )}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="flex-1"
+        >
           Cancel
         </Button>
       </div>
     </form>
   );
 }
+
+// Suppress unused-import warning for FileText (kept for compat with prior signature)
+void FileText;

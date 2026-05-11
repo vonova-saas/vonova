@@ -21,6 +21,29 @@ import {
   updateComment,
   updatePost,
 } from "./app/community/community.api";
+import {
+  getMySubscriptionFn,
+  getSubscriptionHistoryFn,
+  checkPlanFn,
+  upgradeSubscriptionFn,
+  cancelSubscriptionFn,
+  getPricingFn,
+  type Subscription,
+  type PlanLimits,
+  type PlanInfo,
+  type PricingInfo,
+} from "./app/subscription/subscription.api";
+import {
+  getBillingHistoryFn,
+  getUserPaymentsFn,
+  createCheckoutSessionFn,
+  purchaseCourseFn,
+  purchaseMaterialFn,
+  type Payment,
+  type BillingHistoryResponse,
+  type CheckoutSessionRequest,
+  type CheckoutSessionResponse,
+} from "./app/payments/payments.api";
 
 //? ************* Settings *************
 //? ************* Account *************
@@ -53,6 +76,19 @@ export {
   instructorOnboardingMutationFn,
   updatePost,
   updateComment,
+  //? subscription api services
+  getMySubscriptionFn,
+  getSubscriptionHistoryFn,
+  checkPlanFn,
+  upgradeSubscriptionFn,
+  cancelSubscriptionFn,
+  getPricingFn,
+  //? payments api services
+  getBillingHistoryFn,
+  getUserPaymentsFn,
+  createCheckoutSessionFn,
+  purchaseCourseFn,
+  purchaseMaterialFn,
   //? settings api services
   //? account api services
   //? billing api services
@@ -64,3 +100,15 @@ export {
   // user services
   // store services
 }
+
+// Types exports
+export type {
+  Subscription,
+  PlanLimits,
+  PlanInfo,
+  PricingInfo,
+  Payment,
+  BillingHistoryResponse,
+  CheckoutSessionRequest,
+  CheckoutSessionResponse,
+};

@@ -13,15 +13,20 @@ export interface Question {
   correctOptionId: string;
 }
 
+export type QuizVisibility = 'PUBLIC' | 'PRIVATE';
+
 export interface QuizDocument extends Document {
   title: string;
   description?: string;
   topic: string;
   noOfQuestions: number;
   questions: Question[];
-  // createdBy: Types.ObjectId;
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  visibility: QuizVisibility;
+  courseId?: Types.ObjectId | null;
+  lessonId?: Types.ObjectId | null;
 }
 
 @Schema({ _id: false })
@@ -71,6 +76,20 @@ export class Quiz extends Document implements QuizDocument {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: ['PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibility: QuizVisibility;
+
+  @Prop({ type: Types.ObjectId, ref: 'Course', default: null, index: true })
+  courseId?: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Lesson', default: null, index: true })
+  lessonId?: Types.ObjectId | null;
 
   createdAt: Date;
   updatedAt: Date;

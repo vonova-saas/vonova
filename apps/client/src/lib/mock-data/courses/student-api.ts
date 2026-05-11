@@ -10,7 +10,7 @@ import type {
   LessonAccess,
   LessonContent,
   ContentUploadResponse,
-  CourseProgress,
+  StudentCourseProgress,
   LessonProgress,
 } from "@/types/api/lms/courses.type";
 import {
@@ -230,31 +230,39 @@ export async function getLessonContentQueryFn(
 
 // ==================== PROGRESS ====================
 
-export async function getCourseProgressQueryFn(courseId: string): Promise<CourseProgress> {
+export async function getCourseProgressQueryFn(
+  courseId: string,
+): Promise<StudentCourseProgress> {
   initializeMockData();
   const user = getCurrentMockUser();
   if (!user) throw new Error("User not authenticated");
 
   const enrollment = getMockEnrollment(courseId, user._id);
   const allLessons = getMockLessonsByChapter("").filter((l) => l.courseId === courseId);
+  const total = allLessons.length || 1;
+  const completed = enrollment?.completedLessons || 0;
+  const pct = Math.round((completed / total) * 100);
 
   return delay(
     Promise.resolve({
+      success: true,
       courseId,
-      userId: user._id,
-      overallProgress: enrollment?.progress || 0,
-      completedLessons: enrollment?.completedLessons || 0,
-      totalLessons: allLessons.length,
-      totalTimeSpent: 0,
-      lastAccessedAt: enrollment?.enrolledAt || new Date().toISOString(),
-      chapters: [],
-    })
+      studentId: user._id,
+      completedLessonIds: [],
+      completedLessonsCount: completed,
+      totalLessons: total,
+      progressPercentage: pct,
+      completed: pct >= 100,
+      lastLessonId: null,
+      lastAccessedAt: enrollment?.enrolledAt || null,
+    }),
   );
 }
 
 export async function markLessonCompleteMutationFn(
   courseId: string,
-  lessonId: string
+  lessonId: string,
+  _data?: { completed: boolean; timeSpentSec?: number },
 ): Promise<LessonProgress> {
   initializeMockData();
   const user = getCurrentMockUser();

@@ -6,7 +6,15 @@ import { Lesson, LessonSchema } from './schema/lesson.schema';
 import { Course, CourseSchema } from '../course/schema/course.schema';
 import { Chapter, ChapterSchema } from '../chapter/schema/chapter.schema';
 import { Asset, AssetSchema } from '../content/schema/asset.schema';
+import { Quiz, QuizSchema } from '../../quiz/schema/quiz.schema';
+import { Assignment, AssignmentSchema } from '../../assignment/schema/assignment.schema';
 import { S3ConfigService } from './config/s3.config';
+import { Book, BookSchema } from '../../library/schema/book/book.schema';
+import { Guide, GuideSchema } from '../../library/schema/guide.schema';
+import {
+  Presentation,
+  PresentationSchema,
+} from '../../library/schema/presentation.schema';
 
 @Module({
   imports: [
@@ -15,9 +23,14 @@ import { S3ConfigService } from './config/s3.config';
       { name: Course.name, schema: CourseSchema },
       { name: Chapter.name, schema: ChapterSchema },
       { name: Asset.name, schema: AssetSchema },
+      { name: Quiz.name, schema: QuizSchema },
+      { name: Assignment.name, schema: AssignmentSchema },
+      { name: Book.name, schema: BookSchema },
+      { name: Guide.name, schema: GuideSchema },
+      { name: Presentation.name, schema: PresentationSchema },
     ]),
   ],
   controllers: [LessonController],
   providers: [LessonService, S3ConfigService],
 })
-export class LessonModule {}
+export class LessonModule { }
