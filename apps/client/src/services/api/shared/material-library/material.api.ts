@@ -257,6 +257,46 @@ export const updateLibraryMaterialVisibilityMutationFn = async (params: {
   return response.data;
 };
 
+/**
+ * Patch fields on a library material (title, description, category, level,
+ * isPublished, visibility, …). Routes to the per-type PATCH endpoint based
+ * on `viewType`, since the three resources live behind different controllers
+ * but share equivalent `Update*Dto`s (`PartialType(Create*Dto)`).
+ *
+ * Only sends defined fields so we never overwrite values with `undefined`.
+ */
+export const updateLibraryMaterialMutationFn = async (params: {
+  materialId: string;
+  viewType: "book" | "guide" | "presentation";
+  patch: {
+    title?: string;
+    description?: string;
+    category?: string;
+    level?: "Beginner" | "Intermediate" | "Advanced";
+    tags?: string[];
+    topicId?: string;
+    isPublished?: boolean;
+    visibility?: "PUBLIC" | "PRIVATE";
+  };
+}): Promise<unknown> => {
+  const { materialId, viewType, patch } = params;
+  const endpoint =
+    viewType === "presentation"
+      ? `/lms/library/presentation/updatePresentation/${encodeURIComponent(materialId)}`
+      : viewType === "guide"
+        ? `/lms/library/guides/${encodeURIComponent(materialId)}`
+        : `/lms/library/books/${encodeURIComponent(materialId)}`;
+
+  const body: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) body[k] = v;
+  }
+  if (Object.keys(body).length === 0) return null;
+
+  const response = await API.patch(endpoint, body);
+  return response.data;
+};
+
 // Delete function with support for multiple content types
 export const deleteMaterialMutationFn = async (
   id: string,

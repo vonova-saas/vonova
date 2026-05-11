@@ -58,6 +58,7 @@ import {
   createLibraryBookMutationFn,
   uploadLibraryFileMutationFn,
   deleteMaterialMutationFn,
+  updateLibraryMaterialMutationFn,
 } from "@/services/api/shared/material-library/material.api";
 import type { CreateMaterialRequest } from "@/types/api/shared/material-library/material.type";
 import { toast } from "@/hooks/app/use-toast";
@@ -313,19 +314,50 @@ export default function MaterialLibraryManagementPage() {
     createMaterialMutation.mutate({ ...materialData, file });
   };
 
-  const handleEditMaterial = async () => {
-    toast({
-      title: "Material Updated Successfully",
-      description: "Material has been updated.",
-    });
-    setEditingMaterial(null);
-    queryClient.invalidateQueries({ queryKey: ["materials"] });
-  };
+  const updateMaterialMutation = useMutation({
+    mutationFn: async (vars: {
+      materialId: string;
+      viewType: Material["viewType"];
+      patch: Parameters<typeof updateLibraryMaterialMutationFn>[0]["patch"];
+    }) => {
+      return updateLibraryMaterialMutationFn(vars);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Material Updated Successfully",
+        description: "Material has been updated.",
+      });
+      setEditingMaterial(null);
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+    },
+    onError: (error) => {
+      console.error("Failed to update material:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "There was an error saving your changes.";
+      toast({
+        title: "Failed to Update Material",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
 
-  const handleEditMaterialWrapper = async (_data: CreateMaterialRequest) => {
-    if (editingMaterial) {
-      await handleEditMaterial();
-    }
+  const handleEditMaterialWrapper = async (data: CreateMaterialRequest) => {
+    if (!editingMaterial) return;
+    updateMaterialMutation.mutate({
+      materialId: editingMaterial._id,
+      viewType: editingMaterial.viewType,
+      patch: {
+        title: data.title?.trim(),
+        description: data.description,
+        category: data.category,
+        level: data.level,
+        topicId: data.topicId || undefined,
+        isPublished: data.isPublished,
+      },
+    });
   };
 
   const handleDeleteMaterial = async (id: string, type?: string) => {
@@ -463,7 +495,7 @@ export default function MaterialLibraryManagementPage() {
                 onFileUpload={handleFileUpload}
                 onCancel={() => setEditingMaterial(null)}
                 initialData={editingMaterial}
-                isSubmitting={createMaterialMutation.isPending}
+                isSubmitting={updateMaterialMutation.isPending}
               />
             )}
           </DialogContent>

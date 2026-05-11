@@ -90,6 +90,7 @@ export class Course {
       'UI_UX',
       'DATABASE',
       'PROBLEM_SOLVING',
+      'INTERVIEW',
       'OTHER',
     ],
     default: 'OTHER',

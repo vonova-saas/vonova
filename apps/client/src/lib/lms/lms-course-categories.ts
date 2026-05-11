@@ -17,6 +17,7 @@ export const LMS_COURSE_CATEGORIES = [
   "UI_UX",
   "DATABASE",
   "PROBLEM_SOLVING",
+  "INTERVIEW",
   "OTHER",
 ] as const;
 

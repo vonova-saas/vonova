@@ -76,6 +76,7 @@ export class CreateCourseDto {
     'UI_UX',
     'DATABASE',
     'PROBLEM_SOLVING',
+    'INTERVIEW',
     'OTHER',
   ])
   category?: string;
