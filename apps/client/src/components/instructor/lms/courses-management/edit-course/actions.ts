@@ -115,6 +115,7 @@ export async function reorderChapters(
       })),
     };
 
+
     await reorderChaptersMutationFn(courseId, reorderData);
 
     return {

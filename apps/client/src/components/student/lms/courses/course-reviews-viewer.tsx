@@ -29,6 +29,7 @@ export function CourseReviewsViewer({ courseId }: iAppProps) {
           limit: 10,
         });
         setReviewsData(data);
+
         setError(null);
       } catch (err) {
         console.error("Error fetching reviews:", err);

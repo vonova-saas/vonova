@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
 import useConstructUrl from "@/hooks/courses/use-construct-url";
 import Image from "next/image";
 import Link from "next/link";
 import { useCourseProgress } from "@/hooks/student/lms/use-courses";
+import { AIFeedbackButton } from "./ai-feedback-button";
 
 interface iAppProps {
   data: EnrolledCourseType;
@@ -78,6 +78,14 @@ export function CourseProgressCard({ data, studentId }: iAppProps) {
         >
           Continue Learning
         </Link>
+
+        <div className="mt-3 flex justify-center">
+          <AIFeedbackButton
+            courseId={data.Course._id}
+            courseTitle={data.Course.title}
+            studentId={studentId}
+          />
+        </div>
       </CardContent>
     </Card>
   );

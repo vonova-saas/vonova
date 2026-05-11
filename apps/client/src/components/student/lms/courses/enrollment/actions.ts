@@ -4,10 +4,11 @@ import { ApiResponse } from "@/lib/courses/types";
 import { enrollCourseMutationFn } from "@/services/student/lms/courses/courses.api";
 
 export async function enrollInCourseAction(
-  courseId: string
+  courseId: string,
+  couponCode?: string,
 ): Promise<ApiResponse> {
   try {
-    await enrollCourseMutationFn(courseId);
+    await enrollCourseMutationFn(courseId, couponCode);
 
     return {
       status: "success",
