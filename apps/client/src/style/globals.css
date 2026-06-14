@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Required for Tailwind v4 CSS pipeline — `tailwind.config.ts` plugins are not applied here. */
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));

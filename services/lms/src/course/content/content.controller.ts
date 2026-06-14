@@ -50,6 +50,55 @@ export class ContentController {
     );
   }
 
+  @MessagePattern({ cmd: 'app.courses.content.lessonVideoStreamMeta' })
+  async lessonVideoStreamMeta(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const { courseId, lessonId, userId, user } = data;
+    if (!courseId || !lessonId) {
+      throw new Error('courseId and lessonId are required');
+    }
+    const extractedUserId =
+      userId || user?.id || user?.sub || (user as { _id?: string })?._id;
+    if (!extractedUserId) throw new Error('User identification is required');
+
+    return this.contentService.getLessonVideoStreamMeta(
+      courseId,
+      lessonId,
+      String(extractedUserId),
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.content.lessonPosterStreamMeta' })
+  async lessonPosterStreamMeta(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      user?: { id?: string; sub?: string };
+    },
+  ) {
+    const { courseId, lessonId, userId, user } = data;
+    if (!courseId || !lessonId) {
+      throw new Error('courseId and lessonId are required');
+    }
+    const extractedUserId =
+      userId || user?.id || user?.sub || (user as { _id?: string })?._id;
+    if (!extractedUserId) throw new Error('User identification is required');
+    return this.contentService.getLessonPosterStreamMeta(
+      courseId,
+      lessonId,
+      String(extractedUserId),
+    );
+  }
+
   @MessagePattern({ cmd: 'course.content.createAsset' })
   async createAssetRecord(
     @Payload()

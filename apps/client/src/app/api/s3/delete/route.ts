@@ -1,63 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { resolveS3ObjectKeyForDelete } from "@/lib/lms/presigned-url";
 
-function getS3Config() {
-  const region = process.env.AWS_S3_REGION_APP?.trim();
-  const accessKeyId = process.env.AWS_S3_ACCESS_KEY_ID_APP?.trim();
-  const secretAccessKey = process.env.AWS_S3_SECRET_ACCESS_KEY_APP?.trim();
-  const bucket = process.env.AWS_S3_BUCKET_APP?.trim();
-  
-  if (!region || !accessKeyId || !secretAccessKey || !bucket) {
-    return null;
-  }
-  
+type S3Env = {
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+};
+
+function trimEnv(value: string | undefined): string {
+  return (value ?? "").trim();
+}
+
+function lmsS3Env(): S3Env | null {
+  const region = trimEnv(process.env.AWS_S3_REGION_LMS);
+  const accessKeyId = trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_LMS);
+  const secretAccessKey = trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_LMS);
+  const bucket = trimEnv(process.env.AWS_S3_BUCKET_LMS);
+  if (!region || !accessKeyId || !secretAccessKey || !bucket) return null;
   return { region, accessKeyId, secretAccessKey, bucket };
+}
+
+function appS3Env(): S3Env | null {
+  const region = trimEnv(process.env.AWS_S3_REGION_APP);
+  const accessKeyId = trimEnv(process.env.AWS_S3_ACCESS_KEY_ID_APP);
+  const secretAccessKey = trimEnv(process.env.AWS_S3_SECRET_ACCESS_KEY_APP);
+  const bucket = trimEnv(process.env.AWS_S3_BUCKET_APP);
+  if (!region || !accessKeyId || !secretAccessKey || !bucket) return null;
+  return { region, accessKeyId, secretAccessKey, bucket };
+}
+
+function resolveDeleteTarget(rawKey: string): {
+  env: S3Env;
+  objectKey: string;
+} | null {
+  const objectKey = resolveS3ObjectKeyForDelete(rawKey);
+  if (!objectKey) return null;
+  const lmsPrefixes = ["course/", "courses/", "library/", "posts/", "lessons/"];
+  const useLms = lmsPrefixes.some((p) => objectKey.startsWith(p));
+  const env = useLms ? lmsS3Env() : appS3Env();
+  if (!env) return null;
+  return { env, objectKey };
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json();
-    const { key } = body;
+    const { key } = body as { key?: string };
 
     if (!key) {
       return NextResponse.json(
         { error: "Missing required field: key" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const s3Config = getS3Config();
-    if (!s3Config) {
+    const target = resolveDeleteTarget(key);
+    if (!target) {
       return NextResponse.json(
-        { error: "S3 configuration not found" },
-        { status: 500 }
+        {
+          error:
+            "Not an S3 object key (stable media URLs cannot be deleted via this route)",
+        },
+        { status: 400 },
       );
     }
 
     const s3Client = new S3Client({
-      region: s3Config.region,
+      region: target.env.region,
       credentials: {
-        accessKeyId: s3Config.accessKeyId,
-        secretAccessKey: s3Config.secretAccessKey,
+        accessKeyId: target.env.accessKeyId,
+        secretAccessKey: target.env.secretAccessKey,
       },
     });
 
-    // Delete object from S3
-    const command = new DeleteObjectCommand({
-      Bucket: s3Config.bucket,
-      Key: key,
-    });
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: target.env.bucket,
+        Key: target.objectKey,
+      }),
+    );
 
-    await s3Client.send(command);
-
-    return NextResponse.json({
-      message: "File deleted successfully",
-    });
+    return NextResponse.json({ message: "File deleted successfully" });
   } catch (error) {
     console.error("Error deleting file from S3:", error);
-    return NextResponse.json(
-      { error: "Failed to delete file" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }

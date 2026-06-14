@@ -8,6 +8,7 @@ import { PDFFile, PDFMessage } from "@/components/student/ai-lms/pdf-summary/typ
 import PDFSummaryChat from "@/components/student/ai-lms/pdf-summary/pdf-summary-chat";
 import { useUserId } from "@/hooks";
 import { getChatHistoryQueryFn, chatWithPDFMutationFn, getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
+import { describeUnknownErrorForLog } from "@/utils/functions/app/usage-limit-error";
 
 export default function PDFChatPage() {
   const studentId = useUserId();
@@ -229,46 +230,72 @@ export default function PDFChatPage() {
       hasSentAutoMessage.current = true;
       
       const sendAutoMessage = async () => {
-        try {
-          const userMessage: PDFMessage = {
-            id: Date.now().toString(),
-            content: "Please provide a brief summary of this PDF",
-            from: "user",
-            timestamp: new Date(),
-            pdfId: sessionId,
-            type: "question",
-          };
-          
-          setMessages(prev => [...prev, userMessage]);
-          
-          const response = await chatWithPDFMutationFn({
-            session_id: sessionId,
-            question: "Please provide a brief summary of this PDF",
-          });
-          
-          const aiMessage: PDFMessage = {
-            id: (Date.now() + 1).toString(),
-            content: response.answer || "I've analyzed the PDF and here's a summary of the key points.",
-            from: "assistant",
-            timestamp: new Date(),
-            pdfId: sessionId,
-            type: "summary",
-          };
-          
-          setMessages(prev => [...prev, aiMessage]);
-        } catch (err) {
-          console.error("Failed to send auto message:", err);
-          // Add a fallback message
-          const fallbackMessage: PDFMessage = {
-            id: (Date.now() + 1).toString(),
-            content: "I'm ready to help you analyze this PDF. Ask me any questions about the content!",
-            from: "assistant",
-            timestamp: new Date(),
-            pdfId: sessionId,
-            type: "summary",
-          };
-          setMessages(prev => [...prev, fallbackMessage]);
+        const question = "Please provide a brief summary of this PDF";
+        const userMessage: PDFMessage = {
+          id: Date.now().toString(),
+          content: question,
+          from: "user",
+          timestamp: new Date(),
+          pdfId: sessionId,
+          type: "question",
+        };
+        setMessages((prev) => [...prev, userMessage]);
+
+        const delaysMs = [0, 1400];
+        let lastErr: unknown;
+
+        for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+          if (delaysMs[attempt] > 0) {
+            await new Promise((r) => setTimeout(r, delaysMs[attempt]));
+          }
+          try {
+            const response = await chatWithPDFMutationFn({
+              session_id: sessionId,
+              question,
+            });
+
+            const aiMessage: PDFMessage = {
+              id: (Date.now() + 1).toString(),
+              content:
+                response.answer ||
+                "I've analyzed the PDF and here's a summary of the key points.",
+              from: "assistant",
+              timestamp: new Date(),
+              pdfId: sessionId,
+              type: "summary",
+            };
+
+            setMessages((prev) => [...prev, aiMessage]);
+            return;
+          } catch (err) {
+            lastErr = err;
+            if (process.env.NODE_ENV !== "production") {
+              // eslint-disable-next-line no-console
+              console.warn(
+                `[pdf-summary] auto message attempt ${attempt + 1}/${delaysMs.length} failed:`,
+                describeUnknownErrorForLog(err),
+              );
+            }
+          }
         }
+
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.error(
+            "Failed to send auto message after retries:",
+            describeUnknownErrorForLog(lastErr),
+          );
+        }
+        const fallbackMessage: PDFMessage = {
+          id: (Date.now() + 1).toString(),
+          content:
+            "I'm ready to help you analyze this PDF. Ask me any questions about the content!",
+          from: "assistant",
+          timestamp: new Date(),
+          pdfId: sessionId,
+          type: "summary",
+        };
+        setMessages((prev) => [...prev, fallbackMessage]);
       };
       
       // Small delay to ensure the chat interface is ready

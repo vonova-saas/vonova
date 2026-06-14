@@ -24,6 +24,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { QuizGatewayService } from './quiz.gateway.service';
+import { CommunitySocialGatewayService } from 'src/app/community/social.gateway.service';
+import { CommunitySocketGateway } from 'src/community/socket/community.gateway';
+import { scheduleNotificationFanOut } from 'src/app/community/community-notification.helper';
 import {
   CreateQuizDto,
   SubmitQuizAnswersDto,
@@ -36,7 +39,11 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.INSTRUCTOR_USER)
 export class QuizInstructorController {
-  constructor(private readonly quizService: QuizGatewayService) {}
+  constructor(
+    private readonly quizService: QuizGatewayService,
+    private readonly social: CommunitySocialGatewayService,
+    private readonly sockets: CommunitySocketGateway,
+  ) {}
 
   /**
    * Create a new quiz (Instructor only)
@@ -84,8 +91,32 @@ export class QuizInstructorController {
   })
   @Post()
   async createQuiz(@Request() req, @Body() dto: CreateQuizDto) {
-    const userId = req.user._id;
-    return firstValueFrom(this.quizService.createInstructorQuiz(dto, userId));
+    const userId = String(req.user._id);
+    const quiz = await firstValueFrom(
+      this.quizService.createInstructorQuiz(dto, userId),
+    );
+    const quizId = (quiz as { _id?: string })?._id;
+    const courseId = dto.courseId ?? (quiz as { courseId?: string })?.courseId;
+    const title = (quiz as { title?: string })?.title ?? dto.title ?? 'Quiz';
+    if (quizId && courseId) {
+      scheduleNotificationFanOut(this.social, this.sockets, {
+        audience: {
+          kind: 'courseEnrolled',
+          courseId: String(courseId),
+          excludeUserIds: [userId],
+        },
+        template: {
+          actorId: userId,
+          type: 'QUIZ_PUBLISHED',
+          entityType: 'QUIZ',
+          entityId: String(quizId),
+          message: `New quiz available: ${title}`,
+          meta: { courseId: String(courseId), quizId: String(quizId) },
+        },
+        dedupeEntityId: String(quizId),
+      });
+    }
+    return quiz;
   }
 
   /**

@@ -1,4 +1,5 @@
 import API from "@/services/axios-client";
+import { unwrapLmsDataDeep } from "@/lib/api/unwrap-lms-body";
 import type {
   BulkDeleteRoadmapsRequest,
   BulkDeleteRoadmapsResponse,
@@ -31,7 +32,7 @@ export const getRoadmapByIdMutationFn = async (
   roadmapId: string,
 ): Promise<RoadmapPayload> => {
   const response = await API.get(`${ROADMAP_BASE}/${roadmapId}`);
-  return response.data;
+  return unwrapLmsDataDeep<RoadmapPayload>(response.data);
 };
 
 export const getUserRoadmapsMutationFn =
@@ -109,13 +110,3 @@ export const getRoadmapHistoryMutationFn = async (
   return response.data;
 };
 
-export const getMyUsageQueryFn = async (): Promise<{
-  date: string;
-  timezone: string;
-  ai_roadmap: { used: number; limit: number | null; remaining: number | null };
-  pdf_summary: { used: number; limit: number | null; remaining: number | null };
-  pdf_voice: { used: number; limit: number | null; remaining: number | null };
-}> => {
-  const response = await API.get('/me/usage');
-  return response.data;
-};

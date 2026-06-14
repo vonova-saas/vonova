@@ -25,6 +25,19 @@ export class LessonProgress {
 
   @Prop({ default: 0 })
   timeSpentSec?: number;
+
+  /** 0–100; derived from merged watched segments vs video duration. */
+  @Prop({ default: 0 })
+  watchedPercentage?: number;
+
+  @Prop({
+    type: [{ start: Number, end: Number }],
+    default: [],
+  })
+  watchedSegments?: { start: number; end: number }[];
+
+  @Prop({ default: 0 })
+  videoDurationSec?: number;
 }
 
 export const LessonProgressSchema =

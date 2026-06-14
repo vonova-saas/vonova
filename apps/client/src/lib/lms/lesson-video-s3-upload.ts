@@ -47,13 +47,22 @@ export function videoMimeForPresignedPut(file: File): string {
  *
  * - `NEXT_PUBLIC_USE_S3_UPLOAD_PROXY=true` — always proxy
  * - `NEXT_PUBLIC_USE_S3_UPLOAD_PROXY=false` — always direct PUT
- * - unset — proxy on localhost / loopback / common LAN dev IPs, direct elsewhere
+ * - unset — proxy on localhost / LAN for files ≤9MB; direct PUT for larger files
  *
  * Optional: `NEXT_PUBLIC_TRY_UPLOAD_PROXY_ON_DIRECT_FAIL=true` — if direct PUT fails
- * (e.g. CORS), retry once through the same-origin proxy (needs large-body dev server; see .env.example).
+ * (e.g. CORS), retry once through the proxy (only for files ≤9MB; see .env.example).
  */
-export function shouldUseS3UploadProxy(): boolean {
+/** Next.js proxy buffers ~10MB unless `experimental.proxyClientMaxBodySize` is raised. */
+export const S3_UPLOAD_PROXY_SAFE_MAX_BYTES = 9 * 1024 * 1024;
+
+export function shouldUseS3UploadProxy(fileSizeBytes?: number): boolean {
   if (typeof window === "undefined") return false;
+  if (
+    typeof fileSizeBytes === "number" &&
+    fileSizeBytes > S3_UPLOAD_PROXY_SAFE_MAX_BYTES
+  ) {
+    return false;
+  }
   const flag = process.env.NEXT_PUBLIC_USE_S3_UPLOAD_PROXY;
   if (flag === "false") return false;
   if (flag === "true") return true;
@@ -64,8 +73,15 @@ export function shouldUseS3UploadProxy(): boolean {
   return false;
 }
 
-function tryUploadProxyAfterDirectFail(): boolean {
+function tryUploadProxyAfterDirectFail(fileSizeBytes: number): boolean {
+  if (fileSizeBytes > S3_UPLOAD_PROXY_SAFE_MAX_BYTES) return false;
   return process.env.NEXT_PUBLIC_TRY_UPLOAD_PROXY_ON_DIRECT_FAIL === "true";
+}
+
+/** User-facing message for toast / UI when upload fails. */
+export function formatLessonVideoUploadError(err: unknown): string {
+  if (err instanceof Error && err.message.trim()) return err.message;
+  return "Video upload failed — see browser console for details.";
 }
 
 const UPLOAD_MAX_RETRIES = 3;
@@ -114,7 +130,8 @@ function logS3VideoUploadError(
   context: string,
   info: Record<string, unknown>,
 ): void {
-  console.error("[S3 VIDEO UPLOAD ERROR]", { context, ...info });
+  const detail = JSON.stringify({ context, ...info });
+  console.error(`[S3 VIDEO UPLOAD ERROR] ${context} ${detail}`);
 }
 
 function parseProxyErrorResponse(xhr: XMLHttpRequest): string {
@@ -327,12 +344,12 @@ async function putFileToS3Presigned(
       xhrPutToPresignedUrl(uploadUrl, file, contentType, onProgress),
     );
 
-  if (shouldUseS3UploadProxy()) {
+  if (shouldUseS3UploadProxy(file.size)) {
     await runProxy();
     return;
   }
 
-  if (!tryUploadProxyAfterDirectFail()) {
+  if (!tryUploadProxyAfterDirectFail(file.size)) {
     await runDirect();
     return;
   }
@@ -340,6 +357,9 @@ async function putFileToS3Presigned(
   try {
     await runDirect();
   } catch (directErr) {
+    if (file.size > S3_UPLOAD_PROXY_SAFE_MAX_BYTES) {
+      throw directErr;
+    }
     console.warn(
       "[S3 VIDEO UPLOAD] direct PUT failed; retrying via same-origin proxy (NEXT_PUBLIC_TRY_UPLOAD_PROXY_ON_DIRECT_FAIL=true)",
       directErr,

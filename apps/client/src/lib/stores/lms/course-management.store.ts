@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   getInstructorCoursesQueryFn,
   getInstructorCourseByIdQueryFn,
+  getChaptersListForCourseQueryFn,
   createCourseMutationFn,
   updateCourseMutationFn,
   deleteCourseMutationFn,
@@ -19,6 +20,7 @@ import {
   uploadContentFileMutationFn,
 } from "@/services/student/lms/courses/real-courses.api";
 import { unwrapLmsData } from "@/lib/api/unwrap-lms-body";
+import { scheduleInvalidateLmsMediaForCourse } from "@/lib/lms/invalidate-lms-media-queries";
 import { getErrorMessageFromUnknown } from "@/lib/utils/error-message";
 import type {
   Course,
@@ -39,6 +41,123 @@ import type {
 function contentNodeId(node: { _id?: string; id?: string }): string {
   const raw = node._id ?? node.id;
   return raw != null ? String(raw) : "";
+}
+
+function contentChapterToStoreChapter(
+  ch: ContentChapter,
+  treeCourseId: string,
+  prevLessons: Record<string, Lesson>,
+): Chapter {
+  const chapterId = contentNodeId(ch);
+  return {
+    _id: chapterId,
+    courseId: treeCourseId,
+    title: ch.title,
+    index: ch.index,
+    lessons: (ch.lessons || []).map((l: ContentLesson) => {
+      const lessonId = contentNodeId(l);
+      const ext = l as ContentLesson & { videoKey?: string; streamUrl?: string };
+      const base: Lesson = {
+        _id: lessonId,
+        courseId: treeCourseId,
+        chapterId,
+        title: l.title,
+        index: l.index,
+        content: l.content,
+        durationMinutes: l.durationMinutes ?? l.duration ?? 0,
+        videoKey: ext.videoKey != null ? String(ext.videoKey) : undefined,
+        streamUrl: ext.streamUrl != null ? String(ext.streamUrl) : undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const prev = prevLessons[lessonId];
+      return {
+        ...base,
+        videoKey: base.videoKey ?? prev?.videoKey,
+        streamUrl: base.streamUrl ?? prev?.streamUrl,
+      };
+    }),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  } as Chapter;
+}
+
+/** When GET /content returns no rows but chapters exist in the chapter collection. */
+function listedChapterRowToContentChapter(row: Chapter): ContentChapter {
+  const cid = String(row._id ?? "");
+  const raw = row.lessons ?? [];
+  const lessons: ContentLesson[] = raw.map((l, i) => {
+    if (typeof l === "string") {
+      return { id: l, _id: l, title: "Lesson", index: i + 1 };
+    }
+    const lo = l as Lesson;
+    return {
+      id: lo._id,
+      _id: lo._id,
+      title: lo.title,
+      index: lo.index,
+      content: lo.content,
+      durationMinutes: lo.durationMinutes,
+    };
+  });
+  return {
+    id: cid,
+    _id: cid,
+    title: row.title,
+    index: row.index,
+    lessons,
+  };
+}
+
+/**
+ * Content-tree GET can lag behind lesson writes. Lessons already in `lessonsById`
+ * (e.g. just created) may be missing from the tree until the next content sync.
+ * Merge those orphans back into their chapter so the instructor UI stays correct.
+ */
+function mergeOrphanLessonsFromCache(
+  courseId: string,
+  chapters: Chapter[],
+  prevLessons: Record<string, Lesson>,
+): Chapter[] {
+  const seen = new Set<string>();
+  for (const ch of chapters) {
+    for (const l of ch.lessons || []) {
+      if (l._id) seen.add(String(l._id));
+    }
+  }
+
+  const next = chapters.map((ch) => ({
+    ...ch,
+    lessons: [...(ch.lessons || [])],
+  }));
+
+  for (const lesson of Object.values(prevLessons)) {
+    if (!lesson?._id) continue;
+    if (String(lesson.courseId) !== String(courseId)) continue;
+    const lid = String(lesson._id);
+    if (seen.has(lid)) continue;
+
+    const chapterId = lesson.chapterId != null ? String(lesson.chapterId) : "";
+    if (!chapterId) continue;
+
+    const chIdx = next.findIndex((c) => String(c._id) === chapterId);
+    if (chIdx < 0) continue;
+
+    const merged: Lesson = {
+      ...lesson,
+      courseId: String(courseId),
+      chapterId,
+      createdAt: lesson.createdAt ?? new Date().toISOString(),
+      updatedAt: lesson.updatedAt ?? new Date().toISOString(),
+    };
+
+    next[chIdx].lessons = [...(next[chIdx].lessons || []), merged].sort(
+      (a, b) => (a.index ?? 0) - (b.index ?? 0),
+    );
+    seen.add(lid);
+  }
+
+  return next;
 }
 
 // Wrapper functions to extract data from API responses
@@ -211,41 +330,23 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         contentTree.course?.id ??
         courseId;
 
-      // Convert ContentChapter[] to Chapter[] (LMS tree uses `id`, not `_id`)
-      const chapters: Chapter[] = (contentTree.chapters || []).map((ch: ContentChapter) => {
-        const chapterId = contentNodeId(ch);
-        return {
-          _id: chapterId,
-          courseId: treeCourseId,
-          title: ch.title,
-          index: ch.index,
-          lessons: (ch.lessons || []).map((l: ContentLesson) => {
-            const lessonId = contentNodeId(l);
-            const ext = l as ContentLesson & { videoKey?: string; streamUrl?: string };
-            const base: Lesson = {
-              _id: lessonId,
-              courseId: treeCourseId,
-              chapterId,
-              title: l.title,
-              index: l.index,
-              content: l.content,
-              durationMinutes: l.durationMinutes ?? l.duration ?? 0,
-              videoKey: ext.videoKey != null ? String(ext.videoKey) : undefined,
-              streamUrl: ext.streamUrl != null ? String(ext.streamUrl) : undefined,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            const prev = prevLessons[lessonId];
-            return {
-              ...base,
-              videoKey: base.videoKey ?? prev?.videoKey,
-              streamUrl: base.streamUrl ?? prev?.streamUrl,
-            };
-          }),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        } as Chapter;
-      });
+      let chapters: Chapter[] = (contentTree.chapters || []).map((ch: ContentChapter) =>
+        contentChapterToStoreChapter(ch, treeCourseId, prevLessons),
+      );
+
+      if (chapters.length === 0) {
+        try {
+          const listed = await getChaptersListForCourseQueryFn(courseId);
+          const pseudo = listed.map(listedChapterRowToContentChapter);
+          chapters = pseudo.map((ch) =>
+            contentChapterToStoreChapter(ch, treeCourseId, prevLessons),
+          );
+        } catch {
+          // keep empty
+        }
+      }
+
+      chapters = mergeOrphanLessonsFromCache(courseId, chapters, prevLessons);
 
       // Build CourseWithChapters using full course data + chapters from tree
       const courseWithChapters: CourseWithChapters = {
@@ -298,6 +399,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         coursesById: { ...st.coursesById, [course._id]: course },
         allCourseIds: st.allCourseIds.includes(course._id) ? st.allCourseIds : [course._id, ...st.allCourseIds],
       }));
+      void scheduleInvalidateLmsMediaForCourse(course._id);
       return course;
     } catch (e: unknown) {
       const msg = getErrorMessageFromUnknown(e);
@@ -314,10 +416,19 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       const { data: course } = await updateCourseMutationFn(courseId, payload);
       set((st) => ({
         coursesById: { ...st.coursesById, [course._id]: course },
-        currentCourse: st.currentCourse?._id === courseId
-          ? { ...st.currentCourse, ...course }
-          : st.currentCourse,
+        currentCourse:
+          st.currentCourse?._id === courseId
+            ? {
+                ...st.currentCourse,
+                ...course,
+                chapters:
+                  Array.isArray(course.chapters) && course.chapters.length > 0
+                    ? course.chapters
+                    : st.currentCourse.chapters,
+              }
+            : st.currentCourse,
       }));
+      void scheduleInvalidateLmsMediaForCourse(courseId);
       return course;
     } catch (e: unknown) {
       const msg = getErrorMessageFromUnknown(e);
@@ -377,6 +488,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated chapters
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId);
 
       return normalized;
     } catch (e: unknown) {
@@ -405,6 +517,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         set({ currentCourse: { ...currentCourse, chapters: updatedChapters } });
       }
 
+      void scheduleInvalidateLmsMediaForCourse(courseId);
       return chapter;
     } catch (e: unknown) {
       const msg = getErrorMessageFromUnknown(e);
@@ -429,6 +542,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated chapters
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId);
 
       return true;
     } catch (e: unknown) {
@@ -447,6 +561,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId);
 
       return true;
     } catch (e: unknown) {
@@ -471,6 +586,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated lessons
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId, { chapterId });
 
       return lesson;
     } catch (e: unknown) {
@@ -503,6 +619,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
         set({ currentCourse: { ...currentCourse, chapters: updatedChapters } });
       }
 
+      void scheduleInvalidateLmsMediaForCourse(courseId, { chapterId, lessonId });
       return lesson;
     } catch (e: unknown) {
       const msg = getErrorMessageFromUnknown(e);
@@ -527,6 +644,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated lessons
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId, { chapterId, lessonId });
 
       return true;
     } catch (e: unknown) {
@@ -545,6 +663,7 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
 
       // Refresh course to get updated order
       await get().fetchCourseById(courseId);
+      void scheduleInvalidateLmsMediaForCourse(courseId, { chapterId });
 
       return true;
     } catch (e: unknown) {
@@ -567,6 +686,10 @@ export const useCourseManagementStore = create<CourseManagementStore>((set, get)
       formData.append("contentId", contentId);
 
       const result = await uploadContentFileMutationFn(formData);
+      void scheduleInvalidateLmsMediaForCourse(courseId, {
+        chapterId: contentType === "chapter" ? contentId : undefined,
+        lessonId: contentType === "lesson" ? contentId : undefined,
+      });
       return { fileUrl: result.data.fileUrl, objectKey: result.data.assetId };
     } catch (e: unknown) {
       const msg = getErrorMessageFromUnknown(e);

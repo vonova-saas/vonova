@@ -1,64 +1,107 @@
-type UsageLimitDetails = {
-  feature?: string;
-  used?: number;
-  limit?: number | null;
-  remaining?: number | null;
-  unit?: 'count' | 'minutes' | string;
-};
-
 type ParsedUsageLimitError = {
   isUsageLimit: boolean;
   title: string;
   description: string;
 };
 
-const FEATURE_LABELS: Record<string, string> = {
-  ai_roadmap: 'AI roadmap generation',
-  pdf_summary: 'PDF upload',
-  pdf_voice: 'PDF voice chat',
-};
+function readAxiosPayload(error: unknown): {
+  status?: number;
+  code?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+} {
+  const res = (error as { response?: { status?: number; data?: Record<string, unknown> } })
+    ?.response;
+  const payload = res?.data;
+  if (!payload || typeof payload !== "object") {
+    return { status: res?.status };
+  }
+  const nested = payload.error as Record<string, unknown> | undefined;
+  const code = String(payload.code ?? nested?.code ?? "").toUpperCase();
+  const message =
+    (typeof payload.message === "string" ? payload.message : undefined) ??
+    (typeof nested?.message === "string" ? nested.message : undefined) ??
+    "";
+  const inner =
+    payload.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : undefined;
+  return {
+    status: res?.status,
+    code,
+    message,
+    data: inner,
+  };
+}
 
+/**
+ * Maps API/limit errors to user-facing copy focused on monthly AI credits.
+ * Handles legacy daily-limit codes from the LMS gateway as generic limits.
+ */
 export function parseUsageLimitError(error: unknown): ParsedUsageLimitError {
-  const response = (
-    error as { response?: { data?: Record<string, unknown> } }
-  )?.response;
-  const payload = response?.data;
-  const nestedError = payload?.error as Record<string, unknown> | undefined;
-  const code = payload?.code ?? nestedError?.code;
-  const payloadMessage =
-    typeof payload?.message === 'string' ? payload.message : undefined;
-  const nestedMessage =
-    typeof nestedError?.message === 'string' ? nestedError.message : undefined;
+  const { status, code, message, data } = readAxiosPayload(error);
 
-  if (code !== 'DAILY_LIMIT_EXCEEDED') {
+  if (status === 409 || code === "CREDITS_EXHAUSTED" || code === "USAGE_LIMIT") {
     return {
-      isUsageLimit: false,
-      title: 'Something went wrong',
+      isUsageLimit: true,
+      title: "Not enough AI credits",
       description:
-        payloadMessage ??
-        nestedMessage ??
-        'Unexpected error. Please try again.',
+        "You do not have enough AI credits left this month for this action. " +
+        "Upgrade your plan or wait until your monthly credits reset on the 1st (UTC).",
     };
   }
 
-  const details = (payload?.details ?? nestedError?.details ?? {}) as UsageLimitDetails;
-  const featureLabel = FEATURE_LABELS[String(details.feature ?? '')] ?? 'this feature';
-  const used = typeof details.used === 'number' ? details.used : undefined;
-  const limit = typeof details.limit === 'number' ? details.limit : null;
-  const remaining =
-    typeof details.remaining === 'number' ? details.remaining : undefined;
-  const unit = details.unit === 'minutes' ? 'minutes' : 'requests';
-
-  const usagePart =
-    used !== undefined && limit !== null
-      ? `You used ${used}/${limit} ${unit} today.`
-      : "You've reached today's limit.";
-  const remainingPart =
-    remaining !== undefined ? ` Remaining today: ${remaining}.` : '';
+  if (
+    status === 429 ||
+    code === "AI_DAILY_LIMIT_EXCEEDED" ||
+    code === "DAILY_LIMIT_EXCEEDED"
+  ) {
+    const feature =
+      typeof data?.feature === "string"
+        ? data.feature.replace(/_/g, " ")
+        : "this AI feature";
+    return {
+      isUsageLimit: true,
+      title: "AI usage limit reached",
+      description:
+        `We could not complete ${feature} right now because an AI usage limit applies. ` +
+        "Check your monthly AI credits on the dashboard or try again later.",
+    };
+  }
 
   return {
-    isUsageLimit: true,
-    title: `${featureLabel} daily limit reached`,
-    description: `${usagePart}${remainingPart} Limits reset automatically at 00:00 UTC. You can try again tomorrow or upgrade your plan.`,
+    isUsageLimit: false,
+    title: "Something went wrong",
+    description:
+      message || "Unexpected error. Please try again.",
   };
+}
+
+/** Stable log line for `unknown` rejects (Axios/CustomError often print as `{}`). */
+export function describeUnknownErrorForLog(error: unknown): string {
+  if (error === undefined || error === null) {
+    return "unknown error (no details)";
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  const { status, message } = readAxiosPayload(error);
+  const e = error as {
+    errorCode?: string;
+    code?: string;
+    message?: string;
+  };
+  const code = e.errorCode || e.code || "";
+  const net = typeof e.message === "string" ? e.message : "";
+  const parts = [
+    code,
+    status != null ? `HTTP ${status}` : "",
+    message || net,
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 }

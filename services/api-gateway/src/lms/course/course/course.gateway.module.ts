@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { NatsClientModule } from 'src/common/nats-client/nats-client.module';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { AuthGatewayModule } from 'src/app/auth/auth.module';
+import { CommunityGatewayModule } from 'src/app/community/community.module';
 import { CourseGatewayController } from './course.gateway.controller';
 import { CourseGatewayService } from './course.gateway.service';
 import { S3Service } from 'src/common/utils/storage/s3.service';
 
 @Module({
-  imports: [NatsClientModule, AuthGatewayModule],
+  imports: [NatsClientModule, AuthGatewayModule, CommunityGatewayModule],
   controllers: [CourseGatewayController],
   providers: [CourseGatewayService, JwtAuthGuard, S3Service],
   exports: [JwtAuthGuard, CourseGatewayService, S3Service],

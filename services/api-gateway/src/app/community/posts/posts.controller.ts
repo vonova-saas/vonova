@@ -34,10 +34,19 @@ import {
 } from '@nestjs/swagger';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { Public } from '../../../common/decorators/public.decorator';
+import {
+  RateLimit,
+  RateLimitGuard,
+} from '../../../common/guards/rate-limit.guard';
 import type { UploadedFile as CustomUploadedFile } from '../../../common/interfaces/file.interface';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PostsGatewayService } from './posts.service';
+import { CommunitySocialGatewayService } from '../social.gateway.service';
+import { deliverCommunityNotification } from '../community-notification.helper';
+import { CommunitySocketGateway } from '../../../community/socket/community.gateway';
+import { SOCKET_EVENTS } from '../../../community/socket/socket-user.types';
 import {
   CreateCommentDto,
   CreatePostDto,
@@ -46,12 +55,46 @@ import {
   SharePostDto,
 } from './dto/post.dto';
 
+function parseOptionalStringArray(raw: unknown): string[] | undefined {
+  if (raw == null || raw === '') return undefined;
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === 'string') {
+    try {
+      const p = JSON.parse(raw);
+      if (Array.isArray(p)) return p.map(String).filter(Boolean);
+    } catch {
+      /* treat as delimited */
+    }
+    return raw
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
+
+function parseOptionalBoolean(raw: unknown): boolean | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 'true' || raw === '1') return true;
+  if (raw === 'false' || raw === '0') return false;
+  return undefined;
+}
+
 @ApiTags('Community Posts')
 @ApiBearerAuth()
 @Controller('api/v1/community/posts')
 @UseGuards(JwtAuthGuard)
 export class PostsGatewayController {
-  constructor(private readonly postsService: PostsGatewayService) { }
+  constructor(
+    private readonly postsService: PostsGatewayService,
+    private readonly social: CommunitySocialGatewayService,
+    private readonly sockets: CommunitySocketGateway,
+  ) {}
+
+  private actorId(req: { user?: { _id?: string } }): string {
+    return String(req.user?._id ?? '');
+  }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
@@ -175,6 +218,8 @@ export class PostsGatewayController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post()
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60 * 60 * 1000, bucket: 'post-create' })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'files', maxCount: 10 },
@@ -188,9 +233,37 @@ export class PostsGatewayController {
       files?: { files?: CustomUploadedFile[]; videos?: CustomUploadedFile[] };
     },
   ) {
+    let tags: unknown = body.tags;
+    if (tags && typeof tags === 'string') {
+      try {
+        tags = JSON.parse(tags);
+      } catch {
+        tags = (tags as string)
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter((tag: string) => tag);
+      }
+    }
+    if (!Array.isArray(tags)) {
+      tags = [];
+    }
+
     const createPostDto = plainToInstance(CreatePostDto, {
       content: body.content,
-      tags: [],
+      tags: tags as string[],
+      hashtags: parseOptionalStringArray(body.hashtags),
+      visibility:
+        body.visibility === 'FOLLOWERS'
+          ? 'FOLLOWERS'
+          : body.visibility === 'PUBLIC'
+            ? 'PUBLIC'
+            : undefined,
+      courseId:
+        typeof body.courseId === 'string' && body.courseId.trim()
+          ? body.courseId
+          : undefined,
+      isPinned: parseOptionalBoolean(body.isPinned),
+      instructorOnly: parseOptionalBoolean(body.instructorOnly),
     });
 
     const errors = await validate(createPostDto);
@@ -223,7 +296,7 @@ export class PostsGatewayController {
       }
     }
 
-    return firstValueFrom(
+    const created = await firstValueFrom(
       this.postsService.createPost(
         createPostDto,
         undefined,
@@ -232,6 +305,11 @@ export class PostsGatewayController {
         req.user._id,
       ),
     );
+    this.sockets.broadcast(SOCKET_EVENTS.POST_NEW, {
+      authorId: String(req.user._id),
+      post: (created as { data?: { post?: unknown } })?.data?.post ?? created,
+    });
+    return created;
   }
 
   @ApiOperation({
@@ -287,12 +365,45 @@ export class PostsGatewayController {
     status: 200,
     description: 'User posts fetched successfully',
   })
+  @Public()
   @Get('user/:userId')
   async getPostsByUser(
     @Param('userId') userId: string,
     @Query() query: { page?: number; limit?: number },
   ) {
     return firstValueFrom(this.postsService.getPostsByUser(userId, query));
+  }
+
+  @ApiOperation({ summary: 'Users who liked this post' })
+  @ApiParam({
+    name: 'postId',
+    description: 'The unique identifier of the post',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @Public()
+  @Get(':postId/likes')
+  async getPostLikes(
+    @Param('postId') postId: string,
+    @Query() query: { page?: number; limit?: number },
+  ) {
+    return firstValueFrom(this.postsService.getPostLikes(postId, query));
+  }
+
+  @ApiOperation({ summary: 'Users who liked this comment' })
+  @ApiParam({
+    name: 'commentId',
+    description: 'The unique identifier of the comment',
+    example: '507f1f77bcf86cd799439013',
+  })
+  @Public()
+  @Get('comments/:commentId/likes')
+  async getCommentLikes(
+    @Param('commentId') commentId: string,
+    @Query() query: { page?: number; limit?: number },
+  ) {
+    return firstValueFrom(
+      this.postsService.getCommentLikes(commentId, query),
+    );
   }
 
   @ApiOperation({
@@ -381,6 +492,7 @@ export class PostsGatewayController {
     },
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
+  @Public()
   @Get(':postId')
   async getPostById(@Param('postId') postId: string) {
     return firstValueFrom(this.postsService.getPostById(postId));
@@ -471,6 +583,19 @@ export class PostsGatewayController {
     const updatePostDto = plainToInstance(UpdatePostDto, {
       content: body.content,
       tags,
+      hashtags: parseOptionalStringArray(body.hashtags),
+      visibility:
+        body.visibility === 'FOLLOWERS'
+          ? 'FOLLOWERS'
+          : body.visibility === 'PUBLIC'
+            ? 'PUBLIC'
+            : undefined,
+      courseId:
+        typeof body.courseId === 'string' && body.courseId.trim()
+          ? body.courseId
+          : undefined,
+      isPinned: parseOptionalBoolean(body.isPinned),
+      instructorOnly: parseOptionalBoolean(body.instructorOnly),
     });
 
     const errors = await validate(updatePostDto);
@@ -536,9 +661,23 @@ export class PostsGatewayController {
   })
   @Delete(':postId')
   async deletePost(@Param('postId') postId: string, @Request() req: any) {
-    return firstValueFrom(
+    const result = await firstValueFrom(
       this.postsService.deletePost(postId, req.user._id, req.user.role),
     );
+    const data = (result as { data?: Record<string, unknown> })?.data ?? result;
+    this.sockets.broadcast(SOCKET_EVENTS.POST_DELETED, {
+      postId,
+      groupId: (data as { groupId?: string })?.groupId,
+    });
+    const originalPostId = (data as { originalPostId?: string })?.originalPostId;
+    if (originalPostId) {
+      this.sockets.broadcast(SOCKET_EVENTS.POST_UNREPOSTED, {
+        postId: originalPostId,
+        sharesCount: (data as { originalPostSharesCount?: number })
+          ?.originalPostSharesCount,
+      });
+    }
+    return result;
   }
 
   @ApiOperation({
@@ -570,7 +709,38 @@ export class PostsGatewayController {
   @ApiResponse({ status: 404, description: 'Post not found' })
   @Post(':postId/like')
   async toggleLike(@Param('postId') postId: string, @Request() req: any) {
-    return firstValueFrom(this.postsService.toggleLike(postId, req.user._id));
+    const result = await firstValueFrom(
+      this.postsService.toggleLike(postId, req.user._id),
+    );
+    const data = (
+      result as {
+        data?: { liked?: boolean; likesCount?: number; authorId?: string };
+      }
+    )?.data;
+    this.sockets.emitToPost(postId, SOCKET_EVENTS.POST_LIKED, {
+      postId,
+      userId: String(req.user._id),
+      liked: data?.liked,
+      likesCount: data?.likesCount,
+    });
+    this.sockets.broadcast(SOCKET_EVENTS.POST_LIKED, {
+      postId,
+      userId: String(req.user._id),
+      liked: data?.liked,
+      likesCount: data?.likesCount,
+    });
+    if (data?.liked && data?.authorId) {
+      void deliverCommunityNotification(this.social, this.sockets, {
+        recipientId: String(data.authorId),
+        actorId: this.actorId(req),
+        type: 'LIKE',
+        entityType: 'POST',
+        entityId: postId,
+        title: 'New like',
+        message: 'Someone liked your post',
+      });
+    }
+    return result;
   }
 
   @ApiOperation({
@@ -707,9 +877,33 @@ export class PostsGatewayController {
       throw new BadRequestException(errors);
     }
 
-    return firstValueFrom(
+    const result = await firstValueFrom(
       this.postsService.sharePost(postId, req.user._id, sharePostDto.comment),
     );
+    const shareData =
+      (result as { data?: { sharedPost?: unknown; originalPostSharesCount?: number } })
+        ?.data ?? (result as { originalPostSharesCount?: number });
+    this.sockets.broadcast(SOCKET_EVENTS.POST_REPOSTED, {
+      postId,
+      userId: String(req.user._id),
+      sharesCount: shareData?.originalPostSharesCount,
+      sharedPost:
+        (shareData as { sharedPost?: unknown })?.sharedPost ?? result,
+    });
+    const originalAuthorId = (shareData as { originalAuthorId?: string })
+      ?.originalAuthorId;
+    if (originalAuthorId) {
+      void deliverCommunityNotification(this.social, this.sockets, {
+        recipientId: originalAuthorId,
+        actorId: this.actorId(req),
+        type: 'REPOST',
+        entityType: 'POST',
+        entityId: postId,
+        title: 'Post reposted',
+        message: 'Someone reposted your post',
+      });
+    }
+    return result;
   }
 
   // ─── Comments ──────────────────────────────────────────────────────────────
@@ -776,6 +970,8 @@ export class PostsGatewayController {
   @ApiResponse({ status: 404, description: 'Post not found' })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid input data' })
   @Post(':postId/comments')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 30, windowMs: 60_000, bucket: 'comment-create' })
   @UseInterceptors(FileInterceptor('file'))
   async addComment(
     @Param('postId') postId: string,
@@ -792,7 +988,7 @@ export class PostsGatewayController {
       throw new BadRequestException(errors);
     }
 
-    return firstValueFrom(
+    const result = await firstValueFrom(
       this.postsService.createComment(
         postId,
         createCommentDto,
@@ -800,6 +996,31 @@ export class PostsGatewayController {
         req.user._id,
       ),
     );
+    this.sockets.emitToPost(postId, SOCKET_EVENTS.POST_COMMENTED, {
+      postId,
+      userId: String(req.user._id),
+      comment:
+        (result as { data?: unknown })?.data ?? result,
+    });
+    this.sockets.broadcast(SOCKET_EVENTS.POST_COMMENTED, {
+      postId,
+      userId: String(req.user._id),
+    });
+    const commentData =
+      (result as { data?: { postAuthorId?: string; postId?: string } })?.data ??
+      (result as { postAuthorId?: string; postId?: string });
+    if (commentData?.postAuthorId) {
+      void deliverCommunityNotification(this.social, this.sockets, {
+        recipientId: String(commentData.postAuthorId),
+        actorId: this.actorId(req),
+        type: 'COMMENT',
+        entityType: 'POST',
+        entityId: postId,
+        title: 'New comment',
+        message: 'Someone commented on your post',
+      });
+    }
+    return result;
   }
 
   @ApiOperation({
@@ -839,6 +1060,7 @@ export class PostsGatewayController {
       },
     },
   })
+  @Public()
   @Get(':postId/comments')
   async getComments(
     @Param('postId') postId: string,

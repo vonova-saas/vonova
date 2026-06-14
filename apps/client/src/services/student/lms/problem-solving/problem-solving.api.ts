@@ -100,3 +100,122 @@ export const getSolvedProblemsQueryFn = async (): Promise<string[]> => {
   const response = await API.get<string[]>(`${STUDENT_BASE}/solved-problems`);
   return response.data;
 };
+
+export type ProblemSheetEntity = {
+  _id: string;
+  title: string;
+  description?: string;
+  status: "draft" | "published";
+  visibility?: "private" | "public";
+  tags?: string[];
+  problems?: Array<{
+    _id: string;
+    title: string;
+    difficulty: string;
+    tags?: string[];
+    order?: number;
+    status?: string;
+  }>;
+  embeddedQuestions?: Array<{
+    title: string;
+    description?: string;
+    difficulty?: "easy" | "medium" | "hard";
+  }>;
+  totalQuestions?: number;
+  timerMinutes?: number | null;
+  dueDate?: string | null;
+  updatedAt?: string;
+};
+
+export const getStudentProblemSheetsQueryFn = async (): Promise<
+  ProblemSheetEntity[]
+> => {
+  const response = await API.get<ProblemSheetEntity[]>(
+    `${STUDENT_BASE}/problem-sheets`,
+  );
+  return response.data;
+};
+
+export const getStudentProblemSheetByIdQueryFn = async (
+  sheetId: string,
+): Promise<ProblemSheetEntity> => {
+  const response = await API.get<ProblemSheetEntity>(
+    `${STUDENT_BASE}/problem-sheets/${sheetId}`,
+  );
+  return response.data;
+};
+
+export type ProblemProgressRecord = {
+  studentId: string;
+  problemId: string;
+  solved: boolean;
+  solvedAt: string | null;
+  attemptsCount: number;
+  lastSubmissionStatus: string | null;
+};
+
+export type SheetProblemProgressItem = {
+  problemId: string;
+  solved: boolean;
+  solvedAt: string | null;
+  attemptsCount: number;
+  lastSubmissionStatus: string | null;
+};
+
+export type SheetProgressRecord = {
+  studentId: string;
+  sheetId: string;
+  solvedProblemsCount: number;
+  totalProblems: number;
+  completionPercentage: number;
+  completed: boolean;
+  completedAt: string | null;
+  lastOpenedAt: string | null;
+  currentProblemIndex: number;
+  solvedProblemIds: string[];
+  problemProgress: SheetProblemProgressItem[];
+};
+
+export const getSheetProgressQueryFn = async (
+  sheetId: string,
+): Promise<SheetProgressRecord> => {
+  const response = await API.get<SheetProgressRecord>(
+    `/problem-solving/sheets/${sheetId}/progress`,
+  );
+  return response.data;
+};
+
+export const patchSheetProgressMutationFn = async (
+  sheetId: string,
+  body: { currentProblemIndex?: number },
+): Promise<SheetProgressRecord> => {
+  const response = await API.patch<SheetProgressRecord>(
+    `/problem-solving/sheets/${sheetId}/progress`,
+    body,
+  );
+  return response.data;
+};
+
+export const getProblemProgressQueryFn = async (
+  problemId: string,
+): Promise<ProblemProgressRecord> => {
+  const response = await API.get<ProblemProgressRecord>(
+    `/problem-solving/problems/${problemId}/progress`,
+  );
+  return response.data;
+};
+
+export const patchProblemProgressMutationFn = async (
+  problemId: string,
+  body: {
+    solved?: boolean;
+    lastSubmissionStatus?: string;
+    attemptsCount?: number;
+  },
+): Promise<ProblemProgressRecord> => {
+  const response = await API.patch<ProblemProgressRecord>(
+    `/problem-solving/problems/${problemId}/progress`,
+    body,
+  );
+  return response.data;
+};

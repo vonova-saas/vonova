@@ -8,7 +8,7 @@ import { getCourseSidebarData } from "@/components/student/lms/courses/data/get-
 import { CourseEnrollButton } from "@/components/student/lms/courses/course-enroll-button";
 import { useStudentCoursesStore } from "@/lib/stores";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, Users } from "lucide-react";
 import { queryClient } from "@/providers/providers";
 import {
   getCourseByIdQueryFn,
@@ -16,6 +16,9 @@ import {
   getEnrollmentStatusQueryFn,
 } from "@/services/student/lms/courses/real-courses.api";
 import type { Course } from "@/types/api/lms/courses.type";
+import { CourseDescriptionRich, plainTextFromCourseDescription } from "@/components/student/lms/courses/course-description-rich";
+import { shouldBypassNextImageOptimization, COURSE_THUMBNAIL_PLACEHOLDER } from "@/lib/lms/course-thumbnail";
+import { useCourseThumbnailDisplay } from "@/hooks/lms/use-course-thumbnail-display";
 
 export default function CoursesSlugPage() {
   const params = useParams<{ slug: string; studentId: string }>();
@@ -23,6 +26,7 @@ export default function CoursesSlugPage() {
   const router = useRouter();
   const { slug, studentId } = params;
   const courseIdHint = searchParams.get("cid")?.trim() ?? "";
+  const isInstructorPreview = searchParams.get("preview") === "1";
   const loadById = /^[a-fA-F0-9]{24}$/.test(courseIdHint);
   const [loading, setLoading] = useState(true);
   const [courseApi, setCourseApi] = useState<Course | null>(null);
@@ -35,33 +39,78 @@ export default function CoursesSlugPage() {
       if (!slug) return;
       setLoading(true);
       try {
-        const [sidebar, course] = await Promise.all([
+        const [sidebar, coursePrimary] = await Promise.all([
           getCourseSidebarData(slug, courseIdHint || null),
-          loadById
-            ? getCourseByIdQueryFn(courseIdHint).catch(() => null)
-            : getCourseBySlugQueryFn(slug).catch(() => null),
+          (async (): Promise<Course | null> => {
+            if (loadById) {
+              const byId = await getCourseByIdQueryFn(courseIdHint).catch(
+                () => null,
+              );
+              if (byId?._id) return byId;
+              return getCourseBySlugQueryFn(slug).catch(() => null);
+            }
+            return getCourseBySlugQueryFn(slug).catch(() => null);
+          })(),
         ]);
         if (cancelled) return;
+
+        const course = coursePrimary;
         setCourseApi(course);
         if (!course?._id) {
           setEnrolled(false);
+          if (process.env.NODE_ENV === "development") {
+            console.warn("[COURSE_PREVIEW_RENDER] missing course payload", {
+              slug,
+              courseIdHint,
+              loadById,
+              sidebarTitle: sidebar?.course?.title,
+            });
+          }
           return;
         }
-        await hydrateMyEnrollments();
-        const en = await getEnrollmentStatusQueryFn(course._id);
-        const isEn =
-          !!en &&
-          (en.status === "ACTIVE" ||
-            en.status === "COMPLETED");
+
+        try {
+          await hydrateMyEnrollments();
+        } catch {
+          /* preview / optional cache */
+        }
+        let isEn = false;
+        try {
+          const en = await getEnrollmentStatusQueryFn(course._id);
+          isEn =
+            !!en && (en.status === "ACTIVE" || en.status === "COMPLETED");
+        } catch {
+          isEn = false;
+        }
         setEnrolled(isEn);
 
-        const firstChapter = sidebar.course.chapter[0];
-        const firstLesson = firstChapter?.lessons[0];
+        const chapters = sidebar?.course?.chapter ?? [];
+        const firstChapter = chapters[0];
+        const firstLesson = firstChapter?.lessons?.[0];
         const isPrivate = course.visibility === "PRIVATE";
-        if (firstLesson && (isEn || !isPrivate)) {
+        if (
+          firstLesson &&
+          (isEn || !isPrivate) &&
+          !isInstructorPreview
+        ) {
           router.push(`/student/${studentId}/courses/${slug}/${firstLesson.id}`);
           return;
         }
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[COURSE_PREVIEW_RENDER] shell ok", {
+            courseId: course._id,
+            preview: isInstructorPreview,
+            chapters: chapters.length,
+            firstLessonId: firstLesson?.id ?? null,
+            enrolled: isEn,
+          });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[COURSE_PREVIEW_RENDER] load failed", e);
+        }
+        if (!cancelled) setCourseApi(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,11 +118,25 @@ export default function CoursesSlugPage() {
     return () => {
       cancelled = true;
     };
-  }, [slug, studentId, router, hydrateMyEnrollments, courseIdHint, loadById]);
+  }, [slug, studentId, router, hydrateMyEnrollments, courseIdHint, loadById, isInstructorPreview]);
+
+  const rawThumb =
+    courseApi?.thumbnailUrl?.trim() ||
+    courseApi?.thumbnailKey?.trim() ||
+    "";
+  const { src: resolvedHeroThumb, onError: onHeroThumbError } =
+    useCourseThumbnailDisplay(
+      courseApi?._id ?? "",
+      rawThumb,
+      getCourseByIdQueryFn,
+    );
 
   const thumb =
-    courseApi?.thumbnailUrl?.trim() || "/images/Dashboard.png";
-  const useAws = typeof thumb === "string" && thumb.includes("amazonaws.com");
+    resolvedHeroThumb !== COURSE_THUMBNAIL_PLACEHOLDER
+      ? resolvedHeroThumb
+      : courseApi?.thumbnailUrl?.trim() ||
+        "/images/Dashboard.png";
+  const useAws = shouldBypassNextImageOptimization(thumb);
   const showLock = courseApi?.visibility === "PRIVATE" && !enrolled;
 
   if (loading) {
@@ -109,13 +172,32 @@ export default function CoursesSlugPage() {
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 768px"
           unoptimized={useAws}
+          onError={onHeroThumbError}
         />
       </div>
       <div>
         <h1 className="text-3xl font-bold mb-2">{courseApi.title}</h1>
-        {courseApi.smallDescription && (
-          <p className="text-muted-foreground mb-4">{courseApi.smallDescription}</p>
+        {isInstructorPreview && (
+          <p className="mb-3 text-sm font-medium text-muted-foreground">
+            Instructor preview — course shell (content tree may be empty while you
+            edit).
+          </p>
         )}
+        {(() => {
+          const short =
+            plainTextFromCourseDescription(courseApi.smallDescription) ||
+            courseApi.smallDescription?.trim() ||
+            "";
+          return short ? (
+            <p className="text-muted-foreground mb-4">{short}</p>
+          ) : null;
+        })()}
+        {courseApi.description ? (
+          <section className="mb-6 space-y-2">
+            <h2 className="text-lg font-semibold">About this course</h2>
+            <CourseDescriptionRich description={courseApi.description} />
+          </section>
+        ) : null}
         {showLock && (
           <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 mb-4">
             <Lock className="h-5 w-5 shrink-0" />
@@ -142,6 +224,14 @@ export default function CoursesSlugPage() {
           >
             Refresh access
           </Button>
+          {enrolled && courseApi?._id ? (
+            <Button asChild variant="secondary">
+              <Link href={`/community/courses/${courseApi._id}`}>
+                <Users className="mr-2 h-4 w-4" />
+                Open community
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

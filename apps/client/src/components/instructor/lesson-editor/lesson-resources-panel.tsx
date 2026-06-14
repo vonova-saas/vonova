@@ -5,8 +5,15 @@ import type { Lesson } from "@/types/api/lms/courses.type";
 import { LessonMaterialsList } from "./lesson-materials-list";
 import { LessonQuizzesList } from "./lesson-quizzes-list";
 import { LessonProblemsList } from "./lesson-problems-list";
+import { LessonSheetsList } from "./lesson-sheets-list";
 import { Badge } from "@/components/ui/badge";
 import { Layers3 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import {
+  instructorProblemSolvingKeys,
+} from "@/hooks/instructor/use-problem-solving-management";
+import { getInstructorProblemSheetsQueryFn } from "@/services/instructor/lms/problem-solving/problem-solving.api";
 
 type LessonResourcesPanelProps = {
   courseId: string;
@@ -30,10 +37,22 @@ export function LessonResourcesPanel({
     ? `/instructor/${userId}/problem-solving-management`
     : "/instructor";
 
+  // Query problem sheets to count those attached to this lesson
+  const { data: sheets = [] } = useQuery({
+    queryKey: instructorProblemSolvingKeys.sheets(),
+    queryFn: getInstructorProblemSheetsQueryFn,
+  });
+
+  const attachedSheetsCount = useMemo(() => {
+    const list = Array.isArray(sheets) ? sheets : [];
+    return list.filter((s) => String(s.lessonId ?? "") === String(lesson._id)).length;
+  }, [sheets, lesson._id]);
+
   const totalResources =
     (lesson.materials?.length ?? 0) +
     (lesson.quizzes?.length ?? 0) +
-    (lesson.problems?.length ?? 0);
+    (lesson.problems?.length ?? 0) +
+    attachedSheetsCount;
 
   return (
     <section
@@ -51,13 +70,13 @@ export function LessonResourcesPanel({
                 Lesson resources
               </h2>
               <p className="text-xs text-muted-foreground sm:text-sm">
-                Add materials, quizzes, and coding problems. Each{" "}
+                Add materials, quizzes, coding problems, and problem sheets. Each{" "}
                 <span className="font-medium text-foreground">Add</span> button
                 opens a dialog with two tabs:{" "}
                 <span className="font-medium text-foreground">Pick existing</span>{" "}
                 or{" "}
                 <span className="font-medium text-foreground">Create new</span>.
-                Drag any attached item to reorder — changes save automatically.
+                Drag any attached item to reorder (for materials, quizzes, and problems) — changes save automatically.
               </p>
             </div>
           </div>
@@ -87,6 +106,12 @@ export function LessonResourcesPanel({
             >
               Problems ({lesson.problems?.length ?? 0})
             </Badge>
+            <Badge
+              variant="outline"
+              className="h-7 rounded-full border-indigo-500/30 bg-indigo-500/10 px-2.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400"
+            >
+              Sheets ({attachedSheetsCount})
+            </Badge>
           </div>
         </div>
       </header>
@@ -108,6 +133,12 @@ export function LessonResourcesPanel({
         chapterId={chapterId}
         lesson={lesson}
         problemsHref={problemsHref}
+      />
+      <LessonSheetsList
+        courseId={courseId}
+        chapterId={chapterId}
+        lesson={lesson}
+        sheetsHref={problemsHref}
       />
     </section>
   );

@@ -190,6 +190,7 @@ export class PdfSummaryGatewayController {
     const plan = this.isStudentRole(role)
       ? await this.resolveStudentPlan(req)
       : 'pro';
+    const idempotency_key = randomUUID();
 
     return firstValueFrom(
       this.pdfSummaryService.uploadPDF({
@@ -204,6 +205,7 @@ export class PdfSummaryGatewayController {
         ...uploadPdfDto,
         ip,
         userAgent: '',
+        idempotency_key,
       }),
     );
   }

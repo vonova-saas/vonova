@@ -47,4 +47,16 @@ export class LibraryController {
       data.userId,
     );
   }
+
+  @MessagePattern({ cmd: 'library.getMaterialStreamMeta' })
+  async getMaterialStreamMeta(
+    @Payload()
+    data: { materialId: string; materialType?: string; userId?: string },
+  ) {
+    return this.libraryService.getMaterialStreamMeta(
+      data.materialId,
+      data.materialType,
+      data.userId,
+    );
+  }
 }

@@ -5,10 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateProblemDto, ListProblemsDto } from './dto/problem.dto';
 import { Problem, ProblemDocument } from './schemas/problem.schema';
 import { EnrollService } from '../../course/enroll/enroll.service';
+import {
+  ProblemSheet,
+  ProblemSheetDocument,
+} from './schemas/problem-sheet.schema';
 
 @Injectable()
 export class ProblemService {
@@ -17,8 +21,10 @@ export class ProblemService {
   constructor(
     @InjectModel(Problem.name, 'lms-ai')
     private readonly problemModel: Model<ProblemDocument>,
+    @InjectModel(ProblemSheet.name, 'lms-ai')
+    private readonly sheetModel: Model<ProblemSheetDocument>,
     private readonly enrollService: EnrollService,
-  ) {}
+  ) { }
 
   async createProblem(dto: CreateProblemDto, createdBy: string) {
     const created = await this.problemModel.create({
@@ -56,6 +62,9 @@ export class ProblemService {
       query.categories = filters.category;
     }
 
+    // Exclude sheet-scoped problems from global listings
+    query.isSheetScoped = { $ne: true };
+
     const rows = await this.problemModel
       .find(query)
       .sort({ createdAt: -1 })
@@ -63,7 +72,6 @@ export class ProblemService {
 
     const allowed: typeof rows = [];
     for (const p of rows) {
-      const id = String(p._id);
       const visibility = (p as { visibility?: string }).visibility ?? 'PUBLIC';
       const isOwner = !!userId && String(p.createdBy) === userId;
 
@@ -94,9 +102,119 @@ export class ProblemService {
     if (!problem) {
       throw new NotFoundException('Problem not found');
     }
+    if (userId && problem.sheetId) {
+      const sheet = await this.sheetModel.findById(problem.sheetId).lean();
+      if (!sheet) {
+        throw new NotFoundException('Problem sheet not found');
+      }
+      if (
+        sheet.status !== 'published' &&
+        String(sheet.instructorId) !== userId
+      ) {
+        throw new ForbiddenException('Draft sheet is private to the instructor');
+      }
+      return problem;
+    }
+
     if (userId) {
       await this.enrollService.assertProblemAccess(userId, problemId);
     }
     return problem;
+  }
+
+  /**
+   * Create a problem inside a sheet (sheet-first workflow).
+   * Automatically sets sheetId, isSheetScoped=true, visibilityScope="SHEET_ONLY".
+   */
+  async createProblemInSheet(
+    dto: CreateProblemDto,
+    createdBy: string,
+    sheetId: string,
+  ) {
+    await this.assertSheetOwner(sheetId, createdBy);
+    const created = await this.problemModel.create({
+      ...dto,
+      timeLimit: dto.timeLimit ?? 2000,
+      memoryLimit: dto.memoryLimit ?? 128,
+      createdBy,
+      sheetId,
+      isSheetScoped: true,
+      visibilityScope: 'SHEET_ONLY',
+    });
+    this.logger.log(
+      `Sheet-scoped problem created: ${created._id.toString()} in sheet ${sheetId} by ${createdBy}`,
+    );
+    return created;
+  }
+
+  async updateSheetProblem(
+    sheetId: string,
+    problemId: string,
+    dto: Partial<CreateProblemDto>,
+    requesterId: string,
+  ) {
+    await this.assertSheetOwner(sheetId, requesterId);
+    const problem = await this.problemModel.findOne({
+      _id: problemId,
+      sheetId,
+      isSheetScoped: true,
+      visibilityScope: 'SHEET_ONLY',
+    });
+    if (!problem) {
+      throw new NotFoundException('Sheet problem not found');
+    }
+
+    const allowedKeys: Array<keyof CreateProblemDto> = [
+      'title',
+      'description',
+      'constraints',
+      'testCases',
+      'functionName',
+      'parameterNames',
+      'allowUnorderedArrayOutput',
+      'timeLimit',
+      'memoryLimit',
+      'difficulty',
+      'categories',
+    ];
+    for (const key of allowedKeys) {
+      if (dto[key] !== undefined) {
+        (problem as unknown as Record<string, unknown>)[key] = dto[key];
+      }
+    }
+    problem.sheetId = new Types.ObjectId(sheetId) as never;
+    problem.isSheetScoped = true;
+    problem.visibilityScope = 'SHEET_ONLY';
+    await problem.save();
+    return problem.toObject();
+  }
+
+  async deleteSheetProblem(
+    sheetId: string,
+    problemId: string,
+    requesterId: string,
+  ) {
+    await this.assertSheetOwner(sheetId, requesterId);
+    const deleted = await this.problemModel.findOneAndDelete({
+      _id: problemId,
+      sheetId,
+      isSheetScoped: true,
+      visibilityScope: 'SHEET_ONLY',
+    });
+    if (!deleted) {
+      throw new NotFoundException('Sheet problem not found');
+    }
+    return { success: true, message: 'Sheet problem deleted successfully' };
+  }
+
+  private async assertSheetOwner(sheetId: string, instructorId: string) {
+    const sheet = await this.sheetModel.findById(sheetId).lean();
+    if (!sheet) {
+      throw new NotFoundException('Problem sheet not found');
+    }
+    if (String(sheet.instructorId) !== instructorId) {
+      throw new ForbiddenException('Not your sheet');
+    }
+    return sheet;
   }
 }

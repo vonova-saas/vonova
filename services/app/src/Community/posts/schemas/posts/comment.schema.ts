@@ -32,6 +32,20 @@ export class Comment extends Document {
 
   @Prop({ type: Number, default: 0, min: 0 })
   likesCount: number;
+
+  @Prop({
+    type: String,
+    enum: ['PENDING', 'CLEARED', 'FLAGGED', 'SHADOW_BLOCKED', 'REMOVED'],
+    default: 'PENDING',
+    index: true,
+  })
+  moderationState?: 'PENDING' | 'CLEARED' | 'FLAGGED' | 'SHADOW_BLOCKED' | 'REMOVED';
+
+  @Prop({ type: Boolean, default: false, index: true })
+  isShadowBlocked?: boolean;
+
+  @Prop({ type: Boolean, default: false, index: true })
+  isDeleted?: boolean;
 }
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);

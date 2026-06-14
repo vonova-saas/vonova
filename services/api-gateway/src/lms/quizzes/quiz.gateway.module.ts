@@ -7,9 +7,17 @@ import { QuizInstructorController } from './quiz.instructor.controller';
 import { QuizStudentController } from './quiz.student.controller';
 import { QuizGatewayService } from './quiz.gateway.service';
 import { EnrollGatewayModule } from '../course/enroll/enroll.gateway.module';
+import { CommunityGatewayModule } from 'src/app/community/community.module';
+import { CommunitySocketGatewayModule } from 'src/community/socket/community.gateway.module';
 
 @Module({
-  imports: [NatsClientModule, AuthGatewayModule, EnrollGatewayModule],
+  imports: [
+    NatsClientModule,
+    AuthGatewayModule,
+    EnrollGatewayModule,
+    CommunityGatewayModule,
+    CommunitySocketGatewayModule,
+  ],
   controllers: [QuizInstructorController, QuizStudentController],
   providers: [QuizGatewayService, JwtAuthGuard, RolesGuard],
   exports: [JwtAuthGuard, RolesGuard],

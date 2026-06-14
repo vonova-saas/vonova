@@ -1,4 +1,5 @@
 import { CustomError } from "@/types/error/custom-error.type";
+import { persistAccessTokenFromAuthResponse } from "@/lib/media/persist-access-token";
 import axios from "axios";
 import { baseURL } from "./base-url";
 
@@ -26,9 +27,17 @@ API.interceptors.request.use(
     }
 
     // Get token from localStorage or cookies
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const url = String(config.url ?? "");
+    const isCurrentUser = url.includes("/auth/current-user");
+    // Prefer httpOnly cookie for session identity (avoids stale localStorage JWT).
+    if (!isCurrentUser) {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("accessToken")
+          : null;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -44,11 +53,45 @@ const isMissingAccessTokenCookieError = (status: number, data: unknown) => {
 
 API.interceptors.response.use(
   (response) => {
+    const url = String(response.config?.url ?? "");
+    if (
+      typeof window !== "undefined" &&
+      (url.includes("/auth/login") ||
+        url.includes("/auth/refresh-token") ||
+        url.includes("/auth/welcome-email-user"))
+    ) {
+      persistAccessTokenFromAuthResponse(response.data);
+    }
     return response;
   },
   async (error) => {
     if (!error.response) {
-      return Promise.reject(error);
+      const cfg = error.config ?? {};
+      const url =
+        (cfg.baseURL ?? "").replace(/\/+$/, "") +
+        (cfg.url?.startsWith("/") ? cfg.url : `/${cfg.url ?? ""}`);
+      const reason =
+        error.code === "ECONNABORTED"
+          ? `timeout after ${cfg.timeout ?? "?"}ms`
+          : error.code === "ERR_NETWORK"
+            ? "network unreachable (API gateway down, CORS rejection, or DNS error)"
+            : error.message || "no response";
+
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[axios] ${cfg.method?.toUpperCase() ?? "GET"} ${url} failed: ${reason}`,
+        );
+      }
+
+      const customError: CustomError = {
+        ...error,
+        errorCode: error.code ?? "NETWORK_ERROR",
+        message:
+          `Could not reach API at ${url}. ${reason}. ` +
+          `Check that the API gateway is running and NEXT_PUBLIC_API_BASE_URL is correct.`,
+      };
+      return Promise.reject(customError);
     }
     const { data, status } = error.response;
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean });
@@ -60,6 +103,10 @@ API.interceptors.response.use(
 
     if (shouldAttemptRefresh && originalRequest && !originalRequest._retry && !isAuthRefreshRequest && !isAuthLoginRequest) {
       originalRequest._retry = true;
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken");
+      }
 
       try {
         if (!isRefreshing) {
@@ -87,6 +134,24 @@ API.interceptors.response.use(
       ...error,
       errorCode: data?.errorCode || "UNKNOWN_ERROR",
     };
+
+    const url = String(originalRequest?.url ?? "");
+    if (url.includes("/community/")) {
+      const raw = (data as { message?: string | string[] })?.message;
+      const friendly = Array.isArray(raw)
+        ? raw.map((s) => String(s)).join(" ")
+        : typeof raw === "string"
+          ? raw
+          : undefined;
+      if (friendly) {
+        customError.message = friendly;
+      } else if (status === 429) {
+        customError.message =
+          "Too many community actions in a short time. Please wait and try again.";
+      } else if (status === 413) {
+        customError.message = "File is too large for this upload.";
+      }
+    }
 
     return Promise.reject(customError);
   }

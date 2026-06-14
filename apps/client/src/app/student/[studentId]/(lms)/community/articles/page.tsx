@@ -1,18 +1,12 @@
 "use client";
 
-import CommunityPageClient from "@/components/community/community-page-client";
-import { useParams } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function CommunityArticlesPage() {
-  const params = useParams<{ studentId: string }>();
-  const studentId = params?.studentId ?? "";
-
-  return (
-    <CommunityPageClient
-      area="student"
-      userId={studentId}
-      initialTab="articles"
-      viewMode="articles"
-    />
-  );
+export default function LegacyStudentArticlesRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/community");
+  }, [router]);
+  return null;
 }

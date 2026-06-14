@@ -3,8 +3,10 @@ import type {
   LessonContentApiEnvelope,
   LessonContentResourceItem,
 } from "@/services/student/lms/courses/real-courses.api";
+import { normalizeLessonProgressionState } from "@/lib/lms/lesson-progression";
+import type { LessonProgressionState } from "@/types/api/lms/progression.type";
 
-export type LessonContentType = {
+export type LessonContentType = LessonProgressionState & {
   id: string;
   /** Real LMS course id (for progress API). */
   courseId: string;
@@ -64,6 +66,16 @@ export function mapApiLessonContentToPageData(
   const lessonId = String(l.id ?? (l as unknown as { _id?: string })._id ?? "");
   const lessonCompleted =
     (l as { lessonCompleted?: boolean }).lessonCompleted === true;
+  const progression = normalizeLessonProgressionState({
+    watchedPercentage: l.watchedPercentage,
+    canMarkComplete: l.canMarkComplete,
+    hasVideo: l.hasVideo === true || !!videoObjectKey,
+    watchThreshold: l.watchThreshold,
+    completed: lessonCompleted || l.completed,
+    accessible: api.access,
+    locked: api.access === false,
+    computedCompletionRequirements: l.computedCompletionRequirements,
+  });
 
   return {
     id: lessonId,
@@ -83,6 +95,7 @@ export function mapApiLessonContentToPageData(
       problems: [],
     },
     position: 1,
+    ...progression,
     lessonProgress: lessonCompleted
       ? [
           {
@@ -113,6 +126,12 @@ export async function getLessonContent(lessonId: string, userId?: string) {
       videoKey: null,
       lessonResources: { materials: [], quizzes: [], problems: [] },
       position: 1,
+      ...normalizeLessonProgressionState({
+        completed: false,
+        hasVideo: false,
+        accessible: true,
+        locked: false,
+      }),
       lessonProgress: [],
       Chapter: {
         courseId: "demo-course",
@@ -138,6 +157,12 @@ export async function getLessonContent(lessonId: string, userId?: string) {
     videoKey: lesson.videoKey || null,
     lessonResources: { materials: [], quizzes: [], problems: [] },
     position: lesson.index,
+    ...normalizeLessonProgressionState({
+      completed: isCompleted,
+      hasVideo: Boolean(lesson.videoKey),
+      accessible: true,
+      locked: false,
+    }),
     lessonProgress,
     Chapter: {
       courseId: lesson.courseId,

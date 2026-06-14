@@ -30,6 +30,9 @@ import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.i
 import { SubscriptionModule } from './subscription/subscription.module';
 import { AIUsageModule } from './ai-usage/ai-usage.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { MediaHealthSchedulerService } from './common/media/media-health.scheduler.service';
+import { S3Service } from './common/utils/storage/s3.service';
 
 @Module({
   imports: [
@@ -80,9 +83,12 @@ import { PaymentsModule } from './payments/payments.module';
     SubscriptionModule,
     AIUsageModule,
     PaymentsModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
+    MediaHealthSchedulerService,
+    S3Service,
     {
       provide: APP_INTERCEPTOR,
       useClass: MonitoringLogInterceptor,

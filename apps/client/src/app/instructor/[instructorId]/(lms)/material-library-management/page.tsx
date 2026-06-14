@@ -61,6 +61,7 @@ import {
   updateLibraryMaterialMutationFn,
   extractLibraryCatalogTotal,
 } from "@/services/api/shared/material-library/material.api";
+import { invalidateMaterialLibraryQueries } from "@/lib/lms/invalidate-lms-media-queries";
 import type { CreateMaterialRequest } from "@/types/api/shared/material-library/material.type";
 import { toast } from "@/hooks/app/use-toast";
 import { useAuthContext, useAuthContextOptional } from "@/context/app/auth/auth-context";
@@ -304,7 +305,7 @@ export default function MaterialLibraryManagementPage() {
         description: "Material has been added.",
       });
       setIsAddModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      invalidateMaterialLibraryQueries(queryClient);
     },
     onError: (error) => {
       console.error("Failed to add material:", error);
@@ -338,7 +339,7 @@ export default function MaterialLibraryManagementPage() {
         description: "Material has been updated.",
       });
       setEditingMaterial(null);
-      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      invalidateMaterialLibraryQueries(queryClient);
     },
     onError: (error) => {
       console.error("Failed to update material:", error);
@@ -377,7 +378,7 @@ export default function MaterialLibraryManagementPage() {
         title: "Material Deleted Successfully",
         description: "Material has been removed.",
       });
-      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      invalidateMaterialLibraryQueries(queryClient);
     } catch {
       toast({
         title: "Failed to Delete Material",
@@ -414,7 +415,7 @@ export default function MaterialLibraryManagementPage() {
           loading={loading}
           stats={stats}
           onRefresh={() =>
-            queryClient.invalidateQueries({ queryKey: ["materials"] })
+            invalidateMaterialLibraryQueries(queryClient)
           }
           onCreateClicked={() => setIsAddModalOpen(true)}
         />

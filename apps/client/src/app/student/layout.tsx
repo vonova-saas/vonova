@@ -33,6 +33,7 @@ import { useTheme } from "next-themes";
 import { useUserId } from "@/hooks";
 import { AuthProvider } from "@/context/app/auth/auth-context";
 import { Button } from "@/components/ui/button";
+import { AiCreditsNavButton } from "@/components/shared/ai-credits/ai-credits-nav-button";
 
 interface Props {
   children: React.ReactNode;
@@ -101,7 +102,9 @@ export default function DashboardLayout({ children }: Props) {
     { name: "PDF Summary", url: `/student/${userId}/pdf-summary` },
     { name: "AI Assistant", url: `/student/${userId}/ai-assistant` },
     { name: "AI Voice", url: `/student/${userId}/ai-voice` },
-    { name: "Community", url: `/student/${userId}/community` },
+    { name: "Community", url: `/community` },
+    { name: "Messages", url: `/community/messages` },
+    { name: "Notifications", url: `/community/notifications` },
     { name: "Support", url: `/student/${userId}/support` },
     { name: "Feedback", url: `/student/${userId}/feedback` },
     { name: "Settings", url: `/student/${userId}/settings` },
@@ -248,6 +251,7 @@ export default function DashboardLayout({ children }: Props) {
                             Ctrl K
                           </span>
                         </Button>
+                        <AiCreditsNavButton className="hidden sm:inline-flex" />
                         <Button
                           className="p-2 rounded hover:bg-muted transition-colors"
                           aria-label="Toggle theme"

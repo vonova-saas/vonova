@@ -19,10 +19,18 @@ import { sidebarNavData } from "./sidebar-nav-config";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavSubMain } from "./nav-sub-main";
+import { useAuthContextOptional } from "@/context/app/auth/auth-context";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const userId = pathname?.split("/")[2] ?? "";
+  const auth = useAuthContextOptional();
+  // Prefer the authenticated user's id so the sidebar keeps working on
+  // role-agnostic routes (e.g. /community/*) where pathname segment [2] is
+  // not a Mongo id. Fall back to the URL segment for SSR / pre-auth paints.
+  const pathId = pathname?.split("/")[2] ?? "";
+  const looksLikeId = /^[a-f0-9]{24}$/i.test(pathId);
+  const userId =
+    (auth?.user?._id as string | undefined) || (looksLikeId ? pathId : "");
   const withStudentId = (url: string) => url.replace(":studentId", userId);
   const lmsItems = sidebarNavData.lms.map((item) => ({
     ...item,

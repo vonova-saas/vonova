@@ -9,6 +9,7 @@ import {
   Post,
   Request,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +21,10 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { EnrollGatewayService } from './enroll.gateway.service';
+import { CommunitySocialGatewayService } from 'src/app/community/social.gateway.service';
+import { CourseGatewayService } from '../course/course.gateway.service';
+import { CommunitySocketGateway } from 'src/community/socket/community.gateway';
+import { deliverCommunityNotification } from 'src/app/community/community-notification.helper';
 import { EnrollCourseDto } from './dto/enroll.dto';
 
 @ApiTags('LMS Course Enrollment')
@@ -27,7 +32,14 @@ import { EnrollCourseDto } from './dto/enroll.dto';
 @Controller('api/v1/lms/courses')
 @UseGuards(JwtAuthGuard)
 export class EnrollGatewayController {
-  constructor(private readonly enrollService: EnrollGatewayService) {}
+  private readonly logger = new Logger(EnrollGatewayController.name);
+
+  constructor(
+    private readonly enrollService: EnrollGatewayService,
+    private readonly social: CommunitySocialGatewayService,
+    private readonly courseService: CourseGatewayService,
+    private readonly sockets: CommunitySocketGateway,
+  ) {}
 
   @ApiOperation({
     summary: 'Enroll in a course',
@@ -83,9 +95,68 @@ export class EnrollGatewayController {
     }
 
     const createdBy = userId;
-    return firstValueFrom(
+    let wasEnrolled = false;
+    try {
+      const prior = await firstValueFrom(
+        this.enrollService.getEnrollment(courseId, userId),
+      );
+      wasEnrolled = !!prior;
+    } catch {
+      wasEnrolled = false;
+    }
+
+    const enrollment = await firstValueFrom(
       this.enrollService.enrollCourse(courseId, userId, createdBy, dto),
     );
+
+    try {
+      await firstValueFrom(
+        this.social.courseGroupJoinMember(String(courseId), String(userId)),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Community group join failed after enroll (user can be repaired): ${(err as Error).message}`,
+      );
+    }
+
+    if (!wasEnrolled) {
+      try {
+        const courseRaw = await firstValueFrom(
+          this.courseService.getCourseById(courseId),
+        );
+        const course =
+          (courseRaw as { data?: Record<string, unknown> })?.data ??
+          (courseRaw as Record<string, unknown>);
+        const ownerId = course?.ownerId
+          ? String(course.ownerId)
+          : course?.instructorId
+            ? String(course.instructorId)
+            : '';
+        const title =
+          typeof course?.title === 'string'
+            ? course.title
+            : typeof course?.name === 'string'
+              ? course.name
+              : 'your course';
+        if (ownerId) {
+          void deliverCommunityNotification(this.social, this.sockets, {
+            recipientId: ownerId,
+            actorId: String(userId),
+            type: 'ENROLLMENT',
+            entityType: 'COURSE',
+            entityId: String(courseId),
+            message: `enrolled in ${title}`,
+            meta: { courseId: String(courseId), courseTitle: title },
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Enrollment notification failed: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return enrollment;
   }
 
   @ApiOperation({

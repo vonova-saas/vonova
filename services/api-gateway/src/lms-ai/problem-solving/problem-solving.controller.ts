@@ -7,6 +7,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -30,9 +31,14 @@ import {
   ListProblemsQueryDto,
   RequestHintDto,
   RequestSolutionDto,
+  CreateProblemSheetDto,
+  UpdateProblemSheetDto,
 } from './dto/problem-solving.dto';
 import { InstructorGuard } from './guards/instructor.guard';
 import { StudentGuard } from './guards/student.guard';
+import { CommunitySocialGatewayService } from '../../app/community/social.gateway.service';
+import { CommunitySocketGateway } from '../../community/socket/community.gateway';
+import { scheduleNotificationFanOut } from '../../app/community/community-notification.helper';
 
 @ApiTags('Problem Solving')
 @ApiBearerAuth()
@@ -41,7 +47,9 @@ import { StudentGuard } from './guards/student.guard';
 export class ProblemSolvingGatewayController {
   constructor(
     private readonly problemSolvingService: ProblemSolvingGatewayService,
-  ) {}
+    private readonly social: CommunitySocialGatewayService,
+    private readonly sockets: CommunitySocketGateway,
+  ) { }
 
   private getUser(req: unknown): { id: string; role?: string } {
     const request = req as {
@@ -154,6 +162,220 @@ export class ProblemSolvingGatewayController {
     return firstValueFrom(
       this.problemSolvingService.deleteProblem(user.id, id),
     );
+  }
+
+  @Post('problem-solving/sheets')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Create a problem sheet (Instructor)' })
+  async createProblemSolvingSheet(
+    @Request() req: unknown,
+    @Body() dto: CreateProblemSheetDto,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(this.problemSolvingService.createSheet(user.id, dto));
+  }
+
+  @Get('problem-solving/sheets')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'List problem sheets (Instructor)' })
+  async listProblemSolvingSheets(
+    @Request() req: unknown,
+    @Query('status') status?: 'draft' | 'published',
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.listSheets(user.id, status),
+    );
+  }
+
+  @Get('problem-solving/sheets/:sheetId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Get problem sheet by id (Instructor)' })
+  async getProblemSolvingSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getSheet(sheetId, user.id),
+    );
+  }
+
+  @Patch('problem-solving/sheets/:sheetId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Update problem sheet (Instructor)' })
+  async updateProblemSolvingSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Body() dto: UpdateProblemSheetDto,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.updateSheet(sheetId, user.id, dto),
+    );
+  }
+
+  @Delete('problem-solving/sheets/:sheetId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Delete problem sheet (Instructor)' })
+  async deleteProblemSolvingSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.deleteSheet(sheetId, user.id),
+    );
+  }
+
+  @Post('problem-solving/sheets/:sheetId/duplicate')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Duplicate problem sheet (Instructor)' })
+  async duplicateProblemSolvingSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.duplicateSheet(sheetId, user.id),
+    );
+  }
+
+  @Patch('problem-solving/sheets/:sheetId/publish')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Publish or unpublish problem sheet (Instructor)' })
+  async publishProblemSolvingSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Body() body: { status?: 'draft' | 'published'; published?: boolean },
+  ) {
+    const user = this.getUser(req);
+    const shouldPublish = body.status
+      ? body.status === 'published'
+      : body.published !== false;
+    const sheet = await firstValueFrom(
+      shouldPublish
+        ? this.problemSolvingService.publishSheet(sheetId, user.id)
+        : this.problemSolvingService.unpublishSheet(sheetId, user.id),
+    );
+    if (shouldPublish) {
+      const courseId =
+        (sheet as { courseId?: string })?.courseId ??
+        (sheet as { data?: { courseId?: string } })?.data?.courseId;
+      const title =
+        (sheet as { title?: string })?.title ??
+        (sheet as { data?: { title?: string } })?.data?.title ??
+        'Problem sheet';
+      if (courseId) {
+        scheduleNotificationFanOut(this.social, this.sockets, {
+          audience: {
+            kind: 'courseEnrolled',
+            courseId: String(courseId),
+            excludeUserIds: [user.id],
+          },
+          template: {
+            actorId: user.id,
+            type: 'SHEET_ASSIGNED',
+            entityType: 'SHEET',
+            entityId: sheetId,
+            message: `New problem sheet: ${title}`,
+            meta: { courseId: String(courseId), sheetId },
+          },
+          dedupeEntityId: sheetId,
+        });
+      }
+    }
+    return sheet;
+  }
+
+  @Post('problem-solving/sheets/:sheetId/problems')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({
+    summary: 'Create a problem inside a sheet (Instructor)',
+    description:
+      'Creates a problem that is automatically scoped to the sheet. Sets isSheetScoped=true and visibilityScope=SHEET_ONLY.',
+  })
+  @ApiBody({ type: CreateProblemDto })
+  async createProblemInSheet(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Body() dto: CreateProblemDto,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.createProblemInSheet(user.id, sheetId, dto),
+    );
+  }
+
+  @Patch('problem-solving/sheets/:sheetId/problems/:problemId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Update a sheet-scoped problem (Instructor)' })
+  async updateSheetProblem(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Param('problemId') problemId: string,
+    @Body() dto: Partial<CreateProblemDto>,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.updateSheetProblem(
+        user.id,
+        sheetId,
+        problemId,
+        dto,
+      ),
+    );
+  }
+
+  @Delete('problem-solving/sheets/:sheetId/problems/:problemId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({ summary: 'Delete a sheet-scoped problem (Instructor)' })
+  async deleteSheetProblem(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Param('problemId') problemId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.deleteSheetProblem(user.id, sheetId, problemId),
+    );
+  }
+
+  @Get('problem-solving/problems/:problemId')
+  @UseGuards(InstructorGuard)
+  @ApiOperation({
+    summary: 'Get full problem document (Instructor)',
+    description:
+      'Returns the complete problem for editing or preview. Use sheet GET for metadata-only lists.',
+  })
+  async getProblemSolvingProblem(
+    @Request() req: unknown,
+    @Param('problemId') problemId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getProblem(problemId, user.id),
+    );
+  }
+
+  @Get('student/problem-sheets')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'List published problem sheets (Student)' })
+  async listStudentProblemSheets() {
+    return firstValueFrom(
+      this.problemSolvingService.listSheets(undefined, 'published'),
+    );
+  }
+
+  @Get('student/problem-sheets/:id')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'Get published problem sheet (Student)' })
+  async getStudentProblemSheet(
+    @Request() req: unknown,
+    @Param('id') id: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(this.problemSolvingService.getSheet(id, user.id));
   }
 
   @Get('student/problems')
@@ -392,5 +614,64 @@ export class ProblemSolvingGatewayController {
   async markAsSolved(@Request() req: unknown, @Param('id') id: string) {
     const user = this.getUser(req);
     return firstValueFrom(this.problemSolvingService.markAsSolved(user.id, id));
+  }
+
+  @Get('problem-solving/sheets/:sheetId/progress')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'Get sheet progress (Student)' })
+  async getSheetProgress(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getSheetProgress(user.id, sheetId),
+    );
+  }
+
+  @Patch('problem-solving/sheets/:sheetId/progress')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'Update sheet resume position (Student)' })
+  async touchSheetProgress(
+    @Request() req: unknown,
+    @Param('sheetId') sheetId: string,
+    @Body() body: { currentProblemIndex?: number },
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.touchSheetProgress(user.id, sheetId, body),
+    );
+  }
+
+  @Get('problem-solving/problems/:problemId/progress')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'Get problem progress (Student)' })
+  async getProblemProgress(
+    @Request() req: unknown,
+    @Param('problemId') problemId: string,
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.getProblemProgress(user.id, problemId),
+    );
+  }
+
+  @Patch('problem-solving/problems/:problemId/progress')
+  @UseGuards(StudentGuard)
+  @ApiOperation({ summary: 'Update problem progress (Student)' })
+  async patchProblemProgress(
+    @Request() req: unknown,
+    @Param('problemId') problemId: string,
+    @Body()
+    body: {
+      solved?: boolean;
+      lastSubmissionStatus?: string;
+      attemptsCount?: number;
+    },
+  ) {
+    const user = this.getUser(req);
+    return firstValueFrom(
+      this.problemSolvingService.patchProblemProgress(user.id, problemId, body),
+    );
   }
 }

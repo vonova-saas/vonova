@@ -23,6 +23,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import Image from "next/image";
 import useStudentId from "@/hooks/student/use-student-id";
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 
 function useDebouncedValue<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -358,6 +359,7 @@ export default function BookViewer() {
           width={typeof width === 'number' ? width : 600}
           height={typeof height === 'number' ? height : 400}
           style={{ maxWidth: "100%", height: "auto" }}
+          unoptimized={shouldBypassNextImageOptimization(src)}
           {...props}
         />
       );

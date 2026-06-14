@@ -25,6 +25,7 @@ import {
 } from './utils/judge-invocation.util';
 import { runInDocker } from './utils/docker-judge.util';
 import { EnrollService } from '../../course/enroll/enroll.service';
+import { ProgressService } from './progress.service';
 
 @Injectable()
 export class SubmissionService {
@@ -40,6 +41,7 @@ export class SubmissionService {
     private readonly submissionJobModel: Model<SubmissionJobDocument>,
     private readonly judgeQueue: SubmissionJudgeQueue,
     private readonly enrollService: EnrollService,
+    private readonly progressService: ProgressService,
   ) {}
 
   async createSubmission(dto: CreateSubmissionDto, userId: string) {
@@ -346,6 +348,20 @@ export class SubmissionService {
           },
         },
       );
+
+      try {
+        await this.progressService.recordSubmissionResult(
+          String(submission.userId),
+          String(submission.problemId),
+          evaluation.status,
+        );
+      } catch (progressErr) {
+        this.logger.warn(
+          `Failed to persist problem progress for submission ${submissionId}: ${
+            progressErr instanceof Error ? progressErr.message : String(progressErr)
+          }`,
+        );
+      }
     } catch (error) {
       const nextRetry = (job.retryCount ?? 0) + 1;
       const shouldRetry = nextRetry <= this.maxRetries;

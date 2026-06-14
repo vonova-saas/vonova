@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AIUsageService } from './ai-usage.service';
+import { AiCreditService } from './ai-credit.service';
 import type { AIFeature } from './schema/ai-usage.schema';
 
 /**
@@ -18,7 +19,12 @@ const FEATURE_MAP: Record<string, AIFeature> = {
 
 @Controller('ai-usage')
 export class AIUsageController {
-  constructor(private readonly aiUsageService: AIUsageService) { }
+  constructor(
+    private readonly aiUsageService: AIUsageService,
+    private readonly aiCreditService: AiCreditService,
+  ) { }
+
+  // ─── Legacy V1 Endpoints (kept for backward compatibility) ────────────────
 
   @MessagePattern({ cmd: 'ai-usage.track' })
   async trackUsage(
@@ -65,8 +71,8 @@ export class AIUsageController {
   }
 
   /**
-   * Check usage limit - supports both old and new feature names
-   * Used by API Gateway guard for pre-flight checks
+   * Check usage limit - supports both old and new feature names.
+   * Redirects to the monthly V2 credit service for backward compatibility.
    */
   @MessagePattern({ cmd: 'ai.usage.check' })
   async checkUsage(
@@ -76,18 +82,56 @@ export class AIUsageController {
   ) {
     // Map old feature names to new ones
     const mappedFeature = FEATURE_MAP[feature] || feature as AIFeature;
-    const result = await this.aiUsageService.checkUsageLimit(userId, role, mappedFeature);
+    const result = await this.aiCreditService.canUse(userId, mappedFeature);
 
     return {
       message: 'Usage checked successfully',
       data: {
         allowed: result.allowed,
-        used: result.currentCount,
+        used: result.creditsUsed,
         limit: result.limit,
         remaining: result.remaining,
         feature,
         mappedFeature,
       },
+    };
+  }
+
+  // ─── V2 Credit Endpoints ─────────────────────────────────────────────────
+
+  /**
+   * V2: Get monthly credit statistics for all AI features.
+   * Returns current usage, limits, and reset time per feature.
+   * This is the authoritative stats source — use this instead of ai-usage.getAllDaily.
+   *
+   * Payload: { userId: string }
+   */
+  @MessagePattern({ cmd: 'ai.credits.stats' })
+  async getCreditStats(@Payload('userId') userId: string) {
+    const stats = await this.aiCreditService.getMonthlyStats(userId);
+    return {
+      message: 'Monthly credit stats retrieved successfully',
+      data: stats,
+    };
+  }
+
+  /**
+   * V2: Advisory preflight check — "Can this user use this feature?"
+   * Returns credit balance without consuming any credits.
+   * NOT an enforcement gate — for UI display purposes only.
+   * Real enforcement happens inside AiCreditService.executeWithCredits().
+   *
+   * Payload: { userId: string; feature: AIFeature }
+   */
+  @MessagePattern({ cmd: 'ai.credits.canUse' })
+  async canUse(
+    @Payload('userId') userId: string,
+    @Payload('feature') feature: AIFeature,
+  ) {
+    const result = await this.aiCreditService.canUse(userId, feature);
+    return {
+      message: 'Credit availability checked successfully',
+      data: result,
     };
   }
 }

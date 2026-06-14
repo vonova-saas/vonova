@@ -61,14 +61,12 @@ export class UploadGatewayController {
       this.trimEnv(process.env.AWS_S3_REGION_LMS) ||
       this.trimEnv(process.env.AWS_S3_REGION_LMS_AI) ||
       this.trimEnv(process.env.AWS_REGION_LMS_AI) ||
-      this.trimEnv(process.env.AWS_S3_REGION_APP) ||
       this.trimEnv(process.env.AWS_REGION) ||
       this.trimEnv(process.env.AWS_DEFAULT_REGION);
 
     const bucket =
       this.trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
       this.trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
-      this.trimEnv(process.env.AWS_S3_BUCKET_APP) ||
       this.trimEnv(process.env.AWS_S3_BUCKET) ||
       this.trimEnv(process.env.S3_BUCKET);
 
@@ -90,7 +88,7 @@ export class UploadGatewayController {
 
     if (!region || !bucket || !accessKeyId || !secretAccessKey) {
       throw new Error(
-        'S3 library upload is not configured on the gateway. Set AWS_S3_REGION_LMS, AWS_S3_BUCKET_LMS, AWS_S3_ACCESS_KEY_ID_LMS, and AWS_S3_SECRET_ACCESS_KEY_LMS, or provide the standard AWS/App fallback variables.',
+        'S3 library upload is not configured on the gateway. Set AWS_S3_REGION_LMS, AWS_S3_BUCKET_LMS, AWS_S3_ACCESS_KEY_ID_LMS, and AWS_S3_SECRET_ACCESS_KEY_LMS (or LMS_AI / generic AWS_* fallbacks). Do not use a separate App bucket for LMS library objects.',
       );
     }
 
@@ -105,6 +103,8 @@ export class UploadGatewayController {
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
         },
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
       });
     }
 
@@ -215,7 +215,6 @@ export class UploadGatewayController {
 
     try {
       // Generate unique object key
-      const fileExtension = file.originalname.split('.').pop();
       const uniqueId = uuidv4();
       const objectKey = `library/${itemType}/${itemId}/${uniqueId}-${file.originalname}`;
 
@@ -231,16 +230,24 @@ export class UploadGatewayController {
       });
 
       await s3Client.send(command);
-      console.log('S3 upload successful:', objectKey);
 
-      // Generate presigned URL for downloading the uploaded file
-      const getCommand = new GetObjectCommand({
-        Bucket: bucketName,
-        Key: objectKey,
+      let s3Host: string | undefined;
+      try {
+        s3Host = new URL(
+          `https://${bucketName}.s3.${s3Config.region}.amazonaws.com`,
+        ).hostname;
+      } catch {
+        s3Host = undefined;
+      }
+      console.log('[LIBRARY_UPLOAD]', {
+        bucket: bucketName,
+        region: s3Config.region,
+        objectKey,
+        contentType: file.mimetype,
+        s3Host,
       });
-      const presignedUrl = await getSignedUrl(s3Client, getCommand, {
-        expiresIn: 3600,
-      }); // 1 hour expiry
+
+      const viewUrl = `/api/v1/media/lms/materials/${encodeURIComponent(itemId)}/view?type=${encodeURIComponent(itemType.toLowerCase())}`;
 
       // Create asset record via LMS service (only metadata)
       const result = (await firstValueFrom(
@@ -268,14 +275,12 @@ export class UploadGatewayController {
 
       return {
         message: 'File uploaded successfully',
-        presignedUrl, // This is the presigned URL for accessing the file
-        fileUrl: `https://${bucketName}.s3.${s3Config.region}.amazonaws.com/${objectKey}`, // Direct URL for reference
+        viewUrl,
         objectKey,
         size: file.size,
         assetId: result.assetId,
         fileName: file.originalname,
         mimeType: file.mimetype,
-        expiresInSeconds: 3600,
       };
     } catch (error) {
       console.error('File upload error:', error);

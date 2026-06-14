@@ -8,6 +8,16 @@ import {
   LessonProgressSchema,
 } from './schema/lesson-progress.schema';
 import { Lesson, LessonSchema } from '../lesson/schema/lesson.schema';
+import { LessonProgressionEngine } from './lesson-progression.engine';
+import {
+  ProblemSheet,
+  ProblemSheetSchema,
+} from '../../lms-ai/problem-solving/schemas/problem-sheet.schema';
+import {
+  SheetProgress,
+  SheetProgressSchema,
+} from '../../lms-ai/problem-solving/schemas/sheet-progress.schema';
+import { LMS_AI_CONNECTION_NAME } from '../../lms-ai/database/constants';
 
 @Module({
   imports: [
@@ -16,8 +26,16 @@ import { Lesson, LessonSchema } from '../lesson/schema/lesson.schema';
       { name: LessonProgress.name, schema: LessonProgressSchema },
       { name: Lesson.name, schema: LessonSchema },
     ]),
+    MongooseModule.forFeature(
+      [
+        { name: ProblemSheet.name, schema: ProblemSheetSchema },
+        { name: SheetProgress.name, schema: SheetProgressSchema },
+      ],
+      LMS_AI_CONNECTION_NAME,
+    ),
   ],
   controllers: [ProgressController],
-  providers: [ProgressService],
+  providers: [ProgressService, LessonProgressionEngine],
+  exports: [LessonProgressionEngine],
 })
 export class ProgressModule {}

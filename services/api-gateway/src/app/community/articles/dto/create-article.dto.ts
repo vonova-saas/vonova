@@ -75,7 +75,8 @@ export class CreateArticleDto {
   slug?: string;
 
   @IsString()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Article must have at least one content block' })

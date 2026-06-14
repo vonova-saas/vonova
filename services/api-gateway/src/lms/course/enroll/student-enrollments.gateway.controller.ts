@@ -41,28 +41,35 @@ export class StudentEnrollmentsGatewayController {
       progressPercentage?: number;
     }>;
 
-    const data = await Promise.all(
-      rows.map(async (row) => {
-        let course: unknown = null;
-        try {
-          const raw = await firstValueFrom(
-            this.courseService.getCourseById(String(row.courseId), userId),
-          );
-          course = await presignCourseThumbnailFields(
-            raw as Record<string, unknown>,
-            this.s3Service,
-          );
-        } catch {
-          course = null;
-        }
-        return {
-          course,
-          progress: row.progressPercentage ?? 0,
-          status: row.status,
-          enrollmentId: String(row._id),
-        };
-      }),
-    );
+    const data = (
+      await Promise.all(
+        rows.map(async (row) => {
+          let course: unknown = null;
+          try {
+            const raw = await firstValueFrom(
+              this.courseService.getCourseById(String(row.courseId), userId),
+            );
+            course = await presignCourseThumbnailFields(
+              raw as Record<string, unknown>,
+              this.s3Service,
+            );
+          } catch {
+            // Course was deleted/hidden — drop the orphan enrollment from the
+            // response instead of returning a `course: null` row that the UI
+            // can't render. The microservice still emits one NotFoundException
+            // log line per orphan; keep it as a soft warning rather than
+            // suppressing entirely so DB cleanup remains discoverable.
+            return null;
+          }
+          return {
+            course,
+            progress: row.progressPercentage ?? 0,
+            status: row.status,
+            enrollmentId: String(row._id),
+          };
+        }),
+      )
+    ).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
     return {
       success: true,

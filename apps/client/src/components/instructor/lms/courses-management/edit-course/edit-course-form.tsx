@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateCourseMutationFn } from "@/services/instructor/course-managment/courses.api";
 import { UpdateCourseDto, Course } from "@/types/api/lms/courses.type";
 import { queryClient } from "@/providers/providers";
+import { invalidateLmsMediaForCourse } from "@/lib/lms/invalidate-lms-media-queries";
 import { useUserId } from "@/hooks";
 
 interface iAppProps {
@@ -64,6 +65,7 @@ export function EditCourseForm({ data }: iAppProps) {
   const router = useRouter();
   const userId = useUserId();
   const [selectedImageFile, setSelectedImageFile] = useState<File | undefined>(undefined);
+  const [thumbnailCleared, setThumbnailCleared] = useState(false);
 
   const form = useForm<CourseSchemaType>({
     resolver: zodResolver(courseSchema),
@@ -127,8 +129,9 @@ export function EditCourseForm({ data }: iAppProps) {
                 : "ARCHIVED",
         };
 
-        if (selectedImageFile) {
-          updateData.thumbnailUrl = values.fileKey || undefined;
+        if (thumbnailCleared && !selectedImageFile) {
+          updateData.thumbnailUrl = "";
+          updateData.thumbnailKey = "";
         }
 
         await updateCourseMutationFn(data._id, updateData, selectedImageFile);
@@ -139,9 +142,12 @@ export function EditCourseForm({ data }: iAppProps) {
         queryClient.invalidateQueries({ queryKey: ["course-details"] });
         queryClient.invalidateQueries({ queryKey: ["course-details", data._id] });
         queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+        invalidateLmsMediaForCourse(queryClient, data._id);
 
         toast.success("Course updated successfully");
         setSelectedImageFile(undefined);
+        setThumbnailCleared(false);
+        router.refresh();
         router.push(`/instructor/${userId}/courses-management`);
       } catch (error) {
         console.error("Error updating course:", error);
@@ -150,7 +156,7 @@ export function EditCourseForm({ data }: iAppProps) {
     });
   }
 
-  const formRemountKey = `${data._id}-${(data as { updatedAt?: string }).updatedAt ?? ""}-${data.thumbnailUrl ?? ""}`;
+  const formRemountKey = `${data._id}-${(data as { updatedAt?: string }).updatedAt ?? ""}-${data.thumbnailUrl ?? ""}-${(data.description ?? "").slice(0, 80)}`;
 
   return (
     <Form {...form} key={formRemountKey}>
@@ -240,9 +246,15 @@ export function EditCourseForm({ data }: iAppProps) {
                 <Uploader
                   key={`course-thumb-${data._id}-${data.thumbnailUrl ?? ""}`}
                   fileTypeAccepted="image"
+                  courseId={data._id}
+                  contentType="course"
+                  contentId={data._id}
+                  storageDeleteKey={data.thumbnailKey}
                   onChange={(url: string, file?: File) => {
                     field.onChange(url);
                     setSelectedImageFile(file);
+                    setThumbnailCleared(!url && !file);
+                    if (file) setThumbnailCleared(false);
                   }}
                   value={field.value}
                 />

@@ -18,7 +18,7 @@ export function RnderDescription({ json }: { json: JSONContent }) {
   }, [json]);
 
   return (
-    <div className="prose dark:prose-invert prose-li:marker:text-primary">
+    <div className="prose prose-lg max-w-none dark:prose-invert prose-li:marker:text-primary">
       {parse(output)}
     </div>
   );

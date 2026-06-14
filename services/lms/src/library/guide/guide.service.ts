@@ -2,6 +2,10 @@ import { Model, Types } from 'mongoose';
 import { Guide, GuideDocument } from '../schema/guide.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
 import {
+  buildStableLmsMaterialViewUrl,
+  stableMediaGetEnabled,
+} from '../../common/media/stable-media-url';
+import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
@@ -125,31 +129,31 @@ export class GuideService {
 
         if (guide.fileAssetId) {
           try {
+            if (stableMediaGetEnabled()) {
+              (guideObj as { contentUrl?: string }).contentUrl =
+                buildStableLmsMaterialViewUrl(String(guide._id), 'guide');
+            } else {
             const asset = await this.libraryAssetModel.findById(
               guide.fileAssetId,
             );
             if (asset?.objectKey) {
               let contentUrl: string | undefined;
 
-              // Check if we have a valid stored presigned URL
               if (
                 asset.urls?.presignedUrl &&
                 asset.urls?.presignedUrlExpiresAt
               ) {
                 const now = new Date();
                 const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-
                 if (now < expiresAt) {
                   contentUrl = asset.urls.presignedUrl;
                 }
               }
 
-              // Generate new presigned URL if none exists or expired
               if (!contentUrl) {
                 contentUrl = await this.s3Service.getPresignedGetUrl(
                   asset.objectKey,
                 );
-                // Store the new presigned URL in database with 1 hour expiration
                 const expiresAt = new Date(Date.now() + 3600 * 1000);
                 await this.libraryAssetModel.findByIdAndUpdate(
                   guide.fileAssetId,
@@ -160,7 +164,8 @@ export class GuideService {
                 );
               }
 
-              (guideObj as any).contentUrl = contentUrl;
+              (guideObj as { contentUrl?: string }).contentUrl = contentUrl;
+            }
             }
           } catch (error) {
             console.error(
@@ -186,41 +191,38 @@ export class GuideService {
 
     if (guide.fileAssetId) {
       try {
-        const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
-        if (asset?.objectKey) {
-          let contentUrl: string | undefined;
-
-          // Check if we have a valid stored presigned URL
-          if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
-            const now = new Date();
-            const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-
-            if (now < expiresAt) {
-              contentUrl = asset.urls.presignedUrl;
+        if (stableMediaGetEnabled()) {
+          (guideObj as { contentUrl?: string }).contentUrl =
+            buildStableLmsMaterialViewUrl(String(guide._id), 'guide');
+        } else {
+          const asset = await this.libraryAssetModel.findById(guide.fileAssetId);
+          if (asset?.objectKey) {
+            let contentUrl: string | undefined;
+            if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
+              const now = new Date();
+              const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
+              if (now < expiresAt) {
+                contentUrl = asset.urls.presignedUrl;
+              }
             }
+            if (!contentUrl) {
+              contentUrl = await this.s3Service.getPresignedGetUrl(
+                asset.objectKey,
+              );
+              const expiresAt = new Date(Date.now() + 3600 * 1000);
+              await this.libraryAssetModel.findByIdAndUpdate(guide.fileAssetId, {
+                'urls.presignedUrl': contentUrl,
+                'urls.presignedUrlExpiresAt': expiresAt,
+              });
+            }
+            (guideObj as { contentUrl?: string }).contentUrl = contentUrl;
           }
-
-          // Generate new presigned URL if none exists or expired
-          if (!contentUrl) {
-            contentUrl = await this.s3Service.getPresignedGetUrl(
-              asset.objectKey,
-            );
-            // Store the new presigned URL in database with 1 hour expiration
-            const expiresAt = new Date(Date.now() + 3600 * 1000);
-            await this.libraryAssetModel.findByIdAndUpdate(guide.fileAssetId, {
-              'urls.presignedUrl': contentUrl,
-              'urls.presignedUrlExpiresAt': expiresAt,
-            });
-          }
-
-          (guideObj as any).contentUrl = contentUrl;
         }
       } catch (error) {
         console.error(
           `Failed to generate presigned URL for guide ${guide._id}:`,
           error,
         );
-        // Continue without presigned URL
       }
     }
 

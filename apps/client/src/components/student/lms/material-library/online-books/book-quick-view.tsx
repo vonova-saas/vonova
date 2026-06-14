@@ -10,10 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
-import Image from "next/image";
 import { BookQuickViewProps } from "./types";
+import { PresignedMediaImage } from "@/components/shared/presigned-media-image";
 
-export function BookQuickView({ book, onClose, open }: BookQuickViewProps) {
+export function BookQuickView({
+  book,
+  onClose,
+  open,
+  refreshBookMedia,
+}: BookQuickViewProps) {
   if (!book) return null;
 
   return (
@@ -27,14 +32,23 @@ export function BookQuickView({ book, onClose, open }: BookQuickViewProps) {
               <div className="flex flex-col items-center mb-1">
                 <span className="flex -space-x-2 mb-1">
                   {book.authors.map((author, idx) => (
-                    <Image
-                      key={author.name}
+                    <PresignedMediaImage
+                      key={author.name + idx}
                       src={author.avatar}
                       alt={author.name + " avatar"}
                       width={28}
                       height={28}
                       className="rounded-full border border-primary bg-background object-cover align-middle"
                       style={{ zIndex: 10 - idx }}
+                      onRefreshSrc={
+                        refreshBookMedia
+                          ? async () => {
+                              const next = await refreshBookMedia();
+                              const a = next?.authors?.[idx];
+                              return a?.avatar ?? null;
+                            }
+                          : undefined
+                      }
                     />
                   ))}
                 </span>
@@ -53,8 +67,8 @@ export function BookQuickView({ book, onClose, open }: BookQuickViewProps) {
                       book.difficulty === "Beginner"
                         ? "bg-green-100 text-green-700 border-green-200"
                         : book.difficulty === "Intermediate"
-                        ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                        : "bg-red-100 text-red-700 border-red-200"
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                          : "bg-red-100 text-red-700 border-red-200"
                     }`}
                   >
                     {book.difficulty}
@@ -77,12 +91,20 @@ export function BookQuickView({ book, onClose, open }: BookQuickViewProps) {
                   ))}
                 </span>
               )}
-              <Image
+              <PresignedMediaImage
                 src={book.cover}
                 alt={book.title + " cover"}
                 width={120}
                 height={160}
                 className="object-cover rounded shadow"
+                onRefreshSrc={
+                  refreshBookMedia
+                    ? async () => {
+                        const next = await refreshBookMedia();
+                        return next?.cover ?? null;
+                      }
+                    : undefined
+                }
               />
               <div className="text-center">
                 <div className="text-base text-muted-foreground mt-2">
@@ -100,4 +122,4 @@ export function BookQuickView({ book, onClose, open }: BookQuickViewProps) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

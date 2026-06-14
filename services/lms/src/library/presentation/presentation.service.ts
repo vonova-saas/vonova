@@ -13,6 +13,10 @@ import {
   PublishPresentationDto,
 } from './dto/presentition.dto';
 import { S3Service } from '../../common/utils/storage/s3.service';
+import {
+  buildStableLmsMaterialViewUrl,
+  stableMediaGetEnabled,
+} from '../../common/media/stable-media-url';
 
 @Injectable()
 export class PresentationService {
@@ -136,13 +140,19 @@ export class PresentationService {
 
         if (presentation.fileAssetId) {
           try {
+            if (stableMediaGetEnabled()) {
+              (presentationObj as { contentUrl?: string }).contentUrl =
+                buildStableLmsMaterialViewUrl(
+                  String(presentation._id),
+                  'presentation',
+                );
+            } else {
             const asset = await this.assetModel.findById(
               presentation.fileAssetId,
             );
             if (asset?.objectKey) {
               let contentUrl: string | undefined;
 
-              // Check if we have a valid stored presigned URL
               if (
                 asset.urls?.presignedUrl &&
                 asset.urls?.presignedUrlExpiresAt
@@ -155,12 +165,10 @@ export class PresentationService {
                 }
               }
 
-              // Generate new presigned URL if none exists or expired
               if (!contentUrl) {
                 contentUrl = await this.s3Service.getPresignedGetUrl(
                   asset.objectKey,
                 );
-                // Store the new presigned URL in database with 1 hour expiration
                 const expiresAt = new Date(Date.now() + 3600 * 1000);
                 await this.assetModel.findByIdAndUpdate(
                   presentation.fileAssetId,
@@ -171,7 +179,9 @@ export class PresentationService {
                 );
               }
 
-              (presentationObj as any).contentUrl = contentUrl;
+              (presentationObj as { contentUrl?: string }).contentUrl =
+                contentUrl;
+            }
             }
           } catch (error) {
             console.error(
@@ -203,11 +213,14 @@ export class PresentationService {
 
     if (doc.fileAssetId) {
       try {
+        if (stableMediaGetEnabled()) {
+          (presentationObj as { contentUrl?: string }).contentUrl =
+            buildStableLmsMaterialViewUrl(String(doc._id), 'presentation');
+        } else {
         const asset = await this.assetModel.findById(doc.fileAssetId);
         if (asset?.objectKey) {
           let contentUrl: string | undefined;
 
-          // Check if we have a valid stored presigned URL
           if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
             const now = new Date();
             const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
@@ -217,7 +230,6 @@ export class PresentationService {
             }
           }
 
-          // Generate new presigned URL if none exists or expired
           if (!contentUrl) {
             contentUrl = await this.s3Service.getPresignedGetUrl(
               asset.objectKey,
@@ -230,14 +242,14 @@ export class PresentationService {
             });
           }
 
-          (presentationObj as any).contentUrl = contentUrl;
+          (presentationObj as { contentUrl?: string }).contentUrl = contentUrl;
+        }
         }
       } catch (error) {
         console.error(
           `Failed to generate presigned URL for presentation ${doc._id}:`,
           error,
         );
-        // Continue without presigned URL
       }
     }
 

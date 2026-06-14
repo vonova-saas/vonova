@@ -1,12 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LessonContent, LessonResource } from "@/types/api/lms/courses.type";
-import { getLessonContentQueryFn } from "@/services/student/lms/courses/courses.api";
+import {
+  getLessonContentQueryFn,
+  type LessonContentApiEnvelope,
+} from "@/services/student/lms/courses/real-courses.api";
 import { FileText, Download, Clock, RefreshCw } from "lucide-react";
+import { sanitizeHtml } from "@/lib/safety";
+import { logMediaClientFailure } from "@/lib/lms/media-client-telemetry";
+import { isPresignedUrlExpired } from "@/lib/lms/presigned-url";
+import {
+  hostnameOnlyFromUrl,
+  logLessonVideoRefresh,
+  logMediaCacheExpired,
+  logMediaRefresh,
+  refreshSignedMediaUrl,
+} from "@/lib/lms/signed-media-cache";
+import { logLessonStreamRefresh } from "@/lib/lms/ensure-fresh-signed-media-url";
+import { resolveStableMediaPlaybackUrl } from "@/lib/lms/stable-media-url";
+import { normalizeLessonProgressionState } from "@/lib/lms/lesson-progression";
+
+function mapEnvelopeToLessonContent(body: LessonContentApiEnvelope): LessonContent {
+  const l = body.lesson;
+  const r = l.resources;
+  const flatResources =
+    r != null
+      ? [
+          ...r.materials.map((m) => ({
+            type: "PDF" as const,
+            title: `${m.title} (${m.materialType ?? "material"})`,
+            url: `#material-${m.id}`,
+          })),
+          ...r.quizzes.map((q) => ({
+            type: "DOC" as const,
+            title: q.title,
+            url: `#quiz-${q.id}`,
+          })),
+          ...r.problems.map((p) => ({
+            type: "DOC" as const,
+            title: p.title,
+            url: `#problem-${p.id}`,
+          })),
+        ]
+      : [];
+  return {
+    _id: l.id,
+    title: l.title,
+    content: l.content ?? "",
+    type: l.type as LessonContent["type"],
+    durationMinutes: l.durationMinutes,
+    resources: flatResources,
+    isCompleted: false,
+    progress: 0,
+    videoStreamUrl: l.video?.streamUrl ?? undefined,
+    videoObjectKey: l.video?.videoObjectKey ?? undefined,
+    videoError: Boolean(l.video?.videoError),
+    videoStreamError: l.video?.error ?? null,
+    videoPosterUrl: l.video?.thumbnailUrl ?? l.video?.posterUrl,
+    ...normalizeLessonProgressionState({
+      watchedPercentage: l.watchedPercentage,
+      canMarkComplete: l.canMarkComplete,
+      hasVideo: l.hasVideo,
+      watchThreshold: l.watchThreshold,
+      completed: l.completed ?? l.lessonCompleted,
+      accessible: body.access,
+      locked: body.access === false,
+      computedCompletionRequirements: l.computedCompletionRequirements,
+    }),
+  };
+}
 
 interface iAppProps {
   courseId: string;
@@ -18,57 +84,144 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [videoPlaybackFailed, setVideoPlaybackFailed] = useState(false);
+  const [videoRemountKey, setVideoRemountKey] = useState(0);
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playbackRefetchDoneRef = useRef(false);
+  const streamUrlForVisibilityRef = useRef<string>("");
 
   useEffect(() => {
+    streamUrlForVisibilityRef.current = (lessonContent?.videoStreamUrl ?? "").trim();
+  }, [lessonContent?.videoStreamUrl]);
+
+  /** New lesson / course: never show the previous lesson's stream or poster while the next loads. */
+  useEffect(() => {
+    setLessonContent(null);
+    setVideoPlaybackFailed(false);
+    setVideoRemountKey(0);
+    playbackRefetchDoneRef.current = false;
+    setError(null);
+    setLoading(true);
+  }, [courseId, lessonId]);
+
+  /** Tab wake / long session: refetch lesson once if stream SigV4 is expired (debounced). */
+  useEffect(() => {
+    const debounceMs = 2500;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const u = streamUrlForVisibilityRef.current;
+        if (u && isPresignedUrlExpired(u)) {
+          logMediaRefresh({
+            entityType: "lesson_video",
+            courseId,
+            lessonId,
+            reason: "visibility_expired_stream",
+          });
+          setRetryCount((c) => c + 1);
+        }
+      }, debounceMs);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      if (timer) clearTimeout(timer);
+    };
+  }, [courseId, lessonId]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      const u = streamUrlForVisibilityRef.current;
+      if (u && isPresignedUrlExpired(u)) {
+        logLessonStreamRefresh({
+          reason: "online_expired_stream",
+          courseId,
+          lessonId,
+        });
+        setRetryCount((c) => c + 1);
+      }
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [courseId, lessonId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    playbackRefetchDoneRef.current = false;
+
     async function fetchLessonContent() {
+      if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+      loadTimerRef.current = setTimeout(() => {
+        if (!cancelled) {
+          setError("This lesson is taking too long to load. You can retry.");
+          setLoading(false);
+        }
+      }, 45_000);
       try {
         setLoading(true);
-        const body = await getLessonContentQueryFn(courseId, lessonId);
-        const l = body.lesson;
-        const r = l.resources;
-        const flatResources =
-          r != null
-            ? [
-                ...r.materials.map((m) => ({
-                  type: "PDF" as const,
-                  title: `${m.title} (${m.materialType ?? "material"})`,
-                  url: `#material-${m.id}`,
-                })),
-                ...r.quizzes.map((q) => ({
-                  type: "DOC" as const,
-                  title: q.title,
-                  url: `#quiz-${q.id}`,
-                })),
-                ...r.problems.map((p) => ({
-                  type: "DOC" as const,
-                  title: p.title,
-                  url: `#problem-${p.id}`,
-                })),
-              ]
-            : [];
-        setLessonContent({
-          _id: l.id,
-          title: l.title,
-          content: l.content ?? "",
-          type: l.type as LessonContent["type"],
-          durationMinutes: l.durationMinutes,
-          resources: flatResources,
-          isCompleted: false,
-          progress: 0,
-          videoStreamUrl: l.video?.streamUrl ?? undefined,
-          videoObjectKey: l.video?.videoObjectKey ?? undefined,
-          videoPosterUrl: l.video?.thumbnailUrl ?? l.video?.posterUrl,
-        });
+        let envelope = await getLessonContentQueryFn(courseId, lessonId);
+        if (cancelled) return;
+
+        const streamUrlFirst = (envelope.lesson.video?.streamUrl ?? "").trim();
+        let bumpedRemountForStaleUrl = false;
+        if (streamUrlFirst && isPresignedUrlExpired(streamUrlFirst)) {
+          logMediaCacheExpired({
+            entityType: "lesson_video",
+            courseId,
+            lessonId,
+            reason: "presigned_expired_before_play",
+          });
+          try {
+            envelope = await refreshSignedMediaUrl(
+              `lesson-content-stale:${courseId}:${lessonId}`,
+              () => getLessonContentQueryFn(courseId, lessonId),
+            );
+            bumpedRemountForStaleUrl = true;
+            logLessonVideoRefresh({
+              courseId,
+              lessonId,
+              trigger: "stale_stream_url",
+              refreshSuccess: true,
+            });
+          } catch {
+            logLessonVideoRefresh({
+              courseId,
+              lessonId,
+              trigger: "stale_stream_url",
+              refreshSuccess: false,
+            });
+          }
+        }
+
+        if (cancelled) return;
+        setLessonContent(mapEnvelopeToLessonContent(envelope));
+        setVideoPlaybackFailed(false);
+        if (bumpedRemountForStaleUrl) {
+          setVideoRemountKey((k) => k + 1);
+        }
         setError(null);
       } catch (err) {
         console.error("Error fetching lesson content:", err);
         setError("Failed to load lesson content");
       } finally {
-        setLoading(false);
+        if (loadTimerRef.current) {
+          clearTimeout(loadTimerRef.current);
+          loadTimerRef.current = null;
+        }
+        if (!cancelled) setLoading(false);
       }
     }
 
-    fetchLessonContent();
+    void fetchLessonContent();
+    return () => {
+      cancelled = true;
+      if (loadTimerRef.current) {
+        clearTimeout(loadTimerRef.current);
+        loadTimerRef.current = null;
+      }
+    };
   }, [courseId, lessonId, retryCount]);
 
   if (loading) {
@@ -86,17 +239,37 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
   }
 
   /** Show video chrome when we have a playback URL or a stored key (not lesson.type). */
-  const streamUrl = (lessonContent.videoStreamUrl ?? "").trim();
-  const videoLayoutMode = !!(streamUrl || lessonContent.videoObjectKey?.trim());
-  const bodyHtml = lessonContent.content?.trim();
+  const streamUrl = resolveStableMediaPlaybackUrl(
+    (lessonContent.videoStreamUrl ?? "").trim(),
+  );
+  const posterUrl = resolveStableMediaPlaybackUrl(
+    (lessonContent.videoPosterUrl ?? "").trim(),
+  );
+  const safePoster =
+    posterUrl &&
+    (/^https?:\/\//i.test(posterUrl) || posterUrl.startsWith("/api/v1/media/"))
+      ? posterUrl
+      : undefined;
 
-  if (
-    process.env.NODE_ENV === "development" &&
-    typeof window !== "undefined" &&
-    streamUrl
-  ) {
-    console.log("STREAM URL:", streamUrl);
+  if (process.env.NODE_ENV === "development" && typeof window !== "undefined" && streamUrl) {
+    console.warn(
+      "[LESSON_VIDEO_DEBUG]",
+      JSON.stringify({
+        courseId,
+        lessonId,
+        host: hostnameOnlyFromUrl(streamUrl),
+      }),
+    );
   }
+
+  const apiVideoError = Boolean(lessonContent.videoError);
+  const videoLayoutMode = !!(
+    streamUrl ||
+    lessonContent.videoObjectKey?.trim() ||
+    apiVideoError
+  );
+  const blockPlayback = apiVideoError || videoPlaybackFailed;
+  const bodyHtml = sanitizeHtml(lessonContent.content?.trim() ?? "");
 
   return (
     <div className="space-y-6">
@@ -136,28 +309,83 @@ export function LessonContentViewer({ courseId, lessonId }: iAppProps) {
           {videoLayoutMode && (
             <div className="space-y-4">
               <div className="aspect-video min-h-48 bg-black rounded-lg overflow-hidden">
-                {streamUrl ? (
+                {streamUrl && !blockPlayback ? (
                   <video
-                    key={streamUrl}
+                    key={`${streamUrl}-${videoRemountKey}`}
                     src={streamUrl}
+                    poster={safePoster}
                     controls
+                    controlsList="nodownload"
                     preload="metadata"
                     playsInline
                     className="block h-full w-full min-h-48 object-contain bg-black"
+                    onError={() => {
+                      logMediaClientFailure({
+                        courseId,
+                        lessonId,
+                        mediaType: "lesson_video",
+                        failedUrl: streamUrl,
+                        reason: "html_video_error",
+                      });
+                      if (playbackRefetchDoneRef.current) {
+                        setVideoPlaybackFailed(true);
+                        return;
+                      }
+                      playbackRefetchDoneRef.current = true;
+                      void (async () => {
+                        try {
+                          const envelope = await refreshSignedMediaUrl(
+                            `lesson-video-playback:${courseId}:${lessonId}`,
+                            () => getLessonContentQueryFn(courseId, lessonId),
+                          );
+                          const next = mapEnvelopeToLessonContent(envelope);
+                          const nextStream = (next.videoStreamUrl ?? "").trim();
+                          const urlChanged = Boolean(nextStream && nextStream !== streamUrl);
+                          logLessonVideoRefresh({
+                            courseId,
+                            lessonId,
+                            trigger: "html_video_error",
+                            refreshSuccess: urlChanged || (!!nextStream && !streamUrl),
+                          });
+                          setLessonContent(next);
+                          if (urlChanged) {
+                            setVideoRemountKey((k) => k + 1);
+                            setVideoPlaybackFailed(false);
+                          } else {
+                            setVideoPlaybackFailed(true);
+                          }
+                        } catch {
+                          logLessonVideoRefresh({
+                            courseId,
+                            lessonId,
+                            trigger: "html_video_error",
+                            refreshSuccess: false,
+                          });
+                          setVideoPlaybackFailed(true);
+                        }
+                      })();
+                    }}
                   />
-                ) : lessonContent.videoObjectKey?.trim() ? (
+                ) : streamUrl || lessonContent.videoObjectKey?.trim() || apiVideoError || videoPlaybackFailed ? (
                   <div className="flex h-full flex-col items-center justify-center gap-3 bg-muted px-4 text-center">
                     <p className="text-sm font-medium text-foreground">
-                      Video temporarily unavailable
+                      {apiVideoError
+                        ? "Video could not be prepared for playback"
+                        : "Video temporarily unavailable"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Playback could not be started. This is usually temporary.
+                      {lessonContent.videoStreamError?.reason
+                        ? `Reason: ${lessonContent.videoStreamError.reason}`
+                        : "Try again in a moment, or contact support if this persists."}
                     </p>
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => setRetryCount((n) => n + 1)}
+                      onClick={() => {
+                        setVideoPlaybackFailed(false);
+                        setRetryCount((n) => n + 1);
+                      }}
                     >
                       <RefreshCw className="size-4 mr-2" />
                       Retry

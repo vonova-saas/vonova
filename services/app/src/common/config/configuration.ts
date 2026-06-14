@@ -5,6 +5,8 @@ export default () => ({
   NATS_URL: process.env.NATS_URL,
   NATS_USER: process.env.NATS_USER,
   NATS_PASSWORD: process.env.NATS_PASSWORD,
+  /** NATS queue group: all app replicas must share the same name so each RPC is handled once. */
+  NATS_QUEUE: process.env.NATS_QUEUE?.trim() || 'vonova-app-queue',
   NODE_ENV: process.env.NODE_ENV,
 
   //* Database configuration (MongoDB),

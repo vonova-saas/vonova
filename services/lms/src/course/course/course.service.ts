@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { ClientProxy } from '@nestjs/microservices';
 import { Connection, Model, Types } from 'mongoose';
 import {
   CreateCourseDto,
@@ -31,6 +35,14 @@ import {
   LibraryAssetDocument,
 } from '../../library/schema/library-asset.schema';
 import { Quiz, QuizDocument } from '../../quiz/schema/quiz.schema';
+import { objectKeyFromStoredValue } from '../../common/utils/s3-key.util';
+
+export type CourseThumbnailStreamMetaResult =
+  | { error: null; objectKey: string; contentType: string }
+  | {
+      error: 'not_found' | 'forbidden' | 'no_thumbnail';
+      message?: string;
+    };
 
 @Injectable()
 export class CourseService {
@@ -50,7 +62,10 @@ export class CourseService {
     @InjectModel(Quiz.name) private quizModel: Model<QuizDocument>,
     private readonly s3Service: S3Service,
     @InjectConnection() private readonly connection: Connection,
+    @Inject('NATS_OUTBOUND') private readonly natsClient: ClientProxy,
   ) {}
+
+  private readonly eventLogger = new Logger('CourseEvents');
 
   /**
    * Resolve { ownerId -> name } for a set of course owners.
@@ -193,8 +208,56 @@ export class CourseService {
       ownerId: createdBy,
     };
     const course = await this.courseModel.create(courseData);
+
+    try {
+      this.natsClient.emit('app.events.course.created', {
+        courseId: String(course._id),
+        instructorId: String(createdBy),
+        title: course.title,
+        description: (course as { description?: string }).description ?? '',
+      });
+      this.eventLogger.log(
+        `Emitted app.events.course.created courseId=${String(course._id)}`,
+      );
+    } catch (err) {
+      this.eventLogger.warn(
+        `Failed to emit course.created event: ${(err as Error).message}`,
+      );
+    }
+
     return {
       message: 'Course created successfully',
+      data: course.toObject({ flattenMaps: true }),
+    };
+  }
+
+  /**
+   * Called by the API gateway after `CommunityGroup` is created so LMS can
+   * store the back-reference. Owner-only.
+   */
+  async setCommunityGroupId(
+    courseId: string,
+    ownerId: string,
+    communityGroupId: string,
+  ) {
+    if (!Types.ObjectId.isValid(courseId)) {
+      throw new NotFoundException('Course not found');
+    }
+    if (!Types.ObjectId.isValid(communityGroupId)) {
+      throw new BadRequestException('Invalid communityGroupId');
+    }
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw new NotFoundException('Course not found');
+    if (String(course.ownerId) !== String(ownerId)) {
+      throw new ForbiddenException('Not owner of course');
+    }
+    course.set('communityGroupId', new Types.ObjectId(communityGroupId));
+    await course.save();
+    this.eventLogger.log(
+      `[COURSE_GROUP_VERIFY] courseId=${courseId} ownerId=${ownerId} communityGroupId=${communityGroupId} linked=true`,
+    );
+    return {
+      message: 'Community group linked',
       data: course.toObject({ flattenMaps: true }),
     };
   }
@@ -269,11 +332,48 @@ export class CourseService {
     return null;
   }
 
+  /**
+   * Resolve thumbnail object key for stable gateway streaming.
+   */
+  async getCourseThumbnailStreamMeta(
+    courseId: string,
+    userId?: string,
+  ): Promise<CourseThumbnailStreamMetaResult> {
+    const course = await this.courseModel.findById(courseId).lean();
+    if (!course) {
+      return { error: 'not_found', message: 'Course not found' };
+    }
+    const status = (course as { status?: string }).status;
+    const ownerId = String((course as { ownerId?: unknown }).ownerId ?? '');
+    const isOwner = userId && ownerId && String(userId) === ownerId;
+    if (status !== 'PUBLISHED' && !isOwner) {
+      return { error: 'forbidden', message: 'Course not available' };
+    }
+    const rawKey = this.extractCourseThumbKey(
+      (course as { thumbnailUrl?: string }).thumbnailUrl,
+      (course as { thumbnailKey?: string }).thumbnailKey,
+    );
+    const nk = rawKey ? objectKeyFromStoredValue(rawKey) : null;
+    if (!nk) {
+      return { error: 'no_thumbnail', message: 'No thumbnail' };
+    }
+    return {
+      error: null,
+      objectKey: nk,
+      contentType: 'image/jpeg',
+    };
+  }
+
   async deleteCourse(courseId: string, ownerId: string) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
     if (course.ownerId.toString() !== ownerId)
       throw new ForbiddenException('Not owner of course');
+
+    const courseIdStr = String(course._id);
+    const communityGroupIdStr = course.communityGroupId
+      ? String(course.communityGroupId)
+      : '';
 
     const thumbKey = this.extractCourseThumbKey(
       course.thumbnailUrl,
@@ -298,6 +398,22 @@ export class CourseService {
     await this.chapterModel.deleteMany({ courseId: oid });
 
     await course.deleteOne();
+
+    try {
+      this.natsClient.emit('app.events.course.deleted', {
+        courseId: courseIdStr,
+        ownerId: String(ownerId),
+        ...(communityGroupIdStr ? { communityGroupId: communityGroupIdStr } : {}),
+      });
+      this.eventLogger.log(
+        `[COURSE_DELETE_SYNC] emitted app.events.course.deleted courseId=${courseIdStr} ownerId=${ownerId} communityGroupId=${communityGroupIdStr || 'none'}`,
+      );
+    } catch (err) {
+      this.eventLogger.warn(
+        `[COURSE_DELETE_SYNC] failed to emit course.deleted (retry via gateway RPC or orphan repair script): ${(err as Error).message}`,
+      );
+    }
+
     return {
       success: true,
       message: 'course deleted successfully',
@@ -548,6 +664,14 @@ export class CourseService {
     const course = await this.courseModel.findById(courseId).lean();
     if (!course) throw new NotFoundException('Course not found');
     await this.assertCanViewCourse(course, requesterId);
+
+    const rid = this.normalizeMongoId(requesterId);
+    const own = this.normalizeMongoId(
+      (course as { ownerId?: unknown }).ownerId,
+    );
+    this.eventLogger.log(
+      `[COURSE_PREVIEW_ACCESS] courseId=${courseId} requesterId=${rid ?? 'anonymous'} isOwner=${!!(rid && own && rid === own)} status=${String((course as { status?: string }).status ?? '')}`,
+    );
 
     const owners = await this.resolveOwnerNames([
       (course as { ownerId?: unknown }).ownerId as

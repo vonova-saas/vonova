@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { UserBilling } from './schema/billing.schema';
@@ -6,11 +6,23 @@ import { UpdateBillingDto } from './dto/update-billing.dto';
 import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
-export class BillingService {
+export class BillingService implements OnModuleInit {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     @InjectModel(UserBilling.name)
     private readonly billingModel: Model<UserBilling>,
   ) {}
+
+  async onModuleInit() {
+    try {
+      await this.billingModel.syncIndexes();
+    } catch (err) {
+      this.logger.warn(
+        `UserBilling syncIndexes skipped: ${(err as Error).message}`,
+      );
+    }
+  }
 
   private getDefaultBilling() {
     return {
@@ -30,10 +42,21 @@ export class BillingService {
   async findOne(userId: string) {
     let billing = await this.billingModel.findOne({ userId });
     if (!billing) {
-      billing = await this.billingModel.create({
-        userId,
-        ...this.getDefaultBilling(),
-      });
+      try {
+        billing = await this.billingModel.create({
+          userId,
+          ...this.getDefaultBilling(),
+        });
+      } catch (err: unknown) {
+        const code = (err as { code?: number })?.code;
+        // Parallel first-fetch for same user, or legacy index issues
+        if (code === 11000) {
+          billing = await this.billingModel.findOne({ userId });
+        }
+        if (!billing) {
+          throw err;
+        }
+      }
     }
     return { message: 'User billing fetched successfully', data: billing };
   }

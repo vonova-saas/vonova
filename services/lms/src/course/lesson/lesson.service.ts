@@ -23,15 +23,17 @@ import {
 import { S3ConfigService } from './config/s3.config';
 import {
   PutObjectCommand,
-  GetObjectCommand,
   HeadObjectCommand,
 } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   objectKeyFromStoredValue,
   isLessonVideoContentObjectKey,
+  normalizeLmsS3ObjectKey,
+  lmsS3KeyRecoveryCandidates,
 } from '../../common/utils/s3-key.util';
 import { resolveLessonVideoForApi } from '../../common/utils/stream-pipeline.util';
+import { bumpMediaMetric } from '../../common/media/media-metrics';
+import { buildStableLmsLessonVideoUrl } from '../../common/media/stable-media-url';
 import { v4 as uuidv4 } from 'uuid';
 import * as multer from 'multer';
 import { Readable } from 'stream';
@@ -439,6 +441,9 @@ export class LessonService {
 
     const chapter = await this.chapterModel.findOne({ _id: chapterId });
     if (!chapter) throw new NotFoundException('Chapter not found');
+    if (String(chapter.courseId) !== String(courseId)) {
+      throw new NotFoundException('Chapter not found');
+    }
 
     // Build lesson data
     const lessonData: any = {
@@ -455,7 +460,9 @@ export class LessonService {
 
     const newVideoKeyRaw = dto.videoObjectKey ?? dto.videoKey;
     if (newVideoKeyRaw !== undefined) {
-      const normalized = objectKeyFromStoredValue(String(newVideoKeyRaw));
+      const normalized = normalizeLmsS3ObjectKey(
+        objectKeyFromStoredValue(String(newVideoKeyRaw)),
+      );
       if (normalized.trim()) {
         if (!isLessonVideoContentObjectKey(normalized)) {
           throw new BadRequestException(
@@ -519,6 +526,15 @@ export class LessonService {
     }
 
     const lesson = await this.lessonModel.create(lessonData);
+    this.logger.log(
+      `LESSON_CREATE_OK courseId=${String(courseId)} chapterId=${String(chapterId)} lessonId=${String(lesson._id)}`,
+    );
+
+    await this.chapterModel.updateOne(
+      { _id: chapterId, courseId },
+      { $addToSet: { lessons: lesson._id } },
+    );
+
     return { message: 'Lesson created successfully', lesson };
   }
 
@@ -600,7 +616,9 @@ export class LessonService {
 
     const newVideoKeyRaw = dto.videoObjectKey ?? dto.videoKey;
     if (newVideoKeyRaw !== undefined) {
-      const normalized = objectKeyFromStoredValue(String(newVideoKeyRaw));
+      const normalized = normalizeLmsS3ObjectKey(
+        objectKeyFromStoredValue(String(newVideoKeyRaw)),
+      );
       if (normalized.trim()) {
         if (!isLessonVideoContentObjectKey(normalized)) {
           throw new BadRequestException(
@@ -698,7 +716,16 @@ export class LessonService {
     const lesson = await this.lessonModel.findOne({ _id: lessonId, courseId });
     if (!lesson) throw new NotFoundException('Lesson not found');
 
+    const chapterRef = lesson.chapterId;
+    const lessonRefId = lesson._id;
+
     await lesson.deleteOne();
+
+    await this.chapterModel.updateOne(
+      { _id: chapterRef },
+      { $pull: { lessons: lessonRefId } },
+    );
+
     return { message: 'Lesson deleted successfully', lesson };
   }
 
@@ -733,8 +760,17 @@ export class LessonService {
     const bucketName = this.s3ConfigService.getBucketName();
     const s3Client = this.s3ConfigService.getClient();
 
+    const region =
+      process.env.AWS_S3_REGION_LMS?.trim() ||
+      process.env.AWS_REGION?.trim() ||
+      null;
     this.logger.log(
-      `S3 presign PUT lessonId=${lessonId} bucket=${bucketName} key=${objectKey}`,
+      `[LESSON_UPLOAD] ${JSON.stringify({
+        bucket: bucketName,
+        region,
+        objectKey,
+        contentType,
+      })}`,
     );
 
     // Browser uploads use presigned PUT (PutObject). Do not use GetObjectCommand here.
@@ -762,54 +798,122 @@ export class LessonService {
     objectKeyRaw: string,
     fileSize?: number,
   ) {
+    try {
+      return await this.confirmLessonVideoUploadInner(
+        courseId,
+        lessonId,
+        ownerId,
+        objectKeyRaw,
+        fileSize,
+      );
+    } catch (e) {
+      bumpMediaMetric('lesson_upload_failure', {
+        lessonId: String(lessonId),
+        courseId: String(courseId),
+        kind: e instanceof BadRequestException ? 'bad_request' : 'error',
+      });
+      throw e;
+    }
+  }
+
+  private async confirmLessonVideoUploadInner(
+    courseId: string,
+    lessonId: string,
+    ownerId: string,
+    objectKeyRaw: string,
+    fileSize?: number,
+  ) {
     await this.assertCourseOwner(courseId, ownerId);
 
     const lesson = await this.lessonModel.findOne({ _id: lessonId, courseId });
     if (!lesson) throw new NotFoundException('Lesson not found');
 
-    const key = objectKeyFromStoredValue(objectKeyRaw.trim());
-    const inLessonScope =
-      key.includes(`/content/lesson/${lessonId}/`) ||
-      key.includes(`/lessons/${lessonId}/`);
-    if (!inLessonScope) {
-      throw new BadRequestException('objectKey does not belong to this lesson');
-    }
-
     const bucketName = this.s3ConfigService.getBucketName();
     const s3Client = this.s3ConfigService.getClient();
 
-    let storedSize = 0;
-    try {
-      const head = await s3Client.send(
-        new HeadObjectCommand({
-          Bucket: bucketName,
-          Key: key,
-        }),
-      );
-      storedSize = head.ContentLength ?? 0;
-      const ct = head.ContentType ?? '';
-      const ar = head.AcceptRanges ?? '';
-      this.logger.log(
-        `S3_UPLOAD_SUCCESS: ${JSON.stringify({
-          bucket: bucketName,
-          key,
-          size: storedSize,
-          clientFileSize: fileSize,
-          contentType: ct,
-          acceptRanges: ar,
-        })}`,
-      );
-      if (!ct.toLowerCase().startsWith('video/')) {
-        this.logger.warn(
-          `Lesson video HeadObject Content-Type is "${ct}" (expected video/*). ORB or <video> may fail — re-upload with a video/* MIME or fix object metadata.`,
-        );
+    const candidates = lmsS3KeyRecoveryCandidates(objectKeyRaw.trim());
+    const scopedKeys: string[] = [];
+    for (const cand of candidates) {
+      const k = normalizeLmsS3ObjectKey(objectKeyFromStoredValue(cand));
+      if (
+        k.includes(`/content/lesson/${lessonId}/`) ||
+        k.includes(`/lessons/${lessonId}/`)
+      ) {
+        scopedKeys.push(k);
       }
-    } catch (e) {
+    }
+    const uniqueScoped = [...new Set(scopedKeys)];
+    if (uniqueScoped.length === 0) {
+      throw new BadRequestException('objectKey does not belong to this lesson');
+    }
+
+    let key = '';
+    let storedSize = 0;
+    let ct = '';
+    let ar = '';
+    let lastHeadError: string | undefined;
+    for (const k of uniqueScoped) {
+      try {
+        const head = await s3Client.send(
+          new HeadObjectCommand({
+            Bucket: bucketName,
+            Key: k,
+          }),
+        );
+        key = k;
+        storedSize = head.ContentLength ?? 0;
+        ct = head.ContentType ?? '';
+        ar = head.AcceptRanges ?? '';
+        break;
+      } catch (e) {
+        lastHeadError = e instanceof Error ? e.message : String(e);
+      }
+    }
+
+    if (!key) {
       this.logger.warn(
-        `S3 head failed after upload key=${key}: ${(e as Error).message}`,
+        `[LESSON_CONFIRM] ${JSON.stringify({
+          ok: false,
+          phase: 'head_all_candidates_failed',
+          bucket: bucketName,
+          region:
+            process.env.AWS_S3_REGION_LMS?.trim() ||
+            process.env.AWS_REGION?.trim() ||
+            null,
+          lessonId: String(lessonId),
+          courseId: String(courseId),
+          objectKeyRaw: objectKeyRaw.trim(),
+          candidatesTried: uniqueScoped,
+          lastHeadError: lastHeadError ?? null,
+        })}`,
       );
       throw new BadRequestException(
         'Video not found in storage after upload. Check S3 credentials and bucket, then retry.',
+      );
+    }
+
+    this.logger.log(
+      `[LESSON_CONFIRM] ${JSON.stringify({
+        ok: true,
+        phase: 'head_ok',
+        bucket: bucketName,
+        region:
+          process.env.AWS_S3_REGION_LMS?.trim() ||
+          process.env.AWS_REGION?.trim() ||
+          null,
+        lessonId: String(lessonId),
+        courseId: String(courseId),
+        objectKeyRaw: objectKeyRaw.trim(),
+        normalizedKey: key,
+        size: storedSize,
+        clientFileSize: fileSize,
+        contentType: ct,
+        acceptRanges: ar,
+      })}`,
+    );
+    if (!ct.toLowerCase().startsWith('video/')) {
+      this.logger.warn(
+        `Lesson video HeadObject Content-Type is "${ct}" (expected video/*). ORB or <video> may fail — re-upload with a video/* MIME or fix object metadata.`,
       );
     }
 
@@ -853,26 +957,38 @@ export class LessonService {
       },
     );
 
+    const saved = await this.lessonModel.findById(lesson._id).lean();
+    this.logger.log(
+      `[LESSON_CONFIRM] ${JSON.stringify({
+        phase: 'mongo_after_save',
+        lessonId: String(lessonId),
+        courseId: String(courseId),
+        objectKeyRaw: objectKeyRaw.trim(),
+        normalizedKey: key,
+        mongoVideoObjectKey:
+          saved && 'videoObjectKey' in saved && saved.videoObjectKey != null
+            ? String(saved.videoObjectKey)
+            : null,
+        mongoHasVideo: Boolean(saved && 'hasVideo' in saved ? saved.hasVideo : false),
+      })}`,
+    );
+
+    bumpMediaMetric('lesson_upload_success', {
+      lessonId: String(lessonId),
+      courseId: String(courseId),
+    });
+
     return {
       message: 'Lesson video confirmed',
       objectKey: key,
     };
   }
 
-  async getVideoUrl(objectKey: string) {
-    const key = objectKeyFromStoredValue(objectKey);
-    const bucketName = this.s3ConfigService.getBucketName();
-    const s3Client = this.s3ConfigService.getClient();
-
-    const command = new GetObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-    });
-
-    const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
-    const streamUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
-    return { streamUrl };
+  async getVideoUrl(objectKey: string, courseId: string, lessonId: string) {
+    void objectKey;
+    return {
+      streamUrl: buildStableLmsLessonVideoUrl(courseId, lessonId),
+    };
   }
 
   async getLesson(lessonId: string, courseId: string) {
@@ -891,32 +1007,17 @@ export class LessonService {
     delete lo.videoUrl;
 
     const videoKeyRaw = (lesson.videoObjectKey ?? '').trim();
-    const presignResult = await resolveLessonVideoForApi(
-      videoKeyRaw,
-      async (k) => {
-        const command = new GetObjectCommand({
-          Bucket: this.s3ConfigService.getBucketName(),
-          Key: k,
-        });
-        return getSignedUrl(this.s3ConfigService.getClient(), command, {
-          expiresIn: 3600,
-        });
-      },
-    );
-
-    if (presignResult.videoError) {
-      this.logger.warn(
-        `getLesson video presign degraded lessonId=${lessonId} reason=${presignResult.error?.reason ?? 'unknown'}`,
-      );
-    }
+    const streamUrl =
+      videoKeyRaw && objectKeyFromStoredValue(videoKeyRaw)
+        ? buildStableLmsLessonVideoUrl(courseId, lessonId)
+        : null;
 
     const lessonResponse = {
       ...lo,
       video: {
-        streamUrl: presignResult.streamUrl,
+        streamUrl,
         videoObjectKey: videoKeyRaw || null,
-        videoError: presignResult.videoError,
-        ...(presignResult.error ? { error: presignResult.error } : {}),
+        videoError: !streamUrl && Boolean(videoKeyRaw),
       },
       chapterId: lesson.chapterId,
     };

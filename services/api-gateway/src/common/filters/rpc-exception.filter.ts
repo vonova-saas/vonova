@@ -102,15 +102,44 @@ export class RpcExceptionFilter implements ExceptionFilter {
       }
     }
 
+    const requestId =
+      (request as { id?: string }).id ||
+      request.header?.('x-request-id') ||
+      undefined;
+
     const isFavicon404 =
       statusCode === HttpStatus.NOT_FOUND &&
       request.url?.endsWith('/favicon.ico');
     if (!isFavicon404) {
-      this.logger.error('Exception caught', {
+      // 4xx → warn, 5xx → error. Stack traces stay server-side only.
+      const stack =
+        exception instanceof Error ? exception.stack : undefined;
+      const meta = {
         statusCode,
         message,
         path: request.url,
-      });
+        method: request.method,
+        requestId,
+        ...(stack ? { stack } : {}),
+      };
+      if (statusCode >= 500) {
+        this.logger.error('Exception caught', meta);
+      } else {
+        this.logger.warn('Exception caught', meta);
+      }
+    }
+
+    // Sanitize anything that smells like a database / driver error before it
+    // reaches the client. Validation messages and intentional HttpExceptions
+    // are passed through unchanged.
+    const isProduction =
+      (process.env.NODE_ENV ?? '').toLowerCase() === 'production';
+    if (
+      isProduction &&
+      statusCode >= 500 &&
+      /mongo|nats|jwt|aws|s3|ECONN|ENOTFOUND|TimeoutError/i.test(message)
+    ) {
+      message = 'Internal server error';
     }
 
     response.status(statusCode).json({
@@ -118,6 +147,7 @@ export class RpcExceptionFilter implements ExceptionFilter {
       message,
       error,
       timestamp: new Date().toISOString(),
+      ...(requestId ? { requestId } : {}),
     });
   }
 

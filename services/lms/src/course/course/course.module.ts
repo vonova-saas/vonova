@@ -22,9 +22,11 @@ import {
   LibraryAssetSchema,
 } from '../../library/schema/library-asset.schema';
 import { Quiz, QuizSchema } from '../../quiz/schema/quiz.schema';
+import { OutboundNatsModule } from '../../common/nats/outbound-nats.module';
 
 @Module({
   imports: [
+    OutboundNatsModule,
     MongooseModule.forFeature([
       { name: Course.name, schema: CourseSchema },
       { name: Chapter.name, schema: ChapterSchema },

@@ -122,9 +122,48 @@ export class Problem {
     index: true,
   })
   lessonId?: MongooseSchema.Types.ObjectId | null;
+
+  /**
+   * Sheet this problem belongs to (set when created inside a sheet).
+   * If set, the problem is sheet-scoped and should not appear in global problem lists.
+   */
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'ProblemSheet',
+    default: null,
+    index: true,
+  })
+  sheetId?: MongooseSchema.Types.ObjectId | null;
+
+  /**
+   * Whether this problem is scoped to a specific sheet.
+   * Sheet-scoped problems are only visible within their sheet context.
+   */
+  @Prop({
+    type: Boolean,
+    default: false,
+    index: true,
+  })
+  isSheetScoped?: boolean;
+
+  /**
+   * Visibility scope for the problem.
+   * SHEET_ONLY: Only visible within the sheet (for sheet-scoped problems)
+   * PUBLIC: Visible globally (default for standalone problems)
+   * PRIVATE: Visible only to enrolled students in the course
+   */
+  @Prop({
+    type: String,
+    enum: ['SHEET_ONLY', 'PUBLIC', 'PRIVATE'],
+    default: 'PUBLIC',
+    index: true,
+  })
+  visibilityScope?: 'SHEET_ONLY' | 'PUBLIC' | 'PRIVATE';
 }
 
 export const ProblemSchema = SchemaFactory.createForClass(Problem);
 ProblemSchema.index({ createdBy: 1, createdAt: -1 });
 ProblemSchema.index({ difficulty: 1, categories: 1, createdAt: -1 });
 ProblemSchema.index({ visibility: 1, courseId: 1, createdAt: -1 });
+// Composite index for studentId + sheetId (for progress queries)
+ProblemSchema.index({ studentId: 1, sheetId: 1 });

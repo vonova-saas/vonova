@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { CloudUploadIcon, ImageIcon, Loader2, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 
 export function RenderEmptyState({ isDragActive }: { isDragActive: boolean }) {
   return (
@@ -27,15 +28,17 @@ export function RenderEmptyState({ isDragActive }: { isDragActive: boolean }) {
   );
 }
 
-export function RenderErrorState({ }) {
+export function RenderErrorState({ onRetry }: { onRetry?: () => void }) {
   return (
     <div className="text-center">
       <div className="flex items-center mx-auto justify-center size-12 rounded-full bg-destructive/30 mb-4">
         <ImageIcon className={cn("size-6 text-destructive")} />
       </div>
       <p className="text-base font-semibold">Upload Failed</p>
-      <p className="text-xs mt-1 text-muted-foreground">something went wrong</p>
-      <Button type="button" className="mt-4">
+      <p className="text-xs mt-1 text-muted-foreground">
+        Check the error message above, then try again
+      </p>
+      <Button type="button" className="mt-4" onClick={onRetry}>
         Retry File Selection
       </Button>
     </div>
@@ -63,6 +66,7 @@ export function RenderUploadedState({
           alt="Uploaded File"
           fill
           className="object-contain p-2"
+          unoptimized={shouldBypassNextImageOptimization(previewUrl)}
         />
       )}
       <Button

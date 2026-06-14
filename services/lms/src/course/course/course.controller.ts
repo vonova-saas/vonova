@@ -30,6 +30,26 @@ export class CourseController {
     return this.courseService.createCourse(dto, userId);
   }
 
+  @MessagePattern({ cmd: 'app.courses.community.setGroupId' })
+  setCommunityGroupId(
+    @Payload()
+    data: {
+      courseId: string;
+      ownerId: string;
+      communityGroupId: string;
+    },
+  ) {
+    const { courseId, ownerId, communityGroupId } = data;
+    if (!courseId || !ownerId || !communityGroupId) {
+      throw new Error('courseId, ownerId, and communityGroupId are required');
+    }
+    return this.courseService.setCommunityGroupId(
+      courseId,
+      ownerId,
+      communityGroupId,
+    );
+  }
+
   @MessagePattern({ cmd: 'app.courses.update' })
   updateCourse(
     @Payload()
@@ -161,5 +181,14 @@ export class CourseController {
     if (!userId) throw new Error('User identification is required');
 
     return this.courseService.getMyCourses(userId);
+  }
+
+  @MessagePattern({ cmd: 'app.courses.courseThumbnailStreamMeta' })
+  getCourseThumbnailStreamMeta(
+    @Payload() data: { courseId: string; userId?: string },
+  ) {
+    const { courseId, userId } = data;
+    if (!courseId) throw new Error('courseId is required');
+    return this.courseService.getCourseThumbnailStreamMeta(courseId, userId);
   }
 }

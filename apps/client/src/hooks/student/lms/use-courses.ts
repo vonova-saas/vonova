@@ -19,6 +19,9 @@ import {
 } from '@/services/student/lms/courses/real-courses.api';
 import type { CreateReviewDto, StudentCourseProgress } from '@/types/api/lms/courses.type';
 import { getCourseSidebarData } from '@/components/student/lms/courses/data/get-course-sidebar-data';
+import { S3_PRESIGNED_QUERY_STALE_MS } from '@/lib/lms/presigned-url';
+
+const SIGNED_MEDIA_GC_MS = S3_PRESIGNED_QUERY_STALE_MS + 15 * 60 * 1000;
 
 // Query Keys
 export const coursesKeys = {
@@ -43,7 +46,8 @@ export const useCourseSidebarData = (slug: string, cid?: string | null) => {
     queryKey: coursesKeys.sidebar(slug, cid),
     queryFn: () => getCourseSidebarData(slug, cid),
     enabled: !!slug,
-    staleTime: 60 * 1000,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 
@@ -52,7 +56,8 @@ export const useAllCourses = (params?: { page?: number; limit?: number; search?:
   return useQuery({
     queryKey: coursesKeys.list(params || {}),
     queryFn: () => getAllCoursesQueryFn(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 
@@ -61,7 +66,8 @@ export const useCourseBySlug = (slug: string) => {
     queryKey: coursesKeys.detail(slug),
     queryFn: () => getCourseBySlugQueryFn(slug),
     enabled: !!slug,
-    staleTime: 5 * 60 * 1000,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 
@@ -70,7 +76,8 @@ export const useCourseById = (courseId: string) => {
     queryKey: coursesKeys.detailById(courseId),
     queryFn: () => getCourseByIdQueryFn(courseId),
     enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 
@@ -112,6 +119,8 @@ export const useCourseContentTree = (courseId: string) => {
     queryKey: coursesKeys.contentTree(courseId),
     queryFn: () => getCourseContentTreeQueryFn(courseId),
     enabled: !!courseId,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 
@@ -128,6 +137,8 @@ export const useLessonContent = (courseId: string, lessonId: string) => {
     queryKey: coursesKeys.lessonContent(courseId, lessonId),
     queryFn: () => getLessonContentQueryFn(courseId, lessonId),
     enabled: !!courseId && !!lessonId,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: SIGNED_MEDIA_GC_MS,
   });
 };
 

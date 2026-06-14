@@ -90,7 +90,8 @@ export const ArticleSchema = new Schema({
   },
   description: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
     trim: true,
     maxlength: 500,
   },

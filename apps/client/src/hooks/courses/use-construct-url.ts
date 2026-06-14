@@ -1,33 +1,56 @@
 import { useEffect, useState } from "react";
 import { getMockVideoUrl } from "@/lib/mock-data/courses/storage";
+import { isUsableDirectThumbnailRef } from "@/lib/lms/course-thumbnail";
+import { isLikelyS3ObjectKey } from "@/lib/lms/presigned-url";
 
+/**
+ * Resolves a thumbnail / media reference for display.
+ * - Presigned HTTPS URLs and public paths are used as-is (no IndexedDB mock).
+ * - Legacy opaque keys still resolve via mock storage when present.
+ */
 export default function useConstructUrl(key: string): string {
-  const [url, setUrl] = useState<string>("/images/placeholder.svg");
+  const trimmed = (key ?? "").trim();
+  const [url, setUrl] = useState<string>(() =>
+    !trimmed
+      ? "/images/placeholder.svg"
+      : isUsableDirectThumbnailRef(trimmed)
+        ? trimmed
+        : "/images/placeholder.svg",
+  );
 
   useEffect(() => {
-    async function fetchUrl() {
-      if (typeof window !== "undefined" && key) {
-        console.log("[useConstructUrl] Looking up key:", key);
-        const mockUrl = await getMockVideoUrl(key);
-        console.log("[useConstructUrl] Found URL:", mockUrl ? "Yes" : "No");
-
-        if (mockUrl) {
-          setUrl(mockUrl);
-        } else {
-          setUrl("/images/placeholder.svg");
-        }
-      }
+    const k = (key ?? "").trim();
+    if (!k) {
+      setUrl("/images/placeholder.svg");
+      return;
+    }
+    if (isUsableDirectThumbnailRef(k)) {
+      setUrl(k);
+      return;
+    }
+    // Bare S3 keys are not valid browser URLs — do not probe mock IndexedDB.
+    if (isLikelyS3ObjectKey(k)) {
+      setUrl("/images/placeholder.svg");
+      return;
     }
 
-    fetchUrl();
+    let cancelled = false;
+    async function fetchUrl() {
+      if (typeof window === "undefined") return;
+      console.log("[useConstructUrl] mock lookup key (prefix):", k.slice(0, 160));
+      const mockUrl = await getMockVideoUrl(k);
+      console.log("[useConstructUrl] mock hit:", mockUrl ? "yes" : "no");
+      if (cancelled) return;
+      if (mockUrl) setUrl(mockUrl);
+      else setUrl("/images/placeholder.svg");
+    }
 
-    // Cleanup: revoke blob URL when component unmounts or key changes
+    void fetchUrl();
     return () => {
-      if (url && url.startsWith("blob:")) {
-        URL.revokeObjectURL(url);
-      }
+      cancelled = true;
     };
   }, [key]);
 
+  if (trimmed && isUsableDirectThumbnailRef(trimmed)) return trimmed;
   return url;
 }

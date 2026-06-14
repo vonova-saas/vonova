@@ -30,6 +30,9 @@ export type InstructorProblemEntity = {
   createdBy: string;
   /** PUBLIC = appears in Problem Solving library; PRIVATE = course-scoped. */
   visibility?: InstructorProblemVisibility;
+  sheetId?: string | null;
+  isSheetScoped?: boolean;
+  visibilityScope?: "SHEET_ONLY" | "PUBLIC" | "PRIVATE";
   courseId?: string | null;
   lessonId?: string | null;
   createdAt?: string;
@@ -41,6 +44,7 @@ export type CreateInstructorProblemRequest = {
   description: string;
   constraints: string;
   functionName: string;
+  parameterNames?: string[];
   allowUnorderedArrayOutput?: boolean;
   timeLimit?: number;
   memoryLimit?: number;
@@ -59,4 +63,3 @@ export type DeleteInstructorProblemResponse = {
   success: boolean;
   message: string;
 };
-

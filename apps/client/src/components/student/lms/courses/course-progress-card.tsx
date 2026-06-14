@@ -5,12 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import useConstructUrl from "@/hooks/courses/use-construct-url";
 import Image from "next/image";
 import Link from "next/link";
 import { useCourseProgress } from "@/hooks/student/lms/use-courses";
 import { AIFeedbackButton } from "./ai-feedback-button";
 import { User } from "lucide-react";
+import {
+  COURSE_THUMBNAIL_PLACEHOLDER,
+  shouldBypassNextImageOptimization,
+} from "@/lib/lms/course-thumbnail";
+import { useCourseThumbnailDisplay } from "@/hooks/lms/use-course-thumbnail-display";
+import { getCourseByIdQueryFn } from "@/services/student/lms/courses/real-courses.api";
 
 interface iAppProps {
   data: EnrolledCourseType;
@@ -18,14 +23,16 @@ interface iAppProps {
 }
 
 export function CourseProgressCard({ data, studentId }: iAppProps) {
-  const resolvedThumbnailUrl = useConstructUrl(data.Course.thumbnailUrl || "");
-  const thumbnailUrl =
-    resolvedThumbnailUrl && resolvedThumbnailUrl !== "/images/placeholder.svg"
-      ? resolvedThumbnailUrl
-      : data.Course.thumbnailUrl?.startsWith("http") ||
-          data.Course.thumbnailUrl?.startsWith("/")
-        ? data.Course.thumbnailUrl
-        : "/placeholder-course.jpg";
+  const rawThumb = (
+    data.Course.thumbnailUrl ??
+    data.Course.thumbnailKey ??
+    ""
+  ).trim();
+  const { src: thumbnailUrl, onError: onThumbnailError } = useCourseThumbnailDisplay(
+    data.Course._id,
+    rawThumb,
+    getCourseByIdQueryFn,
+  );
 
   const courseId = data.Course._id;
   const { data: progress, isLoading } = useCourseProgress(courseId);
@@ -33,6 +40,13 @@ export function CourseProgressCard({ data, studentId }: iAppProps) {
   const completedLessons = progress?.completedLessonsCount ?? 0;
   const totalLessons = progress?.totalLessons ?? 0;
   const progressPercentage = progress?.progressPercentage ?? 0;
+
+  const imgSrc =
+    thumbnailUrl !== COURSE_THUMBNAIL_PLACEHOLDER
+      ? thumbnailUrl
+      : COURSE_THUMBNAIL_PLACEHOLDER;
+
+  const thumbUnoptimized = shouldBypassNextImageOptimization(imgSrc);
 
   return (
     <Card className="group relative py-0 gap-0">
@@ -42,8 +56,10 @@ export function CourseProgressCard({ data, studentId }: iAppProps) {
         width={600}
         height={400}
         className="w-full rounded-t-xl aspect-video h-full object-cover"
-        src={thumbnailUrl}
-        alt="Thumbnail Image of Course"
+        src={imgSrc}
+        alt={`Thumbnail of ${data.Course.title}`}
+        unoptimized={thumbUnoptimized}
+        onError={onThumbnailError}
       />
 
       <CardContent className="p-4">

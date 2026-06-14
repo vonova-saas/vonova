@@ -24,6 +24,8 @@ import { createNewQuizMutationFn } from "@/services/student/lms/quizzes/quiz.api
 import { generateQuizWithAIMutationFn } from "@/services/instructor/lms/quiz-generation/ai-quiz.api";
 import { useAuthContext } from "@/context/app/auth/auth-context";
 import type { QuizType, Question, createQuizType } from "@/types/api/student/lms/quizzes/quiz.type";
+import { useAiCanUse, useConsumeAiCredits } from "@/hooks/app/community/use-social";
+import { getFeatureCost } from "@/lib/ai/credits";
 
 export function CreateQuiz() {
   const router = useRouter();
@@ -45,6 +47,10 @@ export function CreateQuiz() {
   const [aiMcQuestions, setAiMcQuestions] = useState<number>(5);
   const [aiTfQuestions, setAiTfQuestions] = useState<number>(5);
   const [generatingAI, setGeneratingAI] = useState(false);
+
+  const gateQuiz = useAiCanUse("QUIZ_GENERATION");
+  const consumeCredits = useConsumeAiCredits();
+  const quizAiCost = getFeatureCost("QUIZ_GENERATION");
 
   const canSave = useMemo(() => {
     if (!title.trim() || !topic.trim() || !noOfQuestions.trim()) return false;
@@ -279,6 +285,11 @@ export function CreateQuiz() {
             </DialogTitle>
             <DialogDescription>
               Let AI generate quiz questions based on your topic and preferences.
+              This action costs {quizAiCost} AI credits
+              {typeof gateQuiz.data?.remaining === "number"
+                ? ` · you have ${gateQuiz.data.remaining.toLocaleString()} credits left this month`
+                : ""}
+              .
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -346,7 +357,13 @@ export function CreateQuiz() {
             </Button>
             <Button
               onClick={handleAIGenerate}
-              disabled={!aiTopic.trim() || generatingAI || aiMcQuestions + aiTfQuestions !== aiTotalQuestions}
+              disabled={
+                !aiTopic.trim() ||
+                generatingAI ||
+                aiMcQuestions + aiTfQuestions !== aiTotalQuestions ||
+                gateQuiz.data?.allowed === false ||
+                gateQuiz.isLoading
+              }
               className="cursor-pointer"
             >
               {generatingAI ? (
@@ -371,6 +388,13 @@ export function CreateQuiz() {
     try {
       setGeneratingAI(true);
       setError(null);
+
+      if (gateQuiz.data?.allowed === false) {
+        setError(
+          `Not enough AI credits. Quiz generation costs ${quizAiCost} credits; you have ${(gateQuiz.data.remaining ?? 0).toLocaleString()} remaining this month.`,
+        );
+        return;
+      }
 
       const response = await generateQuizWithAIMutationFn({
         topic: aiTopic.trim(),
@@ -453,6 +477,10 @@ export function CreateQuiz() {
       });
 
       setQuestions(parsedQuestions);
+      consumeCredits.mutate({
+        feature: "QUIZ_GENERATION",
+        creditsUsed: quizAiCost,
+      });
       setShowAIGenerator(false);
     } catch (e: unknown) {
       let msg = "Failed to generate quiz with AI";

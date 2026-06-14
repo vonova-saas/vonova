@@ -53,4 +53,56 @@ export class ProgressController {
 
     return this.progressService.getMyCourseProgress(courseId, userId);
   }
+
+  @MessagePattern({ cmd: 'app.courses.progress.watch' })
+  watchProgress(
+    @Payload()
+    data: {
+      courseId: string;
+      lessonId: string;
+      userId: string;
+      createdBy?: string;
+      user?: { id?: string; sub?: string };
+      currentTime: number;
+      duration: number;
+    },
+  ) {
+    const {
+      courseId,
+      lessonId,
+      userId,
+      createdBy,
+      user,
+      currentTime,
+      duration,
+    } = data;
+    if (!courseId || !lessonId || !userId)
+      throw new Error('courseId, lessonId and userId are required');
+
+    const creatorId = createdBy || user?.id || user?.sub || userId;
+    return this.progressService.updateLessonWatchProgress(
+      courseId,
+      lessonId,
+      userId,
+      creatorId,
+      currentTime,
+      duration,
+    );
+  }
+
+  @MessagePattern({ cmd: 'app.courses.progress.getWatch' })
+  getWatch(
+    @Payload()
+    data: { courseId: string; lessonId: string; userId: string },
+  ) {
+    const { courseId, lessonId, userId } = data;
+    if (!courseId || !lessonId || !userId)
+      throw new Error('courseId, lessonId and userId are required');
+
+    return this.progressService.getLessonWatchProgress(
+      courseId,
+      lessonId,
+      userId,
+    );
+  }
 }

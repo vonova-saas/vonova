@@ -49,6 +49,8 @@ import {
 import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
 import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
 import { cn } from "@/lib/utils";
+import { useAiCanUse, useConsumeAiCredits } from "@/hooks/app/community/use-social";
+import { getFeatureCost } from "@/lib/ai/credits";
 
 interface PDFSummaryListProps {
   pdfs?: PDFFile[];
@@ -114,6 +116,9 @@ export default function PDFSummaryList({
   const [localSessions, setLocalSessions] = useState<any[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<any[]>([]);
+  const gateSummary = useAiCanUse("PDF_SUMMARY");
+  const consumeCredits = useConsumeAiCredits();
+  const pdfSummaryCost = getFeatureCost("PDF_SUMMARY");
 
   const handleUpload =
     onUpload ||
@@ -176,6 +181,34 @@ export default function PDFSummaryList({
       return;
     }
 
+    if (gateSummary.isLoading) {
+      toast.info("Checking AI credits…", {
+        description: "Please wait a moment before uploading.",
+      });
+      try {
+        // Wait briefly for the gate check to finish (race with timeout)
+        const refetchPromise = gateSummary.refetch?.() ?? Promise.resolve(gateSummary);
+        await Promise.race([
+          refetchPromise,
+          new Promise((_res, rej) => setTimeout(() => rej(new Error('credit-check-timeout')), 3000)),
+        ]);
+      } catch (e) {
+        // Timed out or failed — allow upload to proceed but warn the user.
+        toast.warning(
+          "Proceeding without confirmed AI credits. Upload may be rejected if you lack credits.",
+        );
+      }
+    }
+
+    if (gateSummary.data?.allowed === false) {
+      toast.error("Not enough AI credits", {
+        description: `Each new PDF upload costs ${pdfSummaryCost} credits. You have ${(gateSummary.data.remaining ?? 0).toLocaleString()} credits remaining this month.`,
+        duration: 7000,
+      });
+      setUploadProgress([]);
+      return;
+    }
+
     const fileId = `${file.name}-${Date.now()}`;
     setUploadProgress([
       {
@@ -219,6 +252,17 @@ export default function PDFSummaryList({
         "pdf_sessions",
         JSON.stringify(existingSessions.slice(0, 10)),
       );
+
+      consumeCredits.mutate({
+        feature: "PDF_SUMMARY",
+        creditsUsed: pdfSummaryCost,
+      });
+
+      if (currentStudentId && currentStudentId !== "undefined") {
+        router.push(
+          `/student/${currentStudentId}/pdf-summary/${response.session_id}`,
+        );
+      }
     } catch (err) {
       console.error("Upload failed:", err);
       const parsed = parseUsageLimitError(err);

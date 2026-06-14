@@ -9,7 +9,8 @@ export class UserBilling {
   @Prop({ type: String, trim: true })
   plan?: string;
 
-  @Prop({ type: String, trim: true, unique: true })
+  @Prop({ type: String, trim: true })
+  /** Last4 or tokenized ref only in production; never globally unique (same test PAN across users). */
   cardNumber?: string;
 
   @Prop({ type: String })

@@ -10,6 +10,15 @@ import { Guide } from '../schema/guide.schema';
 import { LibraryAsset } from '../schema/library-asset.schema';
 import { Presentation } from '../schema/presentation.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
+import {
+  normalizeLibraryObjectKey,
+  lmsS3KeyRecoveryCandidates,
+} from '../../common/utils/s3-key.util';
+import { bumpMediaMetric } from '../../common/media/media-metrics';
+import { buildStableLmsMaterialViewUrl } from '../../common/media/stable-media-url';
+import {
+  blockLegacyGetPresign,
+} from '../../common/media/legacy-media-guard';
 
 /**
  * TTL for library file **GET** presigns (seconds). Must match what we persist in
@@ -81,12 +90,29 @@ export class UploadService {
   ) {
     const { model } = await this.ensureOwner(itemType, itemId, ownerId);
 
+    const key = normalizeLibraryObjectKey(objectKey);
+
+    const bucket =
+      process.env.AWS_S3_BUCKET_LMS?.trim() ||
+      process.env.AWS_S3_BUCKET_LMS_AI?.trim() ||
+      null;
+    const region =
+      process.env.AWS_S3_REGION_LMS?.trim() ||
+      process.env.AWS_REGION?.trim() ||
+      null;
+    console.log('[LIBRARY_UPLOAD]', {
+      bucket,
+      region,
+      objectKey: key,
+      mimeType,
+    });
+
     // Create asset record with S3 URL
     const asset = await this.assetModel.create({
       ownerId,
       itemType,
       itemId: model._id,
-      objectKey,
+      objectKey: key,
       originalFileName: fileName,
       mimeType,
       size,
@@ -115,7 +141,7 @@ export class UploadService {
     return {
       assetId: asset.id,
       itemId,
-      objectKey,
+      objectKey: key,
       fileName,
       size,
       mimeType,
@@ -237,12 +263,29 @@ export class UploadService {
   ) {
     await this.ensureOwner(itemType, itemId, ownerId);
 
-    const exists = await this.s3Service.headObjectExistsInLibrary(objectKey);
-    if (!exists)
+    const candidates = lmsS3KeyRecoveryCandidates(objectKey);
+    let normalized = candidates[0] ?? normalizeLibraryObjectKey(objectKey);
+    let exists = false;
+    for (const c of candidates) {
+      if (await this.s3Service.headObjectExistsInLibrary(c)) {
+        normalized = c;
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      bumpMediaMetric('material_upload_failure', {
+        assetId,
+        phase: 'head_miss',
+      });
       throw new NotFoundException('Uploaded file not found in bucket');
-
+    }
     const asset = await this.assetModel.findById(assetId);
     if (!asset) throw new NotFoundException('Asset not found');
+
+    if (String(asset.objectKey) !== normalized) {
+      asset.objectKey = normalized;
+    }
 
     asset.status = 'UPLOADED';
     asset.urls.streamUrl = asset.urls.sourceUrl;
@@ -266,33 +309,23 @@ export class UploadService {
         fileUrl: fileUrl,
       });
 
-    // Generate presigned URL for the uploaded file
-    try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(
-        asset.objectKey,
-        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
-      );
-      return {
-        assetId: asset.id,
-        itemId,
-        presignedUrl,
-        fileName: asset.originalFileName,
-        mimeType: asset.mimeType,
-        size: asset.size,
-        expiresInSeconds: LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
-      };
-    } catch (error) {
-      console.error('Failed to generate presigned URL:', error);
-      // Return basic info even if presigned URL fails
-      return {
-        assetId: asset.id,
-        itemId,
-        fileName: asset.originalFileName,
-        mimeType: asset.mimeType,
-        size: asset.size,
-        error: 'Failed to generate presigned URL',
-      };
-    }
+    const materialType = itemType.toLowerCase() as
+      | 'book'
+      | 'guide'
+      | 'presentation';
+    const viewUrl = buildStableLmsMaterialViewUrl(itemId, materialType);
+    bumpMediaMetric('material_upload_success', {
+      assetId,
+      phase: 'complete_with_stable_view',
+    });
+    return {
+      assetId: asset.id,
+      itemId,
+      viewUrl,
+      fileName: asset.originalFileName,
+      mimeType: asset.mimeType,
+      size: asset.size,
+    };
   }
 
   async getPresignedUrl(
@@ -321,23 +354,18 @@ export class UploadService {
       throw new NotFoundException('File asset not found');
     }
 
-    try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(
-        asset.objectKey,
-        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
-      );
-      return {
-        presignedUrl,
-        fileName: asset.originalFileName,
-        contentType: asset.mimeType,
-        size: asset.size,
-        uploadedAt: (asset as any).createdAt,
-      };
-    } catch (error) {
-      throw new Error(
-        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
+    const viewUrl = buildStableLmsMaterialViewUrl(
+      itemId,
+      itemType.toLowerCase() as 'book' | 'guide' | 'presentation',
+    );
+    return {
+      viewUrl,
+      presignedUrl: viewUrl,
+      fileName: asset.originalFileName,
+      contentType: asset.mimeType,
+      size: asset.size,
+      uploadedAt: (asset as { createdAt?: Date }).createdAt,
+    };
   }
 
   async getPresignedUrlForAsset(assetId: string, ownerId?: string) {
@@ -349,54 +377,26 @@ export class UploadService {
     if (ownerId && String(asset.ownerId) !== ownerId)
       throw new ForbiddenException('Not owner of this asset');
 
-    try {
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(
-        asset.objectKey,
-        LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS,
-      );
-      return {
-        presignedUrl,
-        fileName: asset.originalFileName,
-        contentType: asset.mimeType,
-        size: asset.size,
-        uploadedAt: (asset as any).createdAt,
-        itemType: asset.itemType,
-        itemId: asset.itemId,
-      };
-    } catch (error) {
-      throw new Error(
-        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
+    const itemId = String((asset as { itemId?: unknown }).itemId ?? assetId);
+    const itemType = String((asset as { itemType?: string }).itemType ?? 'book')
+      .toLowerCase() as 'book' | 'guide' | 'presentation';
+    const viewUrl = buildStableLmsMaterialViewUrl(itemId, itemType);
+    return {
+      viewUrl,
+      presignedUrl: viewUrl,
+      fileName: asset.originalFileName,
+      contentType: asset.mimeType,
+      size: asset.size,
+      uploadedAt: (asset as { createdAt?: Date }).createdAt,
+      itemType: asset.itemType,
+      itemId: asset.itemId,
+    };
   }
 
   async generateAndStorePresignedUrl(assetId: string): Promise<string> {
-    const asset = await this.assetModel.findById(assetId);
-    if (!asset || !asset.objectKey) {
-      throw new NotFoundException('Asset not found');
-    }
-
-    try {
-      const ttl = LIBRARY_GET_OBJECT_PRESIGN_TTL_SECONDS;
-      const presignedUrl = await this.s3Service.getPresignedGetUrl(
-        asset.objectKey,
-        ttl,
-      );
-
-      // Must align with S3 SigV4 lifetime (same as `ttl`), not a hard-coded 1h.
-      const expiresAt = new Date(Date.now() + ttl * 1000 - 120_000);
-      await this.assetModel.findByIdAndUpdate(assetId, {
-        'urls.presignedUrl': presignedUrl,
-        'urls.presignedUrlExpiresAt': expiresAt,
-      });
-
-      return presignedUrl;
-    } catch (error) {
-      console.error('Failed to generate presigned URL:', error);
-      throw new Error(
-        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
+    blockLegacyGetPresign('upload.generateAndStorePresignedUrl');
+    void assetId;
+    return '';
   }
 
   async getValidPresignedUrl(assetId: string): Promise<string> {
@@ -404,23 +404,94 @@ export class UploadService {
     if (!asset || !asset.objectKey) {
       throw new NotFoundException('Asset not found');
     }
+    const itemId = String((asset as { itemId?: unknown }).itemId ?? '');
+    const itemType = String((asset as { itemType?: string }).itemType ?? '')
+      .toLowerCase() as 'book' | 'guide' | 'presentation';
+    if (!itemId) {
+      throw new NotFoundException('Asset has no linked material id');
+    }
+    return buildStableLmsMaterialViewUrl(itemId, itemType);
+  }
 
-    // Check if we have a valid presigned URL (not expired)
-    if (asset.urls?.presignedUrl && asset.urls?.presignedUrlExpiresAt) {
-      const now = new Date();
-      const expiresAt = new Date(asset.urls.presignedUrlExpiresAt);
-      const sigRefreshAfter = awsSigV4GetUrlRefreshAfter(asset.urls.presignedUrl);
-      const withinDbTtl = now < expiresAt;
-      const withinSigTtl =
-        sigRefreshAfter == null ? true : now < sigRefreshAfter;
-
-      if (withinDbTtl && withinSigTtl) {
-        return asset.urls.presignedUrl;
+  /** Resolve normalized S3 key for a library asset (HEAD recovery). */
+  async resolveLibraryAssetObjectKey(assetId: string): Promise<{
+    objectKey: string;
+    contentType: string;
+    contentDispositionInline: string;
+    contentDispositionAttachment: string;
+  }> {
+    const asset = await this.assetModel.findById(assetId);
+    if (!asset || !asset.objectKey) {
+      throw new NotFoundException('Asset not found');
+    }
+    const mime = asset.mimeType?.trim() || 'application/octet-stream';
+    const rawKey = String(asset.objectKey);
+    const candidates = lmsS3KeyRecoveryCandidates(rawKey);
+    let key = normalizeLibraryObjectKey(rawKey);
+    let exists = false;
+    for (const c of candidates) {
+      if (await this.s3Service.headObjectExistsInLibrary(c)) {
+        key = c;
+        exists = true;
+        break;
       }
     }
+    if (!exists) {
+      bumpMediaMetric('material_open_failure', {
+        assetId,
+        phase: 'head_miss',
+      });
+      throw new NotFoundException('Library file not found in storage');
+    }
+    if (String(asset.objectKey) !== key) {
+      asset.objectKey = key;
+      await asset.save();
+    }
+    return {
+      objectKey: key,
+      contentType: mime,
+      contentDispositionInline: this.buildInlineContentDisposition(
+        asset.originalFileName,
+      ),
+      contentDispositionAttachment: this.buildAttachmentContentDisposition(
+        asset.originalFileName,
+      ),
+    };
+  }
 
-    // Generate new presigned URL if none exists or expired
-    return this.generateAndStorePresignedUrl(assetId);
+  /**
+   * Fresh presigned GET for in-app viewers (PDF iframe, etc.).
+   * Uses `ResponseContentDisposition: inline` so browsers open instead of forcing download.
+   * Does not reuse cached `urls.presignedUrl` (may have been signed without inline).
+   */
+  async getViewerPresignedUrlForMaterial(assetId: string): Promise<string> {
+    blockLegacyGetPresign('upload.getViewerPresignedUrlForMaterial');
+    void assetId;
+    return '';
+  }
+
+  private buildAttachmentContentDisposition(
+    originalFileName?: string | null,
+  ): string {
+    const name = (originalFileName ?? 'document').trim() || 'document';
+    const encoded = encodeURIComponent(name).replace(/'/g, '%27');
+    const ascii = name
+      .replace(/[^\x20-\x7E]/g, '_')
+      .replace(/"/g, '_')
+      .slice(0, 200);
+    return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+  }
+
+  private buildInlineContentDisposition(
+    originalFileName?: string | null,
+  ): string {
+    const name = (originalFileName ?? 'document').trim() || 'document';
+    const encoded = encodeURIComponent(name).replace(/'/g, '%27');
+    const ascii = name
+      .replace(/[^\x20-\x7E]/g, '_')
+      .replace(/"/g, '_')
+      .slice(0, 200);
+    return `inline; filename="${ascii}"; filename*=UTF-8''${encoded}`;
   }
 
   private async ensureOwner(

@@ -32,6 +32,9 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/enums/role.enum';
 import { LessonGatewayService } from './lesson.gateway.service';
+import { CommunitySocialGatewayService } from 'src/app/community/social.gateway.service';
+import { CommunitySocketGateway } from 'src/community/socket/community.gateway';
+import { scheduleNotificationFanOut } from 'src/app/community/community-notification.helper';
 import {
   CreateLessonDto,
   UpdateLessonDto,
@@ -48,15 +51,33 @@ import { v4 as uuidv4 } from 'uuid';
 @Controller('api/v1/lms/courses/:courseId/chapters/:chapterId/lessons')
 @UseGuards(JwtAuthGuard)
 export class LessonGatewayController {
-  constructor(private readonly lessonService: LessonGatewayService) {}
+  constructor(
+    private readonly lessonService: LessonGatewayService,
+    private readonly social: CommunitySocialGatewayService,
+    private readonly sockets: CommunitySocketGateway,
+  ) {}
 
-  private readonly s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION_LMS,
-    credentials: {
-      accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
-      secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
-    },
-  });
+  private lessonUploadS3: S3Client | null = null;
+
+  private getLessonUploadS3Client(): S3Client {
+    if (this.lessonUploadS3) return this.lessonUploadS3;
+    const region =
+      process.env.AWS_S3_REGION_LMS?.trim() || process.env.AWS_REGION?.trim();
+    const accessKeyId = process.env.AWS_S3_ACCESS_KEY_ID_LMS?.trim();
+    const secretAccessKey = process.env.AWS_S3_SECRET_ACCESS_KEY_LMS?.trim();
+    if (!region || !accessKeyId || !secretAccessKey) {
+      throw new Error(
+        'S3 LMS: set AWS_S3_REGION_LMS, AWS_S3_ACCESS_KEY_ID_LMS, AWS_S3_SECRET_ACCESS_KEY_LMS for lesson uploads.',
+      );
+    }
+    this.lessonUploadS3 = new S3Client({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+    return this.lessonUploadS3;
+  }
 
   @ApiOperation({
     summary: 'Create new lesson',
@@ -127,9 +148,36 @@ export class LessonGatewayController {
     }
 
     console.log('Creating lesson with ownerId:', ownerId);
-    return firstValueFrom(
+    const lesson = await firstValueFrom(
       this.lessonService.createLesson(courseId, chapterId, dto, ownerId),
     );
+    const lessonId =
+      (lesson as { _id?: string; data?: { _id?: string } })?._id ??
+      (lesson as { data?: { _id?: string } })?.data?._id;
+    const title =
+      (lesson as { title?: string })?.title ??
+      (lesson as { data?: { title?: string } })?.data?.title ??
+      dto.title ??
+      'New lesson';
+    if (lessonId) {
+      scheduleNotificationFanOut(this.social, this.sockets, {
+        audience: {
+          kind: 'courseEnrolled',
+          courseId,
+          excludeUserIds: [String(ownerId)],
+        },
+        template: {
+          actorId: String(ownerId),
+          type: 'LESSON_PUBLISHED',
+          entityType: 'LESSON',
+          entityId: String(lessonId),
+          message: `New lesson published: ${title}`,
+          meta: { courseId, lessonId: String(lessonId), chapterId },
+        },
+        dedupeEntityId: String(lessonId),
+      });
+    }
+    return lesson;
   }
 
   @Patch('reorder')
@@ -393,14 +441,14 @@ export class LessonGatewayController {
     @Body() body: VideoUploadUrlDto,
     @Request() req: any,
   ) {
-    void courseId;
-    void lessonId;
     void req;
     if (!body.objectKey) {
       throw new BadRequestException('objectKey is required');
     }
 
-    return firstValueFrom(this.lessonService.getVideoUrl(body.objectKey));
+    return firstValueFrom(
+      this.lessonService.getVideoUrl(body.objectKey, courseId, lessonId),
+    );
   }
 
   @ApiOperation({
@@ -543,8 +591,9 @@ export class LessonGatewayController {
         ContentType: file.mimetype,
       });
 
-      await this.s3Client.send(command);
-      await this.s3Client.send(
+      const s3 = this.getLessonUploadS3Client();
+      await s3.send(command);
+      await s3.send(
         new HeadObjectCommand({ Bucket: bucketName, Key: objectKey }),
       );
       console.log(

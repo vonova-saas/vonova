@@ -3,6 +3,7 @@ import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { RoadmapService } from './roadmap.service';
 import { DailyUsageLimitService } from '../usage/daily-usage-limit.service.refactored';
+import { AiCreditService } from '../../ai-usage/ai-credit.service';
 
 @Controller()
 export class RoadmapController {
@@ -11,6 +12,7 @@ export class RoadmapController {
   constructor(
     private readonly roadmapService: RoadmapService,
     private readonly dailyUsageLimitService: DailyUsageLimitService,
+    private readonly aiCreditService: AiCreditService,
   ) { }
 
   @MessagePattern({ cmd: 'lms.ai.roadmap.generate' })
@@ -21,6 +23,7 @@ export class RoadmapController {
       plan,
       ip = '',
       userAgent = '',
+      idempotency_key,
       ...generateRoadmapDto
     } = data;
     const request = { ...generateRoadmapDto, userId };
@@ -29,17 +32,15 @@ export class RoadmapController {
       `Received roadmap generation request for topic: "${request.topic}", user: ${userId}`,
     );
 
-    await this.dailyUsageLimitService.consumeOrThrow({
+    return this.aiCreditService.executeWithCredits(
       userId,
-      role,
-      plan,
-      feature: 'ai_roadmap',
-    });
-
-    return this.roadmapService.generateRoadmap(
-      request,
-      ip,
-      userAgent,
+      'ROADMAP_GENERATION',
+      idempotency_key,
+      () => this.roadmapService.generateRoadmap(
+        request,
+        ip,
+        userAgent,
+      )
     );
   }
 

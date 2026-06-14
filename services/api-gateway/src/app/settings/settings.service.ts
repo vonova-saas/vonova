@@ -7,7 +7,7 @@ export class SettingsGatewayService {
   constructor(
     @Inject('NATS_SERVICE')
     private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   findOne(userId: string) {
     return this.client.send({ cmd: 'findOneSetting' }, { userId });

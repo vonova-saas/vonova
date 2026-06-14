@@ -104,6 +104,7 @@ export function CourseSidebar({ course }: iAppProps) {
                   slug={course.slug}
                   studentId={studentId}
                   isActive={currentLessonId === lesson.id}
+                  locked={"locked" in lesson && lesson.locked === true}
                   completed={
                     completedLessonIds.has(lesson.id) ||
                     lesson.lessonProgress.find(

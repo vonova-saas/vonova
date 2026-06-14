@@ -8,6 +8,9 @@ import {
   Loader,
   LogOut,
   Sparkles,
+  Users,
+  MessageSquare,
+  UserCircle,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -254,6 +257,36 @@ export function NavStudent({
               >
                 <Bell />
                 Notifications
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => router.push("/community")}>
+                <Users />
+                Community
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const username =
+                    (me?.user as { username?: string } | undefined)?.username ??
+                    userId;
+                  if (username)
+                    router.push(`/community/profile/${encodeURIComponent(username)}`);
+                  else router.push("/community");
+                }}
+              >
+                <UserCircle />
+                View community profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/community/messages")}>
+                <MessageSquare />
+                Messages
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/community/notifications")}
+              >
+                <Bell />
+                Community alerts
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

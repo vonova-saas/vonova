@@ -191,7 +191,7 @@ export default function OverviewSection() {
             </p>
           </div>
           <CardContent className="px-2 pb-4 pt-0 sm:px-4">
-            <div className="h-[220px] w-full sm:h-[260px]">
+            <div className="h-[220px] min-h-[200px] w-full min-w-0 sm:h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={monthlyAttempts}

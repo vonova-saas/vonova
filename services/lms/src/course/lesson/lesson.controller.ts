@@ -122,11 +122,17 @@ export class LessonController {
   }
 
   @MessagePattern({ cmd: 'app.courses.lessons.video.url' })
-  getVideoUrl(@Payload() data: { objectKey: string }) {
-    const { objectKey } = data;
+  getVideoUrl(
+    @Payload()
+    data: { objectKey: string; courseId: string; lessonId: string },
+  ) {
+    const { objectKey, courseId, lessonId } = data;
     if (!objectKey) throw new Error('objectKey is required');
+    if (!courseId || !lessonId) {
+      throw new Error('courseId and lessonId are required');
+    }
 
-    return this.lessonService.getVideoUrl(objectKey);
+    return this.lessonService.getVideoUrl(objectKey, courseId, lessonId);
   }
 
   @MessagePattern({ cmd: 'app.courses.lessons.video.upload.url' })

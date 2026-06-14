@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Search, RefreshCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLibraryItemsQueryFn } from "@/services/api/shared/material-library/material.api";
@@ -59,6 +59,16 @@ export default function OnlineBooks() {
     setPage(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, topic]);
+
+  const refreshQuickViewBook = useCallback(async () => {
+    if (!quickViewBook) return null;
+    const r = await refetch();
+    const items = (r.data as { items?: Book[] } | undefined)?.items;
+    if (!items?.length) return null;
+    const found = items.find((b) => String(b.id) === String(quickViewBook.id));
+    if (!found) return null;
+    return { cover: found.cover, authors: found.authors };
+  }, [quickViewBook, refetch]);
 
   // Overview stats
   const totalBooks = materialsData?.items?.length || 0;
@@ -149,6 +159,7 @@ export default function OnlineBooks() {
         book={quickViewBook}
         onClose={() => setQuickViewBook(null)}
         open={!!quickViewBook}
+        refreshBookMedia={refreshQuickViewBook}
       />
     </div>
   );

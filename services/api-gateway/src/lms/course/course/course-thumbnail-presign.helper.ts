@@ -1,6 +1,30 @@
-import { S3Service } from 'src/common/utils/storage/s3.service';
+import {
+  buildStableLmsCourseThumbnailUrl,
+} from 'src/common/media/stable-media-url';
+import { assertNoPresignedGet } from 'src/common/media/legacy-media-guard';
 
-const THUMBNAIL_PRESIGN_TTL_SECONDS = 3600;
+/** Align with LMS `normalizeLmsS3ObjectKey` (gateway cannot import LMS at build time). */
+function normalizeLmsThumbnailObjectKey(raw: string): string {
+  let k = raw.trim().replace(/^\/+/, '');
+  if (/^https?:\/\//i.test(k)) {
+    try {
+      const pathname = new URL(k).pathname.replace(/^\/+/, '');
+      k = pathname || k;
+    } catch {
+      /* keep k */
+    }
+  }
+  while (k.startsWith('library/library/')) {
+    k = k.slice('library/'.length);
+  }
+  while (k.startsWith('course/course/')) {
+    k = k.slice('course/'.length);
+  }
+  while (k.startsWith('courses/courses/')) {
+    k = k.slice('courses/'.length);
+  }
+  return k;
+}
 
 /**
  * Resolve S3 object key for a course thumbnail from explicit key or virtual-hosted S3 URL.
@@ -13,6 +37,13 @@ export function extractCourseThumbnailS3Key(
     return thumbnailKey.trim();
   }
   if (!thumbnailUrl || typeof thumbnailUrl !== 'string') return null;
+  const raw = thumbnailUrl.trim();
+  // Mongo often stores a bare object key (no scheme) — presign it like a normal key.
+  if (!/^https?:\/\//i.test(raw) && raw.includes('/') && !raw.startsWith('/')) {
+    if (!raw.includes('..') && !raw.includes('\\') && raw.length <= 2048) {
+      return raw;
+    }
+  }
   try {
     const u = new URL(thumbnailUrl);
     const host = u.hostname.toLowerCase();
@@ -36,7 +67,9 @@ export function extractCourseThumbnailS3Key(
 
 export async function presignCourseThumbnailFields<
   T extends Record<string, unknown>,
->(course: T | null | undefined, s3: S3Service): Promise<T | null | undefined> {
+>(course: T | null | undefined, _s3?: unknown): Promise<T | null | undefined> {
+  const bucket = process.env.AWS_S3_BUCKET_LMS?.trim() ?? null;
+  const region = process.env.AWS_S3_REGION_LMS?.trim() ?? null;
   if (!course || typeof course !== 'object') return course;
   const { thumbnailKey: _omitKey, ...rest } = course as T & {
     thumbnailKey?: string;
@@ -54,7 +87,9 @@ export async function presignCourseThumbnailFields<
       : undefined;
 
   if (!key) {
-    console.log('[THUMBNAIL PRESIGN]', {
+    console.log('[THUMBNAIL_PRESIGN]', {
+      bucket,
+      region,
       courseId,
       thumbnailKey: (course as { thumbnailKey?: string }).thumbnailKey ?? null,
       signedUrlGenerated: false,
@@ -62,24 +97,13 @@ export async function presignCourseThumbnailFields<
     });
     return { ...rest } as unknown as T;
   }
-  try {
-    const thumbnailUrl = await s3.getPresignedGetUrl(
-      key,
-      THUMBNAIL_PRESIGN_TTL_SECONDS,
-    );
-    console.log('[THUMBNAIL PRESIGN]', {
-      courseId,
-      thumbnailKey: key,
-      signedUrlGenerated: !!thumbnailUrl,
-    });
-    return { ...rest, thumbnailUrl } as unknown as T;
-  } catch (err) {
-    console.log('[THUMBNAIL PRESIGN]', {
-      courseId,
-      thumbnailKey: key,
-      signedUrlGenerated: false,
-      error: err instanceof Error ? err.message : String(err),
-    });
+
+  if (!courseId) {
     return { ...rest } as unknown as T;
   }
+
+  const thumbnailUrl = buildStableLmsCourseThumbnailUrl(courseId);
+  assertNoPresignedGet(thumbnailUrl);
+  console.log('[THUMBNAIL_STABLE]', { courseId, thumbnailUrl });
+  return { ...rest, thumbnailUrl } as unknown as T;
 }

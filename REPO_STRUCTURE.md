@@ -253,3 +253,8 @@ vonova/
 - Review as a team
 - Adopt naming and structure consistently
 - Keep it updated as the project grows
+
+
+
+
+

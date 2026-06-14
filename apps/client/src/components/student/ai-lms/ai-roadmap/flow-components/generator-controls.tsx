@@ -8,7 +8,33 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/lib/stores";
-import { createTree, getDisplayRoadmapId } from "@/lib/utils";
+import { createTree } from "@/lib/utils";
+import type { RoadmapPayload } from "@/types/api/student/lms-ai/roadmap-generator/roadmap.type";
+
+type GenerateRoadmapResult = RoadmapPayload & {
+  query?: string;
+  chapters?: Record<string, unknown[]>;
+  id?: string;
+};
+
+function peelGenerateResponse(raw: unknown): unknown {
+  let v = raw;
+  for (let i = 0; i < 5; i++) {
+    if (!v || typeof v !== "object") break;
+    const o = v as Record<string, unknown>;
+    if (
+      typeof o.roadmapId === "string" ||
+      typeof o.id === "string" ||
+      o.text ||
+      (Array.isArray(o.tree) && o.tree.length > 0)
+    ) {
+      return v;
+    }
+    if ("data" in o) v = o.data as unknown;
+    else break;
+  }
+  return v;
+}
 import {
   addRecentRoadmap,
   getRecentRoadmaps,
@@ -16,7 +42,16 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthContext } from "@/context/app/auth/auth-context";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
+import { useAiCanUse, useConsumeAiCredits } from "@/hooks/app/community/use-social";
+import { getFeatureCost } from "@/lib/ai/credits";
 
 enum Visibility {
   PUBLIC = "public",
@@ -66,7 +101,9 @@ export const GeneratorControls = (props: Props) => {
   const [topic, setTopic] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [durationWeeks, setDurationWeeks] = useState("");
-  const { setRecentRoadmaps } = useUIStore();
+  const gate = useAiCanUse("MINDMAP_GENERATION");
+  const consume = useConsumeAiCredits();
+  const mindmapCost = getFeatureCost("MINDMAP_GENERATION");
 
   // Handlers for step transitions
   const handleTopicNext = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -75,7 +112,13 @@ export const GeneratorControls = (props: Props) => {
   };
   const handleLevelNext = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (skillLevel.trim()) setStep(3);
+    if (
+      skillLevel === "beginner" ||
+      skillLevel === "intermediate" ||
+      skillLevel === "advanced"
+    ) {
+      setStep(3);
+    }
   };
   const handleDurationNext = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
@@ -88,13 +131,15 @@ export const GeneratorControls = (props: Props) => {
     if (currentStep === 3) setStep(2);
   };
 
-  const { model, query, setModelApiKey, setQuery, modelApiKey } = useUIStore(
+  const { model, query, setModelApiKey, setQuery, modelApiKey, setRecentRoadmaps } =
+    useUIStore(
     useShallow((state) => ({
       model: state.model,
       query: state.query,
       modelApiKey: state.modelApiKey,
       setModelApiKey: state.setModelApiKey,
       setQuery: state.setQuery,
+      setRecentRoadmaps: state.setRecentRoadmaps,
     })),
   );
 
@@ -113,11 +158,6 @@ export const GeneratorControls = (props: Props) => {
       }
     };
     checkRoadmapStatus();
-
-    // Redirect if roadmapId changes
-    if (roadmapId) {
-      router.push(`/student/${userId}/ai-roadmap-generator/${roadmapId}`);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, dbRoadmapId, roadmapId, setModelApiKey, router]);
 
@@ -130,10 +170,17 @@ export const GeneratorControls = (props: Props) => {
     e.preventDefault();
     startTimer();
     try {
-      setIsGenerating(true);
       if (!topic || !skillLevel || !durationWeeks) {
         return toast.error("Please fill all fields", {
           description: "Topic, skill level, and duration are required.",
+          duration: 4000,
+        });
+      }
+
+      const allowedSkill = ["beginner", "intermediate", "advanced"] as const;
+      if (!allowedSkill.includes(skillLevel as (typeof allowedSkill)[number])) {
+        return toast.error("Invalid skill level", {
+          description: "Choose Beginner, Intermediate, or Advanced.",
           duration: 4000,
         });
       }
@@ -145,11 +192,20 @@ export const GeneratorControls = (props: Props) => {
           duration: 4000,
         });
       }
+
+      if (gate.data?.allowed === false) {
+        toast.error("Not enough AI credits", {
+          description: `Mindmap generation costs ${mindmapCost} credits. You have ${(gate.data.remaining ?? 0).toLocaleString()} credits remaining this month.`,
+          duration: 6000,
+        });
+        return;
+      }
       // Optionally, add profanity or validation checks here for topic
       toast.info("Generating roadmap", {
         description: "We are generating a roadmap for you.",
         duration: 4000,
       });
+      setIsGenerating(true);
       mutate(
         {
           body: {
@@ -159,52 +215,88 @@ export const GeneratorControls = (props: Props) => {
           },
         },
         {
-          onSuccess: (data: any) => {
+          onSuccess: (raw: unknown) => {
             void queryClient.invalidateQueries({ queryKey: ["user-roadmaps"] });
+            consume.mutate({
+              feature: "MINDMAP_GENERATION",
+              creditsUsed: mindmapCost,
+            });
             toast.success("Success", {
               description: "Roadmap generated successfully.",
               duration: 4000,
             });
-            let id = data?.roadmapId || data?.id;
-            id = getDisplayRoadmapId(id);
-            let tree = null;
-            if (data.query && data.chapters) {
-              tree = [createTree(data)[0]];
-            } else if (data.text && data.text.query && data.text.chapters) {
-              tree = [createTree(data.text)[0]];
-            } else if (data.tree && Array.isArray(data.tree)) {
-              tree = data.tree;
+            const data = peelGenerateResponse(raw) as GenerateRoadmapResult | null;
+            if (!data) {
+              toast.error("Could not open roadmap", {
+                description: "The server returned an unexpected shape.",
+                duration: 5000,
+              });
+              return;
             }
-            if (id && tree) {
-              localStorage.setItem(
-                id,
-                JSON.stringify({ content: tree, visibility: "public" }),
-              );
+            const rawId =
+              (data && typeof data.roadmapId === "string" && data.roadmapId) ||
+              (data && typeof data.id === "string" && data.id) ||
+              "";
+            if (!rawId || !userId) {
+              toast.error("Could not open roadmap", {
+                description: "The server response did not include a roadmap id.",
+                duration: 5000,
+              });
+              return;
+            }
+
+            let tree: unknown[] | null = null;
+            if (Array.isArray(data?.tree) && data.tree.length > 0) {
+              tree = data.tree as unknown[];
+            } else if (
+              data?.text?.query &&
+              data.text.chapters &&
+              typeof data.text.chapters === "object" &&
+              Object.keys(data.text.chapters).length > 0
+            ) {
+              tree = createTree(data.text);
+            } else if (
+              typeof data?.query === "string" &&
+              data.chapters &&
+              typeof data.chapters === "object" &&
+              Object.keys(data.chapters).length > 0
+            ) {
+              tree = createTree({
+                query: data.query,
+                chapters: data.chapters as Record<string, any[]>,
+              });
+            }
+
+            if (tree?.length) {
+              const cached = { content: tree, visibility: "public" as const };
+              localStorage.setItem(rawId, JSON.stringify(cached));
+              queryClient.setQueryData(["Roadmap", rawId], cached);
               addRecentRoadmap({
-                id,
-                title: tree?.[0]?.name || "Untitled",
+                id: rawId,
+                title: (tree[0] as { name?: string })?.name || "Untitled",
                 date: new Date().toLocaleDateString(),
                 icon: "/images/placeholder.svg",
               });
               setRecentRoadmaps(getRecentRoadmaps());
-              // Add a short delay before redirecting to ensure localStorage is updated
-              setTimeout(() => {
-                router.push(`/student/${userId}/ai-roadmap-generator/${id}`);
-              }, 100);
             }
+            setTimeout(() => {
+              router.push(`/student/${userId}/ai-roadmap-generator/${rawId}`);
+            }, 100);
           },
           onError: (error: any) => {
             const parsed = parseUsageLimitError(error);
-            toast.error("Something went wrong", {
+            toast.error(parsed.title, {
               description: parsed.description,
               duration: 4000,
             });
+          },
+          onSettled: () => {
+            setIsGenerating(false);
           },
         },
       );
     } catch (e: any) {
       console.error("api error", e);
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -267,19 +359,27 @@ export const GeneratorControls = (props: Props) => {
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            <Input
-              type="text"
-              value={skillLevel}
-              onChange={(e) => setSkillLevel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleLevelNext(e);
-                if (e.key === "Backspace" && skillLevel === "") handleBack(2);
-              }}
-              placeholder="Skill Level (e.g. Beginner, Intermediate, Advanced)"
-              className="w-full text-base md:text-lg p-4 rounded-none border-none bg-transparent text-foreground placeholder-muted-foreground font-medium focus:outline-none focus:ring-0"
+            <Select
+              value={skillLevel || undefined}
+              onValueChange={setSkillLevel}
               disabled={isPending || isGenerating}
-              autoFocus
-            />
+            >
+              <SelectTrigger
+                autoFocus
+                className="h-auto w-full border-none bg-transparent px-0 py-4 text-base font-medium text-foreground shadow-none focus:ring-0 md:text-lg [&>span]:text-muted-foreground data-placeholder:text-muted-foreground"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleLevelNext(e);
+                  if (e.key === "Backspace" && !skillLevel) handleBack(2);
+                }}
+              >
+                <SelectValue placeholder="Choose your skill level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
           </motion.div>
         )}
         {step === 3 && (
@@ -321,10 +421,22 @@ export const GeneratorControls = (props: Props) => {
             <button
               type="submit"
               className="w-full px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-lg shadow hover:bg-primary/90 transition disabled:opacity-60"
-              disabled={isPending || isGenerating}
+              disabled={
+                isPending ||
+                isGenerating ||
+                gate.data?.allowed === false ||
+                gate.isLoading
+              }
             >
               {isPending || isGenerating ? "Generating..." : "Generate"}
             </button>
+            <p className="mt-3 max-w-md text-center text-xs text-muted-foreground">
+              This action costs {mindmapCost} AI credits
+              {typeof gate.data?.remaining === "number"
+                ? ` · You have ${gate.data.remaining.toLocaleString()} credits remaining this month`
+                : ""}
+              .
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

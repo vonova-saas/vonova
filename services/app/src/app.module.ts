@@ -19,6 +19,8 @@ import { WaitlistModule } from './waitlist/waitlist.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { PostsModule } from './Community/posts/posts.module';
 import { ArticlesModule } from './Community/articles/articles.module';
+import { CommunitySocialModule } from './Community/social/community-social.module';
+import { CommunityMediaModule } from './common/media/community-media.module';
 import { OutboundNatsModule } from './common/nats/outbound-nats.module';
 import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.interceptor';
 // import { ChatbotModule } from './chatbot/chatbot.module';
@@ -49,6 +51,8 @@ import { MonitoringLogInterceptor } from './common/interceptors/monitoring-log.i
     AdminDashboardModule,
     PostsModule,
     ArticlesModule,
+    CommunitySocialModule,
+    CommunityMediaModule,
     OutboundNatsModule,
     // ChatbotModule,
   ],

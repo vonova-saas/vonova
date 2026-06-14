@@ -42,15 +42,29 @@ import { v4 as uuidv4 } from 'uuid';
 export class ContentGatewayController {
   private readonly logger = new Logger(ContentGatewayController.name);
 
+  private contentUploadS3: S3Client | null = null;
+
   constructor(private readonly contentService: ContentGatewayService) {}
 
-  private readonly s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION_LMS,
-    credentials: {
-      accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID_LMS!,
-      secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY_LMS!,
-    },
-  });
+  private getContentUploadS3Client(): S3Client {
+    if (this.contentUploadS3) return this.contentUploadS3;
+    const region =
+      process.env.AWS_S3_REGION_LMS?.trim() || process.env.AWS_REGION?.trim();
+    const accessKeyId = process.env.AWS_S3_ACCESS_KEY_ID_LMS?.trim();
+    const secretAccessKey = process.env.AWS_S3_SECRET_ACCESS_KEY_LMS?.trim();
+    if (!region || !accessKeyId || !secretAccessKey) {
+      throw new Error(
+        'S3 LMS: set AWS_S3_REGION_LMS, AWS_S3_ACCESS_KEY_ID_LMS, AWS_S3_SECRET_ACCESS_KEY_LMS for content uploads.',
+      );
+    }
+    this.contentUploadS3 = new S3Client({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+    return this.contentUploadS3;
+  }
 
   @ApiOperation({
     summary: 'Get course content tree',
@@ -199,12 +213,7 @@ export class ContentGatewayController {
     @Param('lessonId') lessonId: string,
     @Request() req: any,
   ) {
-    const raw =
-      req.user?.id ??
-      req.user?.sub ??
-      req.user?._id ??
-      req.user?.userId;
-    const userId = raw != null ? String(raw) : undefined;
+    const userId = resolveRequesterUserId(req);
 
     if (!userId) {
       throw new Error('Authentication required - No user found');
@@ -336,13 +345,14 @@ export class ContentGatewayController {
         ContentType: file.mimetype,
       });
 
-      await this.s3Client.send(command);
+      const s3 = this.getContentUploadS3Client();
+      await s3.send(command);
       this.logger.log(
         `S3 PutObject ok bucket=${bucketName} key=${objectKey} bytes=${file.size} contentType=${file.mimetype}`,
       );
 
       try {
-        await this.s3Client.send(
+        await s3.send(
           new HeadObjectCommand({
             Bucket: bucketName,
             Key: objectKey,

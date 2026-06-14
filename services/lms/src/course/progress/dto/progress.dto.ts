@@ -9,3 +9,13 @@ export class MarkLessonCompleteDto {
   @Min(0)
   timeSpentSec?: number;
 }
+
+export class UpdateLessonWatchDto {
+  @IsNumber()
+  @Min(0)
+  currentTime: number;
+
+  @IsNumber()
+  @Min(0)
+  duration: number;
+}

@@ -9,7 +9,9 @@ import {
   LifeBuoy,
   Presentation,
   Video,
-  Frame
+  Frame,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -77,19 +79,28 @@ export const sidebarNavData: SidebarNavData = {
       icon: BrainCog,
     },
     {
+      // Realtime social hub. Role-agnostic top-level route — no :instructorId
+      // substitution needed.
       title: "Community",
-      url: "/instructor/:instructorId/community",
+      url: "/community",
       icon: Frame,
       items: [
-        {
-          title: "Articles",
-          url: "/instructor/:instructorId/community/articles",
-        },
-        {
-          title: "Feed",
-          url: "/instructor/:instructorId/community",
-        },
+        { title: "Feed", url: "/community" },
+        { title: "Explore", url: "/community/explore" },
+        { title: "Articles", url: "/community/articles" },
+        { title: "Groups", url: "/community/groups" },
+        { title: "Search", url: "/community/search" },
       ],
+    },
+    {
+      title: "Messages",
+      url: "/community/messages",
+      icon: MessageSquare,
+    },
+    {
+      title: "Notifications",
+      url: "/community/notifications",
+      icon: Bell,
     },
   ],
   lmsTools: [

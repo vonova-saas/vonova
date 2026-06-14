@@ -1,11 +1,19 @@
 "use client";
 
-import CommunityPageClient from "@/components/community/community-page-client";
-import { useParams } from "next/navigation";
+/**
+ * Legacy `/student/:studentId/community` route — superseded by the role-agnostic
+ * `/community` realtime hub. Kept as a client-side redirect so bookmarks and
+ * the legacy sidebar links still land in the right place during the rollout
+ * window. Safe to delete once analytics show no more traffic.
+ */
 
-export default function CommunityPage() {
-  const params = useParams<{ studentId: string }>();
-  const studentId = params?.studentId ?? "";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-  return <CommunityPageClient area="student" userId={studentId} initialTab="feed" viewMode="feed" />;
+export default function LegacyStudentCommunityRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/community");
+  }, [router]);
+  return null;
 }

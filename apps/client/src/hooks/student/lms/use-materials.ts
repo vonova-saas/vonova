@@ -8,10 +8,13 @@ import {
   checkMaterialAccessQueryFn,
   purchaseMaterialMutationFn,
   getMyFavoritesQueryFn,
-  addToFavoritesMutationFn,
-  removeFromFavoritesMutationFn,
+  toggleLibraryFavoriteMutationFn,
+  type LibraryFavoriteItemType,
   getReaderContentQueryFn,
 } from '@/services/student/lms/library/materials.api';
+import { S3_PRESIGNED_QUERY_STALE_MS, S3_PRESIGNED_QUERY_STALE_NEVER } from "@/lib/lms/presigned-url";
+
+const MATERIAL_GC_MS = S3_PRESIGNED_QUERY_STALE_MS + 15 * 60 * 1000;
 
 // Query Keys
 export const materialsKeys = {
@@ -30,7 +33,8 @@ export const useAllMaterials = (params?: { page?: number; limit?: number; type?:
   return useQuery({
     queryKey: materialsKeys.list(params || {}),
     queryFn: () => getAllMaterialsQueryFn(params),
-    staleTime: 5 * 60 * 1000,
+    staleTime: S3_PRESIGNED_QUERY_STALE_MS,
+    gcTime: MATERIAL_GC_MS,
   });
 };
 
@@ -39,7 +43,8 @@ export const useMaterialById = (materialId: string) => {
     queryKey: materialsKeys.detail(materialId),
     queryFn: () => getMaterialByIdQueryFn(materialId),
     enabled: !!materialId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: S3_PRESIGNED_QUERY_STALE_NEVER,
+    gcTime: MATERIAL_GC_MS,
   });
 };
 
@@ -82,17 +87,24 @@ export const useMyFavorites = () => {
   });
 };
 
+export type ToggleFavoriteInput = {
+  materialId: string;
+  itemType: LibraryFavoriteItemType;
+};
+
 export const useAddToFavorites = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: addToFavoritesMutationFn,
-    onSuccess: () => {
-      toast.success('Added to favorites!');
+    mutationFn: toggleLibraryFavoriteMutationFn,
+    onSuccess: (res) => {
+      toast.success(
+        res.data?.favorited ? 'Added to favorites!' : 'Removed from favorites',
+      );
       queryClient.invalidateQueries({ queryKey: materialsKeys.favorites() });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to add to favorites');
+      toast.error(error?.response?.data?.message || 'Failed to update favorites');
     },
   });
 };
@@ -101,22 +113,29 @@ export const useRemoveFromFavorites = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: removeFromFavoritesMutationFn,
-    onSuccess: () => {
-      toast.success('Removed from favorites!');
+    mutationFn: toggleLibraryFavoriteMutationFn,
+    onSuccess: (res) => {
+      toast.success(
+        res.data?.favorited ? 'Added to favorites!' : 'Removed from favorites',
+      );
       queryClient.invalidateQueries({ queryKey: materialsKeys.favorites() });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to remove from favorites');
+      toast.error(error?.response?.data?.message || 'Failed to update favorites');
     },
   });
 };
 
 // Reader
+// Reader: may embed presigned asset URLs — never treat cached payload as fresh after TTL.
 export const useReaderContent = (materialId: string) => {
   return useQuery({
     queryKey: materialsKeys.reader(materialId),
     queryFn: () => getReaderContentQueryFn(materialId),
     enabled: !!materialId,
+    staleTime: S3_PRESIGNED_QUERY_STALE_NEVER,
+    gcTime: MATERIAL_GC_MS,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 };

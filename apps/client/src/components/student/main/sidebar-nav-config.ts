@@ -10,6 +10,8 @@ import {
   User,
   BrainCog,
   Users,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -71,19 +73,28 @@ export const sidebarNavData: SidebarNavData = {
       icon: Component,
     },
     {
+      // Realtime social hub: feed, profiles, groups, chat, notifications.
+      // The new /community route is role-agnostic so we don't substitute :studentId.
       title: "Community",
-      url: "/student/:studentId/community",
+      url: "/community",
       icon: Users,
       items: [
-        {
-          title: "Articles",
-          url: "/student/:studentId/community/articles",
-        },
-        {
-          title: "Feed",
-          url: "/student/:studentId/community",
-        },
+        { title: "Feed", url: "/community" },
+        { title: "Explore", url: "/community/explore" },
+        { title: "Articles", url: "/community/articles" },
+        { title: "Groups", url: "/community/groups" },
+        { title: "Search", url: "/community/search" },
       ],
+    },
+    {
+      title: "Messages",
+      url: "/community/messages",
+      icon: MessageSquare,
+    },
+    {
+      title: "Notifications",
+      url: "/community/notifications",
+      icon: Bell,
     },
     {
       title: "PDF Summary",

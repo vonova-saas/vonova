@@ -82,6 +82,34 @@ export class PostsController {
     return { message: 'Post fetched successfully', data: { post } };
   }
 
+  @MessagePattern({ cmd: 'app.community.posts.getLikes' })
+  async getPostLikes(
+    @Payload() data: { postId: string; page?: number; limit?: number },
+  ) {
+    const { postId, page = 1, limit = 20 } = data || {};
+    if (!postId) throw new Error('postId is required');
+    const result = await this.postsService.getPostLikesUsers(
+      postId,
+      Number(page) || 1,
+      Number(limit) || 20,
+    );
+    return { message: 'ok', data: result };
+  }
+
+  @MessagePattern({ cmd: 'app.community.comments.getLikes' })
+  async getCommentLikes(
+    @Payload() data: { commentId: string; page?: number; limit?: number },
+  ) {
+    const { commentId, page = 1, limit = 20 } = data || {};
+    if (!commentId) throw new Error('commentId is required');
+    const result = await this.commentsService.getCommentLikesUsers(
+      commentId,
+      Number(page) || 1,
+      Number(limit) || 20,
+    );
+    return { message: 'ok', data: result };
+  }
+
   @MessagePattern({ cmd: 'app.community.posts.update' })
   async updatePost(@Payload() data: { postId: string; userId: string; role: string; dto: UpdatePostDto; image?: Express.Multer.File; images?: Express.Multer.File[]; videos?: Express.Multer.File[] }) {
     const { postId, userId, role, dto, image, images, videos } = data;

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import ExpandCollapse from "../flow-components/expand-collapse";
 import { useGenerateRoadmap } from "@/lib/queries";
 import { createTree, isLikelyRoadmapUuid } from "@/lib/utils";
@@ -43,11 +43,11 @@ import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { LocalStorage } from "@/utils/functions";
 import { getDisplayRoadmapId } from '@/lib/utils';
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 import { getRecentRoadmaps, removeRecentRoadmap } from '@/utils/functions';
 import useUserId from "@/hooks/user/use-user-id";
 import { useAuthContextOptional } from "@/context/app/auth/auth-context";
 import { Button } from "@/components/ui/button";
-import DailyUsageBadge from "@/components/student/ai-lms/usage/daily-usage-badge";
 import type {
   RoadmapPayload,
   UserRoadmapListItem,
@@ -62,6 +62,22 @@ type GenerateRoadmapResult = RoadmapPayload & {
 
 const USER_ROADMAPS_PAGE_SIZE = 8;
 
+function parseStoredRoadmap(
+  roadmapId?: string,
+): { content?: any; visibility?: string } | null {
+  if (!roadmapId || typeof window === "undefined") return null;
+  const roadmapData = LocalStorage.get(roadmapId);
+  if (!roadmapData) return null;
+  if (typeof roadmapData === "string") {
+    try {
+      return JSON.parse(roadmapData) as { content?: any; visibility?: string };
+    } catch {
+      return null;
+    }
+  }
+  return roadmapData as { content?: any; visibility?: string };
+}
+
 function formatRoadmapListDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -72,9 +88,13 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // Stepper state for progress indicator (must be before any conditional return)
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const { query } = useUIStore();
-  const [localRoadmap, setLocalRoadmap] = useState<{ content?: any; visibility?: string } | null>(null);
-  const [localStorageChecked, setLocalStorageChecked] = useState(() => !roadmapId);
-  const [isLocalLoading, setIsLocalLoading] = useState(false);
+  const [localRoadmap, setLocalRoadmap] = useState<{
+    content?: any;
+    visibility?: string;
+  } | null>(() => parseStoredRoadmap(roadmapId));
+  const [localStorageChecked, setLocalStorageChecked] = useState(
+    () => !roadmapId || typeof window !== "undefined",
+  );
   const router = useRouter();
   const { recentRoadmaps, setRecentRoadmaps } = useUIStore();
   const [timer, setTimer] = useState(0); // seconds
@@ -196,35 +216,15 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
     setRecentRoadmaps(getRecentRoadmaps());
   };
 
-  // 1. Try to load from localStorage when viewing a roadmap by id; then allow API fallback.
-  useEffect(() => {
+  // 1. Sync localStorage when roadmap id changes (before paint to avoid spinner flash)
+  useLayoutEffect(() => {
     if (!roadmapId) {
       setLocalRoadmap(null);
       setLocalStorageChecked(true);
-      setIsLocalLoading(false);
       return;
     }
-
-    setLocalStorageChecked(false);
-    setIsLocalLoading(true);
-    const roadmapData =
-      typeof window !== "undefined" ? LocalStorage.get(roadmapId) : null;
-    if (roadmapData) {
-      let parsed: { content?: any; visibility?: string } | null = null;
-      if (typeof roadmapData === "string") {
-        try {
-          parsed = JSON.parse(roadmapData);
-        } catch {
-          parsed = null;
-        }
-      } else {
-        parsed = roadmapData as { content?: any; visibility?: string };
-      }
-      setLocalRoadmap(parsed);
-    } else {
-      setLocalRoadmap(null);
-    }
-    setIsLocalLoading(false);
+    if (typeof window === "undefined") return;
+    setLocalRoadmap(parseStoredRoadmap(roadmapId));
     setLocalStorageChecked(true);
   }, [roadmapId]);
 
@@ -242,6 +242,12 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           visibility: "public",
         };
       }
+      if (Array.isArray(payload?.tree) && payload.tree.length > 0) {
+        return {
+          content: payload.tree,
+          visibility: "public",
+        };
+      }
       return null;
     },
     queryKey: ["Roadmap", roadmapId],
@@ -256,7 +262,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
   // 3. Handle roadmap generation
   const { data, mutate, isPending } = useGenerateRoadmap();
 
-  // 4. Compose the data array for ExpandCollapse
+  // 4. Compose the data array for ExpandCollapse (mutation data only if it matches URL id)
   let generatedTree: any = undefined;
   if (data) {
     const d = data as GenerateRoadmapResult;
@@ -273,18 +279,35 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
     }
   }
 
+  const mutationRoadmapContent = (() => {
+    const d = data as GenerateRoadmapResult | undefined;
+    if (!d) return undefined;
+    if (roadmapId) {
+      const mid = d.roadmapId ?? d.id;
+      if (mid && mid !== roadmapId) return undefined;
+    }
+    if (d.query && d.chapters) {
+      return createTree({ query: d.query, chapters: d.chapters });
+    }
+    if (d.text?.query && d.text.chapters) {
+      return createTree({ query: d.text.query, chapters: d.text.chapters });
+    }
+    if (Array.isArray(d.tree) && d.tree.length > 0) return d.tree;
+    return undefined;
+  })();
+
   // 5. Decide what to render
   const roadmapContent =
-    (data?.text?.query &&
-      data.text.chapters &&
-      createTree({
-        query: data.text.query,
-        chapters: data.text.chapters,
-      })) ||
-    (localRoadmap && localRoadmap.content ? localRoadmap.content : undefined) ||
-    (remoteRoadmap && remoteRoadmap.content
-      ? remoteRoadmap.content
-      : undefined);
+    mutationRoadmapContent ||
+    (localRoadmap?.content ? localRoadmap.content : undefined) ||
+    (remoteRoadmap?.content ? remoteRoadmap.content : undefined);
+
+  const treeReady = Boolean(roadmapContent && roadmapContent[0]);
+  const showRoadmapDetailLoader = Boolean(
+    roadmapId &&
+      !treeReady &&
+      (!localStorageChecked || isRoadmapPending),
+  );
 
   // Onboarding state
   const ONBOARDING_KEY = "roadmap-onboarding-complete";
@@ -338,9 +361,9 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
         setTimer((prev) => {
-          if (prev < 50) return prev + 1;
+          if (prev < TIMER_MAX) return prev + 1;
           if (timerRef.current) clearInterval(timerRef.current);
-          return 50;
+          return TIMER_MAX;
         });
       }, 1000);
     } else {
@@ -383,9 +406,6 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
             <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
               Explore your generated learning path and refine it as you progress.
             </p>
-            <div className="mt-5">
-              <DailyUsageBadge />
-            </div>
           </div>
         </section>
         <div className="mx-auto max-w-6xl px-4 pt-10">
@@ -498,13 +518,17 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
                 <Share2 className="w-5 h-5 text-primary" />
               </motion.button>
             </div>
-            {isPending || isRoadmapPending || isLocalLoading ? (
+            {showRoadmapDetailLoader ? (
               <div className="flex justify-center items-center w-full h-64">
                 <Loader2 className="animate-spin w-10 h-10 text-primary/60" />
               </div>
-            ) : roadmapContent && roadmapContent[0] ? (
+            ) : treeReady ? (
               <div className="w-full">
-                <ExpandCollapse data={roadmapContent} isPending={isRoadmapPending || isPending || isLocalLoading} roadmapId={roadmapId} />
+                <ExpandCollapse
+                  data={roadmapContent}
+                  isPending={false}
+                  roadmapId={roadmapId}
+                />
               </div>
             ) : (
               <Instructions />
@@ -555,9 +579,6 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
             Enter your topic and preferences to generate a personalized learning roadmap.
           </p>
-          <div className="mt-5">
-            <DailyUsageBadge />
-          </div>
         </div>
       </section>
       <div className="mx-auto max-w-6xl px-4 pt-10">
@@ -808,7 +829,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
                 className="relative flex flex-col items-center justify-center h-48 bg-card rounded-2xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition group overflow-hidden cursor-pointer border border-border"
                 onClick={() =>
                   router.push(
-                    `/student/${userId}/ai-roadmap-generator/${getDisplayRoadmapId(rm.id)}`,
+                    `/student/${userId}/ai-roadmap-generator/${rm.id}`,
                   )
                 }
               >
@@ -831,6 +852,7 @@ export default function Roadmap({ roadmapId }: { roadmapId?: string }) {
                       width={48}
                       height={48}
                       className="w-12 h-12 object-cover rounded-full bg-background"
+                      unoptimized={shouldBypassNextImageOptimization(rm.icon)}
                     />
                   </div>
                 </div>

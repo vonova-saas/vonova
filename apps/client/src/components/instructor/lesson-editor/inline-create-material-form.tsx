@@ -10,9 +10,11 @@ import {
   createLibraryBookMutationFn,
   uploadLibraryFileMutationFn,
 } from "@/services/api/shared/material-library/material.api";
+import { invalidateMaterialLibraryQueries } from "@/lib/lms/invalidate-lms-media-queries";
 import type { CreateMaterialRequest } from "@/types/api/shared/material-library/material.type";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   VisibilityField,
   type VisibilityChoice,
@@ -39,6 +41,7 @@ export function InlineCreateMaterialForm({
   onCreated,
 }: InlineCreateMaterialFormProps) {
   const { user } = useAuthContext();
+  const queryClient = useQueryClient();
   const authorName = user?.name?.trim() || "Unknown Instructor";
 
   const [draft, setDraft] = useState<MaterialDraft>({
@@ -92,6 +95,8 @@ export function InlineCreateMaterialForm({
       if (file) {
         await uploadLibraryFileMutationFn(itemTypeFor(draft.type), id, file);
       }
+
+      invalidateMaterialLibraryQueries(queryClient);
 
       onCreated({
         id,

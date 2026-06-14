@@ -1,29 +1,50 @@
 "use client";
+
+import { useEffect, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { Menubar } from "./menubar";
 
-// Helper to safely parse content
-function parseContent(value: string | undefined) {
-  if (!value) return "<p>Hello world</p>";
+const EMPTY_DOC = {
+  type: "doc",
+  content: [{ type: "paragraph", content: [] }],
+} as const;
 
-  try {
-    // Try to parse as JSON (TipTap format)
-    const parsed = JSON.parse(value);
-    return parsed;
-  } catch {
-    // If not JSON, treat as HTML/plain text
-    // Wrap plain text in paragraph tags
-    if (!value.trim().startsWith("<")) {
-      return `<p>${value}</p>`;
-    }
-    return value;
+/** Normalize API / form value into TipTap `content` (JSON doc, HTML string, or plain text). */
+function parseContent(value: string | undefined): string | Record<string, unknown> {
+  if (value == null || !String(value).trim()) {
+    return { ...EMPTY_DOC };
   }
+  const raw = String(value).trim();
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      (parsed as { type?: string }).type === "doc"
+    ) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    /* not JSON */
+  }
+  if (!raw.startsWith("<")) {
+    return `<p>${raw}</p>`;
+  }
+  return raw;
+}
+
+function contentSignature(value: string | undefined): string {
+  if (value == null || !String(value).trim()) return "";
+  return String(value).trim();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function RichTextEditor({ field }: { field: any }) {
+  const lastExternal = useRef<string>(contentSignature(field.value));
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -39,12 +60,22 @@ export function RichTextEditor({ field }: { field: any }) {
       },
     },
 
-    onUpdate: ({ editor }) => {
-      field.onChange(JSON.stringify(editor.getJSON()));
+    onUpdate: ({ editor: ed }) => {
+      field.onChange(JSON.stringify(ed.getJSON()));
+      lastExternal.current = contentSignature(JSON.stringify(ed.getJSON()));
     },
 
     content: parseContent(field.value),
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const sig = contentSignature(field.value);
+    if (sig === lastExternal.current) return;
+    lastExternal.current = sig;
+    const next = parseContent(field.value);
+    editor.commands.setContent(next, { emitUpdate: false });
+  }, [editor, field.value]);
 
   if (!editor) return null;
 

@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { logMediaClientFailure } from "@/lib/lms/media-client-telemetry";
+import { isPresignedUrlExpired } from "@/lib/lms/presigned-url";
 import {
   AlertTriangle,
   FileImage,
@@ -63,6 +65,42 @@ export interface ProtectedMediaModalProps {
   loading?: boolean;
   /** When `url` is null AND not loading, show this CTA. */
   emptyAction?: { label: string; onClick: () => void };
+  /** Optional ids for client telemetry (hostnames only; no signed query params logged). */
+  mediaTelemetry?: {
+    courseId?: string;
+    lessonId?: string;
+    assetId?: string;
+    mediaType?: string;
+  };
+  /** Fetch a new presigned URL when embed fails (e.g. S3 Request has expired). */
+  onRefreshUrl?: () => void | Promise<void>;
+}
+
+/**
+ * S3 presigned URLs are almost always signed for GET. A browser `HEAD` uses a
+ * different SigV4 canonical request and often returns 403 even when GET works,
+ * which incorrectly drove the viewer into the "missing" empty state.
+ */
+function skipHeadProbeForMediaUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+  try {
+    const { hostname, search } = new URL(trimmed);
+    const h = hostname.toLowerCase();
+    if (!h.includes("amazonaws.com") && !h.includes("cloudfront.net")) {
+      return false;
+    }
+    const q = search || "";
+    return (
+      q.includes("X-Amz-") ||
+      q.includes("X-Amz-Algorithm=") ||
+      q.includes("X-Amz-Signature=") ||
+      q.includes("Signature=") ||
+      q.includes("AWSAccessKeyId=")
+    );
+  } catch {
+    return false;
+  }
 }
 
 const KIND_META: Record<
@@ -189,7 +227,13 @@ function WatermarkOverlay({
   );
 }
 
-function ProtectedPdfFrame({ url }: { url: string }) {
+function ProtectedPdfFrame({
+  url,
+  onHardError,
+}: {
+  url: string;
+  onHardError?: () => void;
+}) {
   // `#toolbar=0&navpanes=0&statusbar=0` is honored by Chromium/Firefox PDF
   // viewers and hides the built-in toolbar (which carries Download / Print
   // buttons). Determined users can still open devtools; that's covered in
@@ -206,11 +250,18 @@ function ProtectedPdfFrame({ url }: { url: string }) {
       // URLs + access checks on the API, not iframe sandboxing.
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
+      onError={() => onHardError?.()}
     />
   );
 }
 
-function ProtectedVideoFrame({ url }: { url: string }) {
+function ProtectedVideoFrame({
+  url,
+  onHardError,
+}: {
+  url: string;
+  onHardError?: () => void;
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   return (
     <video
@@ -224,12 +275,21 @@ function ProtectedVideoFrame({ url }: { url: string }) {
       disableRemotePlayback
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
+      onError={() => onHardError?.()}
       className="block h-full max-h-full w-full bg-black"
     />
   );
 }
 
-function ProtectedImageFrame({ url, title }: { url: string; title: string }) {
+function ProtectedImageFrame({
+  url,
+  title,
+  onHardError,
+}: {
+  url: string;
+  title: string;
+  onHardError?: () => void;
+}) {
   return (
     <div className="flex h-full w-full items-center justify-center overflow-auto bg-black">
       <img
@@ -238,6 +298,7 @@ function ProtectedImageFrame({ url, title }: { url: string; title: string }) {
         draggable={false}
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
+        onError={() => onHardError?.()}
         className="max-h-full max-w-full select-none object-contain"
       />
     </div>
@@ -284,9 +345,12 @@ function LoadingPanel({ kind }: { kind: ProtectedMediaKind }) {
 
 function EmptyPanel({
   emptyAction,
+  reason = "absent",
 }: {
   emptyAction?: ProtectedMediaModalProps["emptyAction"];
+  reason?: "absent" | "missing";
 }) {
+  const isMissing = reason === "missing";
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center">
       <div className="relative">
@@ -299,11 +363,12 @@ function EmptyPanel({
         </div>
       </div>
       <p className="text-base font-semibold text-foreground">
-        No file available yet
+        {isMissing ? "This file is no longer available" : "No file available yet"}
       </p>
       <p className="max-w-md text-xs text-muted-foreground">
-        The owner can upload one from the Material Library. The viewer will
-        open here once the file is processed.
+        {isMissing
+          ? "The file was removed from storage or the signed link expired. Ask the owner to re-upload it."
+          : "The owner can upload one from the Material Library. The viewer will open here once the file is processed."}
       </p>
       {emptyAction ? (
         <Button
@@ -330,18 +395,106 @@ export function ProtectedMediaModal({
   viewer,
   loading,
   emptyAction,
+  mediaTelemetry,
+  onRefreshUrl,
 }: ProtectedMediaModalProps) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [embedDead, setEmbedDead] = useState(false);
+  const missingLogged = useRef(false);
+  const mediaRecoverAttempts = useRef(0);
+  // Probe the presigned URL with HEAD so we can show a friendly "missing" panel
+  // instead of leaking the raw S3 NoSuchKey XML inside the iframe.
+  const [reachable, setReachable] = useState<"unknown" | "ok" | "missing">(
+    "unknown",
+  );
   useBlockSaveShortcuts(open);
+
+  useEffect(() => {
+    setEmbedDead(false);
+    missingLogged.current = false;
+    mediaRecoverAttempts.current = 0;
+  }, [url, open]);
+
+  useEffect(() => {
+    if (!open || !url) return;
+    if (reachable !== "missing") return;
+    if (missingLogged.current) return;
+    missingLogged.current = true;
+    logMediaClientFailure({
+      courseId: mediaTelemetry?.courseId,
+      lessonId: mediaTelemetry?.lessonId,
+      assetId: mediaTelemetry?.assetId,
+      mediaType: mediaTelemetry?.mediaType ?? kind,
+      failedUrl: url,
+      reason: "head_probe_missing",
+    });
+  }, [open, url, reachable, kind, mediaTelemetry]);
+
+  /** Long-open modal / clock skew: presigned GET expired while dialog is open. */
+  useEffect(() => {
+    if (!open || !url || !onRefreshUrl) return;
+    if (!isPresignedUrlExpired(url)) return;
+    if (mediaRecoverAttempts.current >= 1) return;
+    mediaRecoverAttempts.current += 1;
+    void Promise.resolve(onRefreshUrl());
+  }, [open, url, onRefreshUrl]);
+
+  const reportEmbedHardError = useCallback(() => {
+    if (!url) return;
+    logMediaClientFailure({
+      courseId: mediaTelemetry?.courseId,
+      lessonId: mediaTelemetry?.lessonId,
+      assetId: mediaTelemetry?.assetId,
+      mediaType: mediaTelemetry?.mediaType ?? kind,
+      failedUrl: url,
+      reason: "embed_load_error",
+    });
+    if (onRefreshUrl && mediaRecoverAttempts.current < 2) {
+      mediaRecoverAttempts.current += 1;
+      void Promise.resolve(onRefreshUrl());
+      return;
+    }
+    setEmbedDead(true);
+  }, [url, kind, mediaTelemetry, onRefreshUrl]);
+
+  useEffect(() => {
+    if (!url || !open) {
+      setReachable("unknown");
+      return;
+    }
+    if (skipHeadProbeForMediaUrl(url)) {
+      setReachable("ok");
+      return;
+    }
+    let cancelled = false;
+    setReachable("unknown");
+    void (async () => {
+      try {
+        const res = await fetch(url, { method: "HEAD" });
+        if (cancelled) return;
+        setReachable(res.ok ? "ok" : "missing");
+      } catch {
+        if (!cancelled) setReachable("missing");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url, open]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
     setFullscreen(false);
   }, [onOpenChange]);
 
-  const showContent = Boolean(url) && !loading;
-  const showLoading = loading || (open && !url);
-  const showEmpty = open && !loading && !url;
+  const showContent =
+    Boolean(url) && !loading && reachable !== "missing" && !embedDead;
+  const showLoading =
+    loading ||
+    (open && !url) ||
+    (open && Boolean(url) && reachable === "unknown");
+  const showEmpty =
+    open && !loading && (!url || reachable === "missing" || embedDead);
 
   const meta = KIND_META[kind];
   const KindIcon = meta.icon;
@@ -456,14 +609,36 @@ export function ProtectedMediaModal({
 
           <div className="relative h-full w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-inner ring-1 ring-black/5">
             {showLoading ? <LoadingPanel kind={kind} /> : null}
-            {showEmpty ? <EmptyPanel emptyAction={emptyAction} /> : null}
+            {showEmpty ? (
+              <EmptyPanel
+                emptyAction={
+                  embedDead && onRefreshUrl
+                    ? {
+                        label: "Refresh secure link",
+                        onClick: () => {
+                          setEmbedDead(false);
+                          setReachable("unknown");
+                          void onRefreshUrl();
+                        },
+                      }
+                    : emptyAction
+                }
+                reason={
+                  embedDead || reachable === "missing" ? "missing" : "absent"
+                }
+              />
+            ) : null}
 
             {showContent && url ? (
               <>
-                {kind === "pdf" ? <ProtectedPdfFrame url={url} /> : null}
-                {kind === "video" ? <ProtectedVideoFrame url={url} /> : null}
+                {kind === "pdf" ? (
+                  <ProtectedPdfFrame url={url} onHardError={reportEmbedHardError} />
+                ) : null}
+                {kind === "video" ? (
+                  <ProtectedVideoFrame url={url} onHardError={reportEmbedHardError} />
+                ) : null}
                 {kind === "image" ? (
-                  <ProtectedImageFrame url={url} title={title} />
+                  <ProtectedImageFrame url={url} title={title} onHardError={reportEmbedHardError} />
                 ) : null}
                 <WatermarkOverlay viewer={viewer} />
               </>

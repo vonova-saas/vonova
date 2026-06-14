@@ -27,6 +27,8 @@ export type BookQuickViewProps = {
   book: Book | null;
   onClose: () => void;
   open: boolean;
+  /** Refetch library row for presigned cover/avatar recovery. */
+  refreshBookMedia?: () => Promise<Pick<Book, "cover" | "authors"> | null>;
 };
 
 export type BookCardProps = {

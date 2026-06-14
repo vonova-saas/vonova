@@ -25,6 +25,9 @@ import { Role } from '../../common/enums/role.enum';
 import { QuizGatewayService } from './quiz.gateway.service';
 import { SubmitQuizAnswersDto } from './dto/quiz.dto';
 import { EnrollGatewayService } from '../course/enroll/enroll.gateway.service';
+import { CommunitySocialGatewayService } from 'src/app/community/social.gateway.service';
+import { CommunitySocketGateway } from 'src/community/socket/community.gateway';
+import { deliverCommunityNotification } from 'src/app/community/community-notification.helper';
 
 @ApiTags('LMS Student Quizzes')
 @ApiBearerAuth()
@@ -35,6 +38,8 @@ export class QuizStudentController {
   constructor(
     private readonly quizService: QuizGatewayService,
     private readonly enrollGateway: EnrollGatewayService,
+    private readonly social: CommunitySocialGatewayService,
+    private readonly sockets: CommunitySocketGateway,
   ) {}
 
   private async enrolledCourseIds(userId: string): Promise<string[]> {
@@ -253,9 +258,28 @@ export class QuizStudentController {
       throw new ConflictException('You already attempted this quiz');
     }
 
-    return firstValueFrom(
+    const result = await firstValueFrom(
       this.quizService.submitStudentQuiz(quizId, dto, userId, ids),
     );
+    const pct = (result as { percentage?: number })?.percentage;
+    const quizTitle =
+      (result as { quiz?: { title?: string } })?.quiz?.title ?? 'Quiz';
+    const attemptId = (result as { _id?: string })?._id;
+    void deliverCommunityNotification(this.social, this.sockets, {
+      recipientId: String(userId),
+      actorId: String(userId),
+      skipSelf: false,
+      type: 'QUIZ_RESULT',
+      entityType: 'QUIZ',
+      entityId: quizId,
+      message: `Quiz graded: ${quizTitle} — ${pct ?? 0}%`,
+      meta: {
+        quizId,
+        attemptId: attemptId ? String(attemptId) : null,
+        percentage: pct,
+      },
+    });
+    return result;
   }
 
   /**

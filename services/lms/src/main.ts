@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import configuration from './common/config/configuration';
 import { AllExceptionsFilter } from './common/filters/rpc-exception.filter';
+import { logMediaModeStartup } from './common/media/legacy-media-guard';
 
 async function bootstrap() {
   const config = configuration();
@@ -38,6 +39,8 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen();
+
+  logMediaModeStartup('lms');
 
   console.log('\n--- Vonova LMS (LMS + LMS-AI) ---');
   console.log(`NATS: ${natsUrl}`);

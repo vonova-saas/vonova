@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Star, Users } from 'lucide-react';
 import type { Course } from '@/types/api/lms/courses.type';
+import { useCourseThumbnailDisplay } from '@/hooks/lms/use-course-thumbnail-display';
+import { getCourseByIdQueryFn } from '@/services/student/lms/courses/real-courses.api';
+import { shouldBypassNextImageOptimization } from '@/lib/lms/course-thumbnail';
+import { plainTextFromCourseDescription } from '@/components/student/lms/courses/course-description-rich';
 
 interface CourseCardProps {
   course: Course;
@@ -25,12 +29,14 @@ export function CourseCard({
   const isCompact = variant === 'compact';
   const isHorizontal = variant === 'horizontal';
 
-  const thumb =
-    course.thumbnailUrl?.trim() ||
-    "/images/Dashboard.png";
+  const rawThumb = (course.thumbnailUrl ?? course.thumbnailKey ?? '').trim();
+  const { src: thumb, onError: onThumbnailError } = useCourseThumbnailDisplay(
+    course._id,
+    rawThumb,
+    getCourseByIdQueryFn,
+  );
 
-  const useAwsUnoptimized =
-    typeof thumb === "string" && thumb.includes("amazonaws.com");
+  const useAwsUnoptimized = shouldBypassNextImageOptimization(thumb);
 
   const content = (
     <>
@@ -44,6 +50,7 @@ export function CourseCard({
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 400px"
           unoptimized={useAwsUnoptimized}
+          onError={onThumbnailError}
         />
 
         {/* Difficulty Badge */}
@@ -81,7 +88,9 @@ export function CourseCard({
 
         {!isCompact && (
           <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-            {course.smallDescription || course.description}
+            {course.smallDescription ||
+              plainTextFromCourseDescription(course.description) ||
+              ""}
           </p>
         )}
 

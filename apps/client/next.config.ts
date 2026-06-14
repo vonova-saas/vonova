@@ -2,6 +2,10 @@
 
 const nextConfig = {
   output: 'standalone',
+  /** Next.js 16 buffers API bodies when `proxy.ts` exists; default cap is 10MB. */
+  experimental: {
+    proxyClientMaxBodySize: '5gb',
+  },
   images: {
     remotePatterns: [
       {
@@ -17,6 +21,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'vonova-app.s3.eu-north-1.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vonova-lms.s3.eu-north-1.amazonaws.com',
       },
       {
         protocol: 'https',

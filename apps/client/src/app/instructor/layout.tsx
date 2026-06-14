@@ -32,6 +32,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useUserId } from "@/hooks";
 import { AuthProvider } from "@/context/app/auth/auth-context";
+import { AiCreditsNavButton } from "@/components/shared/ai-credits/ai-credits-nav-button";
 
 interface Props {
   children: React.ReactNode;
@@ -90,7 +91,9 @@ export default function InstructorDashboardLayout({ children }: Props) {
     { name: "Problem Solving Management", url: `/instructor/${userId}/problem-solving-management` },
     { name: "Presentation Builder", url: `/instructor/${userId}/presentation-builder` },
     { name: "Course Recorder", url: `/instructor/${userId}/course-recorder` },
-    { name: "Community", url: `/instructor/${userId}/community` },
+    { name: "Community", url: `/community` },
+    { name: "Messages", url: `/community/messages` },
+    { name: "Notifications", url: `/community/notifications` },
     { name: "Support", url: `/instructor/${userId}/support` },
     { name: "Feedback", url: `/instructor/${userId}/feedback` },
     { name: "Settings", url: `/instructor/${userId}/settings` },
@@ -234,6 +237,7 @@ export default function InstructorDashboardLayout({ children }: Props) {
                             Ctrl K
                           </span>
                         </button>
+                        <AiCreditsNavButton className="hidden sm:inline-flex" />
                         <button
                           className="p-2 rounded hover:bg-muted transition-colors"
                           aria-label="Toggle theme"

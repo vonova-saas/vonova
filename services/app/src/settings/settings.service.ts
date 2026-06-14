@@ -11,7 +11,7 @@ export class SettingsService {
   constructor(
     @InjectModel(UserSettings.name)
     private readonly settingsModel: Model<UserSettings>,
-  ) {}
+  ) { }
 
   async create(createSettingDto: CreateSettingDto) {
     try {

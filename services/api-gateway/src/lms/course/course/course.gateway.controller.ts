@@ -31,6 +31,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { CourseGatewayService } from './course.gateway.service';
+import { CommunitySocialGatewayService } from 'src/app/community/social.gateway.service';
 import {
   CreateCourseDto,
   UpdateCourseDto,
@@ -38,6 +39,8 @@ import {
 } from './dto/course.dto';
 import { presignCourseThumbnailFields } from './course-thumbnail-presign.helper';
 import { resolveRequesterUserId } from 'src/common/utils/request-user-id';
+
+const MONGO_ID_24 = /^[a-fA-F0-9]{24}$/;
 
 @ApiTags('LMS Courses')
 @ApiBearerAuth()
@@ -49,6 +52,7 @@ export class CourseGatewayController {
   constructor(
     private readonly courseService: CourseGatewayService,
     private readonly s3Service: S3Service,
+    private readonly social: CommunitySocialGatewayService,
   ) { }
 
   @ApiOperation({
@@ -137,6 +141,56 @@ export class CourseGatewayController {
     const created = await firstValueFrom(
       this.courseService.createCourse(dto, createdBy),
     );
+
+    /** RPC sync: NATS `emit` events can be missed; gateway guarantees community group. */
+    try {
+      const courseDoc =
+        created &&
+        typeof created === 'object' &&
+        'data' in created &&
+        (created as { data: Record<string, unknown> }).data
+          ? (created as { data: Record<string, unknown> }).data
+          : (created as Record<string, unknown> | null);
+      const courseId =
+        courseDoc && typeof courseDoc._id !== 'undefined'
+          ? String(courseDoc._id)
+          : '';
+      if (courseId && MONGO_ID_24.test(courseId)) {
+        const ensureRes = await firstValueFrom(
+          this.social.courseGroupEnsure({
+            courseId,
+            instructorId: String(createdBy),
+            name: String(
+              (courseDoc as { title?: string }).title ?? dto.title ?? 'Course',
+            ),
+            description: String(
+              (courseDoc as { description?: string }).description ??
+                dto.description ??
+                '',
+            ),
+            triggerSource: 'gateway.lms.createCourse',
+          }),
+        );
+        const grp = (
+          ensureRes as { data?: { group?: { _id?: unknown } } } | undefined
+        )?.data?.group;
+        const groupId = grp?._id != null ? String(grp._id) : '';
+        if (groupId && MONGO_ID_24.test(groupId)) {
+          await firstValueFrom(
+            this.courseService.setCommunityGroupId(
+              courseId,
+              String(createdBy),
+              groupId,
+            ),
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Course community sync failed (course may lack a group until repair): ${(err as Error).message}`,
+      );
+    }
+
     if (created && typeof created === 'object' && 'data' in created) {
       const data = (created as { data?: Record<string, unknown> }).data;
       const signed = await presignCourseThumbnailFields(data, this.s3Service);
@@ -349,7 +403,24 @@ export class CourseGatewayController {
       throw new Error('Authentication required - No user found');
     }
 
-    return firstValueFrom(this.courseService.deleteCourse(courseId, ownerId));
+    const deleted = await firstValueFrom(
+      this.courseService.deleteCourse(courseId, ownerId),
+    );
+
+    try {
+      await firstValueFrom(
+        this.social.courseGroupSoftDeleteForDeletedCourse({
+          courseId,
+          ownerId: String(ownerId),
+        }),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `[COURSE_GROUP_DELETE_FAILED] courseId=${courseId} ownerId=${String(ownerId)} post-LMS: ${(err as Error).message}`,
+      );
+    }
+
+    return deleted;
   }
 
   @ApiOperation({

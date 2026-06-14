@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { tryValidateLmsObjectKeyForPresign } from '../../../common/media/lms-presign-key.validator';
+import { blockLegacyGetPresign } from '../../../common/media/legacy-media-guard';
 
 function trimEnv(value: string | undefined): string | undefined {
   const t = value?.trim();
@@ -93,11 +95,46 @@ export class S3ConfigService {
     objectKey: string,
     expiresInSeconds = 3600,
   ): Promise<string> {
+    blockLegacyGetPresign('lesson.S3ConfigService.getPresignedGetUrl');
     const { client, bucket } = this.ensure();
+    const v = tryValidateLmsObjectKeyForPresign(objectKey);
+    if (!v.ok) {
+      console.warn(
+        `[MEDIA_SIGN_DEBUG] ${JSON.stringify({
+          entityType: 'lms_s3_config_get',
+          keySample: String(objectKey).slice(0, 160),
+          bucket,
+          region: this.resolveRegion() ?? null,
+          success: false,
+          failureReason: v.reason,
+        })}`,
+      );
+      console.warn('[LMS_PRESIGN_KEY_REJECTED]', {
+        op: 'lesson_get',
+        reason: v.reason,
+        keySample: String(objectKey).slice(0, 160),
+      });
+      throw new BadRequestException(`Invalid S3 object key: ${v.reason}`);
+    }
     const command = new GetObjectCommand({
       Bucket: bucket,
-      Key: objectKey,
+      Key: v.key,
     });
-    return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    const url = await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    let host: string | undefined;
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      host = undefined;
+    }
+    console.log('[LESSON_VIDEO_STREAM]', {
+      bucket,
+      region: this.resolveRegion() ?? null,
+      objectKey: v.key,
+      expiresInSeconds,
+      signedUrlHost: host,
+      ok: true,
+    });
+    return url;
   }
 }

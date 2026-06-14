@@ -12,6 +12,7 @@ import {
   Ip,
   UnauthorizedException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
@@ -205,6 +206,7 @@ export class RoadmapGatewayController {
     const plan = this.isStudentRole(role)
       ? await this.resolveStudentPlan(req)
       : 'pro';
+    const idempotency_key = randomUUID();
     return firstValueFrom(
       this.roadmapService.generateRoadmap({
         ...generateRoadmapDto,
@@ -212,6 +214,7 @@ export class RoadmapGatewayController {
         role,
         plan,
         ip,
+        idempotency_key,
       }),
     );
   }

@@ -33,6 +33,45 @@ export class User {
   @IsString()
   profilePictureUrl: string | null;
 
+  /** URL-safe handle for public profile URLs (`/community/profile/:username`). */
+  @Prop({
+    type: String,
+    unique: true,
+    sparse: true,
+    lowercase: true,
+    trim: true,
+    index: true,
+    maxlength: 40,
+  })
+  username?: string | null;
+
+  @Prop({ type: String, maxlength: 160, default: null })
+  headline?: string | null;
+
+  @Prop({ type: [String], default: [] })
+  skills?: string[];
+
+  @Prop({ type: String, default: null })
+  website?: string | null;
+
+  @Prop({ type: String, default: null })
+  github?: string | null;
+
+  @Prop({ type: String, default: null })
+  linkedin?: string | null;
+
+  @Prop({ type: String, default: null })
+  coverImageUrl?: string | null;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  followersCount?: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  followingCount?: number;
+
+  @Prop({ type: Boolean, default: false })
+  isVerifiedInstructor?: boolean;
+
   @Prop({ type: String, enum: Role, default: Role.PENDING })
   role: Role;
 
@@ -65,6 +104,11 @@ export class User {
   @Prop({ type: String, maxlength: 1000, default: null })
   @IsString()
   bio?: string;
+
+  /** Work history / roles (community profile); separate from short bio. */
+  @Prop({ type: String, maxlength: 2000, default: null })
+  @IsString()
+  experience?: string | null;
 
   @Prop({ type: String, default: null })
   @IsString()

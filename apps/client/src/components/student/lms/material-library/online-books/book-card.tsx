@@ -13,6 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BookCardProps } from "./types";
 import useStudentId from "@/hooks/student/use-student-id";
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 
 export function BookCard({
   book,
@@ -76,6 +77,7 @@ export function BookCard({
             width={96}
             height={128}
             className="object-cover w-full h-full"
+            unoptimized={shouldBypassNextImageOptimization(book.cover)}
           />
         </div>
         <h3 className="text-lg text-center line-clamp-2 mb-1 font-semibold">
@@ -94,6 +96,7 @@ export function BookCard({
                 height={24}
                 className="rounded-full border border-primary bg-background object-cover align-middle"
                 style={{ zIndex: 10 - idx }}
+                unoptimized={shouldBypassNextImageOptimization(author.avatar)}
               />
             ))}
           </span>

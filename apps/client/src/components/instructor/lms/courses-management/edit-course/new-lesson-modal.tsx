@@ -35,7 +35,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { getLessonByIdQueryFn } from "@/services/instructor/course-managment/courses.api";
 import { queryClient } from "@/providers/providers";
-import { coursesKeys } from "@/hooks/student/lms/use-courses";
+import { invalidateLmsMediaForCourse } from "@/lib/lms/invalidate-lms-media-queries";
 
 interface NewLessonModalProps {
   courseId: string;
@@ -218,17 +218,9 @@ export function NewLessonModal({ courseId, chapterId }: NewLessonModalProps) {
           });
           await fetchCourseById(courseId);
 
-          queryClient.invalidateQueries({
-            queryKey: ["instructor-course", courseId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["course-details", courseId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: coursesKeys.contentTree(courseId),
-          });
-          queryClient.invalidateQueries({
-            queryKey: coursesKeys.lessonContent(courseId, result._id),
+          invalidateLmsMediaForCourse(queryClient, courseId, {
+            chapterId,
+            lessonId: result._id,
           });
 
           toast.success("Lesson created and video uploaded");
@@ -247,12 +239,7 @@ export function NewLessonModal({ courseId, chapterId }: NewLessonModalProps) {
         }
       } else {
         await fetchCourseById(courseId);
-        queryClient.invalidateQueries({
-          queryKey: ["instructor-course", courseId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: coursesKeys.contentTree(courseId),
-        });
+        invalidateLmsMediaForCourse(queryClient, courseId, { chapterId });
         toast.success("Lesson created successfully");
       }
 

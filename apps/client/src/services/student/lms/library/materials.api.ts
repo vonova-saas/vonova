@@ -72,21 +72,36 @@ export const purchaseMaterialMutationFn = async (materialId: string): Promise<Pu
   return response.data;
 };
 
-// Favorites
-export const getMyFavoritesQueryFn = async (): Promise<{ message: string; data: Material[] }> => {
-  const response = await API.get('/api/v1/lms/library/favorites');
+/** Matches LMS / gateway `library/favorite` (BOOK | GUIDE | PRESENTATION only). */
+export type LibraryFavoriteItemType = "BOOK" | "GUIDE" | "PRESENTATION";
+
+const LIBRARY_FAVORITE_BASE = "/api/v1/lms/library/favorite";
+
+// Favorites — gateway: GET …/favorite/me, toggle: POST …/favorite/:itemType/:itemId
+export const getMyFavoritesQueryFn = async (): Promise<{
+  message: string;
+  data: Array<{ itemType: LibraryFavoriteItemType; itemId: string }>;
+}> => {
+  const response = await API.get(`${LIBRARY_FAVORITE_BASE}/me`);
   return response.data;
 };
 
-export const addToFavoritesMutationFn = async (materialId: string): Promise<{ message: string; data: any }> => {
-  const response = await API.post(`/api/v1/lms/library/favorites`, { materialId });
+export const toggleLibraryFavoriteMutationFn = async (input: {
+  materialId: string;
+  itemType: LibraryFavoriteItemType;
+}): Promise<{ message: string; data: { favorited: boolean } }> => {
+  const { materialId, itemType } = input;
+  const response = await API.post(
+    `${LIBRARY_FAVORITE_BASE}/${itemType}/${encodeURIComponent(materialId)}`,
+  );
   return response.data;
 };
 
-export const removeFromFavoritesMutationFn = async (materialId: string): Promise<{ message: string; data: any }> => {
-  const response = await API.delete(`/api/v1/lms/library/favorites/${materialId}`);
-  return response.data;
-};
+/** @deprecated Use {@link toggleLibraryFavoriteMutationFn} — favorites are toggled via POST, not DELETE. */
+export const addToFavoritesMutationFn = toggleLibraryFavoriteMutationFn;
+
+/** @deprecated Use {@link toggleLibraryFavoriteMutationFn} — removal is the same toggle endpoint. */
+export const removeFromFavoritesMutationFn = toggleLibraryFavoriteMutationFn;
 
 // Reader
 export const getReaderContentQueryFn = async (materialId: string): Promise<{ message: string; data: { content: string; metadata: any } }> => {

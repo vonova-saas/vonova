@@ -40,6 +40,15 @@ export class ProblemSolvingProgress {
   @Prop({ type: Boolean, default: false })
   solved: boolean;
 
+  @Prop({ type: Date, default: null })
+  solvedAt: Date | null;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  attemptsCount: number;
+
+  @Prop({ type: String, default: null })
+  lastSubmissionStatus: string | null;
+
   @Prop({ type: [StoredHintSchema], default: [] })
   hints: StoredHint[];
 }

@@ -15,10 +15,20 @@ import { useConstructUrl } from "@/hooks";
 import {
   uploadFileMutationFn,
   getLessonVideoPresignedUrlMutationFn,
+  getInstructorCourseByIdQueryFn,
 } from "@/services/instructor/course-managment/courses.api";
+import {
+  isPresignedUrlExpired,
+  isLikelyS3ObjectKey,
+  extractS3KeyFromHttpsUrl,
+  resolveS3ObjectKeyForDelete,
+} from "@/lib/lms/presigned-url";
 import {
   uploadLessonVideoViaPresignedPut,
   isAllowedLessonVideoFile,
+  formatLessonVideoUploadError,
+  shouldUseS3UploadProxy,
+  S3_UPLOAD_PROXY_SAFE_MAX_BYTES,
 } from "@/lib/lms/lesson-video-s3-upload";
 
 interface UploaderState {
@@ -42,6 +52,8 @@ interface iAppProps {
   contentId?: string;
   /** Required with lesson video to resolve presigned preview from objectKey. */
   chapterId?: string;
+  /** Bare S3 key used when `value` is a stable `/api/v1/media/...` display URL. */
+  storageDeleteKey?: string;
 }
 
 export function Uploader({
@@ -52,6 +64,7 @@ export function Uploader({
   contentType,
   contentId,
   chapterId,
+  storageDeleteKey,
 }: iAppProps) {
   const [presignedPreview, setPresignedPreview] = useState<string | undefined>(
     undefined,
@@ -63,29 +76,50 @@ export function Uploader({
   useEffect(() => {
     let cancelled = false;
     const key = value?.trim() ?? "";
-    if (!key || key.startsWith("http")) {
+    if (!key) {
       setPresignedPreview(undefined);
       return;
     }
-    if (
-      fileTypeAccepted !== "video" ||
-      contentType !== "lesson" ||
-      !courseId ||
-      !contentId ||
-      !chapterId
-    ) {
+    const httpPresignStale =
+      key.startsWith("http") && isPresignedUrlExpired(key);
+    const needsLessonVideoPresign =
+      fileTypeAccepted === "video" &&
+      contentType === "lesson" &&
+      courseId &&
+      contentId &&
+      chapterId &&
+      (isLikelyS3ObjectKey(key) || httpPresignStale);
+    const needsCourseThumbPresign =
+      fileTypeAccepted === "image" &&
+      contentType === "course" &&
+      courseId &&
+      (isLikelyS3ObjectKey(key) || httpPresignStale);
+
+    if (!needsLessonVideoPresign && !needsCourseThumbPresign) {
       setPresignedPreview(undefined);
       return;
     }
+
     void (async () => {
       try {
-        const { streamUrl } = await getLessonVideoPresignedUrlMutationFn(
-          courseId,
-          chapterId,
-          contentId,
-          key,
-        );
-        if (!cancelled) setPresignedPreview(streamUrl);
+        if (needsLessonVideoPresign && courseId && contentId && chapterId) {
+          const objectKey = isLikelyS3ObjectKey(key)
+            ? key
+            : extractS3KeyFromHttpsUrl(key) ?? key;
+          const { streamUrl } = await getLessonVideoPresignedUrlMutationFn(
+            courseId,
+            chapterId,
+            contentId,
+            objectKey,
+          );
+          if (!cancelled) setPresignedPreview(streamUrl);
+          return;
+        }
+        if (needsCourseThumbPresign && courseId) {
+          const course = await getInstructorCourseByIdQueryFn(courseId);
+          const thumb = (course.thumbnailUrl ?? "").trim();
+          if (!cancelled && thumb) setPresignedPreview(thumb);
+        }
       } catch {
         if (!cancelled) setPresignedPreview(undefined);
       }
@@ -95,12 +129,9 @@ export function Uploader({
     };
   }, [value, fileTypeAccepted, contentType, courseId, contentId, chapterId]);
 
-  // For full S3 URLs, use directly; lesson video keys use presigned URL; else legacy constructUrl
-  const fileUrl = value?.startsWith("http")
-    ? value
-    : fileTypeAccepted === "video" && presignedPreview
-      ? presignedPreview
-      : constructedUrl;
+  const directHttp =
+    value?.startsWith("http") && !isPresignedUrlExpired(value) ? value : undefined;
+  const fileUrl = directHttp ?? presignedPreview ?? constructedUrl;
 
   const [fileState, setFileState] = useState<UploaderState>({
     error: false,
@@ -125,13 +156,10 @@ export function Uploader({
           file: null,
         };
       }
-      if (value.startsWith("http")) {
+      if (value.startsWith("http") && !isPresignedUrlExpired(value)) {
         return { ...prev, objectUrl: value, key: value };
       }
-      const next =
-        fileTypeAccepted === "video" && presignedPreview
-          ? presignedPreview
-          : constructedUrl;
+      const next = presignedPreview ?? constructedUrl;
       if (next && next !== "/images/placeholder.svg") {
         return { ...prev, objectUrl: next, key: value };
       }
@@ -165,6 +193,15 @@ export function Uploader({
             }));
             return;
           }
+          if (
+            file.size > S3_UPLOAD_PROXY_SAFE_MAX_BYTES &&
+            !shouldUseS3UploadProxy(file.size)
+          ) {
+            toast.info(
+              "Large video — uploading directly to S3. Ensure the LMS bucket CORS allows PUT from this site (see apps/client/.env.example).",
+              { duration: 8000 },
+            );
+          }
           const objectKey = await uploadLessonVideoViaPresignedPut(
             courseId,
             chapterId,
@@ -184,6 +221,22 @@ export function Uploader({
           }));
           onChange?.(objectKey, file);
           toast.success("File uploaded successfully");
+        } else if (
+          fileTypeAccepted === "image" &&
+          contentType === "course" &&
+          courseId &&
+          contentId
+        ) {
+          // Course thumbnails are persisted on PATCH /courses/:id (multipart `image`).
+          setFileState((prev) => ({
+            ...prev,
+            progress: 100,
+            uploading: false,
+            key: prev.key,
+            file,
+          }));
+          onChange?.(value ?? "", file);
+          toast.success("Thumbnail selected — click Update Course to save");
         } else if (courseId && contentType && contentId) {
           const result = await uploadFileMutationFn(
             courseId,
@@ -214,8 +267,14 @@ export function Uploader({
             error: true,
           }));
         }
-      } catch {
-        toast.error("something went wrong");
+      } catch (err) {
+        const msg =
+          fileTypeAccepted === "video"
+            ? formatLessonVideoUploadError(err)
+            : err instanceof Error
+              ? err.message
+              : "Upload failed — please try again";
+        toast.error(msg, { duration: 12000 });
         setFileState((prev) => ({
           ...prev,
           progress: 0,
@@ -226,6 +285,7 @@ export function Uploader({
     },
     [
       onChange,
+      value,
       courseId,
       contentType,
       contentId,
@@ -269,25 +329,28 @@ export function Uploader({
         isDeleting: true,
       }));
 
-      const response = await fetch("/api/s3/delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: fileState.key,
-        }),
-      });
+      const s3Key = resolveS3ObjectKeyForDelete(
+        storageDeleteKey ?? fileState.key,
+      );
 
-      if (!response.ok) {
-        toast.error("Failed to remove file from storage");
+      if (s3Key) {
+        const response = await fetch("/api/s3/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: s3Key }),
+        });
 
-        setFileState((prev) => ({
-          ...prev,
-          isDeleting: true,
-          error: true,
-        }));
-
-        return;
+        if (!response.ok) {
+          toast.error("Failed to remove file from storage");
+          setFileState((prev) => ({
+            ...prev,
+            isDeleting: false,
+            error: true,
+          }));
+          return;
+        }
       }
+
       if (fileState.objectUrl && !fileState.objectUrl.startsWith("http")) {
         URL.revokeObjectURL(fileState.objectUrl);
       }
@@ -305,7 +368,11 @@ export function Uploader({
         isDeleting: false,
       }));
 
-      toast.success("File removed successfully");
+      toast.success(
+        contentType === "course" && fileTypeAccepted === "image"
+          ? "Thumbnail removed — click Update Course to save"
+          : "File removed successfully",
+      );
     } catch {
       toast.error("Error removing file. please try again");
 
@@ -348,7 +415,21 @@ export function Uploader({
     }
 
     if (fileState.error) {
-      return <RenderErrorState />;
+      return (
+        <RenderErrorState
+          onRetry={() =>
+            setFileState({
+              error: false,
+              file: null,
+              id: null,
+              uploading: false,
+              progress: 0,
+              isDeleting: false,
+              fileType: fileTypeAccepted,
+            })
+          }
+        />
+      );
     }
 
     if (fileState.objectUrl) {

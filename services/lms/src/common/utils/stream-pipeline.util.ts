@@ -49,6 +49,11 @@ export async function resolveLessonVideoForApi(
     return { streamUrl: null, videoError: false };
   }
 
+  /** Already a playback URL (legacy rows or CDN) — use as-is. */
+  if (/^https?:\/\//i.test(trimmed)) {
+    return { streamUrl: trimmed, videoError: false };
+  }
+
   const key = objectKeyFromStoredValue(trimmed);
   if (!key) {
     return {

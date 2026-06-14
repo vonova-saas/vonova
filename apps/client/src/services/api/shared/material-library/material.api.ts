@@ -1,10 +1,22 @@
 import API from "@/services/axios-client";
+import { peelLmsResponseLayers } from "@/lib/api/unwrap-lms-body";
 import type {
   CreateMaterialRequest,
   CreateMaterialResponse,
   DeleteMaterialResponse,
   UploadFileResponse
 } from "@/types/api/shared/material-library/material.type";
+
+/**
+ * Library routes must include `/api/v1/...`. Paths like `/lms/library/...` are
+ * resolved by axios relative to the request origin only, so with
+ * `baseURL = https://host/api/v1` they incorrectly become `https://host/lms/...`
+ * (the `/api/v1` segment is dropped).
+ */
+const LMS_LIBRARY_V1 = "/api/v1/lms/library";
+const LMS_LIBRARY_BOOKS = `${LMS_LIBRARY_V1}/books`;
+const LMS_LIBRARY_PRESENTATION = `${LMS_LIBRARY_V1}/presentation`;
+const LMS_LIBRARY_GUIDES = `${LMS_LIBRARY_V1}/guides`;
 
 // Unified LMS Library API Functions
 
@@ -21,8 +33,10 @@ export const materialSignedViewQueryKey = (
   materialType: "book" | "guide" | "presentation" = "book",
 ) => ["lms", "material-signed-view", materialId, materialType] as const;
 
-/** Keep below LMS `AWS_S3_LIBRARY_GET_PRESIGN_EXPIRES` (default 3600s) so URLs refresh before S3 expiry. */
-export const MATERIAL_SIGNED_VIEW_STALE_MS = 45 * 60 * 1000;
+import { S3_PRESIGNED_QUERY_STALE_NEVER } from "@/lib/lms/presigned-url";
+
+/** Presigned library view URLs must be fetched at open time, not cached across sessions. */
+export const MATERIAL_SIGNED_VIEW_STALE_MS = S3_PRESIGNED_QUERY_STALE_NEVER;
 
 export const fetchMaterialSignedViewUrl = async (
   materialId: string,
@@ -33,9 +47,21 @@ export const fetchMaterialSignedViewUrl = async (
       ? `?type=${encodeURIComponent(materialType)}`
       : "";
   const response = await API.get(
-    `/lms/library/materials/${encodeURIComponent(materialId)}/view${q}`
+    `${LMS_LIBRARY_V1}/materials/${encodeURIComponent(materialId)}/view${q}`,
   );
-  return response.data;
+  const peeled = peelLmsResponseLayers(response.data) as Record<string, unknown>;
+  const inner = (peeled?.data ?? peeled) as Record<string, unknown>;
+  const url = String(
+    inner?.url ??
+      inner?.presignedUrl ??
+      peeled?.url ??
+      peeled?.presignedUrl ??
+      "",
+  ).trim();
+  if (!url) {
+    return { success: false, data: { url: "" } };
+  }
+  return { success: true, data: { url } };
 };
 
 /** Default page size for catalog UIs (student + instructor). LMS used to cap at 10. */
@@ -82,7 +108,7 @@ export const fetchLibraryItemsQueryFn = async (
   params.append('limit', String(limit));
   params.append('page', String(page));
 
-  const response = await API.get(`/lms/library?${params.toString()}`);
+  const response = await API.get(`${LMS_LIBRARY_V1}?${params.toString()}`);
   return response.data;
 };
 
@@ -199,11 +225,11 @@ export const createLibraryBookMutationFn = async (
   };
 
   // Use different endpoints based on content type
-  let endpoint = "/lms/library/books/createBook";
+  let endpoint = `${LMS_LIBRARY_BOOKS}/createBook`;
   if (data.type === 'presentation') {
-    endpoint = "/lms/library/presentation/createPresentation";
+    endpoint = `${LMS_LIBRARY_PRESENTATION}/createPresentation`;
   } else if (data.type === 'visual-guide') {
-    endpoint = "/lms/library/guides";
+    endpoint = LMS_LIBRARY_GUIDES;
   }
 
   const response = await API.post(endpoint, finalPayload);
@@ -242,7 +268,18 @@ export const uploadLibraryFileMutationFn = async (
       headers: { 'Content-Type': 'multipart/form-data' },
     }
   );
-  return response.data;
+  const peeled = peelLmsResponseLayers(response.data) as Record<string, unknown>;
+  return {
+    message: String(peeled?.message ?? "File uploaded successfully"),
+    presignedUrl: String(peeled?.presignedUrl ?? ""),
+    fileUrl: String(peeled?.fileUrl ?? ""),
+    objectKey: String(peeled?.objectKey ?? "").trim(),
+    size: Number(peeled?.size ?? 0),
+    assetId: String(peeled?.assetId ?? ""),
+    fileName: String(peeled?.fileName ?? file.name),
+    mimeType: String(peeled?.mimeType ?? file.type),
+    expiresInSeconds: Number(peeled?.expiresInSeconds ?? 3600),
+  };
 };
 
 // Complete upload function to finalize file processing
@@ -262,7 +299,8 @@ export const completeUploadMutationFn = async (
   } : {};
 
   const response = await API.post(endpoint, payload);
-  return response.data;
+  const peeled = peelLmsResponseLayers(response.data);
+  return peeled ?? response.data;
 };
 
 /**
@@ -280,10 +318,10 @@ export const updateLibraryMaterialVisibilityMutationFn = async (params: {
   const { materialId, viewType, visibility } = params;
   const endpoint =
     viewType === "presentation"
-      ? `/lms/library/presentation/updatePresentation/${encodeURIComponent(materialId)}`
+      ? `${LMS_LIBRARY_PRESENTATION}/updatePresentation/${encodeURIComponent(materialId)}`
       : viewType === "guide"
-        ? `/lms/library/guides/${encodeURIComponent(materialId)}`
-        : `/lms/library/books/${encodeURIComponent(materialId)}`;
+        ? `${LMS_LIBRARY_GUIDES}/${encodeURIComponent(materialId)}`
+        : `${LMS_LIBRARY_BOOKS}/${encodeURIComponent(materialId)}`;
 
   const response = await API.patch(endpoint, { visibility });
   return response.data;
@@ -351,10 +389,10 @@ export const updateLibraryMaterialMutationFn = async (params: {
   const { materialId, viewType, patch } = params;
   const endpoint =
     viewType === "presentation"
-      ? `/lms/library/presentation/updatePresentation/${encodeURIComponent(materialId)}`
+      ? `${LMS_LIBRARY_PRESENTATION}/updatePresentation/${encodeURIComponent(materialId)}`
       : viewType === "guide"
-        ? `/lms/library/guides/${encodeURIComponent(materialId)}`
-        : `/lms/library/books/${encodeURIComponent(materialId)}`;
+        ? `${LMS_LIBRARY_GUIDES}/${encodeURIComponent(materialId)}`
+        : `${LMS_LIBRARY_BOOKS}/${encodeURIComponent(materialId)}`;
 
   const body: Record<string, unknown> = {};
 
@@ -401,11 +439,11 @@ export const deleteMaterialMutationFn = async (
   type?: string
 ): Promise<DeleteMaterialResponse> => {
   // Use different endpoints based on content type
-  let endpoint = `/lms/library/books/${id}`;
+  let endpoint = `${LMS_LIBRARY_BOOKS}/${id}`;
   if (type === 'presentation') {
-    endpoint = `/lms/library/presentation/${id}`;
+    endpoint = `${LMS_LIBRARY_PRESENTATION}/${id}`;
   } else if (type === 'visual-guide') {
-    endpoint = `/lms/library/guides/${id}`;
+    endpoint = `${LMS_LIBRARY_GUIDES}/${id}`;
   }
 
   const response = await API.delete(endpoint);

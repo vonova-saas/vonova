@@ -94,6 +94,10 @@ export const resetPasswordMutationFn = async (
 // ============== Logout API Services ==============
 export const logoutMutationFn = async (): Promise<{ message: string }> => {
   const response = await API.post("/auth/logout");
+  const { clearPersistedAccessToken } = await import(
+    "@/lib/media/persist-access-token"
+  );
+  clearPersistedAccessToken();
   return response.data;
 };
 

@@ -111,6 +111,10 @@ export class Course {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   ownerId: Types.ObjectId;
+
+  /** App-service `CommunityGroup` _id for this course (LMS ↔ community link). */
+  @Prop({ type: Types.ObjectId, default: null, index: true, sparse: true })
+  communityGroupId?: Types.ObjectId | null;
 }
 
 export type CourseDocument = Course & Document;

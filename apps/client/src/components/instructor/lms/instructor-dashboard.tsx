@@ -432,8 +432,8 @@ export default function InstructorDashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="px-2 pt-0 sm:px-4">
-                      <div className="h-[220px] w-full sm:h-[240px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[220px] min-h-[200px] w-full min-w-0 sm:h-[240px]">
+                        <ResponsiveContainer width="100%" height={220} minWidth={0}>
                           <LineChart
                             data={monthlyOutput}
                             margin={{ top: 10, right: 12, left: -10, bottom: 0 }}
@@ -485,7 +485,7 @@ export default function InstructorDashboard() {
                     </CardHeader>
                     <CardContent className="flex flex-col items-center gap-3 px-4 pt-0 sm:flex-row sm:gap-2">
                       <div className="h-[160px] w-[160px] shrink-0">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width={160} height={160} minWidth={0}>
                           <PieChart>
                             <Pie
                               data={workloadDistribution}
@@ -511,10 +511,13 @@ export default function InstructorDashboard() {
                             className="flex items-center justify-between gap-2 text-muted-foreground"
                           >
                             <div className="flex items-center gap-2">
-                              <span
-                                className="inline-block h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: entry.color }}
-                              />
+                              <svg
+                                className="h-2.5 w-2.5 shrink-0"
+                                viewBox="0 0 10 10"
+                                aria-hidden
+                              >
+                                <circle cx="5" cy="5" r="5" fill={entry.color} />
+                              </svg>
                               <span className="text-xs sm:text-sm">
                                 {entry.name}
                               </span>
@@ -544,8 +547,8 @@ export default function InstructorDashboard() {
                         Create your first course to see this breakdown.
                       </div>
                     ) : (
-                      <div className="h-[220px] w-full sm:h-[240px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[220px] min-h-[200px] w-full min-w-0 sm:h-[240px]">
+                        <ResponsiveContainer width="100%" height={220} minWidth={0}>
                           <BarChart
                             data={coursesByCategory}
                             margin={{ top: 10, right: 12, left: -10, bottom: 0 }}

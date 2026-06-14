@@ -8,7 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Star, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import useConstructUrl from "@/hooks/courses/use-construct-url";
+import { useCourseThumbnailDisplay } from "@/hooks/lms/use-course-thumbnail-display";
+import { getCourseByIdQueryFn } from "@/services/student/lms/courses/real-courses.api";
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 
 interface iAppProps {
   data: PublicCourseType;
@@ -16,16 +18,15 @@ interface iAppProps {
 }
 
 export function PublicCourseCard({ data, studentId }: iAppProps) {
-  // Use useConstructUrl to resolve thumbnail from IndexedDB storage
-  const resolvedThumbnailUrl = useConstructUrl(data.thumbnailUrl || "");
-  const thumbnailUrl = resolvedThumbnailUrl && resolvedThumbnailUrl !== "/images/placeholder.svg"
-    ? resolvedThumbnailUrl
-    : (data.thumbnailUrl?.startsWith("http") || data.thumbnailUrl?.startsWith("/"))
-      ? data.thumbnailUrl
-      : "/placeholder-course.jpg";
+  const rawThumb = (data.thumbnailUrl ?? data.thumbnailKey ?? "").trim();
+  const { src: thumbnailUrl, onError: onThumbnailError } =
+    useCourseThumbnailDisplay(data._id, rawThumb, getCourseByIdQueryFn);
+
   const difficulty = data.difficulty || "BEGINNER";
   const isFree = data.price?.isFree || false;
   const price = isFree ? "Free" : `${data.price?.amount || 0} ${data.price?.currency || "USD"}`;
+
+  const thumbUnoptimized = shouldBypassNextImageOptimization(thumbnailUrl);
 
   return (
     <Card className="group relative py-0 gap-0">
@@ -37,7 +38,8 @@ export function PublicCourseCard({ data, studentId }: iAppProps) {
         className="w-full rounded-t-xl aspect-video h-full object-cover"
         src={thumbnailUrl}
         alt="Thumbnail Image of Course"
-        unoptimized
+        unoptimized={thumbUnoptimized}
+        onError={onThumbnailError}
       />
 
       <CardContent className="p-4">

@@ -52,6 +52,17 @@ export class CourseGatewayService {
     );
   }
 
+  setCommunityGroupId(
+    courseId: string,
+    ownerId: string,
+    communityGroupId: string,
+  ) {
+    return this.client.send(
+      { cmd: 'app.courses.community.setGroupId' },
+      { courseId, ownerId, communityGroupId },
+    );
+  }
+
   getAllCourses(filters?: Record<string, unknown>) {
     return this.client.send({ cmd: 'app.courses.getAll' }, filters || {});
   }

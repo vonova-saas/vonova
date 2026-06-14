@@ -20,11 +20,14 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { ProgressGatewayService } from './progress.gateway.service';
-import { MarkLessonCompleteDto } from './dto/progress.dto';
+import {
+  MarkLessonCompleteDto,
+  UpdateLessonWatchDto,
+} from './dto/progress.dto';
 
 @ApiTags('LMS Course Progress')
 @ApiBearerAuth()
-@Controller('api/v1/lms/courses/:courseId')
+@Controller('api/v1/lms/courses')
 @UseGuards(JwtAuthGuard)
 export class ProgressGatewayController {
   constructor(private readonly progressService: ProgressGatewayService) {}
@@ -72,7 +75,7 @@ export class ProgressGatewayController {
     status: 404,
     description: 'Course or lesson not found',
   })
-  @Patch('lessons/:lessonId/complete')
+  @Patch(':courseId/lessons/:lessonId/complete')
   async markLessonComplete(
     @Param('courseId') courseId: string,
     @Param('lessonId') lessonId: string,
@@ -155,7 +158,7 @@ export class ProgressGatewayController {
     status: 404,
     description: 'Course or progress not found',
   })
-  @Get(['progress/me', 'progress'])
+  @Get([':courseId/progress/me', ':courseId/progress'])
   async getMyCourseProgress(
     @Param('courseId') courseId: string,
     @Request() req: any,
@@ -163,6 +166,39 @@ export class ProgressGatewayController {
     const userId = req.user?._id || req.user?.id || req.user?.sub;
     return firstValueFrom(
       this.progressService.getMyCourseProgress(courseId, userId),
+    );
+  }
+
+  @Patch(':courseId/lessons/:lessonId/watch')
+  async updateLessonWatch(
+    @Param('courseId') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @Body() dto: UpdateLessonWatchDto,
+    @Request() req: any,
+  ) {
+    const userId = req.user?._id || req.user?.id || req.user?.sub;
+    if (!userId) throw new Error('Authentication required - No user found');
+    return firstValueFrom(
+      this.progressService.updateLessonWatch(
+        courseId,
+        lessonId,
+        userId,
+        userId,
+        dto,
+      ),
+    );
+  }
+
+  @Get(':courseId/lessons/:lessonId/watch')
+  async getLessonWatch(
+    @Param('courseId') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @Request() req: any,
+  ) {
+    const userId = req.user?._id || req.user?.id || req.user?.sub;
+    if (!userId) throw new Error('Authentication required - No user found');
+    return firstValueFrom(
+      this.progressService.getLessonWatch(courseId, lessonId, userId),
     );
   }
 }

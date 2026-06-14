@@ -88,6 +88,17 @@ export function InlineCreateProblemForm({
     }
   };
 
+  const inferParameterNames = (input: unknown): string[] => {
+    if (input && typeof input === "object" && !Array.isArray(input)) {
+      const keys = Object.keys(input as Record<string, unknown>).filter(Boolean);
+      if (keys.length > 0) return keys;
+    }
+    if (Array.isArray(input)) {
+      return input.map((_, index) => `arg${index + 1}`);
+    }
+    return ["input"];
+  };
+
   const toggleCategory = (
     category: (typeof CATEGORY_OPTIONS)[number]["value"],
   ) => {
@@ -172,6 +183,7 @@ export function InlineCreateProblemForm({
         description: draft.description.trim(),
         constraints: draft.constraints.trim(),
         functionName: draft.functionName.trim(),
+        parameterNames: inferParameterNames(parsedCases[0]?.input),
         allowUnorderedArrayOutput: draft.allowUnorderedArrayOutput,
         timeLimit: Number(draft.timeLimit) || 2000,
         memoryLimit: Number(draft.memoryLimit) || 128,

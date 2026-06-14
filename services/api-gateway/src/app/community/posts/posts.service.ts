@@ -188,6 +188,13 @@ export class PostsGatewayService {
     );
   }
 
+  getPostLikes(postId: string, query: { page?: number; limit?: number }) {
+    return this.client.send(
+      { cmd: 'app.community.posts.getLikes' },
+      { postId, ...query },
+    );
+  }
+
   // ─── Comments ──────────────────────────────────────────────────────────────
 
   createComment(
@@ -257,6 +264,13 @@ export class PostsGatewayService {
     return this.client.send(
       { cmd: 'app.community.comments.toggleLike' },
       { commentId, userId },
+    );
+  }
+
+  getCommentLikes(commentId: string, query: { page?: number; limit?: number }) {
+    return this.client.send(
+      { cmd: 'app.community.comments.getLikes' },
+      { commentId, ...query },
     );
   }
 

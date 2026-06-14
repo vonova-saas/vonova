@@ -7,12 +7,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Chapter, ChapterDocument } from './schema/chapter.schema';
 import { Course, CourseDocument } from '../course/schema/course.schema';
+import { Lesson, LessonDocument } from '../lesson/schema/lesson.schema';
 
 @Injectable()
 export class ChapterService {
   constructor(
     @InjectModel(Chapter.name) private chapterModel: Model<ChapterDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
   ) {}
 
   async createChapter(
@@ -151,6 +153,41 @@ export class ChapterService {
     return { message: 'Chapter deleted successfully' };
   }
 
+  /**
+   * Lesson documents are the source of truth for structure; chapter.lessons
+   * refs may be empty on older rows because createLesson did not sync them.
+   */
+  private async attachLessonsToChapters(chapters: ChapterDocument[]) {
+    const chapterIds = chapters.map((c) => c._id);
+    const lessons =
+      chapterIds.length === 0
+        ? []
+        : await this.lessonModel
+            .find({ chapterId: { $in: chapterIds } })
+            .sort({ index: 1, createdAt: 1 })
+            .lean()
+            .exec();
+
+    const byChapter = new Map<string, unknown[]>();
+    for (const l of lessons) {
+      const cid = String(l.chapterId);
+      const arr = byChapter.get(cid) ?? [];
+      arr.push(l);
+      byChapter.set(cid, arr);
+    }
+
+    return chapters.map((ch) => {
+      const plain =
+        typeof (ch as ChapterDocument).toObject === 'function'
+          ? (ch as ChapterDocument).toObject()
+          : { ...(ch as object) };
+      return {
+        ...plain,
+        lessons: byChapter.get(String(ch._id)) ?? [],
+      };
+    });
+  }
+
   async getAllChapters(
     courseId: string,
     pagination: { page?: number; limit?: number },
@@ -178,10 +215,12 @@ export class ChapterService {
       .limit(limit)
       .exec();
 
+    const chaptersWithLessons = await this.attachLessonsToChapters(chapters);
+
     const totalPages = Math.ceil(totalChapters / limit);
 
     return {
-      chapters,
+      chapters: chaptersWithLessons,
       currentPage: page,
       totalPages,
       totalChapters,
@@ -209,6 +248,7 @@ export class ChapterService {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException('Course not found');
 
-    return chapter;
+    const [withLessons] = await this.attachLessonsToChapters([chapter]);
+    return withLessons;
   }
 }

@@ -31,23 +31,12 @@ export interface UsageCheckResult {
 }
 
 /**
- * @deprecated Use AIUsageService directly for new code.
- * This service provides backward compatibility for existing controllers.
- * 
- * Refactored to use the centralized AIUsageService with subscription-based limits:
- * - Free Plan: 1/day for each feature
- * - Pro Plan: Unlimited (-1 limit)
+ * Legacy bridge around {@link AIUsageService}. Daily enforcement for LMS AI
+ * features is disabled — Vonova uses monthly AI credits in the app service.
  */
 @Injectable()
 export class DailyUsageLimitService {
   constructor(private readonly aiUsageService: AIUsageService) {}
-
-  private isStudentRole(role?: string): boolean {
-    const normalized = String(role ?? '')
-      .trim()
-      .toLowerCase();
-    return normalized === 'student' || normalized === 'student_user';
-  }
 
   private getUtcDateKey(): string {
     return new Date().toISOString().slice(0, 10);
@@ -82,11 +71,8 @@ export class DailyUsageLimitService {
   }
 
   /**
-   * Check and consume usage for a feature.
-   * Throws RpcException if limit is exceeded.
-   * 
-   * Free Plan: 1/day for each feature
-   * Pro Plan: Unlimited
+   * No-op: monthly credits are enforced in the app service. Kept so older LMS
+   * builds or controllers that still call this method do not block users.
    */
   async consumeOrThrow(params: {
     userId: string;
@@ -95,42 +81,8 @@ export class DailyUsageLimitService {
     feature: OldFeatureKey | string;
     incrementBy?: number;
   }): Promise<void> {
-    // Skip usage check for non-student roles or missing userId
-    if (!params.userId) {
-      return;
-    }
-    if (!this.isStudentRole(params.role)) {
-      return;
-    }
-
-    const aiFeature = this.mapFeature(params.feature);
-    const checkResult = await this.aiUsageService.checkUsageLimit(
-      params.userId,
-      params.role || 'student',
-      aiFeature,
-    );
-
-    if (!checkResult.allowed) {
-      const date = this.getUtcDateKey();
-      throw new RpcException({
-        statusCode: 429,
-        code: 'DAILY_LIMIT_EXCEEDED',
-        message: "You've reached today's limit. Try again tomorrow or upgrade to Pro for unlimited access.",
-        details: {
-          feature: params.feature,
-          aiFeature,
-          date,
-          used: checkResult.currentCount,
-          limit: checkResult.limit,
-          remaining: 0,
-          unit: 'count',
-          upgradeCTA: true,
-        },
-      });
-    }
-
-    // Track usage
-    await this.aiUsageService.trackUsage(params.userId, aiFeature);
+    void params;
+    return;
   }
 
   /**

@@ -29,14 +29,32 @@ export class ArticlesController {
     const { dto, image, images, userId } = data;
     if (!dto) throw new Error('dto is required');
 
-    // Handle both single image and multiple images
-    if (images && images.length > 0) {
-      const article = await this.articlesService.createArticleWithMultipleFiles(dto, images, userId);
-      return { message: 'Article created successfully', data: article };
-    } else {
-      const article = await this.articlesService.createArticleWithFile(dto, image, userId);
+    const gallery =
+      images && images.length > 0
+        ? images.filter(
+            (f) =>
+              f &&
+              (typeof f.buffer === 'string' ||
+                (f.buffer && typeof f.buffer === 'object')),
+          )
+        : [];
+
+    if (gallery.length > 1) {
+      const article = await this.articlesService.createArticleWithMultipleFiles(
+        dto,
+        gallery,
+        userId,
+      );
       return { message: 'Article created successfully', data: article };
     }
+
+    const single = image ?? (gallery.length === 1 ? gallery[0] : undefined);
+    const article = await this.articlesService.createArticleWithFile(
+      dto,
+      single,
+      userId,
+    );
+    return { message: 'Article created successfully', data: article };
   }
 
   @MessagePattern({ cmd: 'app.community.articles.update' })

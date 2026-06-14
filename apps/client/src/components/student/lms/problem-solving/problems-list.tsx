@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -10,8 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
-import { useProblemsQuery } from "@/hooks/student/use-problem-solving";
+import {
+  useProblemsQuery,
+  useStudentProblemSheetsQuery,
+} from "@/hooks/student/use-problem-solving";
 import { useProblemCompletion } from "@/hooks/student/use-problem-completion";
+import { Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -20,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ProblemSheetsSection from "./problem-sheets-section";
 
 const CATEGORY_OPTIONS = [
   { value: "arrays", label: "Arrays" },
@@ -37,6 +42,17 @@ export default function ProblemsList() {
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { data: sheets = [] } = useStudentProblemSheetsQuery();
+  const sheetProblemIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sheet of sheets) {
+      for (const problem of sheet.problems ?? []) {
+        ids.add(String(problem._id));
+      }
+    }
+    return ids;
+  }, [sheets]);
+
   const { data: problems = [], isLoading, refetch, isRefetching } = useProblemsQuery({
     difficulty: difficulty === "all" ? undefined : difficulty,
     category: selectedCategories[0] as
@@ -57,6 +73,7 @@ export default function ProblemsList() {
 
   const filteredProblems = useMemo(() => {
     return problems.filter((problem) => {
+      if (sheetProblemIds.has(String(problem._id))) return false;
       const q = search.toLowerCase();
       const matchesSearch =
         !q ||
@@ -78,15 +95,11 @@ export default function ProblemsList() {
         );
       return matchesSearch && matchesCategories;
     });
-  }, [search, problems, selectedCategories]);
+  }, [search, problems, selectedCategories, sheetProblemIds]);
 
-  const availableProblems = useMemo(
-    () => filteredProblems.filter((problem) => !isCompleted(problem._id)),
-    [filteredProblems, isCompleted],
-  );
-  const completedProblems = useMemo(
-    () => filteredProblems.filter((problem) => isCompleted(problem._id)),
-    [filteredProblems, isCompleted],
+  const standaloneProblems = useMemo(
+    () => filteredProblems,
+    [filteredProblems],
   );
 
   const handleRefresh = () => {
@@ -160,6 +173,7 @@ export default function ProblemsList() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 pt-10">
+      <ProblemSheetsSection />
       {/* Search and Filter */}
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
@@ -227,30 +241,32 @@ export default function ProblemsList() {
             Refreshing...
           </div>
         ) : null}
-        {!isLoading && filteredProblems.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">No problems found.</div>
+        {!isLoading && standaloneProblems.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            No standalone problems found. Open a practice sheet above for grouped problems.
+          </div>
         ) : null}
-        {filteredProblems.length > 0 ? (
-          <div className="space-y-10">
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Available Problems</h2>
-              {availableProblems.length === 0 ? (
-                <Card>
-                  <CardContent className="py-6 text-muted-foreground">
-                    You have no problems left to solve. See completed problems below.
-                  </CardContent>
-                </Card>
-              ) : (
+        {standaloneProblems.length > 0 ? (
+          <section>
+              <h2 className="text-xl font-semibold mb-4">Practice Problems</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
-                  {availableProblems.map((problem, index) => (
+                  {standaloneProblems.map((problem, index) => {
+                    const done = isCompleted(problem._id);
+                    return (
                     <Card
                       key={problem._id ?? `${problem.title}-${index}`}
                       className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
                     >
                       <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-lg font-semibold flex items-center">
+                        <CardTitle className="text-lg font-semibold flex items-center gap-2 flex-wrap">
                           {problem.title}
-                          <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold ml-2 align-middle">
+                          {done ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                              <Check className="h-3 w-3" />
+                              Complete
+                            </span>
+                          ) : null}
+                          <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold">
                             {problem.testCases?.length ?? 0} Cases
                           </span>
                         </CardTitle>
@@ -271,78 +287,26 @@ export default function ProblemsList() {
                           >
                             {problem.difficulty}
                           </span>
-                          {" • "}
+                          {" â€¢ "}
                           {problem.categories.join(", ")}
                         </div>
                         <Link
                           href={`/student/${userId}/problem-solving/${problem._id}`}
                           className="w-full mt-4"
                         >
-                          <Button className="w-full cursor-pointer">Solve Problem</Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section>
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Completed Problems</h2>
-              {completedProblems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto">
-                  {completedProblems.map((problem, index) => (
-                    <Card
-                      key={problem._id ?? `${problem.title}-${index}`}
-                      className="hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
-                    >
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-lg font-semibold flex items-center">
-                          {problem.title}
-                          <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold ml-2 align-middle">
-                            {problem.testCases?.length ?? 0} Cases
-                          </span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex flex-col flex-1 justify-between">
-                        <p className="mb-2 text-muted-foreground min-h-[48px]">
-                          {problem.description}
-                        </p>
-                        <div className="text-xs text-muted-foreground mb-2">
-                          <span
-                            className={
-                              problem.difficulty === "easy"
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : problem.difficulty === "medium"
-                                  ? "text-amber-600 dark:text-amber-400"
-                                  : "text-rose-600 dark:text-rose-400"
-                            }
+                          <Button
+                            className="w-full cursor-pointer"
+                            variant={done ? "outline" : "default"}
                           >
-                            {problem.difficulty}
-                          </span>
-                          {" • "}
-                          {problem.categories.join(", ")}
-                        </div>
-                        <Link
-                          href={`/student/${userId}/problem-solving/${problem._id}`}
-                          className="w-full mt-4"
-                        >
-                          <Button className="w-full cursor-pointer" variant="outline">
-                            Solve Again
+                            {done ? "Solve Again" : "Solve Problem"}
                           </Button>
                         </Link>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
-              ) : (
-                <Card>
-                  <CardContent className="py-6 text-muted-foreground">
-                    No completed problems yet.
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-          </div>
+          </section>
         ) : null}
       </div>
       </div>

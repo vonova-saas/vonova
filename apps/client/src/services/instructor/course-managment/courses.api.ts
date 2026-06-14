@@ -2,7 +2,7 @@
 // Connects to the backend API Gateway
 
 import API from "@/services/axios-client";
-import { unwrapLmsData } from "@/lib/api/unwrap-lms-body";
+import { peelLmsResponseLayers, unwrapLmsData } from "@/lib/api/unwrap-lms-body";
 import type {
   Course,
   Chapter,
@@ -122,6 +122,36 @@ export async function recomputeCourseAggregatesMutationFn(courseId: string): Pro
 export async function getChaptersQueryFn(courseId: string): Promise<{ message: string; data: Chapter[] }> {
   const response = await API.get(`/api/v1/lms/courses/${courseId}/chapters`);
   return response.data;
+}
+
+/**
+ * Normalized chapter list for instructor UI. LMS/gateway may return
+ * `{ chapters, totalPages, ... }`, a bare array, or a single chapter document.
+ */
+export async function getChaptersListForCourseQueryFn(courseId: string): Promise<Chapter[]> {
+  const response = await API.get(`/api/v1/lms/courses/${courseId}/chapters`, {
+    params: { page: 1, limit: 200 },
+  });
+  const peeled = peelLmsResponseLayers(response.data) as unknown;
+
+  if (Array.isArray(peeled)) {
+    return peeled as Chapter[];
+  }
+
+  if (peeled && typeof peeled === "object") {
+    const o = peeled as Record<string, unknown>;
+    if (Array.isArray(o.chapters)) {
+      return o.chapters as Chapter[];
+    }
+    if (Array.isArray(o.data)) {
+      return o.data as Chapter[];
+    }
+    if (o._id != null && o.title != null) {
+      return [peeled as Chapter];
+    }
+  }
+
+  return [];
 }
 
 export async function createChapterMutationFn(
@@ -357,7 +387,13 @@ export async function getLessonVideoPresignedPutMutationFn(
     `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/presign-put`,
     body,
   );
-  return response.data;
+  const peeled = peelLmsResponseLayers(response.data) as Record<string, unknown> | null;
+  const uploadUrl = String(peeled?.uploadUrl ?? "").trim();
+  const objectKey = String(peeled?.objectKey ?? "").trim();
+  if (!uploadUrl || !objectKey) {
+    throw new Error("Presign response missing uploadUrl or objectKey");
+  }
+  return { uploadUrl, objectKey };
 }
 
 /** After successful PUT to S3, persist videoObjectKey on the lesson. */
@@ -372,7 +408,11 @@ export async function confirmLessonVideoUploadMutationFn(
     `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/confirm`,
     { objectKey, fileSize },
   );
-  return response.data;
+  const body = response.data as Record<string, unknown>;
+  const inner = peelLmsResponseLayers(body) as Record<string, unknown> | null;
+  const message = String(inner?.message ?? body?.message ?? "Lesson video confirmed");
+  const key = String(inner?.objectKey ?? inner?.videoObjectKey ?? body?.objectKey ?? objectKey).trim();
+  return { message, objectKey: key || objectKey };
 }
 
 /** Presigned GET for a lesson video object key (instructor preview / player). */
@@ -387,7 +427,12 @@ export async function getLessonVideoPresignedUrlMutationFn(
     `/api/v1/lms/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}/video/url`,
     { objectKey, contentType },
   );
-  return response.data;
+  const peeled = peelLmsResponseLayers(response.data) as Record<string, unknown> | null;
+  const streamUrl = String(peeled?.streamUrl ?? "").trim();
+  if (!streamUrl) {
+    throw new Error("Video URL response missing streamUrl");
+  }
+  return { streamUrl };
 }
 
 // ==================== COURSE CONTENT TREE ====================

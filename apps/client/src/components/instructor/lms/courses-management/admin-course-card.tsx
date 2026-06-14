@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserId } from "@/hooks";
 import {
   ArrowRight,
+  BarChart3,
   Eye,
   MoreVertical,
   Pencil,
@@ -27,13 +28,20 @@ import Link from "next/link";
 import { publishCourseMutationFn, deleteCourseMutationFn } from "@/services/instructor/course-managment/courses.api";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useCourseThumbnailDisplay } from "@/hooks/lms/use-course-thumbnail-display";
+import { getInstructorCourseByIdQueryFn } from "@/services/instructor/course-managment/courses.api";
+import { shouldBypassNextImageOptimization } from "@/lib/lms/course-thumbnail";
 
 interface iAppProps {
   data: AdminCourseType;
 }
 
 export function AdminCourseCard({ data }: iAppProps) {
-  const thumbnailUrl = data.thumbnailUrl || "/placeholder-course.jpg";
+  const rawThumb = (data.thumbnailUrl ?? data.thumbnailKey ?? "").trim();
+  const { src: thumbnailUrl, onError: onThumbnailError } =
+    useCourseThumbnailDisplay(data._id, rawThumb, getInstructorCourseByIdQueryFn);
+
+  const thumbUnoptimized = shouldBypassNextImageOptimization(thumbnailUrl);
   const status = data.status || "DRAFT";
   const isFree = data.price?.isFree || false;
   const price = isFree ? "Free" : `${data.price?.amount || 0} ${data.price?.currency || "USD"}`;
@@ -105,10 +113,18 @@ export function AdminCourseCard({ data }: iAppProps) {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href={`/student/${userId}/courses/${encodeURIComponent(data.slug)}?cid=${encodeURIComponent(data._id)}`}
+                href={`/student/${userId}/courses/${encodeURIComponent(data.slug)}?cid=${encodeURIComponent(data._id)}&preview=1`}
               >
                 <Eye className="size-4 mr-2" />
                 Preview
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/instructor/${userId}/courses-management/${data._id}/analytics`}
+              >
+                <BarChart3 className="size-4 mr-2" />
+                Analytics
               </Link>
             </DropdownMenuItem>
 
@@ -137,7 +153,8 @@ export function AdminCourseCard({ data }: iAppProps) {
         width={600}
         height={400}
         className="w-full rounded-t-lg aspect-video f-ull object-cover"
-        unoptimized
+        unoptimized={thumbUnoptimized}
+        onError={onThumbnailError}
       />
       <CardContent className="p-4">
         <Link

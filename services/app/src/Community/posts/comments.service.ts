@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Comment } from './schemas/posts/comment.schema';
@@ -6,6 +6,14 @@ import { CreateCommentDto, UpdateCommentDto } from './dto/post.dto';
 import { PostDocument } from './schemas/posts/post.schema';
 import { S3Service } from '../../common/aws/s3.service';
 import { CommunityS3Service } from '../../common/aws/community-s3.service';
+import { AiModerationService } from '../social/ai-moderation.service';
+import { sanitizeText } from '../../common/utils/sanitize';
+import { BadRequestException } from '@nestjs/common';
+import { applyStableUserPublicMedia } from '../../common/media/community-media-hydration.helper';
+import { stableMediaGetEnabled } from '../../common/media/stable-media-url';
+
+const COMMENT_AUTHOR_SELECT =
+  'name username email profilePictureUrl profilePicture avatar';
 
 @Injectable()
 export class CommentsService {
@@ -14,7 +22,23 @@ export class CommentsService {
     @InjectModel('Post') private readonly postModel: Model<PostDocument>,
     private readonly s3Service: S3Service,
     private readonly communityS3Service: CommunityS3Service,
+    @Inject(forwardRef(() => AiModerationService))
+    private readonly aiModeration: AiModerationService,
   ) { }
+
+  private scheduleCommentModeration(
+    commentId: Types.ObjectId | string,
+    userId: string,
+    text: string,
+  ) {
+    if (!text?.trim()) return;
+    this.aiModeration.enqueue({
+      targetType: 'COMMENT',
+      targetId: String(commentId),
+      userId,
+      text,
+    });
+  }
 
   private toObjectId(id: string): Types.ObjectId {
     if (!Types.ObjectId.isValid(id)) {
@@ -23,25 +47,105 @@ export class CommentsService {
     return new Types.ObjectId(id);
   }
 
+  private async hydrateUserPublicMediaLean(
+    user: Record<string, unknown> | null | undefined,
+  ): Promise<void> {
+    if (!user || typeof user !== 'object') return;
+    if (stableMediaGetEnabled()) {
+      applyStableUserPublicMedia(user);
+      return;
+    }
+    const pic = user.profilePictureUrl ?? user.profilePicture;
+    if (typeof pic === 'string') {
+      const s = await this.s3Service.signProfileMediaReadUrl(pic);
+      if (s) {
+        user.profilePictureUrl = s;
+        if (typeof user.profilePicture === 'string') {
+          user.profilePicture = s;
+        }
+      }
+    }
+  }
+
+  private async signCommunityCommentImageUrl(
+    url: string | undefined,
+  ): Promise<string | undefined> {
+    if (!url || typeof url !== 'string') return undefined;
+    const key = url.startsWith('http')
+      ? this.communityS3Service.extractKeyFromUrl(url)
+      : url;
+    if (!key?.startsWith('posts/') && !key?.startsWith('articles/')) {
+      return undefined;
+    }
+    try {
+      return await this.communityS3Service.getSignedUrl(key, 3600);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async hydrateCommentLean(c: Record<string, unknown>): Promise<void> {
+    const author = c.author;
+    if (author && typeof author === 'object') {
+      await this.hydrateUserPublicMediaLean(author as Record<string, unknown>);
+    }
+    const image = c.image;
+    if (typeof image === 'string') {
+      const s = await this.signCommunityCommentImageUrl(image);
+      if (s) c.image = s;
+    }
+    const replies = c.replies;
+    if (Array.isArray(replies)) {
+      for (const r of replies) {
+        if (r && typeof r === 'object') {
+          await this.hydrateCommentLean(r as Record<string, unknown>);
+        }
+      }
+    }
+  }
+
+  private async populateAndHydrateCommentById(
+    id: Types.ObjectId | string,
+  ): Promise<Record<string, unknown> | null> {
+    const doc = await this.commentModel
+      .findById(id)
+      .populate('author', COMMENT_AUTHOR_SELECT)
+      .lean();
+    if (doc) await this.hydrateCommentLean(doc as Record<string, unknown>);
+    return doc as Record<string, unknown> | null;
+  }
+
   async createComment(postId: string, userId: string, dto: CreateCommentDto) {
+    const safeText = sanitizeText(dto.text, { maxLength: 2000 });
+    if (!safeText) {
+      throw new BadRequestException('Comment text cannot be empty');
+    }
     const comment = await this.commentModel.create({
       post: this.toObjectId(postId),
       author: this.toObjectId(userId),
-      text: dto.text,
+      text: safeText,
       image: dto.image || null,
       imageKey: dto.imageKey || null,
     });
 
-    // Increment comments count on the post
+    this.scheduleCommentModeration(comment._id as Types.ObjectId, userId, safeText);
+
+    const postMeta = await this.postModel
+      .findById(this.toObjectId(postId))
+      .select('author')
+      .lean();
+
     await this.postModel.findByIdAndUpdate(
       this.toObjectId(postId),
-      { $inc: { commentsCount: 1 } }
+      { $inc: { commentsCount: 1 } },
     );
 
-    return this.commentModel
-      .findById(comment._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    const hydrated = await this.populateAndHydrateCommentById(comment._id);
+    return {
+      comment: hydrated,
+      postAuthorId: postMeta?.author ? String(postMeta.author) : null,
+      postId,
+    };
   }
 
   async getCommentsByPost(postId: string, page: number = 1, limit: number = 10) {
@@ -57,18 +161,26 @@ export class CommentsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name username email profilePictureUrl profilePicture avatar')
+        .populate('author', COMMENT_AUTHOR_SELECT)
         .populate({
           path: 'replies',
           options: { sort: { createdAt: -1 }, limit: 3 }, // Get latest 3 replies
           populate: {
             path: 'author',
-            select: 'name username email profilePictureUrl profilePicture avatar',
+            select: COMMENT_AUTHOR_SELECT,
           },
         })
         .lean(),
       this.commentModel.countDocuments({ post: postObjectId, parentComment: null }),
     ]);
+
+    await Promise.all(
+      (comments as unknown[]).map((c) =>
+        c && typeof c === 'object'
+          ? this.hydrateCommentLean(c as Record<string, unknown>)
+          : Promise.resolve(),
+      ),
+    );
 
     return {
       comments,
@@ -156,16 +268,19 @@ export class CommentsService {
       }
     }
 
-    if (dto.text !== undefined) comment.text = dto.text;
+    if (dto.text !== undefined) {
+      const safe = sanitizeText(dto.text, { maxLength: 2000 });
+      if (!safe) {
+        throw new BadRequestException('Comment text cannot be empty');
+      }
+      comment.text = safe;
+    }
     if (dto.image !== undefined) comment.image = dto.image || undefined;
     if (dto.imageKey !== undefined) comment.imageKey = dto.imageKey || undefined;
 
     await comment.save();
 
-    return this.commentModel
-      .findById(comment._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    return this.populateAndHydrateCommentById(comment._id);
   }
 
   // ─── Replies ─────────────────────────────────────────────────────────────────
@@ -182,12 +297,16 @@ export class CommentsService {
       throw new Error('Parent comment not found');
     }
 
+    const safeReplyText = sanitizeText(dto.text, { maxLength: 2000 });
+    if (!safeReplyText) {
+      throw new BadRequestException('Reply text cannot be empty');
+    }
     // Create the reply
     const reply = await this.commentModel.create({
       post: this.toObjectId(postId),
       parentComment: this.toObjectId(parentCommentId),
       author: this.toObjectId(userId),
-      text: dto.text,
+      text: safeReplyText,
       image: dto.image || null,
       imageKey: dto.imageKey || null,
     });
@@ -207,10 +326,7 @@ export class CommentsService {
       { $inc: { commentsCount: 1 } }
     );
 
-    return this.commentModel
-      .findById(reply._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    return this.populateAndHydrateCommentById(reply._id);
   }
 
   async createReplyWithFile(
@@ -229,12 +345,16 @@ export class CommentsService {
     let image: string | undefined;
     let imageKey: string | undefined;
 
+    const safeReplyText = sanitizeText(dto.text, { maxLength: 2000 });
+    if (!safeReplyText) {
+      throw new BadRequestException('Reply text cannot be empty');
+    }
     // Create reply first to get replyId
     const reply = await this.commentModel.create({
       post: this.toObjectId(postId),
       parentComment: this.toObjectId(parentCommentId),
       author: this.toObjectId(userId),
-      text: dto.text,
+      text: safeReplyText,
       image: null,
       imageKey: null,
     });
@@ -276,10 +396,7 @@ export class CommentsService {
       { $inc: { commentsCount: 1 } }
     );
 
-    return this.commentModel
-      .findById(reply._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    return this.populateAndHydrateCommentById(reply._id);
   }
 
   async getRepliesByComment(
@@ -296,10 +413,18 @@ export class CommentsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name username email profilePictureUrl profilePicture avatar')
+        .populate('author', COMMENT_AUTHOR_SELECT)
         .lean(),
       this.commentModel.countDocuments({ parentComment: parentCommentObjectId }),
     ]);
+
+    await Promise.all(
+      (replies as unknown[]).map((r) =>
+        r && typeof r === 'object'
+          ? this.hydrateCommentLean(r as Record<string, unknown>)
+          : Promise.resolve(),
+      ),
+    );
 
     return {
       replies,
@@ -307,6 +432,56 @@ export class CommentsService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getCommentLikesUsers(commentId: string, page = 1, limit = 20) {
+    const comment = await this.commentModel
+      .findById(this.toObjectId(commentId))
+      .select('likes likesCount')
+      .lean();
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+    const allIds = ((comment as { likes?: Types.ObjectId[] }).likes ?? []).map((id) =>
+      String(id),
+    );
+    const total = allIds.length;
+    const skip = (page - 1) * limit;
+    const pageIds = allIds
+      .slice(skip, skip + limit)
+      .filter((id) => Types.ObjectId.isValid(id));
+    if (pageIds.length === 0) {
+      const totalPages = Math.max(1, Math.ceil(total / limit) || 1);
+      return {
+        items: [],
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    }
+    const User = this.postModel.db.model('User');
+    const oids = pageIds.map((id) => new Types.ObjectId(id));
+    const users = await User.find({ _id: { $in: oids } })
+      .select(COMMENT_AUTHOR_SELECT)
+      .lean();
+    const byId = new Map(
+      (users as Record<string, unknown>[]).map((u) => [String(u._id), u]),
+    );
+    const items = pageIds
+      .map((id) => byId.get(id))
+      .filter(Boolean) as Record<string, unknown>[];
+    await Promise.all(
+      items.map((u) => this.hydrateUserPublicMediaLean(u)),
+    );
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
@@ -352,11 +527,15 @@ export class CommentsService {
     let image: string | undefined;
     let imageKey: string | undefined;
 
+    const safeCommentText = sanitizeText(dto.text, { maxLength: 2000 });
+    if (!safeCommentText) {
+      throw new BadRequestException('Comment text cannot be empty');
+    }
     // Create comment first to get commentId
     const comment = await this.commentModel.create({
       post: this.toObjectId(postId),
       author: this.toObjectId(userId),
-      text: dto.text,
+      text: safeCommentText,
       image: null,
       imageKey: null,
     });
@@ -383,16 +562,24 @@ export class CommentsService {
       }
     }
 
-    // Increment comments count on the post
+    const postMeta = await this.postModel
+      .findById(this.toObjectId(postId))
+      .select('author')
+      .lean();
+
     await this.postModel.findByIdAndUpdate(
       this.toObjectId(postId),
-      { $inc: { commentsCount: 1 } }
+      { $inc: { commentsCount: 1 } },
     );
 
-    return this.commentModel
-      .findById(comment._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    this.scheduleCommentModeration(comment._id as Types.ObjectId, userId, safeCommentText);
+
+    const hydrated = await this.populateAndHydrateCommentById(comment._id);
+    return {
+      comment: hydrated,
+      postAuthorId: postMeta?.author ? String(postMeta.author) : null,
+      postId,
+    };
   }
 
   async updateCommentWithFile(
@@ -445,7 +632,13 @@ export class CommentsService {
     }
 
     // Update comment data
-    if (dto.text !== undefined) comment.text = dto.text;
+    if (dto.text !== undefined) {
+      const safe = sanitizeText(dto.text, { maxLength: 2000 });
+      if (!safe) {
+        throw new BadRequestException('Comment text cannot be empty');
+      }
+      comment.text = safe;
+    }
     if (image !== undefined) comment.image = image;
     if (imageKey !== undefined) comment.imageKey = imageKey;
 
@@ -461,10 +654,7 @@ export class CommentsService {
       }
     }
 
-    return this.commentModel
-      .findById(comment._id)
-      .populate('author', 'name username email profilePictureUrl profilePicture avatar')
-      .lean();
+    return this.populateAndHydrateCommentById(comment._id);
   }
 
   // Helper method to get all comments for a post (for deletion purposes)

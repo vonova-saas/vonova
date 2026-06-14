@@ -14,6 +14,25 @@ import {
 import { LibraryType, LibraryTopics } from '../schema/library.schema';
 import { UploadService } from '../upload/upload.service';
 import { EnrollService } from '../../course/enroll/enroll.service';
+import {
+  buildStableLmsMaterialDownloadUrl,
+  buildStableLmsMaterialViewUrl,
+  stableMediaGetEnabled,
+} from '../../common/media/stable-media-url';
+import { assertNoPresignedGet } from '../../common/media/legacy-media-guard';
+
+export type MaterialStreamMetaResult =
+  | {
+      error: null;
+      objectKey: string;
+      contentType: string;
+      contentDispositionInline: string;
+      contentDispositionAttachment: string;
+    }
+  | {
+      error: 'not_found' | 'forbidden';
+      message?: string;
+    };
 
 export interface GetAllByTypeQuery {
   /** Filter by content type ('book' | 'guide' | 'presentation') */
@@ -534,16 +553,25 @@ export class LibraryService {
 
     // Add type field and presigned URLs to each item
     const addTypeAndUrls = async (items: any[], type: string) => {
+      const matType =
+        type === 'BOOK' ? 'book' : type === 'GUIDE' ? 'guide' : 'presentation';
       return Promise.all(
         items.map(async (item) => {
           let contentUrl: string | undefined;
-          if (item.fileAssetId) {
+          if (item.fileAssetId && item._id) {
             try {
-              contentUrl = await this.uploadService.getValidPresignedUrl(
-                item.fileAssetId.toString(),
-              );
+              if (stableMediaGetEnabled()) {
+                contentUrl = buildStableLmsMaterialViewUrl(
+                  String(item._id),
+                  matType,
+                );
+              } else {
+                contentUrl = await this.uploadService.getValidPresignedUrl(
+                  item.fileAssetId.toString(),
+                );
+              }
             } catch (error) {
-              console.error(`Failed to get presigned URL for ${type} ${item._id}:`, error);
+              console.error(`Failed to resolve URL for ${type} ${item._id}:`, error);
             }
           }
           return {
@@ -620,17 +648,86 @@ export class LibraryService {
       }
       if (!doc?.fileAssetId) return null;
       await this.assertMaterialViewAllowed(doc, userId);
-      const url = await this.uploadService.getValidPresignedUrl(
+      const url = await this.uploadService.getViewerPresignedUrlForMaterial(
         String(doc.fileAssetId),
       );
       return url;
     };
 
-    for (const kind of order) {
-      const url = await tryLoad(kind);
-      if (url) return { success: true, data: { url } };
+    const meta = await this.getMaterialStreamMeta(
+      materialId,
+      materialType,
+      userId,
+    );
+    if (meta.error === 'forbidden') {
+      throw new ForbiddenException(meta.message ?? 'Forbidden');
+    }
+    if (meta.error) {
+      throw new NotFoundException(meta.message ?? 'Material or file not found');
+    }
+    const url = buildStableLmsMaterialViewUrl(materialId, materialType);
+    assertNoPresignedGet(url);
+    return { success: true, data: { url } };
+  }
+
+  /**
+   * Authorize material view (same as signed URL path) and return S3 key for gateway streaming.
+   */
+  async getMaterialStreamMeta(
+    materialId: string,
+    materialType?: string,
+    userId?: string,
+  ): Promise<MaterialStreamMetaResult> {
+    if (!materialId) {
+      return { error: 'not_found', message: 'Material id is required' };
     }
 
-    throw new NotFoundException('Material or file not found');
+    const norm = (materialType || '').toLowerCase().trim();
+    const order: ('BOOK' | 'GUIDE' | 'PRESENTATION')[] =
+      norm === 'book' || norm === 'books'
+        ? ['BOOK']
+        : norm === 'guide' || norm === 'guides' || norm === 'visual-guide'
+          ? ['GUIDE']
+          : norm === 'presentation' || norm === 'presentations'
+            ? ['PRESENTATION']
+            : ['BOOK', 'GUIDE', 'PRESENTATION'];
+
+    for (const kind of order) {
+      let doc: Record<string, unknown> | null = null;
+      if (kind === 'BOOK') {
+        doc = (await this.bookModel.findById(materialId).lean()) as Record<
+          string,
+          unknown
+        > | null;
+      } else if (kind === 'GUIDE') {
+        doc = (await this.guideModel.findById(materialId).lean()) as Record<
+          string,
+          unknown
+        > | null;
+      } else {
+        doc = (await this.presentationModel
+          .findById(materialId)
+          .lean()) as Record<string, unknown> | null;
+      }
+      if (!doc?.fileAssetId) continue;
+      try {
+        await this.assertMaterialViewAllowed(doc, userId);
+      } catch {
+        return { error: 'forbidden', message: 'You do not have access to this material' };
+      }
+      try {
+        const resolved = await this.uploadService.resolveLibraryAssetObjectKey(
+          String(doc.fileAssetId),
+        );
+        return { error: null, ...resolved };
+      } catch (e) {
+        if (e instanceof NotFoundException) {
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    return { error: 'not_found', message: 'Material or file not found' };
   }
 }

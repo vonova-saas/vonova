@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -12,6 +12,21 @@ import { Role } from '../../auth/enums/role.enum';
 import { CommentsService } from './comments.service';
 import { S3Service } from '../../common/aws/s3.service';
 import { CommunityS3Service } from '../../common/aws/community-s3.service';
+import { AiModerationService } from '../social/ai-moderation.service';
+import { AutoModerationService } from '../social/auto-moderation.service';
+import { sanitizeText } from '../../common/utils/sanitize';
+import {
+  assertNotRapidPostDuplicate,
+  fingerprintIncomingMedia,
+} from './post-duplicate.util';
+import {
+  applyStablePostMedia,
+  applyStableUserPublicMedia,
+} from '../../common/media/community-media-hydration.helper';
+import { stableMediaGetEnabled } from '../../common/media/stable-media-url';
+
+const POST_AUTHOR_PUBLIC =
+  'name email profilePictureUrl username headline bio role followersCount followingCount isVerifiedInstructor coverImageUrl';
 
 @Injectable()
 export class PostsService {
@@ -20,7 +35,26 @@ export class PostsService {
     private readonly commentsService: CommentsService,
     private readonly s3Service: S3Service,
     private readonly communityS3Service: CommunityS3Service,
+    @Inject(forwardRef(() => AiModerationService))
+    private readonly aiModeration: AiModerationService,
+    @Inject(forwardRef(() => AutoModerationService))
+    private readonly autoMod: AutoModerationService,
   ) { }
+
+  /**
+   * Hook AI moderation into post-creation paths without blocking the request.
+   * Synchronous evaluation is cheap (regex heuristics), but we still enqueue
+   * the heavier persist + state-mutation path on the in-process queue.
+   */
+  protected scheduleModeration(
+    targetType: 'POST' | 'COMMENT',
+    targetId: string,
+    userId: string,
+    text: string,
+  ) {
+    if (!text?.trim()) return;
+    this.aiModeration.enqueue({ targetType, targetId, userId, text });
+  }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -31,34 +65,215 @@ export class PostsService {
     return new Types.ObjectId(id);
   }
 
+  private async hydrateUserPublicMediaLean(
+    user: Record<string, unknown> | null | undefined,
+  ): Promise<void> {
+    if (!user || typeof user !== 'object') return;
+    if (stableMediaGetEnabled()) {
+      applyStableUserPublicMedia(user);
+      return;
+    }
+    const pic = user.profilePictureUrl;
+    if (typeof pic === 'string') {
+      const s = await this.s3Service.signProfileMediaReadUrl(pic);
+      if (s) user.profilePictureUrl = s;
+    }
+    const cover = user.coverImageUrl;
+    if (typeof cover === 'string') {
+      const s = await this.s3Service.signProfileMediaReadUrl(cover);
+      if (s) user.coverImageUrl = s;
+    }
+  }
+
+  private async signCommunityPostReadUrl(
+    url: string | null | undefined,
+  ): Promise<string | undefined> {
+    if (!url || typeof url !== 'string') return undefined;
+    const key = url.startsWith('http')
+      ? this.communityS3Service.extractKeyFromUrl(url)
+      : url;
+    if (!key?.startsWith('posts/') && !key?.startsWith('articles/')) {
+      return undefined;
+    }
+    try {
+      return await this.communityS3Service.getSignedUrl(key, 3600);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async hydratePostLeanForClient(
+    post: Record<string, unknown> | null | undefined,
+  ): Promise<void> {
+    if (!post || typeof post !== 'object') return;
+    if (stableMediaGetEnabled()) {
+      applyStablePostMedia(post);
+      return;
+    }
+    const img = post.image;
+    if (typeof img === 'string') {
+      const s = await this.signCommunityPostReadUrl(img);
+      if (s) post.image = s;
+    }
+    if (Array.isArray(post.images)) {
+      post.images = await Promise.all(
+        (post.images as unknown[]).map(async (u) =>
+          typeof u === 'string' ? (await this.signCommunityPostReadUrl(u)) ?? u : u,
+        ),
+      );
+    }
+    if (Array.isArray(post.videos)) {
+      post.videos = await Promise.all(
+        (post.videos as unknown[]).map(async (u) =>
+          typeof u === 'string' ? (await this.signCommunityPostReadUrl(u)) ?? u : u,
+        ),
+      );
+    }
+    const att = post.attachmentsMeta;
+    if (Array.isArray(att)) {
+      for (const a of att) {
+        if (!a || typeof a !== 'object') continue;
+        const o = a as Record<string, unknown>;
+        const url = o.url;
+        if (typeof url === 'string') {
+          const s = await this.signCommunityPostReadUrl(url);
+          if (s) o.url = s;
+        }
+      }
+    }
+    await this.hydrateUserPublicMediaLean(post.author as Record<string, unknown>);
+    const sharedBy = post.sharedBy;
+    if (sharedBy && typeof sharedBy === 'object' && !Array.isArray(sharedBy)) {
+      await this.hydrateUserPublicMediaLean(sharedBy as Record<string, unknown>);
+    }
+    const sp = post.sharedPost;
+    if (sp && typeof sp === 'object' && !Array.isArray(sp)) {
+      await this.hydratePostLeanForClient(sp as Record<string, unknown>);
+    }
+  }
+
   private isOwnerOrAdmin(resourceAuthorId: string, userId: string, role: string): boolean {
     return resourceAuthorId.toString() === userId.toString() || role === Role.INSTRUCTOR_USER;
+  }
+
+  private normalizeHashtags(tags?: string[]): string[] {
+    if (!tags?.length) return [];
+    const out = tags
+      .map((t) =>
+        String(t)
+          .replace(/^#/, '')
+          .toLowerCase()
+          .trim(),
+      )
+      .filter(Boolean);
+    return [...new Set(out)];
+  }
+
+  private socialCreateFields(userId: string, dto: CreatePostDto) {
+    const safeContent = sanitizeText(dto.content, { maxLength: 5000 });
+    if (!safeContent) {
+      throw new BadRequestException('Post content cannot be empty');
+    }
+    return {
+      author: this.toObjectId(userId),
+      content: safeContent,
+      tags: dto.tags || [],
+      hashtags: this.normalizeHashtags(dto.hashtags),
+      visibility: dto.visibility ?? 'PUBLIC',
+      courseId:
+        dto.courseId && String(dto.courseId).trim()
+          ? this.toObjectId(dto.courseId)
+          : null,
+      isPinned: dto.isPinned ?? false,
+      instructorOnly: dto.instructorOnly ?? false,
+    };
+  }
+
+  /** Short-window duplicate + burst rate limit (does not replace monthly credits). */
+  private async enforceAntiSpamBeforeCreate(
+    userId: string,
+    dto: CreatePostDto,
+    opts?: { uploadParts?: string[] },
+  ): Promise<void> {
+    const authorOid = this.toObjectId(userId);
+    const burst = await this.postModel.countDocuments({
+      author: authorOid,
+      createdAt: { $gte: new Date(Date.now() - 5000) },
+      isDeleted: { $ne: true },
+    });
+    if (burst >= 25) {
+      throw new BadRequestException(
+        'You are posting too quickly. Please wait a few seconds and try again.',
+      );
+    }
+
+    const safeContent = sanitizeText(dto.content, { maxLength: 5000 });
+    if (!safeContent) return;
+
+    const incomingMediaFingerprint = fingerprintIncomingMedia({
+      imageKey: dto.imageKey,
+      uploadParts: opts?.uploadParts,
+    });
+
+    await assertNotRapidPostDuplicate(this.postModel, {
+      authorId: userId,
+      content: safeContent,
+      incomingMediaFingerprint,
+      contextKey: '',
+    });
+
+    const auto = this.autoMod.evaluateText(safeContent, {
+      userId,
+      surface: 'post',
+    });
+    if (auto.shouldBlock) {
+      throw new BadRequestException(
+        'Content could not be posted. Please revise and try again.',
+      );
+    }
+  }
+
+  private applySocialUpdateFields(post: PostDocument, dto: UpdatePostDto) {
+    if (dto.content !== undefined) {
+      const safe = sanitizeText(dto.content, { maxLength: 5000 });
+      if (!safe) {
+        throw new BadRequestException('Post content cannot be empty');
+      }
+      post.content = safe;
+    }
+    if (dto.hashtags !== undefined) {
+      post.hashtags = this.normalizeHashtags(dto.hashtags);
+    }
+    if (dto.visibility !== undefined) post.visibility = dto.visibility;
+    if (dto.courseId !== undefined) {
+      post.courseId =
+        dto.courseId && String(dto.courseId).trim()
+          ? this.toObjectId(dto.courseId)
+          : null;
+    }
+    if (dto.isPinned !== undefined) post.isPinned = dto.isPinned;
+    if (dto.instructorOnly !== undefined) post.instructorOnly = dto.instructorOnly;
   }
 
   // ─── Posts ─────────────────────────────────────────────────────────────────
 
   async createPost(userId: string, dto: CreatePostDto) {
-    try {
-      const post = await this.postModel.create({
-        author: this.toObjectId(userId),
-        content: dto.content,
-        tags: dto.tags || [],
-        image: dto.image || null,
-        imageKey: dto.imageKey || null,
-      });
+    await this.enforceAntiSpamBeforeCreate(userId, dto);
 
-      return this.postModel
-        .findById(post._id)
-        .populate('author', 'name profilePictureUrl role')
-        .lean();
-    } catch (error: any) {
-      // Handle duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
-        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
-        throw new BadRequestException('Duplicate post detected. This post already exists.');
-      }
-      throw error;
-    }
+    const post = await this.postModel.create({
+      ...this.socialCreateFields(userId, dto),
+      image: dto.image || null,
+      imageKey: dto.imageKey || null,
+    });
+
+    this.scheduleModeration('POST', String(post._id), userId, dto.content ?? '');
+
+    const created = await this.postModel
+      .findById(post._id)
+      .populate('author', POST_AUTHOR_PUBLIC)
+      .lean();
+    await this.hydratePostLeanForClient(created as Record<string, unknown>);
+    return created;
   }
 
   async getAllPosts(page: number, limit: number) {
@@ -70,12 +285,18 @@ export class PostsService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePictureUrl role')
+        .populate('author', POST_AUTHOR_PUBLIC)
         .populate('sharedPost', 'content author image images imageKeys videos videoKeys createdAt')
-        .populate('sharedPost.author', 'name profilePictureUrl role')
+        .populate('sharedPost.author', POST_AUTHOR_PUBLIC)
         .lean(),
       this.postModel.countDocuments(),
     ]);
+
+    await Promise.all(
+      (posts as Record<string, unknown>[]).map((p) =>
+        this.hydratePostLeanForClient(p),
+      ),
+    );
 
     return {
       posts,
@@ -89,11 +310,12 @@ export class PostsService {
   async getPostById(postId: string) {
     const post = await this.postModel
       .findById(this.toObjectId(postId))
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .lean();
 
     if (!post) throw new NotFoundErr('Post not found');
 
+    await this.hydratePostLeanForClient(post as Record<string, unknown>);
     return post;
   }
 
@@ -103,16 +325,28 @@ export class PostsService {
 
     const [posts, total] = await Promise.all([
       this.postModel
-        .find({ author: authorId })
+        .find({
+          author: authorId,
+          $or: [{ groupId: null }, { groupId: { $exists: false } }],
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name profilePictureUrl role')
+        .populate('author', POST_AUTHOR_PUBLIC)
         .populate('sharedPost', 'content author image images imageKeys videos videoKeys createdAt')
-        .populate('sharedPost.author', 'name profilePictureUrl role')
+        .populate('sharedPost.author', POST_AUTHOR_PUBLIC)
         .lean(),
-      this.postModel.countDocuments({ author: authorId }),
+      this.postModel.countDocuments({
+        author: authorId,
+        $or: [{ groupId: null }, { groupId: { $exists: false } }],
+      }),
     ]);
+
+    await Promise.all(
+      (posts as Record<string, unknown>[]).map((p) =>
+        this.hydratePostLeanForClient(p),
+      ),
+    );
 
     return {
       posts,
@@ -140,8 +374,9 @@ export class PostsService {
       }
     }
 
-    if (dto.content !== undefined) post.content = dto.content;
+    // content normalisation now lives inside applySocialUpdateFields
     if (dto.tags !== undefined) post.tags = dto.tags || [];
+    this.applySocialUpdateFields(post, dto);
     if (dto.image !== undefined) post.image = dto.image || null;
     if (dto.imageKey !== undefined) post.imageKey = dto.imageKey || null;
 
@@ -149,7 +384,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .lean();
   }
 
@@ -202,9 +437,28 @@ export class PostsService {
     // Delete all comments associated with this post and their images
     await this.deletePostCommentsAndImages(post._id.toString());
 
+    let originalPostId: string | null = null;
+    let originalPostSharesCount: number | null = null;
+
+    if (post.sharedPost) {
+      const original = await this.postModel.findById(post.sharedPost);
+      if (original) {
+        original.sharesCount = Math.max(0, (original.sharesCount ?? 0) - 1);
+        await original.save();
+        originalPostId = original._id.toString();
+        originalPostSharesCount = original.sharesCount;
+      }
+    }
+
     await this.postModel.findByIdAndDelete(post._id);
 
-    return { deleted: true, postId };
+    return {
+      deleted: true,
+      postId: post._id.toString(),
+      isRepost: Boolean(post.sharedPost),
+      originalPostId,
+      originalPostSharesCount,
+    };
   }
 
   // Test method to verify comment deletion (can be removed after testing)
@@ -336,6 +590,56 @@ export class PostsService {
     return {
       liked: !alreadyLiked,
       likesCount: post.likesCount,
+      authorId: String(post.author),
+      postId: String(post._id),
+    };
+  }
+
+  async getPostLikesUsers(postId: string, page = 1, limit = 20) {
+    const post = await this.postModel
+      .findById(this.toObjectId(postId))
+      .select('likes likesCount')
+      .lean();
+    if (!post) throw new NotFoundErr('Post not found');
+    const allIds = ((post as { likes?: Types.ObjectId[] }).likes ?? []).map((id) =>
+      String(id),
+    );
+    const total = allIds.length;
+    const skip = (page - 1) * limit;
+    const pageIds = allIds
+      .slice(skip, skip + limit)
+      .filter((id) => Types.ObjectId.isValid(id));
+    if (pageIds.length === 0) {
+      const totalPages = Math.max(1, Math.ceil(total / limit) || 1);
+      return {
+        items: [],
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    }
+    const User = this.postModel.db.model('User');
+    const oids = pageIds.map((id) => new Types.ObjectId(id));
+    const users = await User.find({ _id: { $in: oids } })
+      .select(POST_AUTHOR_PUBLIC)
+      .lean();
+    const byId = new Map(
+      (users as Record<string, unknown>[]).map((u) => [String(u._id), u]),
+    );
+    const items = pageIds
+      .map((id) => byId.get(id))
+      .filter(Boolean) as Record<string, unknown>[];
+    await Promise.all(
+      items.map((u) => this.hydrateUserPublicMediaLean(u)),
+    );
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
@@ -356,7 +660,12 @@ export class PostsService {
     const newSharedPost = await this.postModel.create({
       author: this.toObjectId(userId),
       content: sharedPostContent,
-      tags: [], // Shared posts don't have tags by default
+      tags: [],
+      hashtags: [],
+      visibility: (originalPost as PostDocument).visibility || 'PUBLIC',
+      courseId: null,
+      isPinned: false,
+      instructorOnly: false,
       sharedPost: this.toObjectId(postId),
       sharedBy: this.toObjectId(userId),
       shareComment: shareComment || null,
@@ -369,23 +678,27 @@ export class PostsService {
     // Return the newly created shared post with full population
     const result = await this.postModel
       .findById(newSharedPost._id)
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .populate('sharedPost', 'content author image images createdAt')
-      .populate('sharedBy', 'name profilePicture role')
-      .populate('sharedPost.author', 'name profilePictureUrl role')
+      .populate('sharedBy', 'name profilePicture profilePictureUrl role')
+      .populate('sharedPost.author', POST_AUTHOR_PUBLIC)
       .lean();
 
-    const frontendUrl = process.env.FRONTEND_ORIGIN;
-    if (!frontendUrl) {
-      throw new NotFoundErr('FRONTEND_ORIGIN is required in .env');
-    }
+    await this.hydratePostLeanForClient(result as Record<string, unknown>);
+
+    const frontendUrl =
+      process.env.FRONTEND_ORIGIN?.trim() ||
+      process.env.COMMUNITY_APP_ORIGIN?.trim() ||
+      'http://localhost:3000';
 
     // Generate shareable link
-    const shareableLink = `${frontendUrl}/posts/${postId}`;
+    const shareableLink = `${frontendUrl.replace(/\/+$/, '')}/community/explore`;
 
     return {
       sharedPost: result,
       originalPostSharesCount: originalPost.sharesCount,
+      originalAuthorId: String(originalPost.author),
+      originalPostId: String(originalPost._id),
       shareableLink,
     };
   }
@@ -396,15 +709,18 @@ export class PostsService {
     dto: CreatePostDto,
     file?: Express.Multer.File,
   ) {
-    try {
-      let image: string | undefined;
-      let imageKey: string | undefined;
+    const uploadParts = file
+      ? [`${file.originalname}|${file.size}|${file.mimetype || ''}`]
+      : undefined;
+    await this.enforceAntiSpamBeforeCreate(userId, dto, { uploadParts });
 
+    let image: string | undefined;
+    let imageKey: string | undefined;
+
+    try {
       // Create post first to get postId
       const post = await this.postModel.create({
-        author: this.toObjectId(userId),
-        content: dto.content,
-        tags: dto.tags || [],
+        ...this.socialCreateFields(userId, dto),
         image: null,
         imageKey: null,
       });
@@ -432,14 +748,9 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePictureUrl role')
+        .populate('author', POST_AUTHOR_PUBLIC)
         .lean();
     } catch (error: any) {
-      // Handle duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
-        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
-        throw new BadRequestException('Duplicate post detected. This post already exists.');
-      }
       throw error;
     }
   }
@@ -449,12 +760,15 @@ export class PostsService {
     dto: CreatePostDto,
     files: Express.Multer.File[],
   ) {
+    const uploadParts = files.map(
+      (f) => `${f.originalname}|${f.size}|${f.mimetype || ''}`,
+    );
+    await this.enforceAntiSpamBeforeCreate(userId, dto, { uploadParts });
+
     try {
       // Create post first to get postId
       const post = await this.postModel.create({
-        author: this.toObjectId(userId),
-        content: dto.content,
-        tags: dto.tags || [],
+        ...this.socialCreateFields(userId, dto),
         images: null,
         imageKeys: null,
       });
@@ -495,14 +809,9 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePictureUrl role')
+        .populate('author', POST_AUTHOR_PUBLIC)
         .lean();
     } catch (error: any) {
-      // Handle duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
-        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
-        throw new BadRequestException('Duplicate post detected. This post already exists.');
-      }
       throw error;
     }
   }
@@ -513,12 +822,20 @@ export class PostsService {
     videos: Express.Multer.File[],
     images?: Express.Multer.File[],
   ) {
+    const uploadParts = [
+      ...(images ?? []).map(
+        (f) => `${f.originalname}|${f.size}|${f.mimetype || ''}`,
+      ),
+      ...videos.map(
+        (f) => `${f.originalname}|${f.size}|${f.mimetype || ''}`,
+      ),
+    ];
+    await this.enforceAntiSpamBeforeCreate(userId, dto, { uploadParts });
+
     try {
       // Create post first to get postId
       const post = await this.postModel.create({
-        author: this.toObjectId(userId),
-        content: dto.content,
-        tags: dto.tags || [],
+        ...this.socialCreateFields(userId, dto),
         images: null,
         imageKeys: null,
         videos: null,
@@ -578,14 +895,9 @@ export class PostsService {
 
       return this.postModel
         .findById(post._id)
-        .populate('author', 'name profilePictureUrl role')
+        .populate('author', POST_AUTHOR_PUBLIC)
         .lean();
     } catch (error: any) {
-      // Handle duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern['author'] && error.keyPattern['content']) {
-        console.log(`[POSTS BACKEND] Duplicate post blocked for user ${userId}: ${dto.content}`);
-        throw new BadRequestException('Duplicate post detected. This post already exists.');
-      }
       throw error;
     }
   }
@@ -653,8 +965,9 @@ export class PostsService {
     }
 
     // Update post data
-    if (dto.content !== undefined) post.content = dto.content;
+    // content normalisation now lives inside applySocialUpdateFields
     if (dto.tags !== undefined) post.tags = dto.tags || [];
+    this.applySocialUpdateFields(post, dto);
     if (image !== undefined) post.image = image;
     if (imageKey !== undefined) post.imageKey = imageKey;
 
@@ -672,7 +985,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .lean();
   }
 
@@ -722,8 +1035,9 @@ export class PostsService {
     }
 
     // Update post data
-    if (dto.content !== undefined) post.content = dto.content;
+    // content normalisation now lives inside applySocialUpdateFields
     if (dto.tags !== undefined) post.tags = dto.tags || [];
+    this.applySocialUpdateFields(post, dto);
 
     // Replace images if new ones were uploaded
     if (uploadedImages.length > 0) {
@@ -745,7 +1059,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .lean();
   }
 
@@ -814,8 +1128,9 @@ export class PostsService {
     }
 
     // Update post data
-    if (dto.content !== undefined) post.content = dto.content;
+    // content normalisation now lives inside applySocialUpdateFields
     if (dto.tags !== undefined) post.tags = dto.tags || [];
+    this.applySocialUpdateFields(post, dto);
 
     // Replace images if new ones were uploaded
     if (uploadedImages.length > 0) {
@@ -852,7 +1167,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('author', 'name profilePictureUrl role')
+      .populate('author', POST_AUTHOR_PUBLIC)
       .lean();
   }
 

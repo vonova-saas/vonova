@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import {
   S3Client,
   PutObjectCommand,
@@ -6,6 +6,14 @@ import {
   HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { normalizeLmsS3ObjectKey } from '../s3-key.util';
+import { tryValidateLmsObjectKeyForPresign } from '../../media/lms-presign-key.validator';
+import { blockLegacyGetPresign } from '../../media/legacy-media-guard';
+
+export type PresignedGetObjectOptions = {
+  responseContentDisposition?: string;
+  responseContentType?: string;
+};
 
 function trimEnv(value: string | undefined): string | undefined {
   const t = value?.trim();
@@ -29,7 +37,6 @@ export class S3Service {
 
   private resolveBucket(): string | undefined {
     return (
-      trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
       trimEnv(process.env.AWS_S3_BUCKET_LMS) ||
       trimEnv(process.env.AWS_S3_BUCKET_LMS_AI) ||
       trimEnv(process.env.AWS_S3_BUCKET) ||
@@ -105,6 +112,8 @@ export class S3Service {
         accessKeyId,
         secretAccessKey,
       },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
     return { client: this.s3Client, bucket: this.resolvedBucket };
   }
@@ -115,9 +124,18 @@ export class S3Service {
     expiresInSeconds = this.presignExpiresInSeconds,
   ): Promise<string> {
     const { client, bucket } = this.ensureClient();
+    const v = tryValidateLmsObjectKeyForPresign(objectKey);
+    if (!v.ok) {
+      console.warn('[LMS_PRESIGN_KEY_REJECTED]', {
+        op: 'put',
+        reason: v.reason,
+        keySample: String(objectKey).slice(0, 160),
+      });
+      throw new BadRequestException(`Invalid S3 object key: ${v.reason}`);
+    }
     const command = new PutObjectCommand({
       Bucket: bucket,
-      Key: objectKey,
+      Key: v.key,
       ContentType: contentType,
     });
     return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
@@ -126,16 +144,59 @@ export class S3Service {
   async getPresignedGetUrl(
     objectKey: string,
     expiresInSeconds = this.presignExpiresInSeconds,
+    options?: PresignedGetObjectOptions,
   ): Promise<string> {
+    blockLegacyGetPresign('lms.S3Service.getPresignedGetUrl');
     try {
       const { client, bucket } = this.ensureClient();
+      const region = this.resolveRegion();
+      const v = tryValidateLmsObjectKeyForPresign(objectKey);
+      if (!v.ok) {
+        console.warn('[LMS_PRESIGN_KEY_REJECTED]', {
+          op: 'get',
+          reason: v.reason,
+          keySample: String(objectKey).slice(0, 160),
+        });
+        throw new BadRequestException(`Invalid S3 object key: ${v.reason}`);
+      }
       const command = new GetObjectCommand({
         Bucket: bucket,
-        Key: objectKey,
+        Key: v.key,
+        ...(options?.responseContentDisposition
+          ? {
+              ResponseContentDisposition: options.responseContentDisposition,
+            }
+          : {}),
+        ...(options?.responseContentType
+          ? { ResponseContentType: options.responseContentType }
+          : {}),
       });
-      return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+      const url = await getSignedUrl(client, command, {
+        expiresIn: expiresInSeconds,
+      });
+      let host: string | undefined;
+      try {
+        host = new URL(url).hostname;
+      } catch {
+        host = undefined;
+      }
+      console.log('[LMS S3 GET PRESIGN]', {
+        bucket,
+        region: region ?? null,
+        objectKey: v.key,
+        expiresInSeconds,
+        hasDisposition: !!options?.responseContentDisposition,
+        mimeHint: options?.responseContentType ?? null,
+        signedUrlHost: host,
+        ok: true,
+      });
+      return url;
     } catch (error) {
-      console.error('Error generating presigned URL:', error);
+      console.error('[LMS S3 GET PRESIGN]', {
+        objectKey: String(objectKey).slice(0, 200),
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       // Provide specific guidance for common AWS issues
       if (error instanceof Error) {
@@ -227,21 +288,31 @@ export class S3Service {
     expiresInSeconds = this.presignExpiresInSeconds,
   ): Promise<string> {
     const { client, bucket } = this.ensureClient();
+    const v = tryValidateLmsObjectKeyForPresign(objectKey);
+    if (!v.ok) {
+      console.warn('[LMS_PRESIGN_KEY_REJECTED]', {
+        op: 'put_library',
+        reason: v.reason,
+        keySample: String(objectKey).slice(0, 160),
+      });
+      throw new BadRequestException(`Invalid S3 object key: ${v.reason}`);
+    }
     const command = new PutObjectCommand({
       Bucket: bucket,
-      Key: objectKey,
+      Key: v.key,
       ContentType: contentType,
     });
     return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
   }
 
   async headObjectExistsInLibrary(objectKey: string): Promise<boolean> {
+    const key = normalizeLmsS3ObjectKey(objectKey);
     const { client, bucket } = this.ensureClient();
     try {
       await client.send(
         new HeadObjectCommand({
           Bucket: bucket,
-          Key: objectKey,
+          Key: key,
         }),
       );
       return true;

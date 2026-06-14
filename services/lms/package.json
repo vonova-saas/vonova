@@ -24,7 +24,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "repair:media-keys": "ts-node -r tsconfig-paths/register src/admin-seed/repair-lms-media-keys.ts",
+    "repair:lesson-video": "ts-node -r tsconfig-paths/register src/admin-seed/repair-lms-media-keys.ts",
+    "repair:library-asset": "ts-node -r tsconfig-paths/register src/admin-seed/repair-lms-media-keys.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.980.0",
@@ -38,6 +41,7 @@
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.12",
+    "@nestjs/schedule": "5.0.1",
     "@nestjs/websockets": "^11.1.12",
     "axios": "^1.6.2",
     "class-transformer": "^0.5.1",

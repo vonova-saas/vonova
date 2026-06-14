@@ -166,6 +166,62 @@ export class AppController {
     };
   }
 
+  /**
+   * Aggregate health: returns a per-subsystem rollup the dashboard can poll.
+   * Each subsystem check is bounded to {@link HEALTH_TIMEOUT_MS} so a slow
+   * downstream never holds up the entire endpoint.
+   */
+  @Get('health')
+  @ApiOperation({ summary: 'Aggregate gateway + downstream health' })
+  async aggregateHealth(): Promise<object> {
+    const safe = async (
+      name: string,
+      run: () => Promise<unknown>,
+    ): Promise<{ name: string; ok: boolean; latencyMs: number; details?: unknown }> => {
+      const start = Date.now();
+      try {
+        const details = await run();
+        return { name, ok: true, latencyMs: Date.now() - start, details };
+      } catch (err) {
+        return {
+          name,
+          ok: false,
+          latencyMs: Date.now() - start,
+          details: err instanceof Error ? err.message : String(err),
+        };
+      }
+    };
+
+    const checks = await Promise.all([
+      safe('nats:app', () =>
+        firstValueFrom(
+          this.natsClient
+            .send({ cmd: 'getAppHealth' }, {})
+            .pipe(timeout(AppController.HEALTH_TIMEOUT_MS)),
+        ),
+      ),
+      safe('nats:lms', () =>
+        firstValueFrom(
+          this.natsClient
+            .send({ cmd: 'getLmsHealth' }, {})
+            .pipe(timeout(AppController.HEALTH_TIMEOUT_MS)),
+        ),
+      ),
+      safe('s3', async () => {
+        const hasBucket = !!process.env.AWS_S3_BUCKET_APP_COMM;
+        return { configured: hasBucket };
+      }),
+      safe('socket', () => Promise.resolve({ namespace: '/community' })),
+    ]);
+
+    const ok = checks.every((c) => c.ok);
+    return {
+      status: ok ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      checks,
+    };
+  }
+
   @Get('me/usage')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get today's daily usage limits" })

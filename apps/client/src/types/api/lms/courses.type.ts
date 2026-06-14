@@ -1,3 +1,5 @@
+import type { LessonProgressionState } from "./progression.type";
+
 // Course Types based on API documentation
 
 export interface Price {
@@ -19,6 +21,8 @@ export interface Course {
   visibility?: "PUBLIC" | "PRIVATE";
   tags?: string[];
   thumbnailUrl?: string;
+  /** S3 object key when thumbnail is stored as LMS media (not a public URL). */
+  thumbnailKey?: string;
   language?: string;
   price?: Price;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -254,7 +258,7 @@ export interface CourseContentTree {
   chapters: ContentChapter[];
 }
 
-export interface LessonContent {
+export interface LessonContent extends Partial<LessonProgressionState> {
   _id: string;
   title: string;
   content: string;

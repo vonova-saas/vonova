@@ -6,6 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { Toaster } from "sonner";
 import { ViewTransitions } from "next-view-transitions";
+import { useSyncMediaAuthCookie } from "@/hooks/use-sync-media-auth-cookie";
+
+function MediaAuthSync() {
+  useSyncMediaAuthCookie();
+  return null;
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +38,7 @@ function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ViewTransitions>
         <Toaster position="bottom-right" richColors duration={4000} />
+        <MediaAuthSync />
         {children}
         <ChatbotWidget />
         <GoogleAnalytics gaId="G-KGPW43F35B" />

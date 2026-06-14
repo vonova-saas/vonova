@@ -12,9 +12,15 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
 import configuration from './common/config/configuration';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
+import { validateEnv } from './common/utils/env';
+import { logMediaModeStartup } from './common/media/legacy-media-guard';
 
 loadEnv({ path: join(__dirname, '..', '.env') });
 loadEnv();
+
+validateEnv();
+logMediaModeStartup('gateway');
 
 async function bootstrap() {
   // Initialize logger first to create logs directory
@@ -94,6 +100,10 @@ async function bootstrap() {
 
   // Cookie parser
   app.use(cookieParser());
+
+  // Correlation id — must run before any logging / rate-limiting / business
+  // logic so every downstream log line and error response carries it.
+  app.use(requestIdMiddleware);
 
   app.use(
     rateLimit({

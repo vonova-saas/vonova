@@ -30,6 +30,7 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { Public } from '../../../common/decorators/public.decorator';
 import type { UploadedFile as CustomUploadedFile } from '../../../common/interfaces/file.interface';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -206,6 +207,7 @@ export class ArticlesGatewayController {
       contentBlocks,
       category,
       seoMetadata,
+      slug: typeof body.slug === 'string' ? body.slug : undefined,
     });
 
     const errors = await validate(createArticleDto);
@@ -331,9 +333,30 @@ export class ArticlesGatewayController {
       },
     },
   })
+  @Public()
   @Get()
   async findAll(@Query() query: QueryArticlesDto) {
     return firstValueFrom(this.articlesService.getArticles(query));
+  }
+
+  @ApiOperation({
+    summary: 'Get article by slug',
+    description: 'Retrieves a specific article by its slug',
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'The URL-friendly slug of the article',
+    example: 'getting-started-with-nestjs',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Article retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  @Public()
+  @Get('slug/:slug')
+  async findBySlug(@Param('slug') slug: string) {
+    return firstValueFrom(this.articlesService.getArticleBySlug(slug));
   }
 
   @ApiOperation({})
@@ -374,28 +397,10 @@ export class ArticlesGatewayController {
     },
   })
   @ApiResponse({ status: 404, description: 'Article not found' })
+  @Public()
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return firstValueFrom(this.articlesService.getArticleById(id));
-  }
-
-  @ApiOperation({
-    summary: 'Get article by slug',
-    description: 'Retrieves a specific article by its slug',
-  })
-  @ApiParam({
-    name: 'slug',
-    description: 'The URL-friendly slug of the article',
-    example: 'getting-started-with-nestjs',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Article retrieved successfully',
-  })
-  @ApiResponse({ status: 404, description: 'Article not found' })
-  @Get('slug/:slug')
-  async findBySlug(@Param('slug') slug: string) {
-    return firstValueFrom(this.articlesService.getArticleBySlug(slug));
   }
 
   @ApiOperation({

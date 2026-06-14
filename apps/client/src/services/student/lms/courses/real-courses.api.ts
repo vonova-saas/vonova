@@ -1,17 +1,36 @@
 import API from "@/services/axios-client";
-import { unwrapLmsData } from "@/lib/api/unwrap-lms-body";
+import {
+  peelLmsResponseLayers,
+  unwrapLmsData,
+  unwrapLmsDataDeep,
+} from "@/lib/api/unwrap-lms-body";
 import type {
   Course,
   CoursesResponse,
   Enrollment,
   CourseContentTree,
   LessonAccess,
-  LessonContent,
   StudentCourseProgress,
   CourseReview,
   ReviewsResponse,
   CreateReviewDto,
 } from "@/types/api/lms/courses.type";
+import type {
+  LessonCompletionRequirements,
+  LessonProgressionState,
+} from "@/types/api/lms/progression.type";
+
+function normalizeCourseFromResponse(body: unknown): Course {
+  const peeled = peelLmsResponseLayers(body) as unknown;
+  if (peeled && typeof peeled === "object") {
+    const o = peeled as Record<string, unknown>;
+    const id = o._id ?? o.id;
+    if (id != null && String(id).trim() !== "") {
+      return { ...o, _id: String(id) } as Course;
+    }
+  }
+  return unwrapLmsData<Course>(body);
+}
 
 // Browse Courses
 export const getAllCoursesQueryFn = async (params?: {
@@ -31,12 +50,12 @@ export const getAllCoursesQueryFn = async (params?: {
 
 export const getCourseBySlugQueryFn = async (slug: string): Promise<Course> => {
   const response = await API.get(`/api/v1/lms/courses/slug/${slug}`);
-  return unwrapLmsData<Course>(response.data);
+  return normalizeCourseFromResponse(response.data);
 };
 
 export const getCourseByIdQueryFn = async (courseId: string): Promise<Course> => {
   const response = await API.get(`/api/v1/lms/courses/${courseId}`);
-  return unwrapLmsData<Course>(response.data);
+  return normalizeCourseFromResponse(response.data);
 };
 
 // Enrollment
@@ -75,7 +94,7 @@ export const getCourseContentTreeQueryFn = async (
   courseId: string,
 ): Promise<CourseContentTree> => {
   const response = await API.get(`/api/v1/lms/courses/${courseId}/content`);
-  return unwrapLmsData<CourseContentTree>(response.data);
+  return unwrapLmsDataDeep<CourseContentTree>(response.data);
 };
 
 export const getLessonAccessQueryFn = async (courseId: string, lessonId: string): Promise<{ message: string; data: LessonAccess }> => {
@@ -116,7 +135,15 @@ export type LessonContentApiEnvelope = {
     };
     /** Whether the current user has marked this lesson complete (LMS content service). */
     lessonCompleted?: boolean;
-  };
+    computedCompletionRequirements?: LessonCompletionRequirements;
+  } & Partial<LessonProgressionState>;
+};
+
+export type LessonWatchProgress = Omit<
+  LessonProgressionState,
+  "watchThreshold"
+> & {
+  threshold: number;
 };
 
 /**
@@ -227,7 +254,10 @@ export const getCourseProgressQueryFn = async (
   courseId: string,
 ): Promise<StudentCourseProgress> => {
   const response = await API.get(`/api/v1/lms/courses/${courseId}/progress`);
-  return parseStudentCourseProgress(response.data, courseId);
+  return parseStudentCourseProgress(
+    unwrapLmsDataDeep<unknown>(response.data),
+    courseId,
+  );
 };
 
 export const markLessonCompleteMutationFn = async (
@@ -240,6 +270,28 @@ export const markLessonCompleteMutationFn = async (
     data,
   );
   return response.data;
+};
+
+export const updateLessonWatchMutationFn = async (
+  courseId: string,
+  lessonId: string,
+  data: { currentTime: number; duration: number },
+): Promise<LessonWatchProgress> => {
+  const response = await API.patch(
+    `/api/v1/lms/courses/${courseId}/lessons/${lessonId}/watch`,
+    data,
+  );
+  return unwrapLmsDataDeep<LessonWatchProgress>(response.data);
+};
+
+export const getLessonWatchQueryFn = async (
+  courseId: string,
+  lessonId: string,
+): Promise<LessonWatchProgress> => {
+  const response = await API.get(
+    `/api/v1/lms/courses/${courseId}/lessons/${lessonId}/watch`,
+  );
+  return unwrapLmsDataDeep<LessonWatchProgress>(response.data);
 };
 
 // Reviews

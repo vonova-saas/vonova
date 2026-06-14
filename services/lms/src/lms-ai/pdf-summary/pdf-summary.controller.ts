@@ -5,7 +5,7 @@ import { Controller, BadRequestException, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx } from '@nestjs/microservices';
 import { NatsContext } from '@nestjs/microservices';
 import { PdfSummaryService } from './pdf-summary.service';
-import { DailyUsageLimitService } from '../usage/daily-usage-limit.service.refactored';
+import { AiCreditService } from '../../ai-usage/ai-credit.service';
 
 @Controller()
 export class PdfSummaryController {
@@ -13,7 +13,7 @@ export class PdfSummaryController {
 
   constructor(
     private readonly pdfSummaryService: PdfSummaryService,
-    private readonly dailyUsageLimitService: DailyUsageLimitService,
+    private readonly aiCreditService: AiCreditService,
   ) { }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.upload' })
@@ -29,10 +29,11 @@ export class PdfSummaryController {
       language,
       ip = '',
       userAgent = '',
+      idempotency_key,
     } = data;
 
     this.logger.log(
-      `Received PDF upload request: filename="${file.originalname}", size=${file.buffer?.length}, user_id=${user_id}, auto_summarize=${auto_summarize}`,
+      `Received PDF upload request: filename="${file?.originalname}", size=${file?.buffer?.length}, user_id=${user_id}, auto_summarize=${auto_summarize}`,
     );
 
     if (!file) {
@@ -62,14 +63,12 @@ export class PdfSummaryController {
       ...(language && { language }),
     };
 
-    await this.dailyUsageLimitService.consumeOrThrow({
-      userId: user_id,
-      role,
-      plan,
-      feature: 'pdf_summary',
-    });
-
-    return this.pdfSummaryService.uploadPDF(request, ip, userAgent);
+    return this.aiCreditService.executeWithCredits(
+      user_id,
+      'PDF_SUMMARY',
+      idempotency_key,
+      () => this.pdfSummaryService.uploadPDF(request, ip, userAgent)
+    );
   }
 
   @MessagePattern({ cmd: 'lms.ai.pdf.chat' })
@@ -396,20 +395,19 @@ export class PdfSummaryController {
     }
 
     const audioBuffer = Buffer.from(audioBase64, 'base64');
-    await this.dailyUsageLimitService.consumeOrThrow({
-      userId: user_id,
-      role,
-      plan,
-      feature: 'pdf_voice',
-    });
 
-    return this.pdfSummaryService.voiceAsk(
-      session_id,
-      audioBuffer,
-      mimeType || 'audio/webm',
-      filename,
+    return this.aiCreditService.executeWithCredits(
       user_id,
+      'VOICE_CHAT',
       idempotency_key,
+      () => this.pdfSummaryService.voiceAsk(
+        session_id,
+        audioBuffer,
+        mimeType || 'audio/webm',
+        filename,
+        user_id,
+        idempotency_key,
+      )
     );
   }
 }

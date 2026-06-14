@@ -21,3 +21,15 @@ export class MarkLessonCompleteDto {
   @Min(0)
   timeSpentSec?: number;
 }
+
+export class UpdateLessonWatchDto {
+  @ApiProperty({ description: 'Current playback position in seconds', example: 120 })
+  @IsNumber()
+  @Min(0)
+  currentTime: number;
+
+  @ApiProperty({ description: 'Video duration in seconds', example: 600 })
+  @IsNumber()
+  @Min(0)
+  duration: number;
+}

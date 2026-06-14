@@ -1,0 +1,1 @@
+export const LESSON_WATCH_COMPLETE_THRESHOLD = 90;

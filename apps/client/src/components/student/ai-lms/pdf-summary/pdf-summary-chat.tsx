@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useUserId } from "@/hooks";
 import { useDropzone } from "react-dropzone";
 import {
@@ -16,17 +17,9 @@ import {
   AIConversationScrollButton,
 } from "@/components/ui/ai/ai-components/conversation";
 import {
-  AIBranch,
-  AIBranchMessages,
-  AIBranchSelector,
-  AIBranchPrevious,
-  AIBranchNext,
-} from "@/components/ui/ai/ai-components/branch";
-import {
   TrashIcon,
   FileText,
   Upload,
-  SendIcon,
   ArrowLeft,
   MessageSquare,
   Download,
@@ -39,8 +32,10 @@ import {
   Mic,
   Play,
   Pause,
-  Volume2,
   Square,
+  Sparkles,
+  BookOpenCheck,
+  ListTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +59,8 @@ import PDFChatMessage from "./pdf-chat-message";
 import LastPDFChats from "./last-pdf-chats";
 import { uploadPDFMutationFn, chatWithPDFMutationFn, getSessionsQueryFn } from "@/services/student/lms-ai/pdf-summary/pdf.api";
 import { parseUsageLimitError } from "@/utils/functions/app/usage-limit-error";
-import DailyUsageBadge from "@/components/student/ai-lms/usage/daily-usage-badge";
+import { useAiCanUse, useConsumeAiCredits } from "@/hooks/app/community/use-social";
+import { getFeatureCost } from "@/lib/ai/credits";
 import { GetSessionsResponse } from "@/types/api/student/lms-ai/pdf-summary/pdf.type";
 
 interface PDFSummaryChatProps {
@@ -75,23 +71,30 @@ interface PDFSummaryChatProps {
   onClearChatHistory?: () => void;
 }
 
-const fakeResponses = [
-  {
-    content:
-      "Based on the PDF content, here's what I found:\n\n**Key Points:**\n- Point 1: Important information from the document\n- Point 2: Another significant finding\n- Point 3: Additional insights\n\n**Summary:** The document covers [topic] and provides detailed information about [specific aspects]. Would you like me to elaborate on any particular section?",
-  },
-  {
-    content:
-      "I've analyzed the PDF and here are the main takeaways:\n\n1. **Primary Topic**: [Main subject]\n2. **Key Concepts**: [Important ideas]\n3. **Practical Applications**: [How to use this information]\n\nThe document is well-structured and provides comprehensive coverage of the subject matter. Is there a specific aspect you'd like me to focus on?",
-  },
-  {
-    content:
-      "From reviewing your PDF, I can provide the following insights:\n\n**Document Overview:**\n- Type: [Document type]\n- Length: [Number of pages]\n- Main Focus: [Primary topic]\n\n**Critical Information:**\n- [Important point 1]\n- [Important point 2]\n- [Important point 3]\n\nWould you like me to dive deeper into any particular section or answer specific questions about the content?",
-  },
-];
-
 const MAX_PDF_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PDF_UPLOAD_SIZE_LABEL = "10MB";
+
+const PDF_QUICK_PROMPTS: {
+  label: string;
+  text: string;
+  icon: typeof Sparkles;
+}[] = [
+  {
+    label: "TL;DR",
+    text: "Give a tight TL;DR of this PDF in five short bullets.",
+    icon: Sparkles,
+  },
+  {
+    label: "Terms",
+    text: "List important terms from this PDF with one-line definitions each.",
+    icon: BookOpenCheck,
+  },
+  {
+    label: "Outline",
+    text: "How is this document organized? Summarize each major section in order.",
+    icon: ListTree,
+  },
+];
  
 function PDFSummaryChat({
   initialPDF,
@@ -107,13 +110,13 @@ function PDFSummaryChat({
     (typeof window !== "undefined"
       ? window.location.pathname.split("/")[2] || ""
       : "");
+  const router = useRouter();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<PDFMessage[]>(initialMessages);
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
   const [isTyping, setIsTyping] = useState(false);
-  const [currentBranch, setCurrentBranch] = useState(0);
   const [pdfs, setPdfs] = useState<PDFFile[]>(mockPDFFiles);
   const [localSessions, setLocalSessions] = useState<any[]>([]);
 
@@ -184,6 +187,11 @@ function PDFSummaryChat({
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const [showDetailButton, setShowDetailButton] = useState(false);
+  const pdfChatCost = getFeatureCost("PDF_CHAT");
+  const pdfSummaryCost = getFeatureCost("PDF_SUMMARY");
+  const gateChat = useAiCanUse("PDF_CHAT");
+  const gateSummary = useAiCanUse("PDF_SUMMARY");
+  const consumeCredits = useConsumeAiCredits();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<BlobPart[]>([]);
@@ -197,8 +205,6 @@ function PDFSummaryChat({
   const conversationContainerRef = useRef<HTMLDivElement>(null);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [waveformData, setWaveformData] = useState<number[]>([]);
-  const animationFrameRef = useRef<number | null>(null);
   const waveformHeights = ["h-2", "h-3", "h-4", "h-5", "h-6", "h-7", "h-8"] as const;
    //const studentId = useUserId() || "";
 
@@ -231,15 +237,22 @@ function PDFSummaryChat({
     }
   }, [initialMessages, isIndividualChat]);
 
-  const generateFakeResponse = () => {
-    const responseIndex = Math.floor(Math.random() * fakeResponses.length);
-    return fakeResponses[responseIndex];
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isRecording) return;
+    if (pendingVoiceUrl && !text.trim()) {
+      await sendRecordedVoice();
+      return;
+    }
     if (!text.trim()) return;
+
+    if (gateChat.data?.allowed === false) {
+      toast.error("Not enough AI credits", {
+        description: `Each PDF chat reply costs ${pdfChatCost} credits. You have ${(gateChat.data.remaining ?? 0).toLocaleString()} credits remaining this month.`,
+        duration: 7000,
+      });
+      return;
+    }
 
     const userMessage: PDFMessage = {
       id: Date.now().toString(),
@@ -275,14 +288,21 @@ function PDFSummaryChat({
         pdfId: currentPDF?.id,
         type: "summary",
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => {
+        const next = [...prev, aiMessage];
+        const assistantCount = next.filter(
+          (m) => m.from === "assistant" && !!(m.content || "").trim(),
+        ).length;
+        setShowDetailButton(assistantCount === 1);
+        return next;
+      });
       setStatus("ready");
       setIsTyping(false);
       
-      // Show detail button after first assistant response if this is the first exchange
-      if (messages.filter(m => m.from === "assistant").length === 0) {
-        setShowDetailButton(true);
-      }
+      consumeCredits.mutate({
+        feature: "PDF_CHAT",
+        creditsUsed: pdfChatCost,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       const parsed = parseUsageLimitError(error);
@@ -397,6 +417,15 @@ function PDFSummaryChat({
     const audioUrl = forcedUrl || pendingVoiceUrl;
     if (!audioUrl) return;
     if (!currentPDF?.id) return;
+
+    if (gateChat.data?.allowed === false) {
+      toast.error("Not enough AI credits", {
+        description: `Each PDF chat reply costs ${pdfChatCost} credits. You have ${(gateChat.data.remaining ?? 0).toLocaleString()} credits remaining this month.`,
+        duration: 7000,
+      });
+      return;
+    }
+
     const normalizedTranscript =
       voiceTranscript.trim() || "Please process my voice message about this PDF.";
 
@@ -437,6 +466,10 @@ function PDFSummaryChat({
       };
       setMessages((prev) => [...prev, aiMessage]);
       setStatus("ready");
+      consumeCredits.mutate({
+        feature: "PDF_CHAT",
+        creditsUsed: pdfChatCost,
+      });
     } catch (error) {
       console.error("Failed to process voice message:", error);
       const parsed = parseUsageLimitError(error);
@@ -605,12 +638,37 @@ function PDFSummaryChat({
   }
 
   const currentStudentId = studentId;
-  if (!currentStudentId || currentStudentId === "undefined") {
-    toast.error("Session issue", {
-      description: "Please refresh the page and try again.",
-    });
-    return;
-  }
+    if (!currentStudentId || currentStudentId === "undefined") {
+      toast.error("Session issue", {
+        description: "Please refresh the page and try again.",
+      });
+      return;
+    }
+
+    if (gateSummary.isLoading) {
+      toast.info("Checking AI credits…", {
+        description: "Please wait a moment before uploading.",
+      });
+      try {
+        const refetchPromise = gateSummary.refetch?.() ?? Promise.resolve(gateSummary);
+        await Promise.race([
+          refetchPromise,
+          new Promise((_res, rej) => setTimeout(() => rej(new Error('credit-check-timeout')), 3000)),
+        ]);
+      } catch (e) {
+        toast.warning(
+          "Proceeding without confirmed AI credits. Upload may be rejected if you lack credits.",
+        );
+      }
+    }
+
+    if (gateSummary.data?.allowed === false) {
+      toast.error("Not enough AI credits", {
+        description: `Each new PDF upload costs ${pdfSummaryCost} credits. You have ${(gateSummary.data.remaining ?? 0).toLocaleString()} credits remaining this month.`,
+        duration: 7000,
+      });
+      return;
+    }
 
   const fileId = `${file.name}-${Date.now()}`;
     setUploadProgress([{
@@ -667,6 +725,13 @@ function PDFSummaryChat({
           "pdf_sessions", 
           JSON.stringify(existingSessions.slice(0, 10))
         );
+
+      consumeCredits.mutate({
+        feature: "PDF_SUMMARY",
+        creditsUsed: pdfSummaryCost,
+      });
+
+      router.push(`/student/${currentStudentId}/pdf-summary/${response.session_id}`);
 
     } catch (err) {
       console.error("Upload failed:", (err as any)?.response?.data || (err as any)?.message || err);
@@ -754,7 +819,6 @@ function PDFSummaryChat({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <DailyUsageBadge />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -787,7 +851,7 @@ function PDFSummaryChat({
         {/* Chat Messages */}
         <div ref={conversationContainerRef} className="flex-1 overflow-y-auto min-h-0">
           <AIConversation className="h-full">
-            <AIConversationContent>
+            <AIConversationContent className="px-2 py-2 sm:px-4 md:px-6">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/5">
@@ -821,176 +885,216 @@ function PDFSummaryChat({
                   </div>
                 </div>
               ) : (
-                <AIBranch
-                  defaultBranch={currentBranch}
-                  onBranchChange={setCurrentBranch}
-                >
-                  <AIBranchMessages>
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <PDFChatMessage
-                          key={message.id}
-                          message={message}
-                          currentPDFName={currentPDF?.name}
-                        />
-                      ))}
-                      {/* Summarize in Detail Button */}
-                      {showDetailButton && !isTyping && messages.filter(m => m.from === "assistant").length === 1 && (
-                        <div className="flex w-full justify-start mb-4">
-                          <div className="flex items-end mr-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-linear-to-br from-blue-500 to-purple-600">
-                              <Bot className="w-5 h-5 text-white" />
-                            </div>
-                          </div>
-                          <div className="max-w-[75%] mr-12">
-                            <Button
-                              onClick={handleSummarizeInDetail}
-                              variant="outline"
-                              className="rounded-2xl px-4 py-2 text-sm border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
-                            >
-                              Summarize in Detail
-                            </Button>
-                          </div>
+                <div className="mx-auto w-full max-w-6xl space-y-4 px-3 pb-8 sm:px-4">
+                  {messages.map((message) => (
+                    <PDFChatMessage
+                      key={message.id}
+                      message={message}
+                      currentPDFName={currentPDF?.name}
+                    />
+                  ))}
+                  {showDetailButton && !isTyping && messages.filter(m => m.from === "assistant").length === 1 && (
+                    <div className="flex w-full justify-start mb-4">
+                      <div className="flex items-end mr-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-linear-to-br from-primary to-violet-600 shadow-md">
+                          <Bot className="w-5 h-5 text-primary-foreground" />
                         </div>
-                      )}
-                      {/* Typing indicator */}
-                      {isTyping && (
-                        <div className="flex w-full justify-start mb-4">
-                          <div className="flex items-end mr-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-linear-to-br from-blue-500 to-purple-600">
-                              <Bot className="w-5 h-5 text-white" />
-                            </div>
-                          </div>
-                          <div className="max-w-[75%] mr-12">
-                            <div className="rounded-2xl px-4 py-3 text-base bg-card text-card-foreground border shadow-sm flex items-center gap-3">
-                              <div className="flex space-x-1">
-                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                                <div
-                                  className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100"
-                                ></div>
-                                <div
-                                  className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200"
-                                ></div>
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                AI is analyzing PDF...
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
+                      <div className="max-w-[min(92vw,52rem)] mr-12">
+                        <Button
+                          onClick={handleSummarizeInDetail}
+                          variant="outline"
+                          className="rounded-2xl px-4 py-2 text-sm border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                        >
+                          Summarize in Detail
+                        </Button>
+                      </div>
                     </div>
-                  </AIBranchMessages>
-                  <AIBranchSelector from="assistant">
-                    <AIBranchPrevious />
-                    <AIBranchNext />
-                  </AIBranchSelector>
-                </AIBranch>
+                  )}
+                  {isTyping && (
+                    <div className="flex w-full justify-start mb-4">
+                      <div className="flex items-end mr-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-linear-to-br from-primary to-violet-600 shadow-md">
+                          <Bot className="w-5 h-5 text-primary-foreground" />
+                        </div>
+                      </div>
+                      <div className="max-w-[min(92vw,52rem)] mr-12">
+                        <div className="rounded-2xl border border-border/80 bg-card/90 px-4 py-3 text-base shadow-sm flex items-center gap-3 backdrop-blur-sm">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100" />
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200" />
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            Reading your PDF…
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </AIConversationContent>
             <AIConversationScrollButton />
           </AIConversation>
         </div>
 
-        {/* Chat Input */}
-        <div className="sticky bottom-0 z-50 mx-auto mb-4 flex w-[90%] items-center gap-2 border rounded-xl bg-background p-2 shadow-lg">
-          <AIInput onSubmit={handleSubmit} className="border shadow-sm flex-1">
-            <div className="flex items-center gap-2 w-full">
-              {(isRecording || pendingVoiceUrl) ? (
-                <div className="min-h-[60px] w-full flex items-center px-4 py-3">
-                  {isRecording ? (
-                    <div className="flex-1 flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-muted-foreground">Recording… {recordingSeconds}s</span>
+        {/* Margin studio — composer */}
+        <div className="sticky bottom-0 z-50 border-t border-border/50 bg-linear-to-t from-background via-background/95 to-background/70 backdrop-blur-xl">
+          <div className="mx-auto w-full max-w-6xl px-3 pb-4 pt-3 sm:px-4">
+            <p className="mb-2 text-center text-[11px] text-muted-foreground">
+              Each reply costs {pdfChatCost} AI credits
+              {typeof gateChat.data?.remaining === "number"
+                ? ` · ${gateChat.data.remaining.toLocaleString()} credits left this month`
+                : ""}
+            </p>
+            <div className="mb-3 flex flex-wrap justify-center gap-2">
+              {PDF_QUICK_PROMPTS.map(({ label, text, icon: Icon }) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isTyping || gateChat.data?.allowed === false}
+                  className="h-8 gap-1.5 rounded-full border border-border/60 bg-muted/50 text-xs font-medium shadow-sm hover:bg-primary/10 hover:border-primary/30"
+                  onClick={() => {
+                    setText(text);
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <div className="relative rounded-[1.35rem] p-px shadow-xl ring-1 ring-primary/15 bg-linear-to-br from-primary/35 via-violet-500/25 to-transparent">
+              <div className="rounded-[1.3rem] bg-card/95 backdrop-blur-md">
+                <AIInput
+                  onSubmit={handleSubmit}
+                  className="divide-y-0 overflow-visible rounded-[1.3rem] border-0 bg-transparent shadow-none"
+                >
+                  <div className="flex w-full items-end gap-1 px-2 pb-2 pt-2">
+                    <div className="hidden sm:flex w-1 shrink-0 self-stretch rounded-full bg-linear-to-b from-primary via-violet-500 to-transparent opacity-80" aria-hidden />
+                    {(isRecording || pendingVoiceUrl) ? (
+                      <div className="min-h-[60px] flex-1 flex items-center px-3 py-2">
+                        {isRecording ? (
+                          <div className="flex flex-1 items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                              <span className="text-sm text-muted-foreground">
+                                Recording… {recordingSeconds}s
+                              </span>
+                            </div>
+                            <div className="flex h-8 flex-1 items-center justify-center gap-1">
+                              {Array.from({ length: 20 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`w-1 rounded-full bg-primary/80 animate-pulse ${waveformHeights[i % waveformHeights.length]}`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            Voice note ready — tap send to ask with audio context
+                          </div>
+                        )}
                       </div>
-                      {/* Waveform Animation */}
-                      <div className="flex-1 h-8 flex items-center justify-center gap-1">
-                        {Array.from({ length: 20 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-1 rounded-full bg-primary animate-pulse ${waveformHeights[i % waveformHeights.length]} delay-150`}
-                          ></div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center gap-3">
-                      <div className="text-sm text-muted-foreground">
-                        Voice note ready to send
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <AIInputTextarea
-                  placeholder={`Ask about ${currentPDF.name}...`}
-                  disabled={isTyping}
-                  className="min-h-[60px] max-h-[120px] resize-none flex-1 overflow-y-auto"
-                  ref={textareaRef}
-                />
-              )}
-              <AIInputToolbar className="shrink-0">
-                <div className="flex items-center gap-2">
-                  {(isRecording || pendingVoiceUrl) && (
-                    <>
-                      {isRecording && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={isTyping}
-                          onClick={stopRecording}
-                          className="mr-1"
-                        >
-                          <Square size={16} />
-                        </Button>
-                      )}
-                      {pendingVoiceUrl && !isRecording && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={isTyping}
-                          onClick={() => {
-                            if (audioRef.current) {
-                              if (isPlayingVoice) {
-                                audioRef.current.pause();
-                                setIsPlayingVoice(false);
-                              } else {
-                                audioRef.current.play();
-                                setIsPlayingVoice(true);
-                              }
-                            }
-                          }}
-                          className="mr-2"
-                        >
-                          {isPlayingVoice ? <Pause size={16} /> : <Play size={16} />}
-                        </Button>
+                    ) : (
+                      <AIInputTextarea
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder={`Ask anything about this document…`}
+                        disabled={isTyping || gateChat.data?.allowed === false}
+                        className="min-h-[56px] max-h-[140px] flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-[15px] leading-relaxed"
+                        ref={textareaRef}
+                      />
+                    )}
+                    <AIInputToolbar className="shrink-0 flex-col justify-end gap-1 border-0 p-0">
+                      {(isRecording || pendingVoiceUrl) && (
+                        <>
+                          {isRecording && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={isTyping}
+                              onClick={stopRecording}
+                              className="h-9 w-9"
+                              aria-label="Stop recording"
+                            >
+                              <Square size={16} />
+                            </Button>
+                          )}
+                          {pendingVoiceUrl && !isRecording && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={isTyping}
+                              onClick={() => {
+                                if (audioRef.current) {
+                                  if (isPlayingVoice) {
+                                    audioRef.current.pause();
+                                    setIsPlayingVoice(false);
+                                  } else {
+                                    void audioRef.current.play();
+                                    setIsPlayingVoice(true);
+                                  }
+                                }
+                              }}
+                              className="h-9 w-9"
+                              aria-label={isPlayingVoice ? "Pause playback" : "Play recording"}
+                            >
+                              {isPlayingVoice ? <Pause size={16} /> : <Play size={16} />}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={isTyping}
+                            onClick={discardCurrentVoice}
+                            className="h-9 w-9"
+                            aria-label="Discard voice note"
+                          >
+                            <TrashIcon size={16} />
+                          </Button>
+                        </>
                       )}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        disabled={isTyping}
-                        onClick={discardCurrentVoice}
-                        className="mr-2"
+                        className="h-9 w-9 text-muted-foreground hover:text-primary"
+                        disabled={
+                          isTyping ||
+                          gateChat.data?.allowed === false ||
+                          isRecording ||
+                          !!pendingVoiceUrl
+                        }
+                        onClick={() => void startRecording()}
+                        aria-label="Record voice question"
                       >
-                        <TrashIcon size={16} />
+                        <Mic size={18} />
                       </Button>
-                    </>
-                  )}
-                  <AIInputSubmit>
-                    {text.trim() || isRecording || pendingVoiceUrl ? (
-                      <SendIcon size={16} />
-                    ) : (
-                      <Mic size={16} />
-                    )}
-                  </AIInputSubmit>
-                </div>
-              </AIInputToolbar>
+                      <AIInputSubmit
+                        status={status}
+                        disabled={
+                          isTyping ||
+                          gateChat.data?.allowed === false ||
+                          (!text.trim() && !pendingVoiceUrl) ||
+                          isRecording
+                        }
+                        className="h-10 w-10 rounded-xl"
+                        aria-label="Send message"
+                      />
+                    </AIInputToolbar>
+                  </div>
+                </AIInput>
+              </div>
             </div>
-          </AIInput>
+          </div>
         </div>
 
         {/* Hidden Audio Element for Voice Playback */}
@@ -1028,9 +1132,6 @@ function PDFSummaryChat({
             <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
               Upload your PDF files and chat with AI to get instant summaries and insights.
             </p>
-            <div className="mt-5">
-              <DailyUsageBadge />
-            </div>
             <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 text-center md:gap-6">
               <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-4 shadow-sm backdrop-blur-sm md:py-5">
                 <div className="text-2xl font-semibold tabular-nums md:text-3xl">AI</div>

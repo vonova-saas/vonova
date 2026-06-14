@@ -22,7 +22,7 @@ import {
   useSolutionMutation,
   useSubmissionStatusQuery,
   useSubmitSolutionMutation,
-  useMarkAsSolvedMutation,
+  useProblemProgressQuery,
 } from "@/hooks/student/use-problem-solving";
 import type {
   AIInteractionEntity,
@@ -35,6 +35,7 @@ import {
 
 type PlaygroundProps = {
   problem: ProblemEntity;
+  sheetId?: string;
 };
 
 type HintLanguage = "english" | "arabic";
@@ -44,10 +45,9 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false 
 const DEFAULT_LANGUAGE = "javascript";
 const SUBMIT_DEBOUNCE_MS = 800;
 
-export default function Playground({ problem }: PlaygroundProps) {
+export default function Playground({ problem, sheetId }: PlaygroundProps) {
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
-  const markAsSolvedMutation = useMarkAsSolvedMutation();
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [code, setCode] = useState("// Write your solution here");
   const [solution, setSolution] = useState<AIInteractionEntity | null>(null);
@@ -88,6 +88,7 @@ export default function Playground({ problem }: PlaygroundProps) {
     refetch: refetchHintsHistory,
     isFetching: isFetchingHintsHistory,
   } = useHintsHistoryQuery(problem._id);
+  const { data: problemProgress } = useProblemProgressQuery(problem._id);
 
   const hintsUsed = hintsHistory?.hintsUsed ?? 0;
   const solutionUsed = hintsHistory?.solutionUsed ?? false;
@@ -188,10 +189,6 @@ export default function Playground({ problem }: PlaygroundProps) {
       setSubmissionStatus("pending");
       setSubmissionSummary(null);
 
-      await queryClient.invalidateQueries({
-        queryKey: problemSolvingKeys.submissions(problem._id),
-      });
-
       toast.message("Submission queued. Running judge...");
     } catch (error: unknown) {
       toast.error("Submission failed", {
@@ -272,17 +269,27 @@ export default function Playground({ problem }: PlaygroundProps) {
     if (lastNotifiedStatusRef.current === result.status) return;
     if (result.status === "pending") return;
     lastNotifiedStatusRef.current = result.status;
+
+    void queryClient.invalidateQueries({
+      queryKey: problemSolvingKeys.problemProgress(problem._id),
+    });
+
     if (result.status === "accepted") {
+      if (sheetId) {
+        void queryClient.invalidateQueries({
+          queryKey: problemSolvingKeys.sheetProgress(sheetId),
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: problemSolvingKeys.solved() });
       toast.success(
         `Accepted in ${result.executionTime}ms, ${result.memoryUsed}MB`,
       );
-      markAsSolvedMutation.mutate(problem._id);
     } else {
       toast.error("Submission failed", {
         description: `${result.status} • ${result.executionTime}ms • ${result.memoryUsed}MB`,
       });
     }
-  }, [submissionStatusQuery.data, markAsSolvedMutation, problem._id]);
+  }, [submissionStatusQuery.data, problem._id, queryClient, sheetId]);
 
   const displayStatus = submissionStatusQuery.data?.status ?? submissionStatus;
   const displaySummary = submissionStatusQuery.data
@@ -428,6 +435,17 @@ export default function Playground({ problem }: PlaygroundProps) {
               >
                 {displayStatus === "idle" ? "Not submitted" : displayStatus}
               </span>
+              {problemProgress?.solved ? (
+                <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">
+                  · Complete
+                </span>
+              ) : null}
+              {(problemProgress?.attemptsCount ?? 0) > 0 ? (
+                <span className="ml-2">
+                  · {problemProgress?.attemptsCount} attempt
+                  {(problemProgress?.attemptsCount ?? 0) === 1 ? "" : "s"}
+                </span>
+              ) : null}
               {displaySummary ? (
                 <span className="ml-2 text-rose-300">
                   Passed {displaySummary.passed} / {displaySummary.total}

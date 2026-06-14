@@ -90,10 +90,10 @@ export class LessonGatewayService {
     );
   }
 
-  getVideoUrl(objectKey: string) {
+  getVideoUrl(objectKey: string, courseId: string, lessonId: string) {
     return this.client.send(
       { cmd: 'app.courses.lessons.video.url' },
-      { objectKey },
+      { objectKey, courseId, lessonId },
     );
   }
 

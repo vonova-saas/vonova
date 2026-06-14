@@ -7,6 +7,7 @@ import { Guide } from '../schema/guide.schema';
 import { Presentation } from '../schema/presentation.schema';
 import { BookProgress } from '../schema/book/book-progress.schema';
 import { S3Service } from '../../common/utils/storage/s3.service';
+import { buildStableLmsMaterialViewUrl } from '../../common/media/stable-media-url';
 
 @Injectable()
 export class ReaderService {
@@ -23,22 +24,20 @@ export class ReaderService {
     private readonly s3Service: S3Service,
   ) {}
 
-  private async getPresignedUrlIfNeeded(assetId?: Types.ObjectId | string) {
-    if (!assetId) return undefined;
-    const asset = await this.assetModel.findById(assetId);
-    if (!asset) return undefined;
-    if (asset.objectKey && this.s3Service?.getPresignedGetUrl) {
-      return await this.s3Service.getPresignedGetUrl(asset.objectKey);
-    }
-    // fallback to asset urls if provided
-    return asset.urls?.posterUrl;
+  private resolveStableContentUrl(
+    materialId: string,
+    materialType: 'book' | 'guide' | 'presentation',
+  ): string {
+    return buildStableLmsMaterialViewUrl(materialId, materialType);
   }
 
   async getBookContent(bookId: string, userId?: string) {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
-    const pdfUrl = await this.getPresignedUrlIfNeeded(book.fileAssetId!);
+    const pdfUrl = book.fileAssetId
+      ? this.resolveStableContentUrl(bookId, 'book')
+      : undefined;
 
     // fire-and-forget increment views
     this.bookModel
@@ -109,7 +108,9 @@ export class ReaderService {
   async getGuideContent(guideId: string) {
     const guide = await this.guideModel.findById(guideId);
     if (!guide) throw new NotFoundException('Guide not found');
-    const contentUrl = await this.getPresignedUrlIfNeeded(guide.fileAssetId!);
+    const contentUrl = guide.fileAssetId
+      ? this.resolveStableContentUrl(guideId, 'guide')
+      : undefined;
     this.guideModel
       .updateOne({ _id: guide._id }, { $inc: { 'metrics.views': 1 } })
       .catch(() => {});
@@ -130,7 +131,9 @@ export class ReaderService {
   async getPresentationContent(presentationId: string) {
     const pres = await this.presentationModel.findById(presentationId);
     if (!pres) throw new NotFoundException('Presentation not found');
-    const contentUrl = await this.getPresignedUrlIfNeeded(pres.fileAssetId!);
+    const contentUrl = pres.fileAssetId
+      ? this.resolveStableContentUrl(presentationId, 'presentation')
+      : undefined;
     let posterUrl: string | undefined;
     if (pres.fileAssetId) {
       const asset = await this.assetModel.findById(pres.fileAssetId);

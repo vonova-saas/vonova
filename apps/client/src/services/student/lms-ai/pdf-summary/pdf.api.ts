@@ -1,4 +1,5 @@
 import API from "@/services/axios-client";
+import { unwrapLmsDataDeep } from "@/lib/api/unwrap-lms-body";
 import {
   UploadPDFRequest,
   UploadPDFResponse,
@@ -26,6 +27,30 @@ export const uploadPDFMutationFn = async (
 };
 
 // ============== Chat with PDF ==============
+function normalizePdfChatPayload(body: unknown): ChatResponse {
+  const raw = unwrapLmsDataDeep(body) as Record<string, unknown> | null;
+  const o = raw && typeof raw === "object" ? raw : {};
+  const nested =
+    o.data && typeof o.data === "object"
+      ? (o.data as Record<string, unknown>)
+      : undefined;
+  const answer =
+    (typeof o.answer === "string" && o.answer) ||
+    (typeof o.response === "string" && o.response) ||
+    (nested && typeof nested.answer === "string" && nested.answer) ||
+    "";
+  const session_id =
+    (typeof o.session_id === "string" && o.session_id) ||
+    (typeof o.sessionId === "string" && o.sessionId) ||
+    (nested && typeof nested.session_id === "string" && nested.session_id) ||
+    "";
+  const message_id =
+    (typeof o.message_id === "string" && o.message_id) ||
+    (nested && typeof nested.message_id === "string" && nested.message_id) ||
+    undefined;
+  return { answer, session_id, message_id };
+}
+
 export const chatWithPDFMutationFn = async (
   data: ChatRequest
 ): Promise<ChatResponse> => {
@@ -33,7 +58,17 @@ export const chatWithPDFMutationFn = async (
     question: data.question,
     ...(data.context_length && { context_length: data.context_length })
   });
-  return response.data;
+  const normalized = normalizePdfChatPayload(response.data);
+  if (!normalized.answer?.trim()) {
+    const preview =
+      typeof response.data === "object" && response.data !== null
+        ? JSON.stringify(response.data).slice(0, 400)
+        : String(response.data);
+    throw new Error(
+      `PDF chat returned no answer. Raw payload (truncated): ${preview}`,
+    );
+  }
+  return normalized;
 };
 
 // ============== Get Summary ==============

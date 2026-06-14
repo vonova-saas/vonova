@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { LessonContentType } from "./data/get-lesson-content";
 import { RnderDescription } from "./rich-text-editor/rnder-description";
@@ -24,7 +25,18 @@ import {
 import { toast } from "sonner";
 import { useConfetti } from "@/hooks/courses/use-confetti";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { markLessonCompleteMutationFn } from "@/services/student/lms/courses/real-courses.api";
+import {
+  markLessonCompleteMutationFn,
+  updateLessonWatchMutationFn,
+} from "@/services/student/lms/courses/real-courses.api";
+import { LESSON_WATCH_COMPLETE_THRESHOLD } from "@/lib/lms/lesson-watch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import {
   fetchMaterialSignedViewUrl,
   materialSignedViewQueryKey,
@@ -46,6 +58,197 @@ interface iAppProps {
   onAfterMarkComplete?: () => void;
 }
 
+function ProtectedLessonVideo({
+  src,
+  poster,
+  onRetryLesson,
+  onWatchProgress,
+}: {
+  src: string;
+  poster?: string;
+  onRetryLesson?: () => void;
+  onWatchProgress?: (currentTime: number, duration: number) => void;
+}) {
+  const [playbackFailed, setPlaybackFailed] = useState(false);
+  const lastReportRef = useRef(0);
+
+  if (playbackFailed) {
+    return (
+      <div className="aspect-video min-h-48 rounded-lg flex flex-col items-center justify-center gap-3 bg-muted px-4 text-center">
+        <p className="text-sm font-medium">Video could not be played</p>
+        <p className="text-xs text-muted-foreground">
+          The link may have expired or your browser blocked playback.
+        </p>
+        {onRetryLesson ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setPlaybackFailed(false);
+              onRetryLesson();
+            }}
+          >
+            <RefreshCw className="size-4 mr-2" />
+            Retry
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video min-h-48 rounded-lg relative overflow-hidden bg-black">
+      <video
+        key={src}
+        src={src}
+        controls
+        preload="metadata"
+        playsInline
+        poster={poster}
+        controlsList="nodownload noplaybackrate noremoteplayback"
+        disablePictureInPicture
+        disableRemotePlayback
+        onContextMenu={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+        onError={() => setPlaybackFailed(true)}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          const duration = el.duration;
+          const currentTime = el.currentTime;
+          if (
+            !onWatchProgress ||
+            !Number.isFinite(duration) ||
+            duration <= 0 ||
+            el.paused
+          ) {
+            return;
+          }
+          const now = Date.now();
+          if (now - lastReportRef.current < 4000) return;
+          lastReportRef.current = now;
+          onWatchProgress(currentTime, duration);
+        }}
+        className="block h-full w-full min-h-48 object-contain bg-black"
+      >
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  );
+}
+
+function VideoPlayer({
+  thumbnailKey,
+  videoKey,
+  videoObjectKey,
+  videoStreamUrl,
+  videoPosterUrl,
+  onRetry,
+  onWatchProgress,
+}: {
+  thumbnailKey: string;
+  videoKey: string;
+  videoObjectKey?: string | null;
+  videoStreamUrl?: string | null;
+  videoPosterUrl?: string | null;
+  onRetry?: () => void;
+  onWatchProgress?: (currentTime: number, duration: number) => void;
+}) {
+  const legacyVideoUrl = useConstructUrl(videoKey);
+  const legacyThumbnailUrl = useConstructUrl(thumbnailKey);
+
+  /** Presigned playback URL only — never mix with legacy URL for <video src>. */
+  const streamUrl = (videoStreamUrl ?? "").trim();
+  const posterFromApi = videoPosterUrl?.trim() || "";
+  const storedKey = (videoObjectKey?.trim() || videoKey?.trim() || "") as string;
+
+  if (streamUrl) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      typeof window !== "undefined"
+    ) {
+      console.log("STREAM URL:", streamUrl);
+    }
+    return (
+      <ProtectedLessonVideo
+        key={streamUrl}
+        src={streamUrl}
+        onRetryLesson={onRetry}
+        onWatchProgress={onWatchProgress}
+      />
+    );
+  }
+
+  const isVideoDataMissing =
+    !!videoKey?.trim() &&
+    !videoObjectKey?.trim() &&
+    legacyVideoUrl === "/images/placeholder.svg";
+
+  const streamTemporarilyUnavailable = !!videoObjectKey?.trim();
+
+  if (!storedKey) {
+    return (
+      <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center">
+        <BookIcon className="size-16 text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">
+          This lesson does not have a video yet
+        </p>
+      </div>
+    );
+  }
+
+  if (isVideoDataMissing) {
+    return (
+      <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center p-6">
+        <BookIcon className="size-16 text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground text-center mb-2">
+          Video data is not available
+        </p>
+        <p className="text-sm text-muted-foreground text-center">
+          The video was uploaded but the data could not be retrieved.<br />
+          This may happen if the browser storage was cleared.<br />
+          Try re-uploading the video in the instructor dashboard.
+        </p>
+      </div>
+    );
+  }
+
+  if (streamTemporarilyUnavailable) {
+    return (
+      <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <BookIcon className="size-16 text-primary" />
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">Video temporarily unavailable</p>
+          <p className="text-sm text-muted-foreground">
+            Playback could not be started. This is usually temporary.
+          </p>
+        </div>
+        {onRetry ? (
+          <Button type="button" variant="secondary" onClick={onRetry}>
+            <RefreshCw className="size-4 mr-2" />
+            Retry
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
+  const validPoster =
+    posterFromApi ||
+    (legacyThumbnailUrl && legacyThumbnailUrl !== "/images/placeholder.svg"
+      ? legacyThumbnailUrl
+      : undefined);
+
+  return (
+    <ProtectedLessonVideo
+      key={legacyVideoUrl}
+      src={legacyVideoUrl}
+      poster={validPoster}
+      onWatchProgress={onWatchProgress}
+    />
+  );
+}
+
 export function CourseContent({
   data,
   onRetryLessonContent,
@@ -63,6 +266,53 @@ export function CourseContent({
 
   const isCompleted = data.lessonProgress.some(
     (p) => p.lessonId === data.id && p.completed,
+  );
+
+  const [watchedPercentage, setWatchedPercentage] = useState(
+    data.watchedPercentage ?? 0,
+  );
+  const [canMarkComplete, setCanMarkComplete] = useState(
+    data.canMarkComplete ?? !data.hasVideo,
+  );
+
+  useEffect(() => {
+    setWatchedPercentage(data.watchedPercentage ?? 0);
+    setCanMarkComplete(data.canMarkComplete ?? !data.hasVideo);
+  }, [data.id, data.watchedPercentage, data.canMarkComplete, data.hasVideo]);
+
+  const watchMutation = useMutation({
+    mutationFn: (body: { currentTime: number; duration: number }) =>
+      updateLessonWatchMutationFn(data.courseId, data.id, body),
+    onSuccess: (result) => {
+      setWatchedPercentage(result.watchedPercentage);
+      setCanMarkComplete(result.canMarkComplete);
+      if (result.completed && !isCompleted) {
+        toast.success("Lesson automatically completed!");
+        const { courseId, id: lessonId } = data;
+        queryClient.invalidateQueries({ queryKey: coursesKeys.progress(courseId) });
+        queryClient.invalidateQueries({ queryKey: coursesKeys.contentTree(courseId) });
+        queryClient.invalidateQueries({
+          queryKey: coursesKeys.lessonContent(courseId, lessonId),
+        });
+        queryClient.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "courses" &&
+            q.queryKey[1] === "sidebar",
+        });
+        queryClient.invalidateQueries({ queryKey: ["course-details"] });
+        triggerConfetti();
+        onAfterMarkComplete?.();
+      }
+    },
+  });
+
+  const reportWatchProgress = useCallback(
+    (currentTime: number, duration: number) => {
+      if (!data.hasVideo || duration <= 0 || isCompleted) return;
+      watchMutation.mutate({ currentTime, duration });
+    },
+    [data.hasVideo, watchMutation, isCompleted],
   );
 
   const markMutation = useMutation({
@@ -99,106 +349,6 @@ export function CourseContent({
     videoObjectKey: data.videoObjectKey ?? null,
   };
 
-  function VideoPlayer({
-    thumbnailKey,
-    videoKey,
-    videoObjectKey,
-    videoStreamUrl,
-    videoPosterUrl,
-    onRetry,
-  }: {
-    thumbnailKey: string;
-    videoKey: string;
-    videoObjectKey?: string | null;
-    videoStreamUrl?: string | null;
-    videoPosterUrl?: string | null;
-    onRetry?: () => void;
-  }) {
-    const legacyVideoUrl = useConstructUrl(videoKey);
-    const legacyThumbnailUrl = useConstructUrl(thumbnailKey);
-
-    /** Presigned playback URL only — never mix with legacy URL for <video src>. */
-    const streamUrl = (videoStreamUrl ?? "").trim();
-    const posterFromApi = videoPosterUrl?.trim() || "";
-    const storedKey = (videoObjectKey?.trim() || videoKey?.trim() || "") as string;
-
-    if (streamUrl) {
-      if (
-        process.env.NODE_ENV === "development" &&
-        typeof window !== "undefined"
-      ) {
-        console.log("STREAM URL:", streamUrl);
-      }
-      return (
-        <ProtectedLessonVideo src={streamUrl} />
-      );
-    }
-
-    const isVideoDataMissing =
-      !!videoKey?.trim() &&
-      !videoObjectKey?.trim() &&
-      legacyVideoUrl === "/images/placeholder.svg";
-
-    const streamTemporarilyUnavailable = !!videoObjectKey?.trim();
-
-    if (!storedKey) {
-      return (
-        <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center">
-          <BookIcon className="size-16 text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">
-            This lesson does not have a video yet
-          </p>
-        </div>
-      );
-    }
-
-    if (isVideoDataMissing) {
-      return (
-        <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center p-6">
-          <BookIcon className="size-16 text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground text-center mb-2">
-            Video data is not available
-          </p>
-          <p className="text-sm text-muted-foreground text-center">
-            The video was uploaded but the data could not be retrieved.<br />
-            This may happen if the browser storage was cleared.<br />
-            Try re-uploading the video in the instructor dashboard.
-          </p>
-        </div>
-      );
-    }
-
-    if (streamTemporarilyUnavailable) {
-      return (
-        <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4 p-6 text-center">
-          <BookIcon className="size-16 text-primary" />
-          <div className="space-y-1">
-            <p className="font-medium text-foreground">Video temporarily unavailable</p>
-            <p className="text-sm text-muted-foreground">
-              Playback could not be started. This is usually temporary.
-            </p>
-          </div>
-          {onRetry ? (
-            <Button type="button" variant="secondary" onClick={onRetry}>
-              <RefreshCw className="size-4 mr-2" />
-              Retry
-            </Button>
-          ) : null}
-        </div>
-      );
-    }
-
-    const validPoster =
-      posterFromApi ||
-      (legacyThumbnailUrl && legacyThumbnailUrl !== "/images/placeholder.svg"
-        ? legacyThumbnailUrl
-        : undefined);
-
-    return (
-      <ProtectedLessonVideo src={legacyVideoUrl} poster={validPoster} />
-    );
-  }
-
   return (
     <div className="flex flex-col h-full bg-background pl-6">
       <VideoPlayer
@@ -209,23 +359,51 @@ export function CourseContent({
         videoStreamUrl={lessonVideo.streamUrl}
         videoPosterUrl={data.videoPosterUrl}
         onRetry={onRetryLessonContent}
+        onWatchProgress={reportWatchProgress}
       />
 
-      <div className="py-4 border-b">
+      <div className="py-4 border-b space-y-3">
+        {data.hasVideo && !isCompleted ? (
+          <div className="space-y-1.5 max-w-md">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Watch progress</span>
+              <span>
+                {watchedPercentage}% / {data.watchThreshold ?? LESSON_WATCH_COMPLETE_THRESHOLD}%
+                required
+              </span>
+            </div>
+            <Progress value={watchedPercentage} className="h-1.5" />
+          </div>
+        ) : null}
         {isCompleted ? (
           <Button variant="outline" className="bg-green-500/10 text-green-500 hover:text-green-600">
             <CheckCircle className="size-4 mr-2 text-green-500" />
             Completed
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            onClick={() => markMutation.mutate()}
-            disabled={markMutation.isPending}
-          >
-            <CheckCircle className="size-4 mr-2 text-green-500" />
-            Mark as complete
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-block">
+                  <Button
+                    variant="outline"
+                    onClick={() => markMutation.mutate()}
+                    disabled={markMutation.isPending || !canMarkComplete}
+                  >
+                    <CheckCircle className="size-4 mr-2 text-green-500" />
+                    Mark as complete
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!canMarkComplete && data.hasVideo ? (
+                <TooltipContent>
+                  {data.computedCompletionRequirements?.requiresVideoWatch
+                    ? `Watch at least ${data.watchThreshold ?? LESSON_WATCH_COMPLETE_THRESHOLD}% of the video to unlock completion.`
+                    : "Complete the required lesson activities first."}
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
@@ -272,34 +450,7 @@ export function CourseContent({
   );
 }
 
-function ProtectedLessonVideo({
-  src,
-  poster,
-}: {
-  src: string;
-  poster?: string;
-}) {
-  return (
-    <div className="aspect-video min-h-48 rounded-lg relative overflow-hidden bg-black">
-      <video
-        key={src}
-        src={src}
-        controls
-        preload="metadata"
-        playsInline
-        poster={poster}
-        controlsList="nodownload noplaybackrate noremoteplayback"
-        disablePictureInPicture
-        disableRemotePlayback
-        onContextMenu={(e) => e.preventDefault()}
-        onDragStart={(e) => e.preventDefault()}
-        className="block h-full w-full min-h-48 object-contain bg-black"
-      >
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  );
-}
+
 
 type ResourceKind = "material" | "quiz" | "problem";
 

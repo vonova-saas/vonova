@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGatewayService } from '../../app/auth/auth.service';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { extractAccessTokenFromRequest } from '../utils/extract-access-token';
@@ -29,9 +29,30 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
-
     const request = context.switchToHttp().getRequest();
+
+    if (isPublic) {
+      const token = extractAccessTokenFromRequest(request);
+      if (token) {
+        try {
+          const userResponse = await firstValueFrom(
+            this.authService.currentUser(token).pipe(
+              catchError(() => of(null)),
+            ),
+          );
+          const u = userResponse?.user as
+            | { mustChangePassword?: boolean }
+            | undefined;
+          if (userResponse?.user && u?.mustChangePassword !== true) {
+            request.user = userResponse.user;
+          }
+        } catch {
+          /* anonymous on invalid token */
+        }
+      }
+      return true;
+    }
+
     const token = extractAccessTokenFromRequest(request);
 
     if (!token) {

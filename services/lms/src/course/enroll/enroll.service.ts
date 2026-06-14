@@ -1,9 +1,12 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ClientProxy } from '@nestjs/microservices';
 import { Model } from 'mongoose';
 import { Course } from '../course/schema/course.schema';
 import { Enrollment, EnrollmentDocument } from './schema/enrollment.schema';
@@ -15,6 +18,13 @@ import {
 import { QuizAnswer } from '../../quiz/schema/quiz-answer.schema';
 import { Quiz } from '../../quiz/schema/quiz.schema';
 import { Types } from 'mongoose';
+import {
+  flattenLessonOrder,
+  isChapterUnlocked,
+  isLessonUnlockedInSequence,
+  matchCourseIdFilter,
+} from './utils/lesson-sequence.util';
+import { Chapter } from '../chapter/schema/chapter.schema';
 
 @Injectable()
 export class EnrollService {
@@ -23,11 +33,15 @@ export class EnrollService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Course.name) private courseModel: Model<Course>,
     @InjectModel(Lesson.name) private lessonModel: Model<Lesson>,
+    @InjectModel(Chapter.name) private chapterModel: Model<Chapter>,
     @InjectModel(LessonProgress.name)
     private lessonProgressModel: Model<LessonProgressDocument>,
     @InjectModel(QuizAnswer.name) private quizAnswerModel: Model<QuizAnswer>,
     @InjectModel(Quiz.name) private quizModel: Model<Quiz>,
+    @Inject('NATS_OUTBOUND') private readonly natsClient: ClientProxy,
   ) {}
+
+  private readonly eventLogger = new Logger('EnrollEvents');
 
   /**
    * Public course → anyone. Private course → owner or active enrollment.
@@ -41,14 +55,36 @@ export class EnrollService {
     if (!course) return false;
 
     const visibility = (course as { visibility?: string }).visibility ?? 'PUBLIC';
+    const uid = userId != null ? String(userId).trim() : '';
     if (visibility === 'PUBLIC') return true;
 
-    if (!userId) return false;
+    if (!uid) return false;
 
-    const ownerId = String((course as { ownerId?: Types.ObjectId }).ownerId ?? '');
-    if (ownerId === userId) return true;
+    const rawOwner = (course as { ownerId?: Types.ObjectId | string }).ownerId;
+    const ownerStr =
+      rawOwner != null
+        ? rawOwner instanceof Types.ObjectId
+          ? rawOwner.toHexString()
+          : String(rawOwner).trim()
+        : '';
+    if (ownerStr && uid === ownerStr) return true;
+    try {
+      if (
+        Types.ObjectId.isValid(uid) &&
+        rawOwner != null &&
+        new Types.ObjectId(uid).equals(
+          rawOwner instanceof Types.ObjectId
+            ? rawOwner
+            : new Types.ObjectId(String(rawOwner)),
+        )
+      ) {
+        return true;
+      }
+    } catch {
+      /* fall through to enrollment */
+    }
 
-    return this.isEnrolled(courseId, userId);
+    return this.isEnrolled(courseId, uid);
   }
 
   async enrollCourse(
@@ -63,7 +99,7 @@ export class EnrollService {
     const existing = await this.enrollmentModel.findOne({ courseId, userId });
     if (existing) return existing;
 
-    return this.enrollmentModel.create({
+    const enrollment = await this.enrollmentModel.create({
       courseId,
       userId,
       createdBy,
@@ -74,6 +110,47 @@ export class EnrollService {
       currency: course.price?.currency,
       couponCode,
     });
+
+    try {
+      this.natsClient.emit('app.events.enroll.completed', {
+        courseId: String(courseId),
+        userId: String(userId),
+      });
+      this.eventLogger.log(
+        `Emitted app.events.enroll.completed courseId=${String(courseId)} userId=${String(userId)}`,
+      );
+    } catch (err) {
+      this.eventLogger.warn(
+        `Failed to emit enroll.completed event: ${(err as Error).message}`,
+      );
+    }
+
+    return enrollment;
+  }
+
+  /**
+   * Cancel/refund/remove an enrollment and emit `enroll.cancelled` so the
+   * community service can auto-remove the student from the course group.
+   */
+  async cancelEnrollment(courseId: string, userId: string) {
+    const enrollment = await this.enrollmentModel.findOneAndUpdate(
+      { courseId, userId, status: { $in: ['ACTIVE', 'COMPLETED'] } },
+      { $set: { status: 'CANCELED' } },
+      { new: true },
+    );
+
+    try {
+      this.natsClient.emit('app.events.enroll.cancelled', {
+        courseId: String(courseId),
+        userId: String(userId),
+      });
+    } catch (err) {
+      this.eventLogger.warn(
+        `Failed to emit enroll.cancelled event: ${(err as Error).message}`,
+      );
+    }
+
+    return enrollment;
   }
 
   async getEnrollment(courseId: string, userId: string) {
@@ -82,10 +159,81 @@ export class EnrollService {
     return enrollment;
   }
 
+  /**
+   * Paginated enrolled student ids for notification fan-out.
+   * Cursor is the last seen enrollment _id (hex string).
+   */
+  async listEnrolledStudentIdsByCourse(
+    courseId: string,
+    opts?: { cursor?: string; limit?: number },
+  ): Promise<{ userIds: string[]; nextCursor: string | null; total: number }> {
+    const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
+    const filter: Record<string, unknown> = {
+      courseId,
+      status: { $in: ['ACTIVE', 'COMPLETED'] },
+    };
+    if (opts?.cursor && Types.ObjectId.isValid(opts.cursor)) {
+      filter._id = { $gt: new Types.ObjectId(opts.cursor) };
+    }
+    const [rows, total] = await Promise.all([
+      this.enrollmentModel
+        .find(filter)
+        .sort({ _id: 1 })
+        .limit(limit + 1)
+        .select('userId _id')
+        .lean(),
+      this.enrollmentModel.countDocuments({
+        courseId,
+        status: { $in: ['ACTIVE', 'COMPLETED'] },
+      }),
+    ]);
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const userIds = [
+      ...new Set(page.map((r) => String(r.userId)).filter(Boolean)),
+    ];
+    const last = page[page.length - 1];
+    const nextCursor =
+      hasMore && last?._id ? String(last._id) : null;
+    return { userIds, nextCursor, total };
+  }
+
+  private matchEnrollmentQuery(courseId: string, userId: string): any {
+    const cs = String(courseId ?? '').trim();
+    const uid = String(userId ?? '').trim();
+    const courseOid = Types.ObjectId.isValid(cs) ? new Types.ObjectId(cs) : null;
+    const userOid = Types.ObjectId.isValid(uid) ? new Types.ObjectId(uid) : null;
+
+    return {
+      $or: [
+        { courseId: cs },
+        ...(courseOid ? [{ courseId: courseOid }] : []),
+      ],
+      $and: [
+        {
+          $or: [
+            { userId: uid },
+            ...(userOid ? [{ userId: userOid }] : []),
+          ],
+        },
+      ],
+    };
+  }
+
+  private matchUserQuery(userId: string): any {
+    const uid = String(userId ?? '').trim();
+    const userOid = Types.ObjectId.isValid(uid) ? new Types.ObjectId(uid) : null;
+    return {
+      $or: [
+        { userId: uid },
+        ...(userOid ? [{ userId: userOid }] : []),
+      ],
+    };
+  }
+
   async isEnrolled(courseId: string, userId: string): Promise<boolean> {
     const enrollment = await this.enrollmentModel.findOne({
-      courseId,
-      userId,
+      ...this.matchEnrollmentQuery(courseId, userId),
       status: { $in: ['ACTIVE', 'COMPLETED'] },
     });
     return !!enrollment;
@@ -93,40 +241,211 @@ export class EnrollService {
 
   async listActiveEnrollmentsForUser(userId: string) {
     return this.enrollmentModel
-      .find({ userId, status: { $in: ['ACTIVE', 'COMPLETED'] } })
+      .find({
+        ...this.matchUserQuery(userId),
+        status: { $in: ['ACTIVE', 'COMPLETED'] },
+      })
       .sort({ updatedAt: -1 })
       .lean();
   }
 
+  /**
+   * Same as `listActiveEnrollmentsForUser` but drops rows whose course no
+   * longer exists. Doing this in one DB roundtrip avoids the per-row
+   * `getCourseById` lookups that otherwise spam `Course not found` errors
+   * through the gateway's exception filter.
+   */
+  async listActiveEnrollmentsForUserWithLiveCourse(userId: string) {
+    const rows = await this.enrollmentModel
+      .find({
+        ...this.matchUserQuery(userId),
+        status: { $in: ['ACTIVE', 'COMPLETED'] },
+      })
+      .sort({ updatedAt: -1 })
+      .lean();
+    if (rows.length === 0) return rows;
+
+    const courseIds = [
+      ...new Set(
+        rows
+          .map((r) => r.courseId)
+          .filter(Boolean)
+          .map((id) => String(id)),
+      ),
+    ];
+    const liveIds = await this.courseModel
+      .find({ _id: { $in: courseIds } })
+      .select('_id')
+      .lean();
+    const live = new Set(liveIds.map((c) => String(c._id)));
+    return rows.filter((r) => live.has(String(r.courseId)));
+  }
+
+  private async getCompletedLessonIdSet(
+    courseId: string,
+    userId: string,
+  ): Promise<Set<string>> {
+    const courseIdStr = String(courseId ?? '').trim();
+    if (!Types.ObjectId.isValid(courseIdStr)) return new Set();
+    const courseOid = new Types.ObjectId(courseIdStr);
+    const userIdStr = String(userId ?? '').trim();
+    const userOid = Types.ObjectId.isValid(userIdStr) ? new Types.ObjectId(userIdStr) : null;
+
+    const rows = await this.lessonProgressModel
+      .find({
+        ...matchCourseIdFilter(courseOid, courseIdStr),
+        $or: [
+          { userId: userIdStr },
+          ...(userOid ? [{ userId: userOid }] : []),
+        ],
+        completed: true,
+      })
+      .select('lessonId')
+      .lean();
+    return new Set(rows.map((r) => String(r.lessonId)));
+  }
+
+  private async buildCourseLessonTree(courseId: string) {
+    const courseIdStr = String(courseId ?? '').trim();
+    if (!Types.ObjectId.isValid(courseIdStr)) return [];
+    const courseOid = new Types.ObjectId(courseIdStr);
+    const filter = matchCourseIdFilter(courseOid, courseIdStr);
+    const [chapters, lessons] = await Promise.all([
+      this.chapterModel.find(filter).sort({ index: 1 }).lean(),
+      this.lessonModel.find(filter).sort({ chapterId: 1, index: 1 }).lean(),
+    ]);
+
+    const lessonsByChapter = new Map<string, typeof lessons>();
+    for (const l of lessons) {
+      const key = String(l.chapterId);
+      const arr = lessonsByChapter.get(key) ?? [];
+      arr.push(l);
+      lessonsByChapter.set(key, arr);
+    }
+
+    if (chapters.length === 0) {
+      return [
+        {
+          id: '__course_content__',
+          index: 0,
+          lessons: lessons.map((l) => ({
+            id: String(l._id),
+            previewable: !!l.previewable,
+            index: l.index,
+          })),
+        },
+      ];
+    }
+
+    return chapters.map((c) => ({
+      id: String(c._id),
+      index: c.index,
+      lessons: (lessonsByChapter.get(String(c._id)) ?? []).map((l) => ({
+        id: String(l._id),
+        previewable: !!l.previewable,
+        index: l.index,
+      })),
+    }));
+  }
+
   async getLessonAccess(courseId: string, lessonId: string, userId: string) {
-    const lesson = await this.lessonModel.findOne({ _id: lessonId, courseId });
+    const lesson = await this.lessonModel.findOne({
+      _id: lessonId,
+      ...matchCourseIdFilter(new Types.ObjectId(courseId), courseId),
+    });
     if (!lesson) throw new NotFoundException('Lesson not found');
+
+    const course = await this.courseModel.findById(courseId).select('ownerId').lean();
+    const ownerId = (course as { ownerId?: unknown } | null)?.ownerId;
+    const isOwner =
+      ownerId != null &&
+      String(ownerId) === String(userId);
 
     const canContent = await this.canAccessCourseContent(userId, courseId);
     const preview = !!lesson.previewable;
-    const access = preview || canContent;
+
+    if (!preview && !canContent && !isOwner) {
+      return {
+        access: false,
+        reason: 'forbidden',
+        previewable: preview,
+        locked: true,
+      };
+    }
+
+    if (isOwner || preview) {
+      return {
+        access: true,
+        reason: preview && !canContent && !isOwner ? 'preview' : 'allowed',
+        previewable: preview,
+        locked: false,
+      };
+    }
+
+    const tree = await this.buildCourseLessonTree(courseId);
+    const flatOrder = flattenLessonOrder(tree);
+    const completed = await this.getCompletedLessonIdSet(courseId, userId);
+    const chapterIndex = tree.findIndex((ch) =>
+      ch.lessons.some((l) => String(l.id) === String(lessonId)),
+    );
+    const chapterLocked =
+      chapterIndex > 0 && !isChapterUnlocked(chapterIndex, tree, completed);
+    const lessonLocked =
+      chapterLocked ||
+      !isLessonUnlockedInSequence(
+        String(lessonId),
+        flatOrder,
+        completed,
+        preview,
+      );
+
+    if (lessonLocked) {
+      return {
+        access: false,
+        reason: 'locked',
+        previewable: preview,
+        locked: true,
+      };
+    }
 
     return {
-      access,
-      reason: access
-        ? preview && !canContent
-          ? 'preview'
-          : 'allowed'
-        : 'forbidden',
+      access: true,
+      reason: 'allowed',
       previewable: preview,
+      locked: false,
     };
   }
 
   async recalculateEnrollmentProgress(courseId: string, userId: string) {
-    const enrollment = await this.enrollmentModel.findOne({ courseId, userId });
+    const cs = String(courseId ?? '').trim();
+    const uid = String(userId ?? '').trim();
+    if (!cs || !uid) return;
+    const courseOid = Types.ObjectId.isValid(cs) ? new Types.ObjectId(cs) : null;
+    const userOid = Types.ObjectId.isValid(uid) ? new Types.ObjectId(uid) : null;
+
+    const enrollment = await this.enrollmentModel.findOne(
+      this.matchEnrollmentQuery(cs, uid)
+    );
     if (!enrollment) return;
 
     const [total, completed] = await Promise.all([
-      this.lessonModel.countDocuments({ courseId }),
+      this.lessonModel.countDocuments(
+        matchCourseIdFilter(new Types.ObjectId(courseId), courseId),
+      ),
       this.lessonProgressModel.countDocuments({
-        courseId,
-        userId,
-        completed: true,
+        $or: [
+          { courseId: cs },
+          ...(courseOid ? [{ courseId: courseOid }] : []),
+        ],
+        $and: [
+          {
+            $or: [
+              { userId: uid },
+              ...(userOid ? [{ userId: userOid }] : []),
+            ],
+          },
+          { completed: true },
+        ],
       }),
     ]);
 
@@ -143,7 +462,7 @@ export class EnrollService {
     }
 
     await this.enrollmentModel.findOneAndUpdate(
-      { courseId, userId },
+      this.matchEnrollmentQuery(cs, uid),
       { $set: update },
     );
   }
@@ -158,8 +477,11 @@ export class EnrollService {
     lessonId: string,
   ): Promise<void> {
     if (!Types.ObjectId.isValid(lessonId)) return;
+    const cs = String(courseId ?? '').trim();
+    const uid = String(userId ?? '').trim();
+
     await this.enrollmentModel.findOneAndUpdate(
-      { courseId, userId },
+      this.matchEnrollmentQuery(cs, uid),
       {
         $set: {
           lastLessonId: new Types.ObjectId(lessonId),
@@ -177,14 +499,17 @@ export class EnrollService {
     lastAccessedAt: Date | null;
     enrollmentProgress: number;
   } | null> {
+    const cs = String(courseId ?? '').trim();
+    const uid = String(userId ?? '').trim();
+
     const e = await this.enrollmentModel
-      .findOne({ courseId, userId })
+      .findOne(this.matchEnrollmentQuery(cs, uid))
       .select('lastLessonId lastAccessedAt progressPercentage')
       .lean();
     if (!e) return null;
     return {
       lastLessonId: e.lastLessonId ? String(e.lastLessonId) : null,
-      lastAccessedAt: e.lastAccessedAt ?? null,
+      lastAccessedAt: (e.lastAccessedAt as Date) ?? null,
       enrollmentProgress: e.progressPercentage ?? 0,
     };
   }
@@ -202,7 +527,10 @@ export class EnrollService {
 
     const courseOid = new Types.ObjectId(courseId);
     const quizDocs = await this.lessonModel
-      .find({ courseId: courseOid, quizId: { $exists: true, $ne: null } })
+      .find({
+        ...matchCourseIdFilter(courseOid, courseId),
+        quizId: { $exists: true, $ne: null },
+      })
       .select('quizId')
       .lean();
     const quizIds = [
@@ -250,9 +578,9 @@ export class EnrollService {
           userId: e.userId,
           completed: true,
         });
-        const totalLessons = await this.lessonModel.countDocuments({
-          courseId,
-        });
+        const totalLessons = await this.lessonModel.countDocuments(
+          matchCourseIdFilter(new Types.ObjectId(courseId), courseId),
+        );
 
         return {
           studentId: sid,

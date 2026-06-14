@@ -353,12 +353,13 @@ export class AuthGatewayController {
       path: '/',
     });
 
-    // Return response without tokens in body
     return {
       message: result.message,
       data: {
         user: result.data.user,
       },
+      /** Lets the Next.js app mirror the token for same-origin /api/v1/media/* (img/video). */
+      accessToken: result.data.accessToken,
     };
   }
 
@@ -418,6 +419,7 @@ export class AuthGatewayController {
 
     return {
       message: 'Tokens refreshed successfully',
+      accessToken: result.accessToken,
     };
   }
 
@@ -452,10 +454,13 @@ export class AuthGatewayController {
     description: 'Unauthorized - Invalid access token',
   })
   @Get('current-user')
+  @ApiBearerAuth()
   currentUser(@Req() request: Request) {
-    const accessToken = request.cookies?.accessToken;
+    const accessToken = extractAccessTokenFromRequest(request);
     if (!accessToken) {
-      throw new BadRequestException('Access token cookie is required');
+      throw new BadRequestException(
+        'Access token required: set accessToken cookie or Authorization: Bearer <jwt>',
+      );
     }
     return this.authService.currentUser(accessToken);
   }

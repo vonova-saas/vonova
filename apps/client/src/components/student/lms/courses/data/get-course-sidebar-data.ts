@@ -7,6 +7,7 @@ import {
 } from "@/services/student/lms/courses/real-courses.api";
 import type { Course, CourseContentTree } from "@/types/api/lms/courses.type";
 import { getErrorMessageFromUnknown } from "@/lib/utils/error-message";
+import { peelLmsResponseLayers } from "@/lib/api/unwrap-lms-body";
 
 interface LessonProgress {
   lessonId: string;
@@ -44,13 +45,26 @@ function coursePrimaryId(course: Course): string | undefined {
   );
 }
 
-/** Content tree payload varies: flat chapters, or nested under `data`. */
+/** Content tree payload varies: flat chapters, nested under `data`, or multiply wrapped. */
 function normalizeContentTreePayload(body: unknown): CourseContentTree {
-  const top = asRecord(body);
+  const peeled = peelLmsResponseLayers(body);
+  const top = asRecord(peeled);
   const inner = asRecord(top.data);
+  const innerData =
+    inner.data && typeof inner.data === "object"
+      ? asRecord(inner.data)
+      : {};
+  const courseBlock = asRecord(top.course ?? inner.course ?? innerData.course);
   const chaptersSource =
     (Array.isArray(top.chapters) ? top.chapters : null) ??
     (Array.isArray(inner.chapters) ? inner.chapters : null) ??
+    (Array.isArray(innerData.chapters) ? (innerData.chapters as unknown[]) : null) ??
+    (Array.isArray(courseBlock.chapters)
+      ? (courseBlock.chapters as unknown[])
+      : null) ??
+    (Array.isArray(asRecord(top.payload).chapters)
+      ? (asRecord(top.payload).chapters as unknown[])
+      : null) ??
     [];
 
   const courseId =
@@ -143,6 +157,8 @@ export async function getCourseSidebarData(
               title: String(le.title ?? "Lesson"),
               position: Number(le.index ?? lessonIndex + 1),
               description: String(le.content ?? ""),
+              locked: le.locked === true,
+              accessible: le.accessible !== false,
               lessonProgress: [] as LessonProgress[],
             };
           }),

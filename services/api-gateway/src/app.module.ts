@@ -42,9 +42,13 @@ import { UploadGatewayModule } from './lms/library/upload/upload.gateway.module'
 import { AdminGatewayModule } from './admin/admin.module';
 import { AdminAuthGatewayModule } from './admin-auth/admin-auth.module';
 import { CommunityGatewayModule } from './app/community/community.module';
+import { CommunityProfileIntegrationModule } from './app/community/community-profile-integration.module';
+import { CommunitySocketGatewayModule } from './community/socket/community.gateway.module';
 import { SubscriptionGatewayModule } from './lms/subscription/subscription.gateway.module';
 import { PaymentsGatewayModule } from './lms/payments/payments.gateway.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { MediaStreamGatewayModule } from './lms/course/media-stream/media-stream.gateway.module';
+import { CommunityMediaStreamGatewayModule } from './app/community/media/community-media-stream.gateway.module';
 
 @Module({
   imports: [
@@ -71,6 +75,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     ChapterGatewayModule,
     LessonGatewayModule,
     ContentGatewayModule,
+    MediaStreamGatewayModule,
+    CommunityMediaStreamGatewayModule,
     ProgressGatewayModule,
     EnrollGatewayModule,
     ReviewCourseGatewayModule,
@@ -87,6 +93,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     AdminAuthGatewayModule,
     //* Community Services
     CommunityGatewayModule,
+    CommunityProfileIntegrationModule,
+    CommunitySocketGatewayModule,
     //* LMS AI Services
     RoadmapGatewayModule,
     PdfSummaryGatewayModule,

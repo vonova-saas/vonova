@@ -106,6 +106,15 @@ export class CreateProblemDto {
   @IsNotEmpty()
   functionName: string;
 
+  @ApiProperty({
+    description: 'Ordered target function parameter names.',
+    example: ['nums', 'target'],
+    isArray: true,
+  })
+  @IsArray()
+  @IsString({ each: true })
+  parameterNames: string[];
+
   @ApiPropertyOptional({
     description:
       'If true, output arrays are compared as unordered multisets by default.',
@@ -268,12 +277,173 @@ export class RequestSolutionDto {
   @IsOptional()
   problemId: string;
 
-  @ApiPropertyOptional({
-    description: 'Preferred programming language for generated solution.',
-    example: 'typescript',
-    default: 'typescript',
-  })
+  @ApiPropertyOptional({ description: 'Preferred programming language for generated solution.', example: 'typescript', default: 'typescript' })
   @IsString()
   @IsOptional()
   language?: string;
 }
+
+export class EmbeddedSheetQuestionDto {
+  @ApiProperty({ description: 'Question title', example: 'Reverse Array' })
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional({ description: 'Question description', example: 'Reverse the array in place.' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Question difficulty', enum: ['easy', 'medium', 'hard'], example: 'easy' })
+  @IsOptional()
+  @IsEnum(['easy', 'medium', 'hard'])
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export class CreateProblemSheetDto {
+  @ApiProperty({ description: 'Sheet title', example: 'Arrays Basics' })
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional({ description: 'Sheet URL slug', example: 'arrays-basics' })
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @ApiPropertyOptional({ description: 'Sheet description', example: 'Learn basic array operations.' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Course ObjectId', example: '665f7d4a3f0f8d0f42c5b8a1', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Chapter ObjectId', example: '665f7d4a3f0f8d0f42c5b8a2', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  chapterId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Lesson ObjectId', example: '665f7d4a3f0f8d0f42c5b8a3', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  lessonId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Sheet difficulty', enum: ['easy', 'medium', 'hard'], example: 'medium' })
+  @IsOptional()
+  @IsEnum(['easy', 'medium', 'hard'])
+  difficulty?: 'easy' | 'medium' | 'hard';
+
+  @ApiPropertyOptional({ description: 'Sheet visibility', enum: ['private', 'public'], example: 'private' })
+  @IsOptional()
+  @IsEnum(['private', 'public'])
+  visibility?: 'private' | 'public';
+
+  @ApiPropertyOptional({ description: 'Sheet tags', type: [String], example: ['arrays', 'fundamentals'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Embedded questions', type: [EmbeddedSheetQuestionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EmbeddedSheetQuestionDto)
+  embeddedQuestions?: EmbeddedSheetQuestionDto[];
+
+  @ApiPropertyOptional({ description: 'Timer duration in minutes', example: 60, nullable: true })
+  @IsOptional()
+  timerMinutes?: number | null;
+
+  @ApiPropertyOptional({ description: 'Estimated duration in minutes', example: 45, nullable: true })
+  @IsOptional()
+  estimatedDuration?: number | null;
+
+  @ApiPropertyOptional({ description: 'Due date', example: '2026-06-01T00:00:00.000Z', nullable: true })
+  @IsOptional()
+  dueDate?: string | null;
+
+  @ApiPropertyOptional({ description: 'Cover image URL', example: 'https://example.com/cover.png' })
+  @IsOptional()
+  @IsString()
+  coverImage?: string;
+}
+
+export class UpdateProblemSheetDto {
+  @ApiPropertyOptional({ description: 'Sheet title', example: 'Arrays Basics' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Sheet URL slug', example: 'arrays-basics' })
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @ApiPropertyOptional({ description: 'Sheet description', example: 'Learn basic array operations.' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Sheet status', enum: ['draft', 'published'], example: 'draft' })
+  @IsOptional()
+  @IsEnum(['draft', 'published'])
+  status?: 'draft' | 'published';
+
+  @ApiPropertyOptional({ description: 'Sheet visibility', enum: ['private', 'public'], example: 'private' })
+  @IsOptional()
+  @IsEnum(['private', 'public'])
+  visibility?: 'private' | 'public';
+
+  @ApiPropertyOptional({ description: 'Course ObjectId', example: '665f7d4a3f0f8d0f42c5b8a1', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Chapter ObjectId', example: '665f7d4a3f0f8d0f42c5b8a2', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  chapterId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Lesson ObjectId', example: '665f7d4a3f0f8d0f42c5b8a3', nullable: true })
+  @IsOptional()
+  @IsMongoId()
+  lessonId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Sheet difficulty', enum: ['easy', 'medium', 'hard'], example: 'medium' })
+  @IsOptional()
+  @IsEnum(['easy', 'medium', 'hard'])
+  difficulty?: 'easy' | 'medium' | 'hard';
+
+  @ApiPropertyOptional({ description: 'Sheet tags', type: [String], example: ['arrays', 'fundamentals'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Embedded questions', type: [EmbeddedSheetQuestionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EmbeddedSheetQuestionDto)
+  embeddedQuestions?: EmbeddedSheetQuestionDto[];
+
+  @ApiPropertyOptional({ description: 'Timer duration in minutes', example: 60, nullable: true })
+  @IsOptional()
+  timerMinutes?: number | null;
+
+  @ApiPropertyOptional({ description: 'Estimated duration in minutes', example: 45, nullable: true })
+  @IsOptional()
+  estimatedDuration?: number | null;
+
+  @ApiPropertyOptional({ description: 'Due date', example: '2026-06-01T00:00:00.000Z', nullable: true })
+  @IsOptional()
+  dueDate?: string | null;
+
+  @ApiPropertyOptional({ description: 'Cover image URL', example: 'https://example.com/cover.png' })
+  @IsOptional()
+  @IsString()
+  coverImage?: string;
+}
+

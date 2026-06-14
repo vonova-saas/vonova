@@ -6,6 +6,11 @@ import {
   IsInt,
   Min,
   Max,
+  IsArray,
+  IsEnum,
+  IsBoolean,
+  IsMongoId,
+  ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -33,6 +38,28 @@ export class CreatePostDto {
 
   @IsOptional()
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(40)
+  hashtags?: string[];
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'FOLLOWERS'])
+  visibility?: 'PUBLIC' | 'FOLLOWERS';
+
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  instructorOnly?: boolean;
 }
 
 export class UpdatePostDto {
@@ -52,6 +79,28 @@ export class UpdatePostDto {
 
   @IsOptional()
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(40)
+  hashtags?: string[];
+
+  @IsOptional()
+  @IsEnum(['PUBLIC', 'FOLLOWERS'])
+  visibility?: 'PUBLIC' | 'FOLLOWERS';
+
+  @IsOptional()
+  @IsMongoId()
+  courseId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  instructorOnly?: boolean;
 }
 
 // ─── Comment DTOs ─────────────────────────────────────────────────────────────

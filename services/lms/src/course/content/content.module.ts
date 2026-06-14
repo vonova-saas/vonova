@@ -16,11 +16,24 @@ import {
   Presentation,
   PresentationSchema,
 } from '../../library/schema/presentation.schema';
-import { Problem, ProblemSchema } from '../../lms-ai/problem-solving/schemas/problem.schema';
+import {
+  Problem,
+  ProblemSchema,
+} from '../../lms-ai/problem-solving/schemas/problem.schema';
 import {
   LessonProgress,
   LessonProgressSchema,
 } from '../progress/schema/lesson-progress.schema';
+import { ProgressModule } from '../progress/progress.module';
+import {
+  ProblemSheet,
+  ProblemSheetSchema,
+} from '../../lms-ai/problem-solving/schemas/problem-sheet.schema';
+import {
+  SheetProgress,
+  SheetProgressSchema,
+} from '../../lms-ai/problem-solving/schemas/sheet-progress.schema';
+import { LMS_AI_CONNECTION_NAME } from '../../lms-ai/database/constants';
 
 @Module({
   imports: [
@@ -36,7 +49,15 @@ import {
       { name: Problem.name, schema: ProblemSchema },
       { name: LessonProgress.name, schema: LessonProgressSchema },
     ]),
+    MongooseModule.forFeature(
+      [
+        { name: ProblemSheet.name, schema: ProblemSheetSchema },
+        { name: SheetProgress.name, schema: SheetProgressSchema },
+      ],
+      LMS_AI_CONNECTION_NAME,
+    ),
     EnrollModule,
+    ProgressModule,
   ],
   controllers: [ContentController],
   providers: [ContentService, S3Service, S3ConfigService],

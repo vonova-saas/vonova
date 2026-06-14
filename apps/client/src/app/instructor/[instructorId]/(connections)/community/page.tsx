@@ -1,11 +1,18 @@
 "use client";
 
-import CommunityPageClient from "@/components/community/community-page-client";
-import { useParams } from "next/navigation";
+/**
+ * Legacy `/instructor/:instructorId/community` route — superseded by the
+ * role-agnostic `/community` realtime hub. Redirects so legacy sidebar and
+ * bookmarked links still land in the new UI.
+ */
 
-export default function CommunityPage() {
-  const params = useParams<{ instructorId: string }>();
-  const instructorId = params?.instructorId ?? "";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-  return <CommunityPageClient area="instructor" userId={instructorId} initialTab="feed" viewMode="feed" />;
+export default function LegacyInstructorCommunityRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/community");
+  }, [router]);
+  return null;
 }

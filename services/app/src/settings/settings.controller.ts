@@ -5,7 +5,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('app/settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   @MessagePattern({ cmd: 'findOneSetting' })
   findOne(@Payload('userId') userId: string) {
