@@ -338,13 +338,24 @@ export const updateLibraryMaterialVisibilityMutationFn = async (params: {
 const LIBRARY_TOPIC_SLUG_TO_LABEL: Record<string, string> = {
   "programming-basics": "Programming Basics",
   "web-development": "Web Development",
+  frontend: "FRONTEND",
+  backend: "BACKEND",
+  fullstack: "FULLSTACK",
+  flutter: "FLUTTER",
+  "mobile-development": "Mobile Development",
+  ai: "AI",
+  "machine-learning": "Machine Learning",
+  "data-science": "Data Science",
+  "cyber-security": "CYBER SECURITY",
+  devops: "DEVOPS",
+  "ui-ux": "UI UX",
+  "database-design": "Database Design",
+  "problem-solving": "Problem Solving",
   "data-structure": "Data Structure",
   "data-structures": "Data Structure",
   algorithms: "Algorithms",
-  "database-design": "Database Design",
-  "machine-learning": "Machine Learning",
-  "mobile-development": "Mobile Development",
   "cloud-computing": "Cloud Computing",
+  other: "OTHER",
 };
 
 function mapClientTopicToApiTopic(input: string | undefined): string | undefined {

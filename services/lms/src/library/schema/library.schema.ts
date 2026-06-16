@@ -8,12 +8,23 @@ export type LibraryType = 'book' | 'guide' | 'presentation';
 export enum LibraryTopics {
   PROGRAMMING_BASICS = 'Programming Basics',
   WEB_DEVELOPMENT = 'Web Development',
+  FRONTEND = 'FRONTEND',
+  BACKEND = 'BACKEND',
+  FULLSTACK = 'FULLSTACK',
+  FLUTTER = 'FLUTTER',
+  MOBILE_DEVELOPMENT = 'Mobile Development',
+  AI = 'AI',
+  MACHINE_LEARNING = 'Machine Learning',
+  DATA_SCIENCE = 'Data Science',
+  CYBER_SECURITY = 'CYBER SECURITY',
+  DEVOPS = 'DEVOPS',
+  UIUX = 'UI UX',
+  DATABASE_DESIGN = 'Database Design',
+  PROBLEM_SOLVING = 'Problem Solving',
   DATA_STRUCTURE = 'Data Structure',
   ALGORITHMS = 'Algorithms',
-  DATABASE_DESIGN = 'Database Design',
-  MACHINE_LEARNING = 'Machine Learning',
-  MOBILE_DEVELOPMENT = 'Mobile Development',
   CLOUD_COMPUTING = 'Cloud Computing',
+  OTHER = 'OTHER',
 }
 
 export class Author {
