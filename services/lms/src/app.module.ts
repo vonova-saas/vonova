@@ -33,6 +33,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MediaHealthSchedulerService } from './common/media/media-health.scheduler.service';
 import { S3Service } from './common/utils/storage/s3.service';
+import { CourseFeedbackModule } from './course/feedback/feedback.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { S3Service } from './common/utils/storage/s3.service';
     EnrollModule,
     ContentModule,
     ReviewCourseModule,
+    CourseFeedbackModule,
     ProgressModule,
     // LMS-AI (roadmap, PDF summary) – same service
     DatabaseModule,

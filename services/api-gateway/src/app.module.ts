@@ -49,6 +49,7 @@ import { PaymentsGatewayModule } from './lms/payments/payments.gateway.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { MediaStreamGatewayModule } from './lms/course/media-stream/media-stream.gateway.module';
 import { CommunityMediaStreamGatewayModule } from './app/community/media/community-media-stream.gateway.module';
+import { CourseFeedbackGatewayModule } from './lms/course/feedback/feedback.gateway.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { CommunityMediaStreamGatewayModule } from './app/community/media/communi
     ProgressGatewayModule,
     EnrollGatewayModule,
     ReviewCourseGatewayModule,
+    CourseFeedbackGatewayModule,
     BookGatewayModule,
     PresentationGatewayModule,
     GuideGatewayModule,

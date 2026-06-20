@@ -9,7 +9,7 @@ import Stripe from 'stripe';
 
 // Initialize Stripe with secret key
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2026-04-22.dahlia',
+  apiVersion: '2026-05-27.dahlia',
   typescript: true,
   maxNetworkRetries: 3,
   timeout: 30000, // 30 seconds
